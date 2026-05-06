@@ -24,19 +24,20 @@
                 <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
                 <button class="btn admin-only" onclick="showMkdir()">新建文件夹</button>
                 <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
+                
                 <div style="width:1px; height:16px; background:var(--surface-light); margin:0 4px;"></div>
-                <select id="sortSelect" class="select-input" onchange="changeSort()">
-                    <option value="name">名称排序</option>
-                    <option value="time">时间排序</option>
-                    <option value="size">大小排序</option>
-                </select>
+                
+                <!-- 排序循环切换按钮 -->
+                <button id="sortBtn" class="tool-btn" onclick="toggleSortMode()">名称排序</button>
+                
+                <!-- 显示模式循环切换按钮 -->
                 <button id="viewBtn" class="tool-btn" onclick="toggleViewMode()">图墙模式</button>
             </div>
         </div>
         <div id="fileList" class="file-grid"></div>
     </div>
 
-    <!-- 登录弹窗 -->
+    <!-- 登录弹窗 (完美复刻 Element Plus 风格) -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button onclick="closeLoginModal()" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
@@ -67,6 +68,9 @@
 
     <script>
         let currentPath = '/', userRole = 'guest', viewMode = localStorage.getItem('viewMode') || 'grid', sortBy = localStorage.getItem('sortBy') || 'name', fileData = { folders: [], files: [] }, isSearching = false;
+
+        const sortModes = ['name', 'time', 'size'];
+        const sortNames = { name: '名称排序', time: '时间排序', size: '大小排序' };
 
         async function initAuth() {
             const res = await fetch('/api/auth/role');
@@ -117,17 +121,18 @@
 
         function updateViewUI() {
             const list = document.getElementById('fileList');
-            document.getElementById('sortSelect').value = sortBy;
+            
+            // 更新按钮文字
+            document.getElementById('sortBtn').textContent = sortNames[sortBy];
             document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '图墙模式' : '列表模式';
+
             list.className = viewMode === 'grid' ? 'file-grid' : 'file-list-mode';
             list.innerHTML = '';
-
             if (!isSearching && currentPath !== '/') {
                 const parts = currentPath.split('/').filter(p => p); parts.pop();
                 const parent = '/' + parts.join('/') + (parts.length > 0 ? '/' : '');
                 list.innerHTML += `<div class="file-item" onclick="currentPath='${parent}';loadFiles()"><div class="file-main"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-info">返回上级</div><div class="file-actions"></div></div>`;
             }
-
             const folders = [...(fileData.folders || [])].sort((a,b) => a.name.localeCompare(b.name));
             const files = [...(fileData.files || [])].sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
             folders.forEach(f => list.innerHTML += renderItem(f, true));
@@ -143,17 +148,22 @@
                 acts.push(`<button class="btn btn-sm btn-danger" onclick="deleteItem('${item.path}')">删除</button>`);
             }
             return `<div class="file-item" onclick="${isFolder?`navigateTo('${item.path}')`:''}">
-                <div class="file-main">
-                    <div class="file-icon">${isFolder?'📁':getFileIcon(item.name)}</div>
-                    <div class="file-name">${item.name}</div>
-                </div>
+                <div class="file-main"><div class="file-icon">${isFolder?'📁':getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div>
                 <div class="file-info">${isFolder?'文件夹':item.sizeFormatted}</div>
                 <div class="file-actions" onclick="event.stopPropagation()">${acts.join('')}</div>
             </div>`;
         }
 
         function toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); updateViewUI(); }
-        function changeSort() { sortBy = document.getElementById('sortSelect').value; localStorage.setItem('sortBy', sortBy); updateViewUI(); }
+        
+        function toggleSortMode() {
+            let currentIndex = sortModes.indexOf(sortBy);
+            let nextIndex = (currentIndex + 1) % sortModes.length;
+            sortBy = sortModes[nextIndex];
+            localStorage.setItem('sortBy', sortBy);
+            updateViewUI();
+        }
+
         function isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf'].includes(ext); }
         function getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','webp','gif'].includes(ext)?'🖼️':['mp4','webm'].includes(ext)?'🎬':['mp3','wav'].includes(ext)?'🎵':ext==='pdf'?'📕':['zip','rar','7z'].includes(ext)?'📦':'📄'; }
         function navigateTo(p) { currentPath = p + '/'; loadFiles(); }
@@ -176,7 +186,7 @@
         async function submitMkdir() { const folderName = document.getElementById('folderNameInput').value; if(!folderName) return; const target = currentPath==='/'?'/api/mkdir':`/api/mkdir${currentPath.replace(/\/$/,'')}`; await fetch(target, { method: 'POST', body: JSON.stringify({ folderName }) }); closeModal(); loadFiles(); }
         async function deleteItem(p) { if(confirm('确定删除?')) { await fetch(`/api/files${p}`, {method:'DELETE'}); loadFiles(); } }
         function downloadFile(p) { window.open(`/api/download${p}`); }
-        function openRename(p, n) { if(userRole==='admin'){ renameTarget = p; document.getElementById('newNameInput').value = n; document.getElementById('renameModal').classList.add('active'); } }
+        function openRename(p, n) { renameTarget = p; document.getElementById('newNameInput').value = n; document.getElementById('renameModal').classList.add('active'); }
         async function submitRename() { const newName = document.getElementById('newNameInput').value; await fetch(`/api/files${renameTarget}`, { method:'PUT', body: JSON.stringify({newName}) }); closeModal(); loadFiles(); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active')); }
         async function logout() { await fetch('/api/logout'); window.location.reload(); }
