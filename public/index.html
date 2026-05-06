@@ -14,17 +14,21 @@
             <button class="btn btn-secondary" onclick="logout()">退出</button>
         </div>
     </div>
+
     <div class="container">
-        <div id="breadcrumb" style="margin-bottom: 15px; font-size: 14px;"></div>
+        <!-- 面包屑导航 -->
+        <div id="breadcrumb" style="margin-bottom: 20px; font-size: 14px; background: var(--surface); padding: 10px 15px; border-radius: 8px;"></div>
+        
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
             <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">上传文件</button>
             <button class="btn btn-secondary" onclick="showMkdir()">新建文件夹</button>
             <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
         </div>
+
         <div id="fileList" class="file-grid"></div>
     </div>
 
-    <!-- Modals -->
+    <!-- 重命名模态框 -->
     <div id="renameModal" class="modal-overlay">
         <div class="modal">
             <h3>重命名</h3>
@@ -34,12 +38,26 @@
         </div>
     </div>
 
+    <!-- 新建文件夹模态框 -->
     <div id="mkdirModal" class="modal-overlay">
         <div class="modal">
             <h3>新建文件夹</h3>
-            <input type="text" id="folderNameInput" class="form-input" placeholder="文件夹名称">
+            <input type="text" id="folderNameInput" class="form-input" placeholder="名称">
             <button class="btn btn-primary" style="width:100%" onclick="submitMkdir()">创建</button>
             <button class="btn btn-secondary" style="width:100%; margin-top:5px;" onclick="closeModal()">取消</button>
+        </div>
+    </div>
+
+    <!-- 预览模态框 -->
+    <div id="previewModal" class="modal-overlay" onclick="closePreview(event)">
+        <div class="modal" style="max-width: 90%; width: 800px; height: 80vh; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <h3 id="previewTitle" style="font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">预览</h3>
+                <button onclick="closePreview()" style="background:none; border:none; color:white; cursor:pointer; font-size:20px;">&times;</button>
+            </div>
+            <div id="previewContent" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px;">
+                <!-- 预览内容动态插入 -->
+            </div>
         </div>
     </div>
 
@@ -53,36 +71,50 @@
             if (res.status === 401) return window.location.href = '/login.html';
             const data = await res.json();
             
+            renderBreadcrumb();
             const list = document.getElementById('fileList');
             list.innerHTML = '';
             
+            // 渲染文件夹
             data.folders.forEach(f => {
                 list.innerHTML += `<div class="file-item" onclick="navigateTo('${f.path}')">
                     <div class="file-icon">📁</div>
                     <div class="file-name">${f.name}</div>
-                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteItem('${f.path}')">删除</button>
-                </div>`;
-            });
-            data.files.forEach(f => {
-                list.innerHTML += `<div class="file-item">
-                    <div class="file-icon">${getFileIcon(f.name)}</div>
-                    <div class="file-name">${f.name}</div>
-                    <div class="file-meta">${f.sizeFormatted}</div>
-                    <div style="margin-top:8px; display:flex; gap:4px; justify-content:center;">
-                        <button class="btn btn-primary" style="padding:4px 8px; font-size:11px;" onclick="downloadFile('${f.path}')">下载</button>
-                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="openRename('${f.path}','${f.name}')">改名</button>
-                        <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteItem('${f.path}')">删</button>
+                    <div class="file-meta">文件夹</div>
+                    <div style="margin-top:10px;">
+                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteItem('${f.path}')">删除</button>
                     </div>
                 </div>`;
             });
-            renderBreadcrumb();
+
+            // 渲染文件
+            data.files.forEach(f => {
+                const canPreview = isPreviewable(f.name);
+                list.innerHTML += `<div class="file-item">
+                    <div class="file-icon">${getFileIcon(f.name)}</div>
+                    <div class="file-name" title="${f.name}">${f.name}</div>
+                    <div class="file-meta">${f.sizeFormatted}</div>
+                    <div style="margin-top:10px; display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">
+                        ${canPreview ? `<button class="btn btn-sm btn-primary" onclick="openPreview('${f.path}', '${f.name}')">预览</button>` : ''}
+                        <button class="btn btn-sm btn-primary" onclick="downloadFile('${f.path}')">下载</button>
+                        <button class="btn btn-sm btn-secondary" onclick="openRename('${f.path}','${f.name}')">改名</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteItem('${f.path}')">删</button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        function isPreviewable(n) {
+            const ext = n.split('.').pop().toLowerCase();
+            return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf'].includes(ext);
         }
 
         function getFileIcon(n) {
             const ext = n.split('.').pop().toLowerCase();
-            if (['jpg','png','webp','gif'].includes(ext)) return '🖼️';
+            if (['jpg','jpeg','png','webp','gif'].includes(ext)) return '🖼️';
             if (['mp4','webm'].includes(ext)) return '🎬';
-            if (['mp3','wav','flac'].includes(ext)) return '🎵';
+            if (['mp3','wav'].includes(ext)) return '🎵';
+            if (['pdf'].includes(ext)) return '📕';
             if (['zip','rar','7z'].includes(ext)) return '📦';
             return '📄';
         }
@@ -90,16 +122,47 @@
         function navigateTo(p) { currentPath = p + '/'; loadFiles(); }
         
         function renderBreadcrumb() {
-            let html = `<span style="cursor:pointer; color:var(--primary)" onclick="currentPath='/';loadFiles()">🏠 Root</span>`;
+            let html = `<span style="cursor:pointer; color:var(--primary); font-weight:bold;" onclick="currentPath='/';loadFiles()">🏠 根目录</span>`;
             let acc = '';
-            currentPath.split('/').filter(p => p).forEach(p => {
+            const parts = currentPath.split('/').filter(p => p);
+            parts.forEach((p, index) => {
                 acc += '/' + p;
                 const pathCopy = acc + '/';
-                html += ` / <span style="cursor:pointer" onclick="currentPath='${pathCopy}';loadFiles()">${p}</span>`;
+                html += ` <span style="color:var(--text-muted)">/</span> <span style="cursor:pointer; ${index === parts.length - 1 ? 'color:white' : ''}" onclick="currentPath='${pathCopy}';loadFiles()">${p}</span>`;
             });
             document.getElementById('breadcrumb').innerHTML = html;
         }
 
+        // --- 预览逻辑 ---
+        function openPreview(path, name) {
+            const ext = name.split('.').pop().toLowerCase();
+            const url = `/api/preview${path}`;
+            const content = document.getElementById('previewContent');
+            document.getElementById('previewTitle').textContent = name;
+            content.innerHTML = '';
+
+            if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
+                content.innerHTML = `<img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+            } else if (['mp4','webm'].includes(ext)) {
+                content.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%; max-height:100%;"></video>`;
+            } else if (['mp3','wav'].includes(ext)) {
+                content.innerHTML = `<audio src="${url}" controls autoplay style="width:80%;"></audio>`;
+            } else if (ext === 'pdf') {
+                content.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;"></iframe>`;
+            } else if (ext === 'txt') {
+                fetch(url).then(r => r.text()).then(t => {
+                    content.innerHTML = `<pre style="color:white; padding:20px; width:100%; white-space:pre-wrap; font-size:14px;">${escapeHtml(t)}</pre>`;
+                });
+            }
+            document.getElementById('previewModal').classList.add('active');
+        }
+
+        function closePreview() {
+            document.getElementById('previewContent').innerHTML = '';
+            document.getElementById('previewModal').classList.remove('active');
+        }
+
+        // --- 其他操作 ---
         async function uploadFiles(files) {
             const target = currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`;
             for (let f of files) {
@@ -114,10 +177,7 @@
             const folderName = document.getElementById('folderNameInput').value;
             if(!folderName) return;
             const target = currentPath === '/' ? '/api/mkdir' : `/api/mkdir${currentPath.replace(/\/$/, '')}`;
-            await fetch(target, { 
-                method: 'POST', 
-                body: JSON.stringify({ folderName }) 
-            });
+            await fetch(target, { method: 'POST', body: JSON.stringify({ folderName }) });
             document.getElementById('folderNameInput').value = '';
             closeModal(); loadFiles();
         }
@@ -132,7 +192,12 @@
         }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active')); }
         async function logout() { await fetch('/api/logout'); window.location.href = '/login.html'; }
-        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         loadFiles();
     </script>
 </body>
