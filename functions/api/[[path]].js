@@ -56,16 +56,16 @@ export async function onRequest(context) {
     return jsonResponse({ success: true, logs: results });
   }
 
-  // 4. File Operations Path Parsing
+  // 4. Path Parsing
   let r2Path = "";
   if (path.startsWith('/api/files/')) r2Path = decodeURIComponent(path.slice(11));
   else if (path.startsWith('/api/download/')) r2Path = decodeURIComponent(path.slice(14));
+  else if (path.startsWith('/api/mkdir/')) r2Path = decodeURIComponent(path.slice(11));
 
   // List Files
   if (path.startsWith('/api/files') && method === 'GET') {
     let prefix = r2Path;
     if (prefix && !prefix.endsWith('/')) prefix += '/';
-    
     const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
     const folders = (listed.delimitedPrefixes || []).map(p => ({
       name: p.slice(prefix.length, -1),
@@ -76,8 +76,18 @@ export async function onRequest(context) {
       path: '/' + o.key,
       sizeFormatted: (o.size / 1024 / 1024).toFixed(2) + ' MB'
     })).filter(f => f.name !== '' && f.name !== '.folder');
-
     return jsonResponse({ folders, files });
+  }
+
+  // Mkdir (Create .folder placeholder)
+  if (path.startsWith('/api/mkdir') && method === 'POST') {
+    const { folderName } = await request.json();
+    let prefix = r2Path;
+    if (prefix && !prefix.endsWith('/')) prefix += '/';
+    const key = prefix + folderName + '/.folder';
+    await env.R2_BUCKET.put(key, new Uint8Array(0));
+    await addLog(env, request, 'MKDIR', prefix + folderName);
+    return jsonResponse({ success: true });
   }
 
   // Upload
@@ -95,6 +105,8 @@ export async function onRequest(context) {
   // Delete
   if (path.startsWith('/api/files') && method === 'DELETE') {
     await env.R2_BUCKET.delete(r2Path);
+    // If it's a folder, we might want to delete the .folder too, but R2 delete is precise.
+    // To delete a folder properly in this flat UI, we delete the key passed.
     await addLog(env, request, 'DELETE', r2Path);
     return jsonResponse({ success: true });
   }
@@ -103,6 +115,7 @@ export async function onRequest(context) {
   if (path.startsWith('/api/files') && method === 'PUT') {
     const { newName } = await request.json();
     const source = await env.R2_BUCKET.get(r2Path);
+    if (!source) return jsonResponse({ success: false, message: 'Source not found' }, 404);
     const dir = r2Path.substring(0, r2Path.lastIndexOf('/') + 1);
     const newKey = dir + newName;
     await env.R2_BUCKET.put(newKey, source.body, { httpMetadata: source.httpMetadata });
