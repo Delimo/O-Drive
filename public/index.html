@@ -35,7 +35,7 @@
         <div id="fileList" class="file-grid"></div>
     </div>
 
-    <!-- 模态框保持不变 -->
+    <!-- 模态框逻辑 -->
     <div id="renameModal" class="modal-overlay"><div class="modal"><h3>重命名</h3><input type="text" id="newNameInput" class="form-input"><button class="btn btn-primary" style="width:100%" onclick="submitRename()">确定</button><button class="btn btn-secondary" style="width:100%; margin-top:5px;" onclick="closeModal()">取消</button></div></div>
     <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn btn-primary" style="width:100%" onclick="submitMkdir()">创建</button><button class="btn btn-secondary" style="width:100%; margin-top:5px;" onclick="closeModal()">取消</button></div></div>
     <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="modal" style="max-width:90%; width:800px; height:80vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h3 id="previewTitle">预览</h3><button onclick="closePreview()" style="background:none; border:none; color:white; cursor:pointer; font-size:20px;">&times;</button></div><div id="previewContent" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px;"></div></div></div>
@@ -57,7 +57,7 @@
                 if (userRole === 'admin') {
                     document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('admin-only'));
                     document.getElementById('roleBadge').textContent = '(管理员)';
-                    authBtnContainer.innerHTML = `<a href="/admin.html" class="btn btn-secondary">审计日志</a><button class="btn btn-secondary" onclick="logout()">退出登录</button>`;
+                    authBtnContainer.innerHTML = `<a href="/admin.html" class="btn btn-secondary">控制面板</a><button class="btn btn-secondary" onclick="logout()">退出登录</button>`;
                 } else {
                     document.getElementById('roleBadge').textContent = '(访客)';
                     authBtnContainer.innerHTML = `<a href="/login.html" class="btn btn-primary">管理员登录</a>`;
@@ -80,53 +80,21 @@
             document.getElementById('sortSelect').value = sortBy;
             list.className = viewMode === 'grid' ? 'file-grid' : 'file-list-mode';
             document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '📋' : '🖼️';
-
             list.innerHTML = '';
-
-            // --- 核心修改：如果是子目录，添加 ".." 返回上一级 ---
             if (currentPath !== '/') {
-                const parentPath = getParentPath(currentPath);
-                list.innerHTML += renderParentItem(parentPath);
+                const parts = currentPath.split('/').filter(p => p);
+                parts.pop();
+                const parentPath = '/' + parts.join('/') + (parts.length > 0 ? '/' : '');
+                list.innerHTML += `<div class="file-item" onclick="currentPath='${parentPath}';loadFiles()"><div class="file-info"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-meta">返回上级</div><div class="file-actions"></div></div>`;
             }
-
             const sortedFolders = [...fileData.folders].sort((a, b) => a.name.localeCompare(b.name));
             const sortedFiles = [...fileData.files].sort((a, b) => {
                 if (sortBy === 'time') return b.time - a.time;
                 if (sortBy === 'size') return b.rawSize - a.rawSize;
                 return a.name.localeCompare(b.name);
             });
-
             sortedFolders.forEach(f => { list.innerHTML += renderItem(f, true); });
             sortedFiles.forEach(f => { list.innerHTML += renderItem(f, false); });
-        }
-
-        // 计算上一级路径
-        function getParentPath(path) {
-            const parts = path.split('/').filter(p => p);
-            if (parts.length <= 1) return '/';
-            parts.pop();
-            return '/' + parts.join('/') + '/';
-        }
-
-        // 渲染特殊的 ".." 文件夹
-        function renderParentItem(path) {
-            if (viewMode === 'grid') {
-                return `<div class="file-item" onclick="currentPath='${path}';loadFiles()">
-                    <div class="file-icon">📁</div>
-                    <div class="file-name">..</div>
-                    <div class="file-meta">返回上级</div>
-                    <div class="file-actions"></div>
-                </div>`;
-            } else {
-                return `<div class="file-item" onclick="currentPath='${path}';loadFiles()">
-                    <div class="file-info">
-                        <div class="file-icon">📁</div>
-                        <div class="file-name">..</div>
-                    </div>
-                    <div class="file-meta">返回上级</div>
-                    <div class="file-actions"></div>
-                </div>`;
-            }
         }
 
         function renderItem(item, isFolder) {
@@ -153,7 +121,6 @@
             }
         }
 
-        // 剩余函数保持不变...
         function toggleViewMode() { viewMode = viewMode === 'grid' ? 'list' : 'grid'; localStorage.setItem('viewMode', viewMode); updateViewUI(); }
         function changeSort() { sortBy = document.getElementById('sortSelect').value; localStorage.setItem('sortBy', sortBy); updateViewUI(); }
         function isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf'].includes(ext); }
@@ -170,7 +137,15 @@
         function openRename(p, n) { if(userRole==='admin'){ renameTarget = p; document.getElementById('newNameInput').value = n; document.getElementById('renameModal').classList.add('active'); } }
         async function submitRename() { const newName = document.getElementById('newNameInput').value; await fetch(`/api/files${renameTarget}`, { method:'PUT', body: JSON.stringify({newName}) }); closeModal(); loadFiles(); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active')); }
-        async function logout() { await fetch('/api/logout'); window.location.href = '/'; }
+        
+        // 改进后的登出函数
+        async function logout() { 
+            await fetch('/api/logout'); 
+            // 彻底清除前端状态并跳转到首页
+            window.location.href = '/'; 
+            // 针对某些浏览器强制刷新
+            setTimeout(() => window.location.reload(), 100);
+        }
 
         initAuth();
     </script>
