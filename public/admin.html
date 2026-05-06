@@ -2,43 +2,23 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>控制面板 - O-Drive</title>
+    <title>控制面板</title>
     <link rel="stylesheet" href="/style.css">
     <style>
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--surface-light); padding-bottom: 10px; }
-        .tab-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px 16px; font-weight: bold; }
-        .tab-btn.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--surface-light); padding-bottom: 12px; }
+        .tab-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px 16px; font-weight: 600; border-radius: 6px; }
+        .tab-btn.active { color: #fff; background: var(--surface-light); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
-        .tips-box { background: rgba(99, 102, 241, 0.1); border-left: 4px solid var(--primary); padding: 15px; margin-bottom: 20px; border-radius: 4px; font-size: 13px; color: var(--text-muted); }
-        .tips-box b { color: var(--text); display: block; margin-bottom: 5px; }
-
-        /* 操作日志表格专用样式 */
-        .log-table { width: 100%; border-collapse: collapse; table-layout: fixed; } /* 固定布局 */
-        .log-table th, .log-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--surface-light); }
-        
-        /* 列宽分配 */
-        .col-time { width: 180px; }
-        .col-action { width: 100px; }
-        .col-ip { width: 140px; }
-        .col-details { width: auto; } /* 详情自适应 */
-
-        .log-table td.details-cell { 
-            word-break: break-all; /* 强制换行 */
-            white-space: normal; 
-            font-family: monospace; 
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-        
-        .log-table tr:hover { background: rgba(255,255,255,0.03); }
-        code { background: var(--background); padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        .tips { background: rgba(129, 140, 248, 0.1); border-left: 3px solid var(--primary); padding: 16px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+        .log-table { table-layout: fixed; }
+        .col-time { width: 180px; } .col-act { width: 100px; } .col-ip { width: 140px; }
+        .details-cell { word-break: break-all; font-family: monospace; font-size: 12px; color: var(--text-muted); }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="logo">O-Drive 控制面板</div>
+        <div class="header-left"><a class="logo-box" href="/"><span style="font-size:24px;">⚙️</span><span class="logo-text">管理后台</span></a></div>
         <a href="/" class="btn btn-secondary">返回云盘</a>
     </div>
     <div class="container">
@@ -47,126 +27,56 @@
             <button class="tab-btn" onclick="switchTab('privacy')">隐私管理</button>
         </div>
 
-        <!-- 操作日志标签页 -->
         <div id="logs-tab" class="tab-content active">
-            <div class="card" style="padding: 0; overflow: hidden;"> <!-- 移除内边距让表格撑满 -->
-                <table class="log-table">
-                    <thead>
-                        <tr>
-                            <th class="col-time">时间</th>
-                            <th class="col-action">动作</th>
-                            <th class="col-details">详情</th>
-                            <th class="col-ip">IP 地址</th>
-                        </tr>
-                    </thead>
+            <div class="card" style="padding:0">
+                <table>
+                    <thead><tr><th class="col-time">时间</th><th class="col-act">动作</th><th>详情</th><th class="col-ip">IP</th></tr></thead>
                     <tbody id="logTbody"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 隐私管理标签页 -->
         <div id="privacy-tab" class="tab-content">
             <div class="card">
-                <div class="tips-box">
-                    <b>配置注意事项：</b>
-                    • <b>路径格式</b>：请输入相对路径，不要带开头的斜杠。正确示例：<code>photos</code> 或 <code>work/docs</code>。<br>
-                    • <b>大小写敏感</b>：R2 路径区分大小写，请确保与云盘中显示的名称完全一致。<br>
-                    • <b>递归生效</b>：隐藏文件夹后，其内部的所有子文件和子文件夹对访客也将自动不可见。
+                <div class="tips">
+                    <b>配置说明：</b>请输入相对路径（如 <code>private_docs</code>），不要带前缀斜杠。隐藏后访客将完全无法感知该路径及其子文件的存在。
                 </div>
-
-                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                    <input type="text" id="hidePathInput" class="form-input" placeholder="输入要隐藏的路径 (例如: secret_folder)" style="margin:0; flex:1;">
-                    <button class="btn btn-primary" onclick="addHiddenPath()">添加隐藏</button>
+                <div style="display:flex; gap:12px; margin-bottom:24px;">
+                    <input type="text" id="hideInput" class="form-input" placeholder="输入路径..." style="margin:0; flex:1">
+                    <button class="btn btn-primary" onclick="addHidden()">添加隐藏</button>
                 </div>
-                <table class="log-table">
-                    <thead>
-                        <tr>
-                            <th>已隐藏路径</th>
-                            <th>状态</th>
-                            <th style="width: 120px;">操作</th>
-                        </tr>
-                    </thead>
+                <table>
+                    <thead><tr><th>路径</th><th>状态</th><th style="width:100px">操作</th></tr></thead>
                     <tbody id="hiddenTbody"></tbody>
                 </table>
             </div>
         </div>
     </div>
-
     <script>
         function switchTab(id) {
             document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
-            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.innerText.includes(id==='logs'?'操作':'隐私'));
-            if(activeBtn) activeBtn.classList.add('active');
-            
-            document.getElementById(id + '-tab').classList.add('active');
-            if(id === 'logs') loadLogs();
-            if(id === 'privacy') loadHiddenList();
+            event.target.classList.add('active'); document.getElementById(id + '-tab').classList.add('active');
+            id === 'logs' ? loadLogs() : loadHidden();
         }
-
         async function loadLogs() {
-            const res = await fetch('/api/admin/logs');
-            if(res.status !== 200) return window.location.href='/login.html';
+            const res = await fetch('/api/admin/logs'); if(res.status!==200) return window.location.href='/login.html';
             const data = await res.json();
-            
             document.getElementById('logTbody').innerHTML = data.logs.map(l => {
-                // 转换为中国标准时间 (Asia/Shanghai)
-                const date = new Date(l.timestamp);
-                const timeStr = date.toLocaleString('zh-CN', { 
-                    timeZone: 'Asia/Shanghai',
-                    hour12: false,
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-
-                let actionColor = 'var(--primary)';
-                if(l.action === 'DELETE') actionColor = 'var(--error)';
-                if(l.action === 'UPLOAD') actionColor = '#10b981';
-
-                return `
-                    <tr>
-                        <td class="col-time" style="font-size:12px; color:var(--text-muted);">${timeStr}</td>
-                        <td class="col-action"><b style="color:${actionColor}">${l.action}</b></td>
-                        <td class="col-details details-cell">${l.details}</td>
-                        <td class="col-ip"><code>${l.ip}</code></td>
-                    </tr>
-                `;
+                const time = new Date(l.timestamp).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+                const color = l.action==='DELETE'?'var(--error)':l.action==='UPLOAD'?'var(--success)':'var(--primary)';
+                return `<tr><td style="color:var(--text-muted);font-size:12px">${time}</td><td><b style="color:${color}">${l.action}</b></td><td class="details-cell">${l.details}</td><td><code style="font-size:12px;opacity:0.7">${l.ip}</code></td></tr>`;
             }).join('');
         }
-
-        async function loadHiddenList() {
-            const res = await fetch('/api/admin/settings/hidden');
-            const data = await res.json();
-            document.getElementById('hiddenTbody').innerHTML = data.list.map(item => `
-                <tr>
-                    <td><code>${item.path}</code></td>
-                    <td><span style="color:var(--error)">访客不可见</span></td>
-                    <td><button class="btn btn-sm btn-danger" onclick="removeHiddenPath('${item.path}')">取消隐藏</button></td>
-                </tr>
-            `).join('');
+        async function loadHidden() {
+            const data = await (await fetch('/api/admin/settings/hidden')).json();
+            document.getElementById('hiddenTbody').innerHTML = data.list.map(i => `<tr><td><code>${i.path}</code></td><td style="color:var(--error)">隐藏</td><td><button class="btn btn-sm btn-danger" onclick="removeHidden('${i.path}')">取消</button></td></tr>`).join('');
         }
-
-        async function addHiddenPath() {
-            const path = document.getElementById('hidePathInput').value.trim();
-            if(!path) return;
-            await fetch('/api/admin/settings/hidden', {
-                method: 'POST',
-                body: JSON.stringify({ targetPath: path })
-            });
-            document.getElementById('hidePathInput').value = '';
-            loadHiddenList();
+        async function addHidden() {
+            const path = document.getElementById('hideInput').value.trim(); if(!path) return;
+            await fetch('/api/admin/settings/hidden', { method: 'POST', body: JSON.stringify({ targetPath: path }) });
+            document.getElementById('hideInput').value = ''; loadHidden();
         }
-
-        async function removeHiddenPath(path) {
-            if(!confirm('确定取消隐藏该路径吗？')) return;
-            await fetch(`/api/admin/settings/hidden?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
-            loadHiddenList();
-        }
-
-        // 初始加载
+        async function removeHidden(p) { if(confirm('确定取消?')) { await fetch(`/api/admin/settings/hidden?path=${encodeURIComponent(p)}`, { method: 'DELETE' }); loadHidden(); } }
         loadLogs();
     </script>
 </body>
