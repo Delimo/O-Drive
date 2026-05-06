@@ -15,11 +15,18 @@ async function createJWT(payload, secret) {
 async function verifyAuth(request, env) {
   const cookie = request.headers.get('Cookie') || '';
   const token = cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-  if (!token) return { role: 'guest' }; // 无 Token 默认为访客
+  
+  if (!token) {
+    // 核心逻辑：如果没登录，检查是否允许游客模式
+    return env.ALLOW_GUEST === "true" ? { role: 'guest' } : null;
+  }
+
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload;
-  } catch (e) { return { role: 'guest' }; }
+  } catch (e) {
+    return env.ALLOW_GUEST === "true" ? { role: 'guest' } : null;
+  }
 }
 
 async function addLog(env, request, action, details) {
@@ -35,7 +42,7 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
-  // 1. 登录与登出
+  // 1. 登录
   if (path === '/api/login' && method === 'POST') {
     const { password } = await request.json();
     if (password === env.ADMIN_PASSWORD) {
@@ -46,18 +53,16 @@ export async function onRequest(context) {
   }
   if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; Max-Age=0' });
 
-  // 2. 获取权限状态
+  // 2. 鉴权 (受 ALLOW_GUEST 影响)
   const auth = await verifyAuth(request, env);
+  if (!auth) return jsonResponse({ success: false, message: '需要登录' }, 401);
 
-  // 3. 权限控制：只有管理员能执行的操作
-  const isAdminPath = path === '/api/admin/logs';
+  // 3. 权限控制：写操作或管理操作必须是管理员
   const isWriteAction = ['POST', 'PUT', 'DELETE'].includes(method);
+  const isAdminPath = path === '/api/admin/logs';
   
   if ((isAdminPath || (isWriteAction && path.startsWith('/api/'))) && auth.role !== 'admin') {
-    // 排除登录接口自身
-    if (path !== '/api/login') {
-      return jsonResponse({ success: false, message: '需要管理员权限' }, 403);
-    }
+    return jsonResponse({ success: false, message: '无管理员权限' }, 403);
   }
 
   // 4. API 逻辑
@@ -74,7 +79,6 @@ export async function onRequest(context) {
   else if (path.startsWith('/api/preview/')) r2Path = decodeURIComponent(path.slice(13));
   else if (path.startsWith('/api/mkdir/')) r2Path = decodeURIComponent(path.slice(11));
 
-  // 获取文件列表 (公开)
   if (path.startsWith('/api/files') && method === 'GET') {
     let prefix = r2Path;
     if (prefix && !prefix.endsWith('/')) prefix += '/';
@@ -84,7 +88,6 @@ export async function onRequest(context) {
     return jsonResponse({ folders, files });
   }
 
-  // 以下操作上方已做拦截，只有管理员能进
   if (path.startsWith('/api/mkdir') && method === 'POST') {
     const { folderName } = await request.json();
     let prefix = r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '';
@@ -97,8 +100,9 @@ export async function onRequest(context) {
     const formData = await request.formData();
     const file = formData.get('file');
     let prefix = r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '';
-    await env.R2_BUCKET.put(prefix + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
-    await addLog(env, request, 'UPLOAD', prefix + file.name);
+    const key = prefix + file.name;
+    await env.R2_BUCKET.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
+    await addLog(env, request, 'UPLOAD', key);
     return jsonResponse({ success: true });
   }
 
