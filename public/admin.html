@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>操作日志 - O-Drive</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">O-Drive 日志</div>
+        <a href="/" class="btn btn-secondary">返回云盘</a>
+    </div>
+    <div class="container">
+        <div class="card">
+            <table>
+                <thead>
+                    <tr><th>时间</th><th>动作</th><th>详情</th><th>IP</th></tr>
+                </thead>
+                <tbody id="logsTable"></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        async function loadLogs() {
+            const res = await fetch('/api/admin/logs');
+            const data = await res.json();
+            document.getElementById('logsTable').innerHTML = data.logs.map(l => `
+                <tr>
+                    <td>${new Date(l.timestamp).toLocaleString()}</td>
+                    <td><b style="color:var(--primary)">${l.action}</b></td>
+                    <td>${l.details}</td>
+                    <td><code>${l.ip}</code></td>
+                </tr>
+            `).join('');
+        }
+        loadLogs();
+    </script>
+</body>
+</html>
