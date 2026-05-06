@@ -36,27 +36,38 @@
         <div id="fileList" class="file-grid"></div>
     </div>
 
-    <!-- 参照图二风格的登录弹窗 -->
+    <!-- Element Plus 风格登录弹窗 -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button class="login-close" onclick="closeLoginModal()">&times;</button>
-            <h2>管理端登录</h2>
-            <div class="input-group">
-                <label>用户名</label>
-                <span class="input-icon">👤</span>
-                <input type="text" id="adminUser" placeholder="请输入用户名">
+            <h1 class="login-title">管理端登录</h1>
+            
+            <div class="input-container">
+                <label class="input-name">用户名</label>
+                <div class="input-wrapper">
+                    <span class="el-icon">
+                        <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M512 512a192 192 0 1 0 0-384 192 192 0 0 0 0 384m0 64a256 256 0 1 1 0-512 256 256 0 0 1 0 512m320 320v-96a96 96 0 0 0-96-96H288a96 96 0 0 0-96 96v96a32 32 0 1 1-64 0v-96a160 160 0 0 1 160-160h448a160 160 0 0 1 160 160v96a32 32 0 1 1-64 0"></path></svg>
+                    </span>
+                    <input type="text" id="adminUser" placeholder="请输入用户名">
+                </div>
             </div>
-            <div class="input-group">
-                <label>密码</label>
-                <span class="input-icon">🔒</span>
-                <input type="password" id="adminPass" placeholder="请输入密码" onkeypress="if(event.key==='Enter')doLogin()">
+
+            <div class="input-container">
+                <label class="input-name">密码</label>
+                <div class="input-wrapper">
+                    <span class="el-icon">
+                        <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M224 448a32 32 0 0 0-32 32v384a32 32 0 0 0 32 32h576a32 32 0 0 0 32-32V480a32 32 0 0 0-32-32zm0-64h576a96 96 0 0 1 96 96v384a96 96 0 0 1-96 96H224a96 96 0 0 1-96-96V480a96 96 0 0 1 96-96"></path><path fill="currentColor" d="M512 544a32 32 0 0 1 32 32v192a32 32 0 1 1-64 0V576a32 32 0 0 1 32-32m192-160v-64a192 192 0 1 0-384 0v64zM512 64a256 256 0 0 1 256 256v128H256V320A256 256 0 0 1 512 64"></path></svg>
+                    </span>
+                    <input type="password" id="adminPass" placeholder="请输入密码" onkeypress="if(event.key==='Enter')doLogin()">
+                </div>
             </div>
-            <button class="btn" style="width:100%; height:50px; background:#2d3748; margin-top:10px; font-size:16px;" onclick="doLogin()">登录</button>
-            <p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:13px;"></p>
+
+            <button class="submit-btn" onclick="doLogin()">登录</button>
+            <p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p>
         </div>
     </div>
 
-    <!-- 其他模态框 -->
+    <!-- 其他模态框保持不变 -->
     <div id="renameModal" class="modal-overlay"><div class="modal"><h3>重命名</h3><input type="text" id="newNameInput" class="form-input"><button class="btn" style="width:100%; background:var(--primary)" onclick="submitRename()">确定</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
     <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn" style="width:100%; background:var(--primary)" onclick="submitMkdir()">创建</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
     <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="modal" style="max-width:90%; width:800px; height:80vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; margin-bottom:12px;"><h3 id="previewTitle">预览</h3><button onclick="closePreview()" style="background:none; border:none; color:#fff; cursor:pointer; font-size:24px;">&times;</button></div><div id="previewContent" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px;"></div></div></div>
@@ -66,9 +77,8 @@
 
         async function initAuth() {
             const res = await fetch('/api/auth/role');
-            if (res.status === 401) { userRole = 'none'; updateAuthUI(); return; }
-            const data = await res.json(); 
-            userRole = data.role || 'guest';
+            if (res.status === 401) { userRole = 'guest'; updateAuthUI(); return; }
+            const data = await res.json(); userRole = data.role || 'guest';
             updateAuthUI();
             loadFiles();
         }
@@ -80,11 +90,10 @@
                 btnBox.innerHTML = `<a href="/admin.html" class="btn">控制面板</a><button class="btn" onclick="logout()">退出</button>`;
             } else {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-                btnBox.innerHTML = `<button class="btn" onclick="openLoginModal()" style="background:#2d3748">登录</button>`;
+                btnBox.innerHTML = `<button class="btn" onclick="openLoginModal()" style="background:#337ecc">登录</button>`;
             }
         }
 
-        // 登录模态框逻辑
         function openLoginModal() { document.getElementById('loginModal').classList.add('active'); }
         function closeLoginModal() { document.getElementById('loginModal').classList.remove('active'); document.getElementById('loginError').textContent=''; }
         
