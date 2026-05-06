@@ -1,13 +1,12 @@
 :root {
-  --primary: #818cf8; 
+  --primary: #409eff; /* Element Plus 风格主色 */
   --background: #0f172a;
   --surface: #1e293b;
   --surface-light: #334155;
   --surface-hover: #475569;
   --text: #f8fafc;
   --text-muted: #94a3b8;
-  --error: #ef4444;
-  --success: #10b981;
+  --error: #f56c6c;
   --radius: 12px;
 }
 
@@ -18,8 +17,8 @@ html, body { height: 100%; margin: 0; background: var(--background); color: var(
 .logo-box { display: flex; align-items: center; text-decoration: none; gap: 10px; }
 .logo-text { font-size: 18px; font-weight: 700; color: #fff; user-select: none; }
 
-.search-bar { flex: 1; max-width: 480px; margin: 0 20px; position: relative; }
-.search-bar input { width: 100%; background: var(--background); border: 1px solid var(--surface-light); border-radius: 8px; padding: 8px 12px 8px 36px; color: #fff; outline: none; transition: 0.2s; }
+.search-bar { flex: 1; max-width: 400px; margin: 0 20px; position: relative; }
+.search-bar input { width: 100%; background: var(--background); border: 1px solid var(--surface-light); border-radius: 8px; padding: 8px 12px 8px 36px; color: #fff; outline: none; }
 .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5; pointer-events: none; }
 .header-right { display: flex; gap: 16px; align-items: center; }
 
@@ -28,57 +27,69 @@ html, body { height: 100%; margin: 0; background: var(--background); color: var(
 .toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 12px 20px; border-radius: var(--radius); border: 1px solid var(--surface-light); margin-bottom: 24px; gap: 16px; }
 .tools-right { display: flex; gap: 12px; align-items: center; }
 
-/* 排序框 - 彻底删除箭头 */
+/* 排序框 - 彻底去箭头 */
 .select-input { 
   background: var(--surface-light); color: #fff; border: none; padding: 0 16px; height: 36px; border-radius: 8px; font-size: 13px; cursor: pointer; outline: none;
-  -webkit-appearance: none; appearance: none; text-align: center; min-width: 100px;
+  -webkit-appearance: none; appearance: none; text-align: center;
 }
 
 /* 按钮统一风格 */
-.btn { 
-  height: 36px; padding: 0 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap; 
-}
-.btn:hover { background: var(--surface-hover); transform: translateY(-1px); }
-.btn-primary { background: #334155; } /* 参照图二深蓝灰 */
-.btn-primary:hover { background: #475569; }
-.btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--error); border: 1px solid rgba(239, 68, 68, 0.2); }
-.btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+.btn { height: 36px; padding: 0 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap; }
+.btn:hover { background: var(--surface-hover); }
+.btn-danger { background: rgba(245, 108, 108, 0.1); color: var(--error); border: 1px solid rgba(245, 108, 108, 0.2); }
+.btn-danger:hover { background: rgba(245, 108, 108, 0.2); }
 
-/* Grid View - 解决按钮太近问题 */
-.file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-.file-item { 
-  background: var(--surface); border-radius: var(--radius); padding: 24px 16px; text-align: center; border: 1px solid transparent; cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; height: 280px; 
-}
-.file-item:hover { border-color: var(--primary); background: #242f3e; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+/* Grid View - 解决拥挤问题 */
+.file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+.file-item { background: var(--surface); border-radius: var(--radius); padding: 24px 16px; text-align: center; border: 1px solid transparent; cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; height: 280px; }
+.file-item:hover { border-color: var(--primary); background: #242f3e; }
 .file-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .file-icon { font-size: 52px; margin-bottom: 15px; }
 .file-name { font-size: 14px; font-weight: 500; word-break: break-all; margin-bottom: 6px; }
-.file-info { font-size: 11px; color: var(--text-muted); margin-bottom: 15px; }
-/* 按钮间距增大 */
-.file-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: auto; }
+.file-info { font-size: 12px; color: var(--text-muted); margin-bottom: 15px; }
+.file-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: auto; }
 
-/* 参照图二的登录卡片样式 */
+/* List View 修复 */
+.file-list-mode .file-item { flex-direction: row; height: 60px; padding: 0 24px; justify-content: space-between; }
+.file-list-mode .file-main { flex: 1; flex-direction: row; justify-content: flex-start; text-align: left; }
+.file-list-mode .file-icon { font-size: 24px; margin: 0 16px 0 0; }
+.file-list-mode .file-name { -webkit-line-clamp: 1; flex: 1; margin: 0; }
+.file-list-mode .file-info { width: 100px; margin: 0 40px; text-align: right; flex-shrink: 0; }
+.file-list-mode .file-actions { margin: 0; }
+
+/* --- 登录弹窗 (Element Plus 风格复刻) --- */
 .login-card {
-  background: #121212; /* 更深的背景 */
+  background: #1a1a1a;
   padding: 40px;
-  border-radius: 20px;
+  border-radius: 16px;
   width: 100%;
-  max-width: 440px;
+  max-width: 400px;
   position: relative;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  border: 1px solid #2a2a2a;
+  border: 1px solid #333;
 }
-.login-card h2 { text-align: center; font-size: 28px; margin-bottom: 30px; letter-spacing: 1px; color: #e2e8f0; }
-.input-group { position: relative; margin-bottom: 20px; }
-.input-group label { display: block; font-size: 14px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; }
-.input-group input { 
-  width: 100%; background: #262626; border: 1px solid #333; border-radius: 10px; padding: 14px 12px 14px 42px; color: #fff; outline: none; transition: 0.2s; font-size: 15px;
+.login-title { font-size: 24px; font-weight: 600; color: #fff; margin-bottom: 30px; text-align: center; letter-spacing: 1px; }
+.input-container { margin-bottom: 20px; }
+.input-name { display: block; font-size: 14px; color: #cfd3dc; margin-bottom: 10px; font-weight: 500; }
+.input-wrapper { 
+  position: relative; 
+  background: #262626; 
+  border-radius: 8px; 
+  border: 1px solid #4c4d4f;
+  transition: 0.2s;
 }
-.input-group input:focus { border-color: #3b82f6; background: #2d2d2d; }
-.input-icon { position: absolute; left: 15px; top: 40px; opacity: 0.5; font-size: 16px; pointer-events: none; }
-.login-close { position: absolute; right: 20px; top: 20px; background: none; border: none; color: #666; font-size: 24px; cursor: pointer; transition: 0.2s; }
+.input-wrapper:focus-within { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.input-wrapper input {
+  width: 100%; background: transparent; border: none; padding: 12px 12px 12px 40px; color: #fff; outline: none; font-size: 14px;
+}
+.el-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #909399; display: flex;
+}
+.submit-btn {
+  width: 100%; height: 40px; background: #337ecc; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.2s;
+}
+.submit-btn:hover { background: var(--primary); }
+.login-close { position: absolute; right: 15px; top: 15px; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; }
 .login-close:hover { color: #fff; }
 
-/* 模态框通用 */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(8px); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(10px); }
 .modal-overlay.active { display: flex; }
