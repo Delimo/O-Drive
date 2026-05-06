@@ -34,7 +34,6 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
-  // 1. 登录与鉴权
   if (path === '/api/login' && method === 'POST') {
     const { password } = await request.json();
     if (password === env.ADMIN_PASSWORD) {
@@ -48,7 +47,6 @@ export async function onRequest(context) {
   const auth = await verifyAuth(request, env);
   if (!auth) return jsonResponse({ success: false }, 401);
 
-  // 2. 日志与路径解析
   if (path === '/api/admin/logs') {
     const { results } = await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all();
     return jsonResponse({ success: true, logs: results });
@@ -60,7 +58,6 @@ export async function onRequest(context) {
   else if (path.startsWith('/api/preview/')) r2Path = decodeURIComponent(path.slice(13));
   else if (path.startsWith('/api/mkdir/')) r2Path = decodeURIComponent(path.slice(11));
 
-  // 3. 文件列表逻辑
   if (path.startsWith('/api/files') && method === 'GET') {
     let prefix = r2Path;
     if (prefix && !prefix.endsWith('/')) prefix += '/';
@@ -68,19 +65,20 @@ export async function onRequest(context) {
     
     const folders = (listed.delimitedPrefixes || []).map(p => ({
       name: p.slice(prefix.length, -1),
-      path: '/' + p.slice(0, -1)
+      path: '/' + p.slice(0, -1),
+      time: Date.now() // 文件夹默认排前面
     }));
     const files = (listed.objects || []).map(o => ({
       name: o.key.slice(prefix.length),
       path: '/' + o.key,
       sizeFormatted: (o.size / 1024 / 1024).toFixed(2) + ' MB',
-      size: o.size
+      rawSize: o.size,
+      time: o.uploaded.getTime() // 增加修改时间
     })).filter(f => f.name !== '' && f.name !== '.folder');
 
     return jsonResponse({ folders, files });
   }
 
-  // 4. 新建文件夹
   if (path.startsWith('/api/mkdir') && method === 'POST') {
     const { folderName } = await request.json();
     let prefix = r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '';
@@ -90,7 +88,6 @@ export async function onRequest(context) {
     return jsonResponse({ success: true });
   }
 
-  // 5. 上传
   if (path.startsWith('/api/files') && method === 'POST') {
     const formData = await request.formData();
     const file = formData.get('file');
@@ -101,14 +98,12 @@ export async function onRequest(context) {
     return jsonResponse({ success: true });
   }
 
-  // 6. 删除
   if (path.startsWith('/api/files') && method === 'DELETE') {
     await env.R2_BUCKET.delete(r2Path);
     await addLog(env, request, 'DELETE', r2Path);
     return jsonResponse({ success: true });
   }
 
-  // 7. 重命名
   if (path.startsWith('/api/files') && method === 'PUT') {
     const { newName } = await request.json();
     const source = await env.R2_BUCKET.get(r2Path);
@@ -120,7 +115,6 @@ export async function onRequest(context) {
     return jsonResponse({ success: true });
   }
 
-  // 8. 下载 (带附件头)
   if (path.startsWith('/api/download')) {
     const obj = await env.R2_BUCKET.get(r2Path);
     if (!obj) return new Response('Not Found', { status: 404 });
@@ -132,13 +126,10 @@ export async function onRequest(context) {
     });
   }
 
-  // 9. 预览 (不带附件头，允许浏览器解析)
   if (path.startsWith('/api/preview')) {
     const obj = await env.R2_BUCKET.get(r2Path);
     if (!obj) return new Response('Not Found', { status: 404 });
-    return new Response(obj.body, {
-      headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream' }
-    });
+    return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream' } });
   }
 
   return jsonResponse({ message: 'Not Found' }, 404);
