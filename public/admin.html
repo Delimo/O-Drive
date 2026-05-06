@@ -10,8 +10,30 @@
         .tab-btn.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
         .tips-box { background: rgba(99, 102, 241, 0.1); border-left: 4px solid var(--primary); padding: 15px; margin-bottom: 20px; border-radius: 4px; font-size: 13px; color: var(--text-muted); }
         .tips-box b { color: var(--text); display: block; margin-bottom: 5px; }
+
+        /* 操作日志表格专用样式 */
+        .log-table { width: 100%; border-collapse: collapse; table-layout: fixed; } /* 固定布局 */
+        .log-table th, .log-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--surface-light); }
+        
+        /* 列宽分配 */
+        .col-time { width: 180px; }
+        .col-action { width: 100px; }
+        .col-ip { width: 140px; }
+        .col-details { width: auto; } /* 详情自适应 */
+
+        .log-table td.details-cell { 
+            word-break: break-all; /* 强制换行 */
+            white-space: normal; 
+            font-family: monospace; 
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .log-table tr:hover { background: rgba(255,255,255,0.03); }
+        code { background: var(--background); padding: 2px 4px; border-radius: 4px; font-family: monospace; }
     </style>
 </head>
 <body>
@@ -21,36 +43,49 @@
     </div>
     <div class="container">
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('logs')">审计日志</button>
+            <button class="tab-btn active" onclick="switchTab('logs')">操作日志</button>
             <button class="tab-btn" onclick="switchTab('privacy')">隐私管理</button>
         </div>
 
+        <!-- 操作日志标签页 -->
         <div id="logs-tab" class="tab-content active">
-            <div class="card">
-                <table>
-                    <thead><tr><th>时间</th><th>动作</th><th>详情</th><th>IP</th></tr></thead>
+            <div class="card" style="padding: 0; overflow: hidden;"> <!-- 移除内边距让表格撑满 -->
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th class="col-time">时间</th>
+                            <th class="col-action">动作</th>
+                            <th class="col-details">详情</th>
+                            <th class="col-ip">IP 地址</th>
+                        </tr>
+                    </thead>
                     <tbody id="logTbody"></tbody>
                 </table>
             </div>
         </div>
 
+        <!-- 隐私管理标签页 -->
         <div id="privacy-tab" class="tab-content">
             <div class="card">
-                <!-- 注意事项引导 -->
                 <div class="tips-box">
                     <b>配置注意事项：</b>
                     • <b>路径格式</b>：请输入相对路径，不要带开头的斜杠。正确示例：<code>photos</code> 或 <code>work/docs</code>。<br>
                     • <b>大小写敏感</b>：R2 路径区分大小写，请确保与云盘中显示的名称完全一致。<br>
-                    • <b>递归生效</b>：隐藏文件夹后，其内部的所有子文件和子文件夹对访客也将自动不可见。<br>
-                    • <b>优先级</b>：隐藏设置即刻生效，无需重启或重新部署。
+                    • <b>递归生效</b>：隐藏文件夹后，其内部的所有子文件和子文件夹对访客也将自动不可见。
                 </div>
 
                 <div style="margin-bottom: 20px; display: flex; gap: 10px;">
                     <input type="text" id="hidePathInput" class="form-input" placeholder="输入要隐藏的路径 (例如: secret_folder)" style="margin:0; flex:1;">
                     <button class="btn btn-primary" onclick="addHiddenPath()">添加隐藏</button>
                 </div>
-                <table>
-                    <thead><tr><th>已隐藏路径</th><th>状态</th><th>操作</th></tr></thead>
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>已隐藏路径</th>
+                            <th>状态</th>
+                            <th style="width: 120px;">操作</th>
+                        </tr>
+                    </thead>
                     <tbody id="hiddenTbody"></tbody>
                 </table>
             </div>
@@ -60,7 +95,9 @@
     <script>
         function switchTab(id) {
             document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.innerText.includes(id==='logs'?'操作':'隐私'));
+            if(activeBtn) activeBtn.classList.add('active');
+            
             document.getElementById(id + '-tab').classList.add('active');
             if(id === 'logs') loadLogs();
             if(id === 'privacy') loadHiddenList();
@@ -70,14 +107,34 @@
             const res = await fetch('/api/admin/logs');
             if(res.status !== 200) return window.location.href='/login.html';
             const data = await res.json();
-            document.getElementById('logTbody').innerHTML = data.logs.map(l => `
-                <tr>
-                    <td>${new Date(l.timestamp).toLocaleString()}</td>
-                    <td><b style="color:var(--primary)">${l.action}</b></td>
-                    <td style="font-size:12px;">${l.details}</td>
-                    <td>${l.ip}</td>
-                </tr>
-            `).join('');
+            
+            document.getElementById('logTbody').innerHTML = data.logs.map(l => {
+                // 转换为中国标准时间 (Asia/Shanghai)
+                const date = new Date(l.timestamp);
+                const timeStr = date.toLocaleString('zh-CN', { 
+                    timeZone: 'Asia/Shanghai',
+                    hour12: false,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                let actionColor = 'var(--primary)';
+                if(l.action === 'DELETE') actionColor = 'var(--error)';
+                if(l.action === 'UPLOAD') actionColor = '#10b981';
+
+                return `
+                    <tr>
+                        <td class="col-time" style="font-size:12px; color:var(--text-muted);">${timeStr}</td>
+                        <td class="col-action"><b style="color:${actionColor}">${l.action}</b></td>
+                        <td class="col-details details-cell">${l.details}</td>
+                        <td class="col-ip"><code>${l.ip}</code></td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         async function loadHiddenList() {
@@ -109,6 +166,7 @@
             loadHiddenList();
         }
 
+        // 初始加载
         loadLogs();
     </script>
 </body>
