@@ -24,17 +24,12 @@
                 <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
                 <button class="btn admin-only" onclick="showMkdir()">新建文件夹</button>
                 <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
-                
                 <div style="width:1px; height:16px; background:var(--surface-light); margin:0 4px;"></div>
-                
-                <!-- 排序框 -->
                 <select id="sortSelect" class="select-input" onchange="changeSort()">
                     <option value="name">名称排序</option>
                     <option value="time">时间排序</option>
                     <option value="size">大小排序</option>
                 </select>
-                
-                <!-- 显示模式按钮 -->
                 <button id="viewBtn" class="tool-btn" onclick="toggleViewMode()">图墙模式</button>
             </div>
         </div>
@@ -44,7 +39,7 @@
     <!-- 登录弹窗 -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
-            <button class="login-close" onclick="closeLoginModal()">&times;</button>
+            <button onclick="closeLoginModal()" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
             <h1 class="login-title">管理端登录</h1>
             <div class="input-container">
                 <label class="input-name">用户名</label>
@@ -66,8 +61,8 @@
     </div>
 
     <!-- Modals -->
-    <div id="renameModal" class="modal-overlay"><div class="modal"><h3>重命名</h3><input type="text" id="newNameInput" class="form-input"><button class="btn" style="width:100%; background:var(--primary)" onclick="submitRename()">确定</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
-    <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn" style="width:100%; background:var(--primary)" onclick="submitMkdir()">创建</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
+    <div id="renameModal" class="modal-overlay"><div class="modal"><h3>重命名</h3><input type="text" id="newNameInput" class="form-input"><button class="btn btn-primary" style="width:100%" onclick="submitRename()">确定</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
+    <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn btn-primary" style="width:100%" onclick="submitMkdir()">创建</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
     <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="modal" style="max-width:90%; width:800px; height:80vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; margin-bottom:12px;"><h3 id="previewTitle">预览</h3><button onclick="closePreview()" style="background:none; border:none; color:#fff; cursor:pointer; font-size:24px;">&times;</button></div><div id="previewContent" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px;"></div></div></div>
 
     <script>
@@ -87,7 +82,7 @@
                 btnBox.innerHTML = `<a href="/admin.html" class="btn">控制面板</a><button class="btn" onclick="logout()">退出</button>`;
             } else {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-                btnBox.innerHTML = `<button class="btn" onclick="openLoginModal()" style="background:#337ecc">登录</button>`;
+                btnBox.innerHTML = `<button class="btn btn-primary" onclick="openLoginModal()">登录</button>`;
             }
         }
 
@@ -123,17 +118,16 @@
         function updateViewUI() {
             const list = document.getElementById('fileList');
             document.getElementById('sortSelect').value = sortBy;
-            
-            // 更新按钮文字
             document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '图墙模式' : '列表模式';
-
             list.className = viewMode === 'grid' ? 'file-grid' : 'file-list-mode';
             list.innerHTML = '';
+
             if (!isSearching && currentPath !== '/') {
                 const parts = currentPath.split('/').filter(p => p); parts.pop();
                 const parent = '/' + parts.join('/') + (parts.length > 0 ? '/' : '');
                 list.innerHTML += `<div class="file-item" onclick="currentPath='${parent}';loadFiles()"><div class="file-main"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-info">返回上级</div><div class="file-actions"></div></div>`;
             }
+
             const folders = [...(fileData.folders || [])].sort((a,b) => a.name.localeCompare(b.name));
             const files = [...(fileData.files || [])].sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
             folders.forEach(f => list.innerHTML += renderItem(f, true));
@@ -149,7 +143,10 @@
                 acts.push(`<button class="btn btn-sm btn-danger" onclick="deleteItem('${item.path}')">删除</button>`);
             }
             return `<div class="file-item" onclick="${isFolder?`navigateTo('${item.path}')`:''}">
-                <div class="file-main"><div class="file-icon">${isFolder?'📁':getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div>
+                <div class="file-main">
+                    <div class="file-icon">${isFolder?'📁':getFileIcon(item.name)}</div>
+                    <div class="file-name">${item.name}</div>
+                </div>
                 <div class="file-info">${isFolder?'文件夹':item.sizeFormatted}</div>
                 <div class="file-actions" onclick="event.stopPropagation()">${acts.join('')}</div>
             </div>`;
