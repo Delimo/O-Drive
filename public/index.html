@@ -3,38 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>O-Drive - 云盘</title>
+    <title>O-Drive</title>
     <link rel="stylesheet" href="/style.css">
-    <style>.admin-only { display: none !important; }</style>
+    <style>.admin-only { display: none; }</style>
 </head>
 <body>
     <div class="header">
-        <div class="header-left">
-            <a class="app-title-container" href="/">
-                <span style="font-size: 24px;">🚀</span>
-                <h1 class="logo">O-Drive</h1>
-            </a>
-        </div>
-        <div class="header-center">
-            <span class="search-icon-hint">🔍</span>
-            <input type="search" id="searchInput" placeholder="全盘搜索文件..." onkeypress="if(event.key==='Enter')handleSearch()">
-            <span id="clearSearch" onclick="clearSearch()">&times;</span>
+        <div class="header-left"><a class="logo-box" href="/"><span style="font-size:24px;">🚀</span><span class="logo-text">O-Drive</span></a></div>
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="search" id="searchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')handleSearch()">
         </div>
         <div class="header-right" id="authButtons"></div>
     </div>
 
     <div class="container">
         <div class="toolbar">
-            <div class="tools-left">
-                <div id="breadcrumb"></div>
-            </div>
+            <div class="tools-left"><div id="breadcrumb"></div></div>
             <div class="tools-right">
                 <button class="btn btn-primary admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
                 <button class="btn btn-secondary admin-only" onclick="showMkdir()">新建文件夹</button>
                 <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
-                
-                <div style="width: 1px; height: 16px; background: var(--surface-light); margin: 0 4px;"></div>
-                
+                <div style="width:1px; height:16px; background:var(--surface-light); margin:0 4px;"></div>
                 <select id="sortSelect" class="select-input" onchange="changeSort()">
                     <option value="name">名称排序</option>
                     <option value="time">时间排序</option>
@@ -43,45 +33,37 @@
                 <button id="viewBtn" class="btn btn-secondary btn-icon" onclick="toggleViewMode()">📋</button>
             </div>
         </div>
-
         <div id="fileList" class="file-grid"></div>
     </div>
 
     <!-- Modals -->
-    <div id="renameModal" class="modal-overlay"><div class="modal"><h3>重命名</h3><input type="text" id="newNameInput" class="form-input"><button class="btn btn-primary" style="width:100%" onclick="submitRename()">确定</button><button class="btn btn-secondary" style="width:100%; margin-top:5px;" onclick="closeModal()">取消</button></div></div>
-    <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn btn-primary" style="width:100%" onclick="submitMkdir()">创建</button><button class="btn btn-secondary" style="width:100%; margin-top:5px;" onclick="closeModal()">取消</button></div></div>
-    <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="modal" style="max-width:90%; width:800px; height:80vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h3 id="previewTitle">预览</h3><button onclick="closePreview()" style="background:none; border:none; color:white; cursor:pointer; font-size:20px;">&times;</button></div><div id="previewContent" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px;"></div></div></div>
+    <div id="renameModal" class="modal-overlay"><div class="modal"><h3>重命名</h3><input type="text" id="newNameInput" class="form-input"><button class="btn btn-primary" style="width:100%" onclick="submitRename()">确定</button><button class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
+    <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn btn-primary" style="width:100%" onclick="submitMkdir()">创建</button><button class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
+    <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="modal" style="max-width:90%; width:800px; height:80vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; margin-bottom:12px;"><h3 id="previewTitle">预览</h3><button onclick="closePreview()" style="background:none; border:none; color:#fff; cursor:pointer; font-size:24px;">&times;</button></div><div id="previewContent" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px;"></div></div></div>
 
     <script>
-        let currentPath = '/';
-        let userRole = 'guest';
-        let viewMode = localStorage.getItem('viewMode') || 'grid'; 
-        let sortBy = localStorage.getItem('sortBy') || 'name';
-        let fileData = { folders: [], files: [] };
-        let isSearching = false;
+        let currentPath = '/', userRole = 'guest', viewMode = localStorage.getItem('viewMode') || 'grid', sortBy = localStorage.getItem('sortBy') || 'name', fileData = { folders: [], files: [] }, isSearching = false;
 
         async function initAuth() {
-            try {
-                const res = await fetch('/api/auth/role');
-                if (res.status === 401) return window.location.href = '/login.html';
-                const data = await res.json();
-                userRole = data.role || 'guest';
-                const authBtnContainer = document.getElementById('authButtons');
-                if (userRole === 'admin') {
-                    document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('admin-only'));
-                    authBtnContainer.innerHTML = `<a href="/admin.html" class="btn btn-secondary">控制面板</a><button class="btn btn-secondary" onclick="logout()">退出</button>`;
-                } else {
-                    authBtnContainer.innerHTML = `<a href="/login.html" class="btn btn-primary">登录</a>`;
-                }
-                loadFiles();
-            } catch (e) { window.location.href = '/login.html'; }
+            const res = await fetch('/api/auth/role');
+            if (res.status === 401) return window.location.href = '/login.html';
+            const data = await res.json();
+            userRole = data.role || 'guest';
+            const btnBox = document.getElementById('authButtons');
+            if (userRole === 'admin') {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-flex');
+                btnBox.innerHTML = `<a href="/admin.html" class="btn btn-secondary">控制面板</a><button class="btn btn-secondary" onclick="logout()">退出</button>`;
+            } else {
+                btnBox.innerHTML = `<a href="/login.html" class="btn btn-primary">登录</a>`;
+            }
+            loadFiles();
         }
 
         async function loadFiles() {
             if (isSearching) return;
-            const apiPath = currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`;
-            const res = await fetch(apiPath);
+            const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`);
             fileData = await res.json();
+            document.getElementById('searchInput').placeholder = currentPath === '/' ? "全盘搜索..." : "在当前目录搜索...";
             updateViewUI();
             renderBreadcrumb();
         }
@@ -90,20 +72,13 @@
             const q = document.getElementById('searchInput').value.trim();
             if (!q) return clearSearch();
             isSearching = true;
-            document.getElementById('clearSearch').style.display = 'block';
             const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`);
-            const data = await res.json();
-            fileData = { folders: [], files: data.files || [] };
+            fileData = { folders: [], files: (await res.json()).files || [] };
             updateViewUI();
-            document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索结果: "${q}"</span>`;
+            document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
         }
 
-        function clearSearch() {
-            isSearching = false;
-            document.getElementById('searchInput').value = '';
-            document.getElementById('clearSearch').style.display = 'none';
-            loadFiles();
-        }
+        function clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; loadFiles(); }
 
         function updateViewUI() {
             const list = document.getElementById('fileList');
@@ -113,62 +88,57 @@
             list.innerHTML = '';
 
             if (!isSearching && currentPath !== '/') {
-                const parts = currentPath.split('/').filter(p => p);
-                parts.pop();
-                const parentPath = '/' + parts.join('/') + (parts.length > 0 ? '/' : '');
-                list.innerHTML += `<div class="file-item" onclick="currentPath='${parentPath}';loadFiles()">
-                    <div class="file-info-top">
-                        <div class="file-icon">📁</div>
-                        <div class="file-name">..</div>
-                        <div class="file-meta">返回上级</div>
-                    </div>
-                </div>`;
+                const parts = currentPath.split('/').filter(p => p); parts.pop();
+                const parent = '/' + parts.join('/') + (parts.length > 0 ? '/' : '');
+                list.innerHTML += `<div class="file-item" onclick="currentPath='${parent}';loadFiles()"><div class="file-main"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-info">返回上级</div><div class="file-actions"></div></div>`;
             }
 
-            const sortedFolders = [...(fileData.folders || [])].sort((a, b) => a.name.localeCompare(b.name));
-            const sortedFiles = [...(fileData.files || [])].sort((a, b) => {
-                if (sortBy === 'time') return (b.time || 0) - (a.time || 0);
-                if (sortBy === 'size') return (b.rawSize || 0) - (a.rawSize || 0);
-                return a.name.localeCompare(b.name);
-            });
-            sortedFolders.forEach(f => { list.innerHTML += renderItem(f, true); });
-            sortedFiles.forEach(f => { list.innerHTML += renderItem(f, false); });
+            const folders = [...(fileData.folders || [])].sort((a,b) => a.name.localeCompare(b.name));
+            const files = [...(fileData.files || [])].sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
+            folders.forEach(f => list.innerHTML += renderItem(f, true));
+            files.forEach(f => list.innerHTML += renderItem(f, false));
         }
 
         function renderItem(item, isFolder) {
-            const actions = [];
-            if (!isFolder && isPreviewable(item.name)) actions.push(`<button class="btn btn-sm btn-primary" style="padding:4px 10px; height:28px;" onclick="openPreview('${item.path}', '${item.name}')">预览</button>`);
-            if (!isFolder) actions.push(`<button class="btn btn-sm btn-primary" style="padding:4px 10px; height:28px;" onclick="downloadFile('${item.path}')">下载</button>`);
+            const acts = [];
+            if (!isFolder && isPreviewable(item.name)) acts.push(`<button class="btn btn-sm btn-primary" onclick="openPreview('${item.path}','${item.name}')">预览</button>`);
+            if (!isFolder) acts.push(`<button class="btn btn-sm btn-primary" onclick="downloadFile('${item.path}')">下载</button>`);
             if (userRole === 'admin') {
-                actions.push(`<button class="btn btn-sm btn-secondary" style="padding:4px 10px; height:28px;" onclick="openRename('${item.path}','${item.name}')">重命名</button>`);
-                actions.push(`<button class="btn btn-sm btn-danger" style="padding:4px 10px; height:28px;" onclick="deleteItem('${item.path}')">删</button>`);
+                acts.push(`<button class="btn btn-sm btn-secondary" onclick="openRename('${item.path}','${item.name}')">重命名</button>`);
+                acts.push(`<button class="btn btn-sm btn-danger" onclick="deleteItem('${item.path}')">删</button>`);
             }
-
-            return `
-            <div class="file-item" onclick="${isFolder ? `navigateTo('${item.path}')` : ''}">
-                <div class="file-info-top">
-                    <div class="file-icon">${isFolder ? '📁' : getFileIcon(item.name)}</div>
-                    <div class="file-name" title="${item.name}">${item.name}</div>
-                    <div class="file-meta">${isFolder ? '文件夹' : item.sizeFormatted}</div>
-                </div>
-                <div class="file-actions" onclick="event.stopPropagation()">${actions.join('')}</div>
+            return `<div class="file-item" onclick="${isFolder?`navigateTo('${item.path}')`:''}">
+                <div class="file-main"><div class="file-icon">${isFolder?'📁':getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div>
+                <div class="file-info">${isFolder?'文件夹':item.sizeFormatted}</div>
+                <div class="file-actions" onclick="event.stopPropagation()">${acts.join('')}</div>
             </div>`;
         }
 
-        function toggleViewMode() { viewMode = viewMode === 'grid' ? 'list' : 'grid'; localStorage.setItem('viewMode', viewMode); updateViewUI(); }
+        function toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); updateViewUI(); }
         function changeSort() { sortBy = document.getElementById('sortSelect').value; localStorage.setItem('sortBy', sortBy); updateViewUI(); }
         function isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf'].includes(ext); }
-        function getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); if (['jpg','jpeg','png','webp','gif'].includes(ext)) return '🖼️'; if (['mp4','webm'].includes(ext)) return '🎬'; if (['mp3','wav'].includes(ext)) return '🎵'; if (['pdf'].includes(ext)) return '📕'; return '📄'; }
+        function getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','webp','gif'].includes(ext)?'🖼️':['mp4','webm'].includes(ext)?'🎬':['mp3','wav'].includes(ext)?'🎵':ext==='pdf'?'📕':['zip','rar','7z'].includes(ext)?'📦':'📄'; }
         function navigateTo(p) { currentPath = p + '/'; loadFiles(); }
-        function renderBreadcrumb() { if(isSearching) return; let html = `<span style="cursor:pointer; color:var(--primary); font-weight:bold;" onclick="currentPath='/';loadFiles()">🏠 根目录</span>`; let acc = ''; const parts = currentPath.split('/').filter(p => p); parts.forEach((p, index) => { acc += '/' + p; html += ` <span style="color:var(--text-muted)">/</span> <span style="cursor:pointer; ${index === parts.length - 1 ? 'color:white' : ''}" onclick="currentPath='${acc}/';loadFiles()">${p}</span>`; }); document.getElementById('breadcrumb').innerHTML = html; }
-        function openPreview(path, name) { const ext = name.split('.').pop().toLowerCase(); const url = `/api/preview${path}`; const content = document.getElementById('previewContent'); document.getElementById('previewTitle').textContent = name; content.innerHTML = ''; if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;">`; else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%; max-height:100%;"></video>`; else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="${url}" controls autoplay style="width:80%;"></audio>`; else if (ext === 'pdf') content.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;"></iframe>`; else if (ext === 'txt') fetch(url).then(r => r.text()).then(t => { content.innerHTML = `<pre style="color:white; padding:20px; width:100%; white-space:pre-wrap; font-size:14px;">${t}</pre>`; }); document.getElementById('previewModal').classList.add('active'); }
+        function renderBreadcrumb() { if(isSearching) return; let html = `<span style="cursor:pointer;color:var(--primary);font-weight:700;" onclick="currentPath='/';loadFiles()">🏠 根目录</span>`; let acc = ''; currentPath.split('/').filter(p=>p).forEach((p,i,a) => { acc += '/'+p; html += ` <span style="opacity:0.5">/</span> <span style="cursor:pointer;${i===a.length-1?'color:#fff':''}" onclick="currentPath='${acc}/';loadFiles()">${p}</span>`; }); document.getElementById('breadcrumb').innerHTML = html; }
+        
+        function openPreview(path, name) {
+            const ext = name.split('.').pop().toLowerCase(), url = `/api/preview${path}`, content = document.getElementById('previewContent');
+            document.getElementById('previewTitle').textContent = name; content.innerHTML = '';
+            if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+            else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%;max-height:100%;"></video>`;
+            else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="${url}" controls autoplay style="width:80%;"></audio>`;
+            else if (ext === 'pdf') content.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe>`;
+            else if (ext === 'txt') fetch(url).then(r=>r.text()).then(t=> { content.innerHTML = `<pre style="color:#fff;padding:20px;width:100%;white-space:pre-wrap;font-size:13px;">${t}</pre>`; });
+            document.getElementById('previewModal').classList.add('active');
+        }
+
         function closePreview() { document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewModal').classList.remove('active'); }
-        async function uploadFiles(files) { if(userRole!=='admin') return; const target = currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } loadFiles(); }
-        function showMkdir() { if(userRole==='admin') document.getElementById('mkdirModal').classList.add('active'); }
-        async function submitMkdir() { const folderName = document.getElementById('folderNameInput').value; if(!folderName) return; const target = currentPath === '/' ? '/api/mkdir' : `/api/mkdir${currentPath.replace(/\/$/, '')}`; await fetch(target, { method: 'POST', body: JSON.stringify({ folderName }) }); closeModal(); loadFiles(); }
-        async function deleteItem(p) { if(userRole==='admin' && confirm('确定删除?')) { await fetch(`/api/files${p}`, {method:'DELETE'}); loadFiles(); } }
+        async function uploadFiles(files) { const target = currentPath==='/'?'/api/files':`/api/files${currentPath.replace(/\/$/,'')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } loadFiles(); }
+        function showMkdir() { document.getElementById('mkdirModal').classList.add('active'); }
+        async function submitMkdir() { const folderName = document.getElementById('folderNameInput').value; if(!folderName) return; const target = currentPath==='/'?'/api/mkdir':`/api/mkdir${currentPath.replace(/\/$/,'')}`; await fetch(target, { method: 'POST', body: JSON.stringify({ folderName }) }); closeModal(); loadFiles(); }
+        async function deleteItem(p) { if(confirm('确定删除?')) { await fetch(`/api/files${p}`, {method:'DELETE'}); loadFiles(); } }
         function downloadFile(p) { window.open(`/api/download${p}`); }
-        function openRename(p, n) { if(userRole==='admin'){ renameTarget = p; document.getElementById('newNameInput').value = n; document.getElementById('renameModal').classList.add('active'); } }
+        function openRename(p, n) { renameTarget = p; document.getElementById('newNameInput').value = n; document.getElementById('renameModal').classList.add('active'); }
         async function submitRename() { const newName = document.getElementById('newNameInput').value; await fetch(`/api/files${renameTarget}`, { method:'PUT', body: JSON.stringify({newName}) }); closeModal(); loadFiles(); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active')); }
         async function logout() { await fetch('/api/logout'); window.location.href = '/'; }
