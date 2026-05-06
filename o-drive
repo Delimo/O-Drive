@@ -5,8 +5,8 @@ DROP TABLE IF EXISTS logs;
 
 CREATE TABLE IF NOT EXISTS logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    action TEXT NOT NULL,         -- 操作类型: UPLOAD, DELETE, RENAME, DOWNLOAD
-    details TEXT,                 -- 详细信息: 文件路径或改名详情
-    ip TEXT,                      -- 操作者 IP 地址
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP -- 操作时间
+    action TEXT NOT NULL,
+    details TEXT,
+    ip TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
