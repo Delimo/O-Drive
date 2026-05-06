@@ -34,17 +34,7 @@ body {
 
 .header-left { display: flex; align-items: center; }
 .app-title-container { display: flex; align-items: center; text-decoration: none; }
-
-/* 修改为纯白色 Logo */
-.logo { 
-  font-size: 20px; 
-  font-weight: 700; 
-  color: #ffffff;
-  margin: 0 25px 0 8px;
-  user-select: none;
-  background: none;
-  -webkit-text-fill-color: initial;
-}
+.logo { font-size: 20px; font-weight: 700; color: #ffffff; margin: 0 25px 0 8px; user-select: none; }
 
 .header-center { flex: 1; max-width: 500px; position: relative; margin: 0 20px; }
 .header-center input[type="search"] { width: 100%; background: var(--background); border: 1px solid var(--surface-light); border-radius: 8px; padding: 8px 12px 8px 35px; color: white; outline: none; font-size: 14px; }
@@ -55,7 +45,7 @@ body {
 /* Main Container */
 .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
 
-/* Toolbar & Breadcrumb 集成 */
+/* Toolbar 布局优化 */
 .toolbar { 
   display: flex; 
   justify-content: space-between; 
@@ -63,30 +53,56 @@ body {
   margin-bottom: 20px; 
   gap: 15px; 
   background: var(--surface);
-  padding: 10px 15px;
+  padding: 8px 15px;
   border-radius: 10px;
   border: 1px solid var(--surface-light);
 }
 
-.tools-group { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; }
-.tools-group-right { display: flex; gap: 8px; align-items: center; }
+.tools-left { flex: 1; min-width: 0; } /* 路径显示占用左侧 */
+.tools-right { display: flex; gap: 8px; align-items: center; } /* 按钮全部居右 */
 
 #breadcrumb { 
   font-size: 14px; 
   white-space: nowrap; 
   overflow: hidden; 
   text-overflow: ellipsis;
-  margin-right: 10px;
 }
 
-.select-input { background: var(--surface-light); color: white; border: none; padding: 8px; border-radius: 6px; font-size: 13px; outline: none; cursor: pointer; }
+/* 统一输入框和选择框风格 */
+.select-input { 
+  background: var(--surface-light); 
+  color: white; 
+  border: 1px solid transparent;
+  padding: 7px 12px; 
+  border-radius: 8px; 
+  font-size: 13px; 
+  outline: none; 
+  cursor: pointer; 
+  transition: 0.2s;
+}
+.select-input:hover { background: #475569; }
 
-/* Buttons */
-.btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: white; text-decoration: none; }
+/* 统一按钮风格 */
+.btn { 
+  padding: 8px 16px; 
+  border-radius: 8px; 
+  border: none; 
+  font-weight: 600; 
+  cursor: pointer; 
+  transition: 0.2s; 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 8px; 
+  font-size: 13px; 
+  color: white; 
+  text-decoration: none;
+  white-space: nowrap;
+}
 .btn-primary { background: var(--gradient); }
 .btn-secondary { background: var(--surface-light); }
+.btn-secondary:hover { background: #475569; }
 .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--error); }
-.btn-icon { padding: 8px; width: 36px; height: 36px; justify-content: center; font-size: 18px; }
+.btn-icon { padding: 0; width: 34px; height: 34px; justify-content: center; font-size: 16px; }
 
 /* Grid & List View */
 .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
@@ -96,7 +112,7 @@ body {
 .file-name { font-size: 13px; font-weight: 500; word-break: break-all; height: 40px; overflow: hidden; color: var(--text); }
 .file-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
 
-.file-list-mode .file-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; margin-bottom: 8px; }
+.file-list-mode .file-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; margin-bottom: 8px; border-radius: 8px; }
 .file-list-mode .file-info { display: flex; align-items: center; gap: 15px; flex: 1; }
 .file-list-mode .file-icon { font-size: 24px; margin: 0; }
 .file-list-mode .file-name { height: auto; white-space: nowrap; }
