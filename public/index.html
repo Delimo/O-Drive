@@ -15,27 +15,22 @@
                 <h1 class="logo">O-Drive</h1>
             </a>
         </div>
-
         <div class="header-center">
             <span class="search-icon-hint">🔍</span>
-            <input type="search" id="searchInput" placeholder="全盘搜索文件..." onkeypress="if(event.key==='Enter')handleSearch()">
+            <input type="search" id="searchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')handleSearch()">
             <span id="clearSearch" onclick="clearSearch()">&times;</span>
         </div>
-
         <div class="header-right" id="authButtons"></div>
     </div>
 
     <div class="container">
         <div class="toolbar">
             <div class="tools-group">
-                <!-- 面包屑现在位于此处 -->
                 <div id="breadcrumb"></div>
-                
                 <button class="btn btn-primary admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
                 <button class="btn btn-secondary admin-only" onclick="showMkdir()">新建文件夹</button>
                 <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
             </div>
-            
             <div class="tools-group-right">
                 <select id="sortSelect" class="select-input" onchange="changeSort()">
                     <option value="name">名称排序</option>
@@ -45,11 +40,10 @@
                 <button id="viewBtn" class="btn btn-secondary btn-icon" onclick="toggleViewMode()">📋</button>
             </div>
         </div>
-
         <div id="fileList" class="file-grid"></div>
     </div>
 
-    <!-- 模态框逻辑 -->
+    <!-- Modals -->
     <div id="renameModal" class="modal-overlay"><div class="modal"><h3>重命名</h3><input type="text" id="newNameInput" class="form-input"><button class="btn btn-primary" style="width:100%" onclick="submitRename()">确定</button><button class="btn btn-secondary" style="width:100%; margin-top:5px;" onclick="closeModal()">取消</button></div></div>
     <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn btn-primary" style="width:100%" onclick="submitMkdir()">创建</button><button class="btn btn-secondary" style="width:100%; margin-top:5px;" onclick="closeModal()">取消</button></div></div>
     <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="modal" style="max-width:90%; width:800px; height:80vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h3 id="previewTitle">预览</h3><button onclick="closePreview()" style="background:none; border:none; color:white; cursor:pointer; font-size:20px;">&times;</button></div><div id="previewContent" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px;"></div></div></div>
@@ -65,34 +59,39 @@
         async function initAuth() {
             try {
                 const res = await fetch('/api/auth/role');
-                if (res.status === 401) return window.location.href = '/login.html';
-                const data = await res.json();
-                userRole = data.role;
                 const authBtnContainer = document.getElementById('authButtons');
+                
+                if (res.status === 401) {
+                    // 如果后端彻底拒绝访客，跳转登录
+                    return window.location.href = '/login.html';
+                }
+
+                const data = await res.json();
+                userRole = data.role || 'guest';
+
                 if (userRole === 'admin') {
                     document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('admin-only'));
-                    document.getElementById('roleBadge').textContent = '(管理员)';
                     authBtnContainer.innerHTML = `<a href="/admin.html" class="btn btn-secondary">控制面板</a><button class="btn btn-secondary" onclick="logout()">退出</button>`;
                 } else {
-                    document.getElementById('roleBadge').textContent = '(访客)';
                     authBtnContainer.innerHTML = `<a href="/login.html" class="btn btn-primary">登录</a>`;
                 }
                 loadFiles();
-            } catch (e) { window.location.href = '/login.html'; }
+            } catch (e) {
+                // 网络错误或后端崩溃时的回退
+                console.error("Auth Init Error:", e);
+                loadFiles(); // 尝试直接加载
+            }
         }
 
         async function loadFiles() {
             if (isSearching) return;
             const apiPath = currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`;
             const res = await fetch(apiPath);
+            if (res.status === 401) return window.location.href = '/login.html';
             fileData = await res.json();
             
             const searchInput = document.getElementById('searchInput');
-            if (currentPath === '/') searchInput.placeholder = "全盘搜索文件...";
-            else {
-                const folderName = currentPath.split('/').filter(p=>p).pop();
-                searchInput.placeholder = `搜索 ${folderName} ...`;
-            }
+            searchInput.placeholder = currentPath === '/' ? "全盘搜索..." : `在当前目录搜索...`;
 
             updateViewUI();
             renderBreadcrumb();
@@ -105,9 +104,8 @@
             document.getElementById('clearSearch').style.display = 'block';
             const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`);
             const data = await res.json();
-            fileData = { folders: [], files: data.files };
+            fileData = { folders: [], files: data.files || [] };
             updateViewUI();
-            const scopeText = currentPath === '/' ? '全盘' : '当前目录';
             document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
         }
 
@@ -132,10 +130,10 @@
                 list.innerHTML += `<div class="file-item" onclick="currentPath='${parentPath}';loadFiles()"><div class="file-info"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-meta">返回上级</div><div class="file-actions"></div></div>`;
             }
 
-            const sortedFolders = [...fileData.folders].sort((a, b) => a.name.localeCompare(b.name));
-            const sortedFiles = [...fileData.files].sort((a, b) => {
-                if (sortBy === 'time') return b.time - a.time;
-                if (sortBy === 'size') return b.rawSize - a.rawSize;
+            const sortedFolders = [...(fileData.folders || [])].sort((a, b) => a.name.localeCompare(b.name));
+            const sortedFiles = [...(fileData.files || [])].sort((a, b) => {
+                if (sortBy === 'time') return (b.time || 0) - (a.time || 0);
+                if (sortBy === 'size') return (b.rawSize || 0) - (a.rawSize || 0);
                 return a.name.localeCompare(b.name);
             });
             sortedFolders.forEach(f => { list.innerHTML += renderItem(f, true); });
@@ -171,33 +169,8 @@
         function isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf'].includes(ext); }
         function getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); if (['jpg','jpeg','png','webp','gif'].includes(ext)) return '🖼️'; if (['mp4','webm'].includes(ext)) return '🎬'; if (['mp3','wav'].includes(ext)) return '🎵'; if (['pdf'].includes(ext)) return '📕'; return '📄'; }
         function navigateTo(p) { currentPath = p + '/'; loadFiles(); }
-        
-        function renderBreadcrumb() { 
-            if(isSearching) return; 
-            let html = `<span style="cursor:pointer; color:var(--primary); font-weight:bold;" onclick="currentPath='/';loadFiles()">🏠 根目录</span>`; 
-            let acc = ''; 
-            const parts = currentPath.split('/').filter(p => p); 
-            parts.forEach((p, index) => { 
-                acc += '/' + p; 
-                html += ` <span style="color:var(--text-muted)">/</span> <span style="cursor:pointer; ${index === parts.length - 1 ? 'color:white' : ''}" onclick="currentPath='${acc}/';loadFiles()">${p}</span>`; 
-            }); 
-            document.getElementById('breadcrumb').innerHTML = html; 
-        }
-
-        function openPreview(path, name) {
-            const ext = name.split('.').pop().toLowerCase();
-            const url = `/api/preview${path}`;
-            const content = document.getElementById('previewContent');
-            document.getElementById('previewTitle').textContent = name;
-            content.innerHTML = '';
-            if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
-            else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%; max-height:100%;"></video>`;
-            else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="${url}" controls autoplay style="width:80%;"></audio>`;
-            else if (ext === 'pdf') content.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;"></iframe>`;
-            else if (ext === 'txt') fetch(url).then(r => r.text()).then(t => { content.innerHTML = `<pre style="color:white; padding:20px; width:100%; white-space:pre-wrap; font-size:14px;">${t}</pre>`; });
-            document.getElementById('previewModal').classList.add('active');
-        }
-
+        function renderBreadcrumb() { if(isSearching) return; let html = `<span style="cursor:pointer; color:var(--primary); font-weight:bold;" onclick="currentPath='/';loadFiles()">🏠 根目录</span>`; let acc = ''; const parts = currentPath.split('/').filter(p => p); parts.forEach((p, index) => { acc += '/' + p; html += ` <span style="color:var(--text-muted)">/</span> <span style="cursor:pointer; ${index === parts.length - 1 ? 'color:white' : ''}" onclick="currentPath='${acc}/';loadFiles()">${p}</span>`; }); document.getElementById('breadcrumb').innerHTML = html; }
+        function openPreview(path, name) { const ext = name.split('.').pop().toLowerCase(); const url = `/api/preview${path}`; const content = document.getElementById('previewContent'); document.getElementById('previewTitle').textContent = name; content.innerHTML = ''; if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;">`; else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%; max-height:100%;"></video>`; else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="${url}" controls autoplay style="width:80%;"></audio>`; else if (ext === 'pdf') content.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;"></iframe>`; else if (ext === 'txt') fetch(url).then(r => r.text()).then(t => { content.innerHTML = `<pre style="color:white; padding:20px; width:100%; white-space:pre-wrap; font-size:14px;">${t}</pre>`; }); document.getElementById('previewModal').classList.add('active'); }
         function closePreview() { document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewModal').classList.remove('active'); }
         async function uploadFiles(files) { if(userRole!=='admin') return; const target = currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } loadFiles(); }
         function showMkdir() { if(userRole==='admin') document.getElementById('mkdirModal').classList.add('active'); }
