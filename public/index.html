@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="header-left"><a class="logo-box" href="/"><span style="font-size:24px;">🚀</span><span class="logo-text">O-Drive</span></a></div>
+        <div class="header-left"><a class="logo-box" href="/"><span style="font-size:24px;">☁️</span><span class="logo-text">O-Drive</span></a></div>
         <div class="search-bar">
             <span class="search-icon">🔍</span>
             <input type="search" id="searchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')handleSearch()">
@@ -30,7 +30,7 @@
                     <option value="time">时间排序</option>
                     <option value="size">大小排序</option>
                 </select>
-                <button id="viewBtn" class="btn btn-icon" onclick="toggleViewMode()">📋</button>
+                <button id="viewBtn" class="btn" style="width:36px; padding:0" onclick="toggleViewMode()">📋</button>
             </div>
         </div>
         <div id="fileList" class="file-grid"></div>
@@ -43,12 +43,10 @@
 
     <script>
         let currentPath = '/', userRole = 'guest', viewMode = localStorage.getItem('viewMode') || 'grid', sortBy = localStorage.getItem('sortBy') || 'name', fileData = { folders: [], files: [] }, isSearching = false;
-
         async function initAuth() {
             const res = await fetch('/api/auth/role');
             if (res.status === 401) return window.location.href = '/login.html';
-            const data = await res.json();
-            userRole = data.role || 'guest';
+            const data = await res.json(); userRole = data.role || 'guest';
             const btnBox = document.getElementById('authButtons');
             if (userRole === 'admin') {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-flex');
@@ -58,47 +56,36 @@
             }
             loadFiles();
         }
-
         async function loadFiles() {
             if (isSearching) return;
             const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`);
             fileData = await res.json();
-            document.getElementById('searchInput').placeholder = currentPath === '/' ? "全盘搜索..." : "在当前目录搜索...";
-            updateViewUI();
-            renderBreadcrumb();
+            document.getElementById('searchInput').placeholder = currentPath === '/' ? "全盘搜索..." : "在子目录搜索...";
+            updateViewUI(); renderBreadcrumb();
         }
-
         async function handleSearch() {
-            const q = document.getElementById('searchInput').value.trim();
-            if (!q) return clearSearch();
+            const q = document.getElementById('searchInput').value.trim(); if (!q) return clearSearch();
             isSearching = true;
             const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`);
             fileData = { folders: [], files: (await res.json()).files || [] };
-            updateViewUI();
-            document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
+            updateViewUI(); document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
         }
-
         function clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; loadFiles(); }
-
         function updateViewUI() {
             const list = document.getElementById('fileList');
             document.getElementById('sortSelect').value = sortBy;
             list.className = viewMode === 'grid' ? 'file-grid' : 'file-list-mode';
-            document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '📋' : '🖼️';
             list.innerHTML = '';
-
             if (!isSearching && currentPath !== '/') {
                 const parts = currentPath.split('/').filter(p => p); parts.pop();
                 const parent = '/' + parts.join('/') + (parts.length > 0 ? '/' : '');
                 list.innerHTML += `<div class="file-item" onclick="currentPath='${parent}';loadFiles()"><div class="file-main"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-info">返回上级</div><div class="file-actions"></div></div>`;
             }
-
             const folders = [...(fileData.folders || [])].sort((a,b) => a.name.localeCompare(b.name));
             const files = [...(fileData.files || [])].sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
             folders.forEach(f => list.innerHTML += renderItem(f, true));
             files.forEach(f => list.innerHTML += renderItem(f, false));
         }
-
         function renderItem(item, isFolder) {
             const acts = [];
             if (!isFolder && isPreviewable(item.name)) acts.push(`<button class="btn btn-sm" onclick="openPreview('${item.path}','${item.name}')">预览</button>`);
@@ -113,14 +100,12 @@
                 <div class="file-actions" onclick="event.stopPropagation()">${acts.join('')}</div>
             </div>`;
         }
-
         function toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); updateViewUI(); }
         function changeSort() { sortBy = document.getElementById('sortSelect').value; localStorage.setItem('sortBy', sortBy); updateViewUI(); }
         function isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf'].includes(ext); }
         function getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','webp','gif'].includes(ext)?'🖼️':['mp4','webm'].includes(ext)?'🎬':['mp3','wav'].includes(ext)?'🎵':ext==='pdf'?'📕':['zip','rar','7z'].includes(ext)?'📦':'📄'; }
         function navigateTo(p) { currentPath = p + '/'; loadFiles(); }
         function renderBreadcrumb() { if(isSearching) return; let html = `<span style="cursor:pointer;color:var(--primary);font-weight:700;" onclick="currentPath='/';loadFiles()">🏠 根目录</span>`; let acc = ''; currentPath.split('/').filter(p=>p).forEach((p,i,a) => { acc += '/'+p; html += ` <span style="opacity:0.5">/</span> <span style="cursor:pointer;${i===a.length-1?'color:#fff':''}" onclick="currentPath='${acc}/';loadFiles()">${p}</span>`; }); document.getElementById('breadcrumb').innerHTML = html; }
-        
         function openPreview(path, name) {
             const ext = name.split('.').pop().toLowerCase(), url = `/api/preview${path}`, content = document.getElementById('previewContent');
             document.getElementById('previewTitle').textContent = name; content.innerHTML = '';
@@ -131,7 +116,6 @@
             else if (ext === 'txt') fetch(url).then(r=>r.text()).then(t=> { content.innerHTML = `<pre style="color:#fff;padding:20px;width:100%;white-space:pre-wrap;font-size:13px;">${t}</pre>`; });
             document.getElementById('previewModal').classList.add('active');
         }
-
         function closePreview() { document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewModal').classList.remove('active'); }
         async function uploadFiles(files) { const target = currentPath==='/'?'/api/files':`/api/files${currentPath.replace(/\/$/,'')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } loadFiles(); }
         function showMkdir() { document.getElementById('mkdirModal').classList.add('active'); }
@@ -142,7 +126,6 @@
         async function submitRename() { const newName = document.getElementById('newNameInput').value; await fetch(`/api/files${renameTarget}`, { method:'PUT', body: JSON.stringify({newName}) }); closeModal(); loadFiles(); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active')); }
         async function logout() { await fetch('/api/logout'); window.location.href = '/'; }
-
         initAuth();
     </script>
 </body>
