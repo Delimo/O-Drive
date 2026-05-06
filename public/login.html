@@ -2,27 +2,49 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>登录 - O-Drive</title>
+    <title>管理员登录 - O-Drive</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <div style="height: 100vh; display: flex; align-items: center; justify-content: center;">
-        <div class="modal" style="display: block;">
-            <h2 style="text-align: center; margin-bottom: 20px;">管理员登录</h2>
-            <input type="password" id="password" class="form-input" placeholder="输入管理员密码" onkeypress="if(event.key==='Enter')login()">
-            <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="login()">进入云盘</button>
+    <div style="height:100vh; display:flex; align-items:center; justify-content:center;">
+        <div class="modal" style="display:block; text-align:center;">
+            <h2 style="margin-bottom:20px;">O-Drive 后台管理</h2>
+            <input type="text" id="username" class="form-input" placeholder="管理员账号">
+            <input type="password" id="pw" class="form-input" placeholder="管理员密码" onkeypress="if(event.key==='Enter')login()">
+            <button id="loginBtn" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:10px;" onclick="login()">登录</button>
+            <p id="msg" style="color:var(--error); font-size:12px; margin-top:10px;"></p>
+            <a href="/" style="display:block; margin-top:15px; color:var(--text-muted); font-size:12px; text-decoration:none;">返回公共主页</a>
         </div>
     </div>
     <script>
         async function login() {
-            const password = document.getElementById('password').value;
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                body: JSON.stringify({ password })
-            });
-            const data = await res.json();
-            if (data.success) window.location.href = '/';
-            else alert(data.message);
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('pw').value;
+            const msg = document.getElementById('msg');
+            const btn = document.getElementById('loginBtn');
+
+            if(!username || !password) return msg.textContent = '请输入完整信息';
+
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            
+            try {
+                const res = await fetch('/api/login', { 
+                    method:'POST', 
+                    body: JSON.stringify({username, password}) 
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    msg.textContent = data.message || '登录失败';
+                    btn.disabled = false;
+                    btn.textContent = '登录';
+                }
+            } catch (e) {
+                msg.textContent = '服务器错误';
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
