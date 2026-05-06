@@ -10,6 +10,8 @@
         .tab-btn.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .tips-box { background: rgba(99, 102, 241, 0.1); border-left: 4px solid var(--primary); padding: 15px; margin-bottom: 20px; border-radius: 4px; font-size: 13px; color: var(--text-muted); }
+        .tips-box b { color: var(--text); display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -23,7 +25,6 @@
             <button class="tab-btn" onclick="switchTab('privacy')">隐私管理</button>
         </div>
 
-        <!-- 日志标签页 -->
         <div id="logs-tab" class="tab-content active">
             <div class="card">
                 <table>
@@ -33,14 +34,21 @@
             </div>
         </div>
 
-        <!-- 隐私管理标签页 -->
         <div id="privacy-tab" class="tab-content">
             <div class="card">
+                <!-- 注意事项引导 -->
+                <div class="tips-box">
+                    <b>配置注意事项：</b>
+                    • <b>路径格式</b>：请输入相对路径，不要带开头的斜杠。正确示例：<code>photos</code> 或 <code>work/docs</code>。<br>
+                    • <b>大小写敏感</b>：R2 路径区分大小写，请确保与云盘中显示的名称完全一致。<br>
+                    • <b>递归生效</b>：隐藏文件夹后，其内部的所有子文件和子文件夹对访客也将自动不可见。<br>
+                    • <b>优先级</b>：隐藏设置即刻生效，无需重启或重新部署。
+                </div>
+
                 <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                    <input type="text" id="hidePathInput" class="form-input" placeholder="输入要隐藏的 R2 路径 (如: work/photos)" style="margin:0; flex:1;">
+                    <input type="text" id="hidePathInput" class="form-input" placeholder="输入要隐藏的路径 (例如: secret_folder)" style="margin:0; flex:1;">
                     <button class="btn btn-primary" onclick="addHiddenPath()">添加隐藏</button>
                 </div>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">* 隐藏后访客不可见。文件夹路径请注意不要带前缀斜杠。</p>
                 <table>
                     <thead><tr><th>已隐藏路径</th><th>状态</th><th>操作</th></tr></thead>
                     <tbody id="hiddenTbody"></tbody>
@@ -96,6 +104,7 @@
         }
 
         async function removeHiddenPath(path) {
+            if(!confirm('确定取消隐藏该路径吗？')) return;
             await fetch(`/api/admin/settings/hidden?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
             loadHiddenList();
         }
