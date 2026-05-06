@@ -18,16 +18,12 @@ async function verifyAuth(request, env) {
   if (!token) return env.ALLOW_GUEST === "true" ? { role: 'guest' } : null;
   try {
     return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
-    return env.ALLOW_GUEST === "true" ? { role: 'guest' } : null;
-  }
+  } catch (e) { return env.ALLOW_GUEST === "true" ? { role: 'guest' } : null; }
 }
 
 async function addLog(env, request, action, details) {
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-  try {
-    await env.DB.prepare("INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)").bind(action, details, ip).run();
-  } catch (e) {}
+  try { await env.DB.prepare("INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)").bind(action, details, ip).run(); } catch (e) {}
 }
 
 export async function onRequest(context) {
@@ -37,61 +33,55 @@ export async function onRequest(context) {
   const method = request.method;
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
 
-  // 1. 登录逻辑 (带频率限制)
+  // 1. 登录与基础鉴权
   if (path === '/api/login' && method === 'POST') {
     const { username, password } = await request.json();
     const now = Date.now();
-
-    // 检查是否有封禁记录
     const attempt = await env.DB.prepare("SELECT * FROM login_attempts WHERE ip = ?").bind(ip).first();
-    
-    if (attempt) {
-        const timePassed = now - attempt.last_attempt;
-        // 如果 10 分钟内尝试超过 5 次，拒绝
-        if (attempt.attempts >= 5 && timePassed < 600000) {
-            const remain = Math.ceil((600000 - timePassed) / 60000);
-            return jsonResponse({ success: false, message: `尝试次数过多，请在 ${remain} 分钟后再试` }, 429);
-        }
-        // 如果已经过了 10 分钟，重置计数
-        if (timePassed >= 600000) {
-            await env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?").bind(ip).run();
-        }
-    }
-
+    if (attempt && attempt.attempts >= 5 && (now - attempt.last_attempt < 600000)) return jsonResponse({ success: false, message: '尝试过多，请稍后再试' }, 429);
     if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
-      // 登录成功，清除失败记录
       await env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?").bind(ip).run();
       const token = await createJWT({ role: 'admin' }, env.ADMIN_PASSWORD);
       return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
     } else {
-      // 登录失败，增加计数
-      await env.DB.prepare(`
-        INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?)
-        ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = ?
-      `).bind(ip, now, now).run();
-      
-      return jsonResponse({ success: false, message: '用户名或密码错误' }, 401);
+      await env.DB.prepare("INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = ?").bind(ip, now, now).run();
+      return jsonResponse({ success: false, message: '错误' }, 401);
     }
   }
 
-  if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; Max-Age=0' });
-
-  // 鉴权逻辑
   const auth = await verifyAuth(request, env);
   if (!auth) return jsonResponse({ success: false }, 401);
 
-  const isAdminPath = path === '/api/admin/logs';
-  const isWriteAction = ['POST', 'PUT', 'DELETE'].includes(method);
-  if ((isAdminPath || (isWriteAction && path.startsWith('/api/'))) && auth.role !== 'admin') {
-    return jsonResponse({ success: false, message: '需要管理员权限' }, 403);
+  // 2. 后台管理接口 (仅限 Admin)
+  if (path.startsWith('/api/admin/')) {
+    if (auth.role !== 'admin') return jsonResponse({ success: false }, 403);
+    
+    // 日志
+    if (path === '/api/admin/logs') {
+      const { results } = await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all();
+      return jsonResponse({ success: true, logs: results });
+    }
+    // 获取隐藏名单
+    if (path === '/api/admin/settings/hidden' && method === 'GET') {
+      const { results } = await env.DB.prepare("SELECT key as path FROM settings").all();
+      return jsonResponse({ success: true, list: results });
+    }
+    // 添加隐藏
+    if (path === '/api/admin/settings/hidden' && method === 'POST') {
+      const { targetPath } = await request.json();
+      await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind(targetPath).run();
+      return jsonResponse({ success: true });
+    }
+    // 删除隐藏
+    if (path === '/api/admin/settings/hidden' && method === 'DELETE') {
+      const targetPath = url.searchParams.get('path');
+      await env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(targetPath).run();
+      return jsonResponse({ success: true });
+    }
   }
 
-  // 后续 API 逻辑保持不变...
+  // 3. 通用 API 权限
   if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
-  if (path === '/api/admin/logs') {
-    const { results } = await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all();
-    return jsonResponse({ success: true, logs: results });
-  }
 
   let r2Path = "";
   if (path.startsWith('/api/files/')) r2Path = decodeURIComponent(path.slice(11));
@@ -99,37 +89,55 @@ export async function onRequest(context) {
   else if (path.startsWith('/api/preview/')) r2Path = decodeURIComponent(path.slice(13));
   else if (path.startsWith('/api/mkdir/')) r2Path = decodeURIComponent(path.slice(11));
 
+  // 获取隐藏列表（用于后续过滤）
+  const hiddenSettings = await env.DB.prepare("SELECT key FROM settings").all();
+  const hiddenPaths = hiddenSettings.results.map(r => r.key);
+
+  // 检查当前访问的 R2 路径是否属于隐藏范围
+  const isTargetHidden = hiddenPaths.some(hp => r2Path === hp || r2Path.startsWith(hp + '/'));
+  if (isTargetHidden && auth.role !== 'admin') {
+    return jsonResponse({ success: false, message: 'Forbidden' }, 403);
+  }
+
+  // 4. 文件列表 (访客过滤)
   if (path.startsWith('/api/files') && method === 'GET') {
     let prefix = r2Path; if (prefix && !prefix.endsWith('/')) prefix += '/';
     const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
-    const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.slice(prefix.length, -1), path: '/' + p.slice(0, -1), time: Date.now() }));
-    const files = (listed.objects || []).map(o => ({ name: o.key.slice(prefix.length), path: '/' + o.key, sizeFormatted: (o.size / 1024 / 1024).toFixed(2) + ' MB', rawSize: o.size, time: o.uploaded.getTime() })).filter(f => f.name !== '' && f.name !== '.folder');
+    
+    const folders = (listed.delimitedPrefixes || []).map(p => {
+        const name = p.slice(prefix.length, -1);
+        const fullPath = p.slice(0, -1);
+        return { name, path: '/' + fullPath, fullKey: fullPath };
+    }).filter(f => auth.role === 'admin' || !hiddenPaths.includes(f.fullKey));
+
+    const files = (listed.objects || []).map(o => {
+        return { name: o.key.slice(prefix.length), path: '/' + o.key, sizeFormatted: (o.size/1024/1024).toFixed(2)+' MB', rawSize: o.size, time: o.uploaded.getTime(), fullKey: o.key };
+    }).filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.includes(f.fullKey)));
+
     return jsonResponse({ folders, files });
   }
 
-  if (path.startsWith('/api/mkdir') && method === 'POST') {
+  // 5. 写操作 (仅限管理员)
+  if (auth.role !== 'admin') return jsonResponse({ success: false }, 403);
+  // ... (Upload, Mkdir, Delete, Rename 逻辑与之前一致，略，确保完整性建议保留)
+  if (path.startsWith('/api/mkdir')) {
     const { folderName } = await request.json();
     let prefix = r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '';
     await env.R2_BUCKET.put(prefix + folderName + '/.folder', new Uint8Array(0));
     await addLog(env, request, 'MKDIR', prefix + folderName);
     return jsonResponse({ success: true });
   }
-
   if (path.startsWith('/api/files') && method === 'POST') {
-    const formData = await request.formData();
-    const file = formData.get('file');
+    const formData = await request.formData(); const file = formData.get('file');
     let prefix = r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '';
     await env.R2_BUCKET.put(prefix + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
     await addLog(env, request, 'UPLOAD', prefix + file.name);
     return jsonResponse({ success: true });
   }
-
   if (path.startsWith('/api/files') && method === 'DELETE') {
-    await env.R2_BUCKET.delete(r2Path);
-    await addLog(env, request, 'DELETE', r2Path);
+    await env.R2_BUCKET.delete(r2Path); await addLog(env, request, 'DELETE', r2Path);
     return jsonResponse({ success: true });
   }
-
   if (path.startsWith('/api/files') && method === 'PUT') {
     const { newName } = await request.json();
     const source = await env.R2_BUCKET.get(r2Path);
@@ -140,16 +148,15 @@ export async function onRequest(context) {
     return jsonResponse({ success: true });
   }
 
-  if (path.startsWith('/api/download')) {
+  // 下载与预览
+  if (path.startsWith('/api/download') || path.startsWith('/api/preview')) {
     const obj = await env.R2_BUCKET.get(r2Path);
     if (!obj) return new Response('Not Found', { status: 404 });
-    return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': `attachment; filename="${encodeURIComponent(r2Path.split('/').pop())}"` } });
-  }
-
-  if (path.startsWith('/api/preview')) {
-    const obj = await env.R2_BUCKET.get(r2Path);
-    if (!obj) return new Response('Not Found', { status: 404 });
-    return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream' } });
+    const isDownload = path.startsWith('/api/download');
+    return new Response(obj.body, { headers: { 
+        'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream',
+        'Content-Disposition': isDownload ? `attachment; filename="${encodeURIComponent(r2Path.split('/').pop())}"` : 'inline'
+    }});
   }
 
   return jsonResponse({ message: 'Not Found' }, 404);
