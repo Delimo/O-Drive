@@ -1,4 +1,3 @@
-// ================= 工具函数 =================
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
@@ -18,102 +17,112 @@ async function verifyAuth(request, env) {
   const token = cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
   if (!token) return null;
   try {
-    const [header, payload, sig] = token.split('.');
-    return JSON.parse(atob(payload));
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload;
   } catch (e) { return null; }
 }
 
 async function addLog(env, request, action, details) {
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-  await env.DB.prepare("INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)").bind(action, details, ip).run();
+  try {
+    await env.DB.prepare("INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)").bind(action, details, ip).run();
+  } catch (e) {}
 }
 
-// ================= 主处理程序 =================
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
 
-  // 1. 登录路由
+  // 1. Login & Logout
   if (path === '/api/login' && method === 'POST') {
     const { password } = await request.json();
     if (password === env.ADMIN_PASSWORD) {
       const token = await createJWT({ role: 'admin' }, env.ADMIN_PASSWORD);
-      return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=${token}; Path=/; HttpOnly; Max-Age=86400` });
+      return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
     }
     return jsonResponse({ success: false, message: '密码错误' }, 401);
   }
-
-  // 2. 退出
   if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; Max-Age=0' });
 
-  // 3. 鉴权
+  // 2. Auth Check
   const auth = await verifyAuth(request, env);
-  if (!auth) return jsonResponse({ success: false, message: '未授权' }, 401);
+  if (!auth) return jsonResponse({ success: false }, 401);
 
-  // 4. 日志查询
+  // 3. Admin Logs
   if (path === '/api/admin/logs') {
     const { results } = await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all();
-    return jsonResponse({ logs: results });
+    return jsonResponse({ success: true, logs: results });
   }
 
-  // 5. 文件操作
-  const r2Path = path.replace('/api/files/', '').replace('/api/download/', '');
-  const decodedPath = decodeURIComponent(r2Path);
+  // 4. File Operations Path Parsing
+  let r2Path = "";
+  if (path.startsWith('/api/files/')) r2Path = decodeURIComponent(path.slice(11));
+  else if (path.startsWith('/api/download/')) r2Path = decodeURIComponent(path.slice(14));
 
-  // 列出文件
+  // List Files
   if (path.startsWith('/api/files') && method === 'GET') {
-    const prefix = decodedPath === 'api/files' ? '' : (decodedPath.endsWith('/') ? decodedPath : decodedPath + '/');
-    const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
+    let prefix = r2Path;
+    if (prefix && !prefix.endsWith('/')) prefix += '/';
     
-    const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.split('/').slice(-2, -1)[0], path: '/' + p.slice(0, -1) }));
+    const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
+    const folders = (listed.delimitedPrefixes || []).map(p => ({
+      name: p.slice(prefix.length, -1),
+      path: '/' + p.slice(0, -1)
+    }));
     const files = (listed.objects || []).map(o => ({
-      name: o.key.split('/').pop(),
+      name: o.key.slice(prefix.length),
       path: '/' + o.key,
       sizeFormatted: (o.size / 1024 / 1024).toFixed(2) + ' MB'
-    })).filter(f => f.name !== '');
+    })).filter(f => f.name !== '' && f.name !== '.folder');
 
     return jsonResponse({ folders, files });
   }
 
-  // 上传
+  // Upload
   if (path.startsWith('/api/files') && method === 'POST') {
     const formData = await request.formData();
     const file = formData.get('file');
-    const key = (decodedPath ? decodedPath + '/' : '') + file.name;
+    let prefix = r2Path;
+    if (prefix && !prefix.endsWith('/')) prefix += '/';
+    const key = prefix + file.name;
     await env.R2_BUCKET.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
     await addLog(env, request, 'UPLOAD', key);
     return jsonResponse({ success: true });
   }
 
-  // 删除
+  // Delete
   if (path.startsWith('/api/files') && method === 'DELETE') {
-    await env.R2_BUCKET.delete(decodedPath);
-    await addLog(env, request, 'DELETE', decodedPath);
+    await env.R2_BUCKET.delete(r2Path);
+    await addLog(env, request, 'DELETE', r2Path);
     return jsonResponse({ success: true });
   }
 
-  // 重命名 (简易版: 复制并删除)
+  // Rename
   if (path.startsWith('/api/files') && method === 'PUT') {
     const { newName } = await request.json();
-    const obj = await env.R2_BUCKET.get(decodedPath);
-    const newKey = decodedPath.substring(0, decodedPath.lastIndexOf('/') + 1) + newName;
-    await env.R2_BUCKET.put(newKey, obj.body);
-    await env.R2_BUCKET.delete(decodedPath);
-    await addLog(env, request, 'RENAME', `${decodedPath} -> ${newName}`);
+    const source = await env.R2_BUCKET.get(r2Path);
+    const dir = r2Path.substring(0, r2Path.lastIndexOf('/') + 1);
+    const newKey = dir + newName;
+    await env.R2_BUCKET.put(newKey, source.body, { httpMetadata: source.httpMetadata });
+    await env.R2_BUCKET.delete(r2Path);
+    await addLog(env, request, 'RENAME', `${r2Path} -> ${newName}`);
     return jsonResponse({ success: true });
   }
 
-  // 下载
+  // Download
   if (path.startsWith('/api/download')) {
-    const obj = await env.R2_BUCKET.get(decodedPath);
-    if (!obj) return new Response('Not Found', { status: 404 });
-    await addLog(env, request, 'DOWNLOAD', decodedPath);
+    const obj = await env.R2_BUCKET.get(r2Path);
+    if (!obj) return new Response('File Not Found', { status: 404 });
+    await addLog(env, request, 'DOWNLOAD', r2Path);
     return new Response(obj.body, {
-      headers: { 'Content-Type': obj.httpMetadata.contentType || 'application/octet-stream', 'Content-Disposition': `attachment; filename="${encodeURIComponent(decodedPath.split('/').pop())}"` }
+      headers: {
+        'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(r2Path.split('/').pop())}"`
+      }
     });
   }
 
-  return jsonResponse({ message: 'Not Found' }, 404);
+  return jsonResponse({ message: 'API Path Not Found' }, 404);
 }
