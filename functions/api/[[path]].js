@@ -15,15 +15,9 @@ async function createJWT(payload, secret) {
 async function verifyAuth(request, env) {
   const cookie = request.headers.get('Cookie') || '';
   const token = cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-  
-  if (!token) {
-    // 核心逻辑：如果没登录，检查是否允许游客模式
-    return env.ALLOW_GUEST === "true" ? { role: 'guest' } : null;
-  }
-
+  if (!token) return env.ALLOW_GUEST === "true" ? { role: 'guest' } : null;
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload;
+    return JSON.parse(atob(token.split('.')[1]));
   } catch (e) {
     return env.ALLOW_GUEST === "true" ? { role: 'guest' } : null;
   }
@@ -41,33 +35,59 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
 
-  // 1. 登录
+  // 1. 登录逻辑 (带频率限制)
   if (path === '/api/login' && method === 'POST') {
-    const { password } = await request.json();
-    if (password === env.ADMIN_PASSWORD) {
+    const { username, password } = await request.json();
+    const now = Date.now();
+
+    // 检查是否有封禁记录
+    const attempt = await env.DB.prepare("SELECT * FROM login_attempts WHERE ip = ?").bind(ip).first();
+    
+    if (attempt) {
+        const timePassed = now - attempt.last_attempt;
+        // 如果 10 分钟内尝试超过 5 次，拒绝
+        if (attempt.attempts >= 5 && timePassed < 600000) {
+            const remain = Math.ceil((600000 - timePassed) / 60000);
+            return jsonResponse({ success: false, message: `尝试次数过多，请在 ${remain} 分钟后再试` }, 429);
+        }
+        // 如果已经过了 10 分钟，重置计数
+        if (timePassed >= 600000) {
+            await env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?").bind(ip).run();
+        }
+    }
+
+    if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
+      // 登录成功，清除失败记录
+      await env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?").bind(ip).run();
       const token = await createJWT({ role: 'admin' }, env.ADMIN_PASSWORD);
       return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
+    } else {
+      // 登录失败，增加计数
+      await env.DB.prepare(`
+        INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?)
+        ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = ?
+      `).bind(ip, now, now).run();
+      
+      return jsonResponse({ success: false, message: '用户名或密码错误' }, 401);
     }
-    return jsonResponse({ success: false, message: '密码错误' }, 401);
   }
+
   if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; Max-Age=0' });
 
-  // 2. 鉴权 (受 ALLOW_GUEST 影响)
+  // 鉴权逻辑
   const auth = await verifyAuth(request, env);
-  if (!auth) return jsonResponse({ success: false, message: '需要登录' }, 401);
+  if (!auth) return jsonResponse({ success: false }, 401);
 
-  // 3. 权限控制：写操作或管理操作必须是管理员
-  const isWriteAction = ['POST', 'PUT', 'DELETE'].includes(method);
   const isAdminPath = path === '/api/admin/logs';
-  
+  const isWriteAction = ['POST', 'PUT', 'DELETE'].includes(method);
   if ((isAdminPath || (isWriteAction && path.startsWith('/api/'))) && auth.role !== 'admin') {
-    return jsonResponse({ success: false, message: '无管理员权限' }, 403);
+    return jsonResponse({ success: false, message: '需要管理员权限' }, 403);
   }
 
-  // 4. API 逻辑
+  // 后续 API 逻辑保持不变...
   if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
-
   if (path === '/api/admin/logs') {
     const { results } = await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all();
     return jsonResponse({ success: true, logs: results });
@@ -80,8 +100,7 @@ export async function onRequest(context) {
   else if (path.startsWith('/api/mkdir/')) r2Path = decodeURIComponent(path.slice(11));
 
   if (path.startsWith('/api/files') && method === 'GET') {
-    let prefix = r2Path;
-    if (prefix && !prefix.endsWith('/')) prefix += '/';
+    let prefix = r2Path; if (prefix && !prefix.endsWith('/')) prefix += '/';
     const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
     const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.slice(prefix.length, -1), path: '/' + p.slice(0, -1), time: Date.now() }));
     const files = (listed.objects || []).map(o => ({ name: o.key.slice(prefix.length), path: '/' + o.key, sizeFormatted: (o.size / 1024 / 1024).toFixed(2) + ' MB', rawSize: o.size, time: o.uploaded.getTime() })).filter(f => f.name !== '' && f.name !== '.folder');
@@ -100,9 +119,8 @@ export async function onRequest(context) {
     const formData = await request.formData();
     const file = formData.get('file');
     let prefix = r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '';
-    const key = prefix + file.name;
-    await env.R2_BUCKET.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
-    await addLog(env, request, 'UPLOAD', key);
+    await env.R2_BUCKET.put(prefix + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
+    await addLog(env, request, 'UPLOAD', prefix + file.name);
     return jsonResponse({ success: true });
   }
 
