@@ -10,6 +10,8 @@
     <style>.admin-only { display: none; }</style>
 </head>
 <body>
+    <div id="toastContainer" class="toast-container"></div>
+
     <div class="header">
         <div class="header-content">
             <div class="header-left"><a class="logo-box" href="/"><span>☁️</span><span>O-Drive</span></a></div>
@@ -19,13 +21,14 @@
             </div>
         </div>
     </div>
+
     <div class="container">
         <div class="toolbar">
             <div class="tools-left" id="breadcrumb"></div>
             <div id="batchTools">
                 <button class="btn btn-sm" style="background:none; border:none" onclick="Actions.selectAll()">全选</button>
                 <div style="width:1px; height:14px; background:var(--border-color)"></div>
-                <button class="btn btn-sm" style="background:none; border:none" onclick="setClipboard('move')">移动</button>
+                <button class="btn btn-sm" style="background:none; border:none" onclick="Actions.setClipboard('move')">移动</button>
                 <button class="btn btn-sm" style="background:none; border:none" onclick="setClipboard('copy')">复制</button>
                 <button class="btn btn-sm btn-danger" style="background:none; border:none" onclick="Actions.batchDelete()">删除</button>
             </div>
@@ -46,10 +49,21 @@
             <div>&copy; 2026 O-Drive. All rights reserved.</div>
         </footer>
     </div>
+
+    <!-- 上传管理器面板 -->
+    <div id="uploadManager" class="upload-manager">
+        <div class="upload-header">
+            <span>上传进度</span>
+            <button onclick="UI.closeUploadManager()" style="background:none; border:none; color:#fff; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div id="uploadList" class="upload-list"></div>
+    </div>
+
+    <!-- Modals -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button onclick="UI.closeModal('loginModal')" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
-            <h1 style="font-size:24px; text-align:center; margin-bottom:30px;">管理端登录</h1>
+            <h1>管理端登录</h1>
             <div class="input-wrapper"><input type="text" id="adminUser" placeholder="用户名"></div>
             <div class="input-wrapper"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()"></div>
             <button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.doLogin()">登录</button>
@@ -58,14 +72,46 @@
     </div>
     <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称" style="width:100%; padding:10px; margin:15px 0; background:var(--background); border:1px solid var(--border-color); color:#fff; border-radius:6px;"><button class="btn btn-primary" style="width:100%" onclick="Actions.submitMkdir()">创建</button><button class="btn" style="width:100%; margin-top:8px;" onclick="UI.closeModal('mkdirModal')">取消</button></div></div>
     <div id="previewModal" class="modal-overlay" onclick="UI.closePreview()"><div class="preview-modal" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 id="previewTitle">预览</h3><div style="display:flex; gap:10px;"><button id="editBtn" class="btn btn-sm" style="display:none" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-sm btn-primary" style="display:none" onclick="Actions.saveTextContent()">保存</button><button onclick="UI.closePreview()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:28px; line-height:1">&times;</button></div></div><div id="previewContent" class="preview-body"></div></div></div>
+
     <script>
+        /**
+         * 1. 全局状态与基础工具
+         */
         let currentPath = '/', userRole = 'guest', isSearching = false, isEditing = false, currentPreviewPath = '';
         let viewMode = localStorage.getItem('viewMode') || 'list', sortBy = localStorage.getItem('sortBy') || 'name';
         let fileData = { folders: [], files: [] }, selectedPaths = [], clipboard = null;
         const sortModes = ['name', 'time', 'size'], sortNames = { name: '名称排序', time: '时间排序', size: '大小排序' };
+
+        const Message = {
+            show(msg, type = 'info') {
+                const container = document.getElementById('toastContainer');
+                const div = document.createElement('div');
+                div.className = `toast toast-${type}`;
+                div.textContent = msg;
+                container.appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            },
+            success(msg) { this.show(msg, 'success'); },
+            error(msg) { this.show(msg, 'error'); },
+            info(msg) { this.show(msg, 'info'); }
+        };
+
+        const Utils = {
+            getParentPath(p) { const pts = p.split('/').filter(x=>x); pts.pop(); return '/' + pts.join('/') + (pts.length? '/':''); },
+            formatDate(ts) { return ts ? new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '-'; },
+            getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','webp','gif'].includes(ext)?'🖼️':['mp4','webm'].includes(ext)?'🎬':['mp3','wav'].includes(ext)?'🎵':ext==='pdf'?'📕':['zip','rar','7z'].includes(ext)?'📦':'📄'; },
+            isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(ext); },
+            escapeHtml(text) { return text.replace(/[&<>"']/g, function(m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; }); }
+        };
+
+        /**
+         * 2. 界面控制
+         */
         const UI = {
             showModal(id) { document.getElementById(id).classList.add('active'); },
             closeModal(id) { document.getElementById(id).classList.remove('active'); },
+            closePreview() { document.getElementById('previewContent').innerHTML = ''; this.closeModal('previewModal'); },
+            closeUploadManager() { document.getElementById('uploadManager').style.display = 'none'; },
             updateAuth() {
                 const btnBox = document.getElementById('authButtons');
                 if (userRole === 'admin') {
@@ -110,32 +156,43 @@
                     if (userRole === 'admin') {
                         const nameEl = div.querySelector('.file-name');
                         nameEl.ondblclick = (e) => { e.stopPropagation(); const oldName = item.name; const input = document.createElement('input'); input.className = 'rename-input'; input.value = oldName; nameEl.replaceWith(input); input.focus(); input.select();
-                            const save = async () => { if (input.value && input.value !== oldName) { await fetch(`/api/files/${item.fullKey}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) }); Actions.loadFiles(); } else { Actions.loadFiles(); } };
+                            const save = async () => { if (input.value && input.value !== oldName) { await fetch(`/api/files/${item.fullKey}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) }); Actions.loadFiles(); Message.success('重命名成功'); } else { Actions.loadFiles(); } };
                             input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') save(); };
                         };
                     }
                     list.appendChild(div);
                 });
             },
-            updateBatchUI() { const bt = document.getElementById('batchTools'); const pb = document.getElementById('pasteBtn'); bt.style.display = (userRole === 'admin' && selectedPaths.length > 0) ? 'flex' : 'none'; pb.style.display = (userRole === 'admin' && clipboard) ? 'inline-flex' : 'none'; if (clipboard) pb.textContent = `粘贴 (${clipboard.paths.length})`; },
-            closePreview() { document.getElementById('previewContent').innerHTML = ''; this.closeModal('previewModal'); }
+            updateBatchUI() { const bt = document.getElementById('batchTools'); const pb = document.getElementById('pasteBtn'); bt.style.display = (userRole === 'admin' && selectedPaths.length > 0) ? 'flex' : 'none'; pb.style.display = (userRole === 'admin' && clipboard) ? 'inline-flex' : 'none'; if (clipboard) pb.textContent = `粘贴 (${clipboard.paths.length})`; }
         };
+
+        /**
+         * 3. 业务逻辑
+         */
         const Actions = {
             async init() { const res = await fetch('/api/auth/role'); const data = (res.status === 200) ? await res.json() : { role: 'guest' }; userRole = data.role || 'guest'; UI.updateAuth(); this.loadFiles(); },
             async loadFiles() { if (isSearching) return; selectedPaths = []; UI.updateBatchUI(); const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`); fileData = await res.json(); UI.updateFileList(); UI.renderBreadcrumb(); },
             async doLogin() {
                 const u = document.getElementById('adminUser').value; const p = document.getElementById('adminPass').value;
                 const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:u, password:p}) });
-                if((await res.json()).success) window.location.reload();
-                else document.getElementById('loginError').textContent = '用户名或密码错误';
+                if((await res.json()).success) { Message.success('欢迎回来'); setTimeout(()=>window.location.reload(), 500); }
+                else Message.error('登录失败');
             },
             async logout() { await fetch('/api/logout'); window.location.reload(); },
             navigateTo(p) { currentPath = p.endsWith('/') ? p : p + '/'; isSearching = false; this.loadFiles(); },
             toggleSelect(key, el, e) { e.stopPropagation(); if (selectedPaths.includes(key)) selectedPaths = selectedPaths.filter(p => p !== key); else selectedPaths.push(key); UI.updateBatchUI(); UI.updateFileList(); },
             selectAll() { selectedPaths = [...fileData.folders, ...fileData.files].map(i => i.fullKey); UI.updateFileList(); UI.updateBatchUI(); },
-            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); },
-            async executePaste() { await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); clipboard = null; this.loadFiles(); },
-            async batchDelete() { if (confirm(`确定删除选中的 ${selectedPaths.length} 项吗？`)) { await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); this.loadFiles(); } },
+            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); Message.info(`已加入剪贴板，请前往目的地粘贴`); },
+            async executePaste() {
+                const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) });
+                if((await res.json()).success) { Message.success('粘贴完成'); clipboard = null; this.loadFiles(); }
+            },
+            async batchDelete() {
+                if (confirm(`确定删除这 ${selectedPaths.length} 项吗？`)) {
+                    const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) });
+                    if((await res.json()).success) { Message.success('删除成功'); this.loadFiles(); }
+                }
+            },
             async handleSearch() {
                 const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch();
                 isSearching = true;
@@ -146,7 +203,7 @@
             clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
             async openPreview(path, name) {
                 currentPreviewPath = path; isEditing = false; const content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn');
-                editBtn.style.display = 'none'; saveBtn.style.display = 'none'; title.textContent = "加载中..."; content.innerHTML = '<div style="color:var(--text-muted); padding:50px;">加载中...</div>'; UI.showModal('previewModal');
+                editBtn.style.display = 'none'; saveBtn.style.display = 'none'; title.textContent = "加载中..."; content.innerHTML = '<div style="color:var(--text-muted); padding:50px;">正在努力加载内容...</div>'; UI.showModal('previewModal');
                 const ext = name.split('.').pop().toLowerCase();
                 try {
                     if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<img src="/api/preview${path}" class="preview-media" style="object-fit:contain;">`;
@@ -171,20 +228,53 @@
             async saveTextContent() {
                 const content = document.getElementById('editArea').value;
                 const res = await fetch(`/api/save-text${currentPreviewPath}`, { method: 'POST', body: JSON.stringify({ content }) });
-                if ((await res.json()).success) { UI.closePreview(); this.loadFiles(); }
+                if ((await res.json()).success) { Message.success('修改已保存'); UI.closePreview(); this.loadFiles(); }
             },
             toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
             downloadFile(p) { window.open(`/api/download${p}`); },
-            async submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); UI.closeModal('mkdirModal'); this.loadFiles(); },
-            async uploadFiles(files) { if(userRole!=='admin') return; const target = currentPath==='/'?'/api/files':`/api/files${currentPath.replace(/\/$/,'')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } this.loadFiles(); }
+            async submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); UI.closeModal('mkdirModal'); this.loadFiles(); Message.success('文件夹已创建'); },
+            
+            // --- 核心：带进度的上传 ---
+            async uploadFiles(files) {
+                if(userRole!=='admin') return;
+                const manager = document.getElementById('uploadManager');
+                const list = document.getElementById('uploadList');
+                manager.style.display = 'flex';
+
+                for (let f of files) {
+                    const item = document.createElement('div');
+                    item.className = 'upload-item';
+                    item.innerHTML = `<div class="upload-info"><span>${f.name}</span><span class="pct">0%</span></div><div class="progress-bg"><div class="progress-fill"></div></div>`;
+                    list.prepend(item);
+
+                    const fd = new FormData(); fd.append('file', f);
+                    const xhr = new XMLHttpRequest();
+                    const target = currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`;
+                    
+                    xhr.open('POST', target, true);
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const pct = Math.round((e.loaded / e.total) * 100);
+                            item.querySelector('.progress-fill').style.width = pct + '%';
+                            item.querySelector('.pct').textContent = pct + '%';
+                        }
+                    };
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            item.querySelector('.pct').textContent = '完成';
+                            item.querySelector('.progress-fill').style.background = 'var(--success)';
+                            this.loadFiles();
+                        } else {
+                            item.querySelector('.pct').textContent = '失败';
+                            item.querySelector('.progress-fill').style.background = 'var(--error)';
+                        }
+                    };
+                    xhr.send(fd);
+                }
+            }
         };
-        const Utils = {
-            getParentPath(p) { const pts = p.split('/').filter(x=>x); pts.pop(); return '/' + pts.join('/') + (pts.length? '/':''); },
-            formatDate(ts) { return ts ? new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '-'; },
-            getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','webp','gif'].includes(ext)?'🖼️':['mp4','webm'].includes(ext)?'🎬':['mp3','wav'].includes(ext)?'🎵':ext==='pdf'?'📕':['zip','rar','7z'].includes(ext)?'📦':'📄'; },
-            isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(ext); }
-        };
+
         Actions.init();
     </script>
 </body>
