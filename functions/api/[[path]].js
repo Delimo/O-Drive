@@ -21,7 +21,6 @@ export async function onRequest(context) {
   const method = request.method;
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
 
-  // 1. 登录与安全
   if (path === '/api/login' && method === 'POST') {
     const { username, password } = await request.json();
     const now = Date.now();
@@ -37,7 +36,7 @@ export async function onRequest(context) {
       return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=${header}.${payload}.${signature}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
     } else {
       await env.DB.prepare("INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = ?").bind(ip, now, now).run();
-      return jsonResponse({ success: false }, 401);
+      return jsonResponse({ success: false, message: '错误' }, 401);
     }
   }
   if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT' });
@@ -46,12 +45,11 @@ export async function onRequest(context) {
   if (!auth) return jsonResponse({ success: false }, 401);
   if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
-  // 2. 路径解析与隐藏检查
   let r2Path = decodeURIComponent(path.split('/').slice(3).join('/'));
-  const hiddenPaths = (await env.DB.prepare("SELECT key FROM settings").all()).results.map(r => r.key);
+  const hiddenRes = await env.DB.prepare("SELECT key FROM settings").all();
+  const hiddenPaths = hiddenRes.results.map(r => r.key);
   if (hiddenPaths.some(hp => r2Path === hp || r2Path.startsWith(hp + '/')) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
 
-  // 3. 核心 API
   if (path === '/api/search') {
     const q = url.searchParams.get('q')?.toLowerCase();
     const scope = (url.searchParams.get('scope') || '/').slice(1);
@@ -78,13 +76,9 @@ export async function onRequest(context) {
     return jsonResponse({ folders, files });
   }
 
-  // 4. 管理员写操作
   if (['POST', 'PUT', 'DELETE'].includes(method) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
-
-  if (path.startsWith('/api/save-text/')) {
-    await env.R2_BUCKET.put(decodeURIComponent(path.slice(15)), (await request.json()).content);
-    return jsonResponse({ success: true });
-  }
+  
+  if (path.startsWith('/api/save-text/')) { await env.R2_BUCKET.put(decodeURIComponent(path.slice(15)), (await request.json()).content); return jsonResponse({ success: true }); }
 
   if (path === '/api/batch-delete') {
     const { paths } = await request.json();
@@ -93,6 +87,7 @@ export async function onRequest(context) {
       for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
       await env.R2_BUCKET.delete(p);
     }
+    await addLog(env, request, 'BATCH_DELETE', paths.join(', '));
     return jsonResponse({ success: true });
   }
 
@@ -100,56 +95,34 @@ export async function onRequest(context) {
     const { action, paths, targetDir } = await request.json();
     const destPrefix = targetDir === '/' ? '' : (targetDir.endsWith('/') ? targetDir : targetDir + '/');
     for (const srcPath of paths) {
-        const fileName = srcPath.split('/').pop();
-        const destPath = destPrefix + fileName;
+        const fileName = srcPath.split('/').pop(); const destPath = destPrefix + fileName;
         const listed = await env.R2_BUCKET.list({ prefix: srcPath + '/' });
         const self = await env.R2_BUCKET.get(srcPath);
         if (self) await env.R2_BUCKET.put(destPath, self.body);
         for (const obj of listed.objects) await env.R2_BUCKET.put(destPath + obj.key.slice(srcPath.length), (await env.R2_BUCKET.get(obj.key)).body);
         if (action === 'move') {
-            for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
-            await env.R2_BUCKET.delete(srcPath);
+            for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key); await env.R2_BUCKET.delete(srcPath);
             await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(destPath, srcPath).run();
         }
     }
     return jsonResponse({ success: true });
   }
 
-  if (path.startsWith('/api/mkdir')) {
-    await env.R2_BUCKET.put((r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + (await request.json()).folderName + '/.folder', new Uint8Array(0));
-    return jsonResponse({ success: true });
-  }
-
-  if (path.startsWith('/api/files') && method === 'POST') {
-    const file = (await request.formData()).get('file');
-    await env.R2_BUCKET.put((r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
-    return jsonResponse({ success: true });
-  }
-
+  if (path.startsWith('/api/mkdir')) { await env.R2_BUCKET.put((r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + (await request.json()).folderName + '/.folder', new Uint8Array(0)); return jsonResponse({ success: true }); }
+  if (path.startsWith('/api/files') && method === 'POST') { const file = (await request.formData()).get('file'); await env.R2_BUCKET.put((r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } }); return jsonResponse({ success: true }); }
   if (path.startsWith('/api/files') && method === 'PUT') {
-    const { newName } = await request.json();
-    const source = await env.R2_BUCKET.get(r2Path);
-    const newKey = r2Path.substring(0, r2Path.lastIndexOf('/') + 1) + newName;
+    const { newName } = await request.json(); const source = await env.R2_BUCKET.get(r2Path); const newKey = r2Path.substring(0, r2Path.lastIndexOf('/') + 1) + newName;
     const listed = await env.R2_BUCKET.list({ prefix: r2Path + '/' });
     for (const obj of listed.objects) { await env.R2_BUCKET.put(newKey + obj.key.slice(r2Path.length), (await env.R2_BUCKET.get(obj.key)).body); await env.R2_BUCKET.delete(obj.key); }
     if (source) { await env.R2_BUCKET.put(newKey, source.body); await env.R2_BUCKET.delete(r2Path); }
     await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Path).run();
-    await addLog(env, request, 'RENAME', `${r2Path} -> ${newName}`);
     return jsonResponse({ success: true });
   }
-
-  if (path.startsWith('/api/files') && method === 'DELETE') {
-    const listed = await env.R2_BUCKET.list({ prefix: r2Path + '/' });
-    for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
-    await env.R2_BUCKET.delete(r2Path);
-    return jsonResponse({ success: true });
-  }
+  if (path.startsWith('/api/files') && method === 'DELETE') { const listed = await env.R2_BUCKET.list({ prefix: r2Path + '/' }); for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key); await env.R2_BUCKET.delete(r2Path); return jsonResponse({ success: true }); }
 
   if (path.startsWith('/api/download') || path.startsWith('/api/preview')) {
-    const obj = await env.R2_BUCKET.get(r2Path);
-    if (!obj) return new Response('404', { status: 404 });
+    const obj = await env.R2_BUCKET.get(r2Path); if (!obj) return new Response('404', { status: 404 });
     return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': path.startsWith('/api/download') ? `attachment; filename="${encodeURIComponent(r2Path.split('/').pop())}"` : 'inline' }});
   }
-
   return jsonResponse({ message: 'Not Found' }, 404);
 }
