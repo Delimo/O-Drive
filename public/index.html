@@ -26,7 +26,7 @@
                 <button class="btn btn-sm" style="background:none; border:none" onclick="Actions.selectAll()">全选</button>
                 <div style="width:1px; height:14px; background:var(--border-color)"></div>
                 <button class="btn btn-sm" style="background:none; border:none" onclick="Actions.setClipboard('move')">移动</button>
-                <button class="btn btn-sm" style="background:none; border:none" onclick="Actions.setClipboard('copy')">复制</button>
+                <button class="btn btn-sm" style="background:none; border:none" onclick="setClipboard('copy')">复制</button>
                 <button class="btn btn-sm btn-danger" style="background:none; border:none" onclick="Actions.batchDelete()">删除</button>
             </div>
             <div class="tools-right">
@@ -46,6 +46,7 @@
             <div>&copy; 2026 O-Drive. All rights reserved.</div>
         </footer>
     </div>
+    <!-- 模态框逻辑 -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button onclick="UI.closeModal('loginModal')" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
@@ -144,15 +145,14 @@
                     else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
                     else { const res = await fetch(`/api/preview${path}`); const text = await res.text(); if (userRole === 'admin') editBtn.style.display = 'inline-flex'; if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; text-align:left;">${marked.parse(text)}</div>`; else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:13px; font-family:monospace; text-align:left;">${text}</pre>`; }
                     title.textContent = name;
-                } catch (e) { content.innerHTML = `<div style="color:var(--error); padding:50px;">失败</div>`; }
+                } catch (e) { content.innerHTML = `<div style="color:var(--error); padding:50px;">预览失败</div>`; }
             },
             toggleEditMode() { const pre = document.getElementById('textContent') || document.querySelector('.markdown-body'); const textarea = document.createElement('textarea'); textarea.className = 'edit-textarea'; textarea.id = 'editArea'; textarea.value = pre.innerText || pre.textContent; document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewContent').appendChild(textarea); document.getElementById('editBtn').style.display = 'none'; document.getElementById('saveBtn').style.display = 'inline-flex'; },
             async saveTextContent() { const content = document.getElementById('editArea').value; const res = await fetch(`/api/save-text${currentPreviewPath}`, { method: 'POST', body: JSON.stringify({ content }) }); if ((await res.json()).success) { UI.closePreview(); this.loadFiles(); } },
             toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
             downloadFile(p) { window.open(`/api/download${p}`); },
-            async submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); UI.closeModal('mkdirModal'); this.loadFiles(); },
-            async uploadFiles(files) { if(userRole!=='admin') return; const target = currentPath==='/'?'/api/files':`/api/files${currentPath.replace(/\/$/,'')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } this.loadFiles(); }
+            async submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); UI.closeModal('mkdirModal'); this.loadFiles(); }
         };
         const Utils = {
             getParentPath(p) { const pts = p.split('/').filter(x=>x); pts.pop(); return '/' + pts.join('/') + (pts.length? '/':''); },
