@@ -1,48 +1,22 @@
 :root {
-  --primary: #409eff; 
-  --background: #0f172a;
-  --surface: #1e293b;
-  --surface-light: #2d3748;
-  --surface-hover: #3a4659;
-  --border-color: #334155;
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-  --error: #f56c6c;
-  --radius: 10px;
-  --header-height: 64px;
+  --primary: #409eff; --background: #0f172a; --surface: #1e293b; --surface-light: #2d3748;
+  --surface-hover: #3a4659; --border-color: #334155; --text: #f8fafc; --text-muted: #94a3b8;
+  --error: #f56c6c; --radius: 10px; --header-height: 64px;
 }
-
 html, body { height: 100%; margin: 0; background: var(--background); color: var(--text); font-family: system-ui, -apple-system, sans-serif; }
-
-/* Header 布局 */
 .header { height: var(--header-height); background: var(--surface); border-bottom: 1px solid var(--surface-light); position: sticky; top: 0; z-index: 100; width: 100%; }
 .header-content { max-width: 1200px; margin: 0 auto; height: 100%; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
 .header-left .logo-box { display: flex; align-items: center; text-decoration: none; gap: 10px; color: #fff; font-size: 18px; font-weight: 700; }
-
-/* 右侧按钮组 - 强制间距 */
 .header-right { display: flex; gap: 16px; align-items: center; }
 #authButtons { display: flex; gap: 12px; align-items: center; } 
-
-/* 基础按钮系统 - 统一所有按钮的外观基础 */
-.btn, .tool-btn { 
-  height: 34px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border-color); 
-  font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; 
-  align-items: center; justify-content: center; gap: 6px; transition: 0.2s; 
-  color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap;
-  outline: none; appearance: none; -webkit-appearance: none;
-}
+.btn, .tool-btn { height: 34px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap; outline: none; appearance: none; -webkit-appearance: none; }
 .btn:hover, .tool-btn:hover { background: var(--surface-hover); border-color: var(--primary); }
-.btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
 .btn-primary { background: var(--primary) !important; border: none; }
 .btn-danger { background: rgba(245, 108, 108, 0.1) !important; color: var(--error) !important; border: 1px solid rgba(245, 108, 108, 0.3); }
-
-/* 通用弹窗 */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(10px); }
 .modal-overlay.active { display: flex; }
 .login-card { background: #1a1a1a; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; border: 1px solid #333; position: relative; }
 .input-wrapper { position: relative; background: #262626; border-radius: 8px; border: 1px solid #4c4d4f; height: 44px; display: flex; align-items: center; margin-bottom: 20px; }
 .input-wrapper input { width: 100%; background: transparent; border: none; padding: 0 15px; color: #fff; outline: none; height: 100%; font-size: 14px; text-align: left; }
-
-/* 页脚 */
 .footer { margin-top: 50px; padding: 40px 0; text-align: center; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 13px; line-height: 2.2; }
+.footer a { color: var(--text); text-decoration: none; font-weight: 500; }
