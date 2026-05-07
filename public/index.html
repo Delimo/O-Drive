@@ -49,7 +49,7 @@
         </footer>
     </div>
 
-    <!-- [模块化弹窗] 登录 -->
+    <!-- Modals -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button class="modal-close" onclick="UI.closeModal('loginModal')">&times;</button>
@@ -60,19 +60,14 @@
             <p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p>
         </div>
     </div>
-
-    <!-- [模块化弹窗] 新建文件夹 (已统一风格) -->
     <div id="mkdirModal" class="modal-overlay">
         <div class="mkdir-card">
             <button class="modal-close" onclick="UI.closeModal('mkdirModal')">&times;</button>
             <h1 class="modal-title">新建文件夹</h1>
-            <div class="input-wrapper">
-                <input type="text" id="folderNameInput" placeholder="请输入文件夹名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()">
-            </div>
+            <div class="input-wrapper"><input type="text" id="folderNameInput" placeholder="请输入文件夹名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()"></div>
             <button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.submitMkdir()">创建</button>
         </div>
     </div>
-
     <div id="previewModal" class="modal-overlay" onclick="UI.closePreview()"><div class="preview-modal" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 id="previewTitle">预览</h3><div style="display:flex; gap:10px;"><button id="editBtn" class="btn btn-sm" style="display:none" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-sm btn-primary" style="display:none" onclick="Actions.saveTextContent()">保存</button><button onclick="UI.closePreview()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:28px; line-height:1">&times;</button></div></div><div id="previewContent" class="preview-body"></div></div></div>
     <div id="uploadManager" class="upload-manager">
         <div class="upload-header"><span>上传任务</span><button onclick="UI.closeUploadManager()" style="background:none; border:none; color:#fff; cursor:pointer;">&times;</button></div>
@@ -125,7 +120,9 @@
                 const list = document.getElementById('fileList'); document.getElementById('sortBtn').textContent = sortNames[sortBy];
                 document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '网格视图' : '列表视图';
                 list.className = viewMode === 'grid' ? 'grid-layout' : 'list-layout'; list.innerHTML = '';
-                if (viewMode === 'list') list.innerHTML = `<div class="list-header"><div class="col-name">名称</div><div class="col-size">大小</div><div class="col-time">修改时间</div><div class="col-acts">操作</div></div>`;
+                if (viewMode === 'list') {
+                    list.innerHTML = `<div class="list-header"><div class="col-name">名称</div><div class="col-size">大小</div><div class="col-time">修改时间</div><div class="col-acts" style="text-align:center">操作</div></div>`;
+                }
                 if (currentPath !== '/' && !isSearching) {
                     const parent = Utils.getParentPath(currentPath); const div = document.createElement('div'); div.className = 'file-item';
                     if (viewMode === 'grid') div.innerHTML = `<div class="file-main"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-info">返回上级</div>`;
@@ -175,12 +172,12 @@
                 selectedPaths = (selectedPaths.length === totalKeys.length) ? [] : totalKeys;
                 UI.updateFileList(); UI.updateBatchUI();
             },
-            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); Message.success('已存入剪贴板'); },
+            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); Message.success('已加入剪贴板'); },
             async executePaste() {
                 const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) });
                 if(res.ok) { Message.success('粘贴成功'); clipboard = null; this.loadFiles(); }
             },
-            async batchDelete() { if (confirm(`确认删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('已删除'); this.loadFiles(); } } },
+            async batchDelete() { if (confirm(`确定删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('已删除'); this.loadFiles(); } } },
             async handleSearch() {
                 const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch();
                 isSearching = true;
@@ -199,8 +196,7 @@
                     else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="/api/preview${path}" controls autoplay style="width:80%; margin-top:100px;"></audio>`;
                     else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
                     else {
-                        const res = await fetch(`/api/preview${path}`); const text = await res.text();
-                        if (userRole === 'admin') editBtn.style.display = 'inline-flex';
+                        const res = await fetch(`/api/preview${path}`); const text = await res.text(); if (userRole === 'admin') editBtn.style.display = 'inline-flex';
                         if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; width:100%; text-align:left;">${marked.parse(text)}</div>`;
                         else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:13px; font-family:monospace; text-align:left;">${text}</pre>`;
                     }
@@ -221,7 +217,7 @@
             toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
             downloadFile(p) { window.open(`/api/download${p}`); },
-            async submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); document.getElementById('folderNameInput').value = ''; UI.closeModal('mkdirModal'); this.loadFiles(); Message.success('文件夹已创建'); },
+            async submitMkdir() { const n = document.getElementById('folderNameInput').value.trim(); if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); document.getElementById('folderNameInput').value = ''; UI.closeModal('mkdirModal'); this.loadFiles(); Message.success('文件夹已创建'); },
             async uploadFiles(files) {
                 if(userRole!=='admin') return;
                 const manager = document.getElementById('uploadManager'); const list = document.getElementById('uploadList');
