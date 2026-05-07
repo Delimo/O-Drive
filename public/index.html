@@ -38,7 +38,7 @@
                 <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
                 <div style="width:1px; height:16px; background:var(--surface-light); margin:0 4px;"></div>
                 <button id="sortBtn" class="tool-btn" onclick="Actions.toggleSortMode()">名称排序</button>
-                <button id="viewBtn" class="tool-btn" onclick="Actions.toggleViewMode()">图墙模式</button>
+                <button id="viewBtn" class="tool-btn" onclick="Actions.toggleViewMode()">网格视图</button>
             </div>
         </div>
         <div class="explorer-card"><div id="fileList"></div></div>
@@ -52,15 +52,22 @@
     <!-- Modals -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
-            <button onclick="UI.closeModal('loginModal')" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
-            <h1 style="font-size:24px; text-align:center; margin-bottom:30px;">管理端登录</h1>
+            <button class="modal-close" onclick="UI.closeModal('loginModal')">&times;</button>
+            <h1 class="modal-title">管理端登录</h1>
             <div class="input-wrapper"><input type="text" id="adminUser" placeholder="用户名"></div>
             <div class="input-wrapper"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()"></div>
             <button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.doLogin()">登录</button>
             <p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p>
         </div>
     </div>
-    <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称" style="width:100%; padding:10px; margin:15px 0; background:var(--background); border:1px solid var(--border-color); color:#fff; border-radius:6px;"><button class="btn btn-primary" style="width:100%" onclick="Actions.submitMkdir()">创建</button><button class="btn" style="width:100%; margin-top:8px;" onclick="UI.closeModal('mkdirModal')">取消</button></div></div>
+    <div id="mkdirModal" class="modal-overlay">
+        <div class="mkdir-card">
+            <button class="modal-close" onclick="UI.closeModal('mkdirModal')">&times;</button>
+            <h1 class="modal-title">新建文件夹</h1>
+            <div class="input-wrapper"><input type="text" id="folderNameInput" placeholder="请输入文件夹名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()"></div>
+            <button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.submitMkdir()">创建</button>
+        </div>
+    </div>
     <div id="previewModal" class="modal-overlay" onclick="UI.closePreview()"><div class="preview-modal" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 id="previewTitle">预览</h3><div style="display:flex; gap:10px;"><button id="editBtn" class="btn btn-sm" style="display:none" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-sm btn-primary" style="display:none" onclick="Actions.saveTextContent()">保存</button><button onclick="UI.closePreview()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:28px; line-height:1">&times;</button></div></div><div id="previewContent" class="preview-body"></div></div></div>
     <div id="uploadManager" class="upload-manager">
         <div class="upload-header"><span>上传任务</span><button onclick="UI.closeUploadManager()" style="background:none; border:none; color:#fff; cursor:pointer;">&times;</button></div>
@@ -176,7 +183,6 @@
                 UI.updateFileList(); document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
             },
             clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
-            
             async openPreview(path, name) {
                 currentPreviewPath = path; isEditing = false; const content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn');
                 editBtn.style.display = 'none'; saveBtn.style.display = 'none'; title.textContent = "加载中..."; content.innerHTML = '<div style="color:var(--text-muted); padding:50px;">正在加载内容...</div>'; UI.showModal('previewModal');
@@ -203,13 +209,8 @@
             },
             async saveTextContent() {
                 const content = document.getElementById('editArea').value;
-                // 核心修复：手动移除路径开头的 / 以适配后端逻辑
-                const res = await fetch(`/api/save-text/${currentPreviewPath.replace(/^\//, '')}`, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ content }) 
-                });
-                if (res.ok) { Message.success('修改已保存'); UI.closePreview(); this.loadFiles(); }
-                else { Message.error('保存失败'); }
+                const res = await fetch(`/api/save-text/${currentPreviewPath.replace(/^\//, '')}`, { method: 'POST', body: JSON.stringify({ content }) });
+                if (res.ok) { Message.success('修改已保存'); UI.closePreview(); this.loadFiles(); } else { Message.error('保存失败'); }
             },
             toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
@@ -255,6 +256,7 @@
             isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(ext); },
             escapeHtml(text) { return text.replace(/[&<>"']/g, function(m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; }); }
         };
+
         Actions.init();
     </script>
 </body>
