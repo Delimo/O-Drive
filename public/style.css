@@ -23,52 +23,56 @@ html, body { height: 100%; margin: 0; background: var(--background); color: var(
 .header-right { display: flex; gap: 16px; align-items: center; }
 
 /* Toolbar */
-.toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 12px 20px; border-radius: var(--radius); border: 1px solid var(--surface-light); margin: 24px auto; max-width: 1200px; gap: 16px; height: 60px; }
-.tools-left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 5px; font-size: 14px; }
-.breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; }
-.breadcrumb-item:hover { text-decoration: underline; }
-.tools-right { display: flex; gap: 10px; align-items: center; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 10px 20px; border-radius: var(--radius); border: 1px solid var(--surface-light); margin: 24px auto; max-width: 1200px; gap: 16px; height: 56px; }
+.tools-left { flex: 1; min-width: 0; display: flex; align-items: center; font-size: 14px; overflow: hidden; }
+.tools-right { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 
-/* 批量操作工具栏 */
-#batchTools { display: none; gap: 10px; background: rgba(64, 158, 255, 0.1); padding: 0 15px; border-radius: 8px; height: 36px; align-items: center; border: 1px solid rgba(64, 158, 255, 0.2); }
-
-/* 统一按钮 */
-.btn { height: 36px; padding: 0 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap; }
-.btn:hover:not(:disabled) { background: var(--surface-hover); }
+/* 统一工具按钮 */
+.tool-btn, .btn { 
+  background: var(--surface-light); color: #fff; border: none; height: 34px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; outline: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; min-width: 80px; text-decoration: none; white-space: nowrap;
+}
+.tool-btn:hover, .btn:hover:not(:disabled) { background: var(--surface-hover); }
 .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* 只有登录和确认操作保留蓝色 */
 .btn-primary { background: var(--primary) !important; }
-.btn-danger { background: rgba(245, 108, 108, 0.1); color: var(--error); border: 1px solid rgba(245, 108, 108, 0.2); }
+.btn-danger { background: rgba(245, 108, 108, 0.1) !important; color: var(--error); border: 1px solid rgba(245, 108, 108, 0.2); }
+.btn-sm { height: 28px; padding: 0 10px; font-size: 11px; min-width: 60px; }
 
-.tool-btn { background: var(--surface-light); color: #fff; border: none; height: 36px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0 16px; }
-
-/* Grid View */
+/* --- Grid View (修复变形) --- */
 .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; padding: 0 24px 50px; }
-.file-item { background: var(--surface); border-radius: var(--radius); padding: 24px 16px; text-align: center; border: 2px solid transparent; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; height: 260px; user-select: none; }
+.file-item { 
+  background: var(--surface); border-radius: var(--radius); padding: 20px 15px; text-align: center; border: 2px solid transparent; cursor: pointer; transition: 0.2s; 
+  display: flex; flex-direction: column; height: 250px; /* 适中的高度 */
+  user-select: none;
+}
 .file-item:hover { background: #242f3e; }
 .file-item.selected { border-color: var(--primary); background: rgba(64, 158, 255, 0.1); }
+
 .file-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-.file-icon { font-size: 52px; margin-bottom: 12px; }
-.file-name { font-size: 14px; font-weight: 500; word-break: break-all; pointer-events: auto; }
-.file-info { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
-.file-actions { display: flex; gap: 8px; justify-content: center; margin-top: auto; }
+.file-icon { font-size: 48px; margin-bottom: 12px; }
+.file-name { font-size: 14px; font-weight: 500; word-break: break-all; pointer-events: auto; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+.file-info { font-size: 11px; color: var(--text-muted); margin: 8px 0 12px; }
+.file-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: auto; }
 
-/* 列表模式 */
+/* --- List View (对齐修复) --- */
 .file-list-mode { display: flex; flex-direction: column; gap: 8px; }
-.file-list-mode .file-item { flex-direction: row; height: 60px; padding: 0 24px; justify-content: space-between; align-items: center; }
+.file-list-mode .file-item { flex-direction: row; height: 60px !important; padding: 0 24px; justify-content: space-between; align-items: center; }
 .file-list-mode .file-main { flex-direction: row; justify-content: flex-start; text-align: left; }
-.file-list-mode .file-icon { font-size: 24px; margin-right: 16px; }
+.file-list-mode .file-icon { font-size: 24px; margin: 0 16px 0 0; }
 .file-list-mode .file-name { -webkit-line-clamp: 1; margin: 0; }
-.file-list-mode .file-info { width: 120px; text-align: center; margin: 0 40px; }
+.file-list-mode .file-info { width: 120px; text-align: center; margin: 0 30px; }
+.file-list-mode .file-actions { margin: 0; }
 
-/* --- 登录弹窗 (参照 Element Plus) --- */
+/* --- 登录弹窗 (Element Plus) --- */
 .login-card { background: #1a1a1a; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; position: relative; border: 1px solid #333; }
 .login-title { font-size: 24px; font-weight: 600; color: #fff; margin-bottom: 30px; text-align: center; }
 .input-container { margin-bottom: 20px; }
 .input-name { display: block; font-size: 14px; color: #cfd3dc; margin-bottom: 10px; }
 .input-wrapper { position: relative; background: #262626; border-radius: 8px; border: 1px solid #4c4d4f; }
-.input-wrapper input { width: 100%; background: transparent; border: none; padding: 12px 12px 12px 40px; color: #fff; outline: none; }
+.input-wrapper input { width: 100%; background: transparent; border: none; padding: 12px 12px 12px 40px; color: #fff; outline: none; font-size: 14px; }
 .el-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #909399; display: flex; }
-.submit-btn { width: 100%; height: 44px; background: #337ecc; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+.submit-btn { width: 100%; height: 40px; background: #337ecc; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 10px; }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(10px); }
 .modal-overlay.active { display: flex; }
