@@ -20,21 +20,18 @@
     <div class="container">
         <div class="toolbar">
             <div class="tools-left" id="breadcrumb"></div>
-            
-            <!-- 批量操作工具栏：仅管理员选中时显示 -->
-            <div id="batchTools">
-                <button class="btn btn-sm" style="background:none" onclick="selectAll()">全选</button>
-                <div style="width:1px; height:14px; background:var(--surface-light)"></div>
-                <button class="btn btn-sm" style="background:none" onclick="setClipboard('move')">移动</button>
-                <button class="btn btn-sm" style="background:none" onclick="setClipboard('copy')">复制</button>
-                <button class="btn btn-sm btn-danger" style="border:none" onclick="batchDelete()">批量删除</button>
-            </div>
-
             <div class="tools-right">
+                <div id="batchTools" style="display:none; gap:8px; margin-right:10px;">
+                    <button class="btn btn-sm" onclick="selectAll()">全选</button>
+                    <button class="btn btn-sm" onclick="setClipboard('move')">移动</button>
+                    <button class="btn btn-sm" onclick="setClipboard('copy')">复制</button>
+                    <button class="btn btn-sm btn-danger" onclick="batchDelete()">删除</button>
+                </div>
                 <button id="pasteBtn" class="btn btn-primary" onclick="executePaste()" style="display:none">粘贴</button>
                 <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
                 <button class="btn admin-only" onclick="showMkdir()">新建文件夹</button>
                 <input type="file" id="fileInput" hidden multiple onchange="uploadFiles(this.files)">
+                <div style="width:1px; height:16px; background:var(--surface-light); margin:0 4px;"></div>
                 <button id="sortBtn" class="tool-btn" onclick="toggleSortMode()">名称排序</button>
                 <button id="viewBtn" class="tool-btn" onclick="toggleViewMode()">图墙模式</button>
             </div>
@@ -42,7 +39,7 @@
         <div id="fileList"></div>
     </div>
 
-    <!-- 登录弹窗 (Element Plus 风格) -->
+    <!-- 登录弹窗 -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button onclick="closeLoginModal()" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
@@ -62,11 +59,11 @@
                 </div>
             </div>
             <button class="submit-btn" onclick="doLogin()">登录</button>
-            <p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p>
         </div>
     </div>
 
-    <!-- 其他弹窗 -->
+    <!-- 模态框重名/重命名/新建 -->
+    <div id="renameModal" class="modal-overlay"><div class="modal"><h3>重命名</h3><input type="text" id="newNameInput" class="form-input"><button class="btn btn-primary" style="width:100%" onclick="submitRename()">确定</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
     <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn btn-primary" style="width:100%" onclick="submitMkdir()">创建</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
     <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="modal" style="max-width:90%; width:800px; height:80vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; margin-bottom:12px;"><h3 id="previewTitle">预览</h3><button onclick="closePreview()" style="background:none; border:none; color:#fff; cursor:pointer; font-size:24px;">&times;</button></div><div id="previewContent" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px;"></div></div></div>
 
@@ -88,20 +85,16 @@
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-flex');
                 btnBox.innerHTML = `<a href="/admin.html" class="btn">控制面板</a><button class="btn" onclick="logout()">退出</button>`;
             } else {
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
                 btnBox.innerHTML = `<button class="btn btn-primary" onclick="openLoginModal()">登录</button>`;
             }
         }
 
-        // 登录框函数
         function openLoginModal() { document.getElementById('loginModal').classList.add('active'); }
-        function closeLoginModal() { document.getElementById('loginModal').classList.remove('active'); document.getElementById('loginError').textContent=''; }
+        function closeLoginModal() { document.getElementById('loginModal').classList.remove('active'); }
         async function doLogin() {
-            const username = document.getElementById('adminUser').value;
-            const password = document.getElementById('adminPass').value;
-            const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username, password}) });
-            if((await res.json()).success) { window.location.reload(); }
-            else { document.getElementById('loginError').textContent = '用户名或密码错误'; }
+            const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username: document.getElementById('adminUser').value, password: document.getElementById('adminPass').value}) });
+            if((await res.json()).success) window.location.reload();
+            else alert('登录失败');
         }
 
         async function loadFiles() {
@@ -120,10 +113,9 @@
             list.innerHTML = '';
             
             if (!isSearching && currentPath !== '/') {
-                const parent = getParentPath(currentPath);
                 const div = document.createElement('div'); div.className = 'file-item';
                 div.innerHTML = `<div class="file-main"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-info">返回上级</div><div class="file-actions"></div>`;
-                div.ondblclick = () => navigateTo(parent);
+                div.ondblclick = () => navigateTo(getParentPath(currentPath));
                 list.appendChild(div);
             }
 
@@ -134,46 +126,38 @@
                 const isFolder = !item.sizeFormatted;
                 const div = document.createElement('div');
                 div.className = 'file-item';
-                div.dataset.key = item.fullKey;
+                if(selectedPaths.includes(item.fullKey)) div.classList.add('selected');
+
                 div.innerHTML = `
                     <div class="file-main">
                         <div class="file-icon">${isFolder ? '📁' : getFileIcon(item.name)}</div>
-                        <div class="file-name" title="${userRole==='admin'?'双击重命名':''}">${item.name}</div>
+                        <div class="file-name">${item.name}</div>
                     </div>
                     <div class="file-info">${isFolder ? '文件夹' : item.sizeFormatted}</div>
                     <div class="file-actions" onclick="event.stopPropagation()">
-                        ${!isFolder ? `<button class="btn btn-sm btn-primary" onclick="downloadFile('${item.path}')">下载</button>` : ''}
+                        ${!isFolder ? `<button class="btn btn-sm" onclick="openPreview('${item.path}','${item.name}')">预览</button><button class="btn btn-sm" onclick="downloadFile('${item.path}')">下载</button>` : ''}
                     </div>
                 `;
 
                 div.onclick = (e) => {
-                    if (userRole !== 'admin') return; // 访客不可选中
+                    if (userRole !== 'admin') return;
                     e.stopPropagation();
-                    if (selectedPaths.includes(item.fullKey)) {
-                        selectedPaths = selectedPaths.filter(p => p !== item.fullKey);
-                        div.classList.remove('selected');
-                    } else {
-                        selectedPaths.push(item.fullKey);
-                        div.classList.add('selected');
-                    }
-                    updateBatchUI();
+                    if (selectedPaths.includes(item.fullKey)) selectedPaths = selectedPaths.filter(p => p !== item.fullKey);
+                    else selectedPaths.push(item.fullKey);
+                    updateViewUI(); updateBatchUI();
                 };
 
                 div.ondblclick = () => { if(isFolder) navigateTo(item.path); else openPreview(item.path, item.name); };
-
-                // 仅管理员可双击重命名
+                
                 if (userRole === 'admin') {
                     div.querySelector('.file-name').ondblclick = (e) => {
                         e.stopPropagation();
-                        const oldName = item.name;
-                        const input = document.createElement('input');
-                        input.value = oldName; input.style.width="100%"; input.style.textAlign="center";
+                        const oldName = item.name, input = document.createElement('input');
+                        input.value = oldName; input.className = 'form-input'; input.style.textAlign="center";
                         e.target.replaceWith(input); input.focus();
                         input.onblur = async () => {
-                            if (input.value && input.value !== oldName) {
-                                await fetch(`/api/files/${item.fullKey}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) });
-                                loadFiles();
-                            } else { loadFiles(); }
+                            if (input.value && input.value !== oldName) { await fetch(`/api/files/${item.fullKey}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) }); loadFiles(); }
+                            else loadFiles();
                         };
                     };
                 }
@@ -182,8 +166,7 @@
         }
 
         function updateBatchUI() {
-            const bt = document.getElementById('batchTools');
-            const pb = document.getElementById('pasteBtn');
+            const bt = document.getElementById('batchTools'), pb = document.getElementById('pasteBtn');
             bt.style.display = (userRole === 'admin' && selectedPaths.length > 0) ? 'flex' : 'none';
             pb.style.display = (userRole === 'admin' && clipboard) ? 'inline-flex' : 'none';
             if (clipboard) pb.textContent = `粘贴 (${clipboard.paths.length})`;
@@ -191,8 +174,7 @@
 
         function renderBreadcrumb() {
             if(isSearching) return;
-            const box = document.getElementById('breadcrumb');
-            const parts = currentPath.split('/').filter(p => p);
+            const box = document.getElementById('breadcrumb'), parts = currentPath.split('/').filter(p => p);
             let html = `<span class="breadcrumb-item" onclick="navigateTo('/')">🏠 根目录</span>`;
             if (parts.length > 3) {
                 html += `<span style="opacity:0.5"> / </span><span>...</span>`;
@@ -201,44 +183,21 @@
                     html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="navigateTo('${path}')">${p}</span>`;
                 });
             } else {
-                let acc = '';
-                parts.forEach(p => { acc += '/' + p; html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="navigateTo('${acc}/')">${p}</span>`; });
+                let acc = ''; parts.forEach(p => { acc += '/' + p; html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="navigateTo('${acc}/')">${p}</span>`; });
             }
             box.innerHTML = html;
         }
 
-        function setClipboard(action) {
-            clipboard = { action, paths: [...selectedPaths] };
-            selectedPaths = [];
-            loadFiles();
-        }
-
-        async function executePaste() {
-            await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) });
-            clipboard = null; loadFiles();
-        }
-
-        async function batchDelete() {
-            if (confirm(`确定删除这 ${selectedPaths.length} 个项目吗？`)) {
-                await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) });
-                loadFiles();
-            }
-        }
-
-        function selectAll() {
-            selectedPaths = [...fileData.folders, ...fileData.files].map(i => i.fullKey);
-            document.querySelectorAll('.file-item').forEach(el => { if(!el.innerText.includes('..')) el.classList.add('selected'); });
-            updateBatchUI();
-        }
-
+        function setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; updateViewUI(); updateBatchUI(); }
+        async function executePaste() { await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); clipboard = null; loadFiles(); }
+        async function batchDelete() { if (confirm(`确定删除这 ${selectedPaths.length} 个项目吗？`)) { await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); loadFiles(); } }
+        function selectAll() { selectedPaths = [...fileData.folders, ...fileData.files].map(i => i.fullKey); updateViewUI(); updateBatchUI(); }
         async function handleSearch() {
             const q = document.getElementById('searchInput').value.trim(); if (!q) return clearSearch();
-            isSearching = true;
-            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`);
-            fileData = { folders: [], files: (await res.json()).files || [] };
-            updateViewUI(); document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
+            isSearching = true; const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`);
+            fileData = { folders: [], files: (await res.json()).files || [] }; updateViewUI();
+            document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
         }
-
         function clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; loadFiles(); }
         function navigateTo(p) { currentPath = p.endsWith('/') ? p : p + '/'; loadFiles(); }
         function getParentPath(p) { const pts = p.split('/').filter(x=>x); pts.pop(); return '/' + pts.join('/') + (pts.length? '/':''); }
@@ -250,10 +209,10 @@
         function openPreview(path, name) {
             const ext = name.split('.').pop().toLowerCase(), url = `/api/preview${path}`, content = document.getElementById('previewContent');
             document.getElementById('previewTitle').textContent = name; content.innerHTML = '';
-            if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
-            else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%;max-height:100%;"></video>`;
+            if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+            else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%; max-height:100%;"></video>`;
             else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="${url}" controls autoplay style="width:80%;"></audio>`;
-            else if (ext === 'pdf') content.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe>`;
+            else if (ext === 'pdf') content.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;"></iframe>`;
             else if (ext === 'txt') fetch(url).then(r=>r.text()).then(t=> { content.innerHTML = `<pre style="color:#fff;padding:20px;width:100%;white-space:pre-wrap;font-size:13px;">${t}</pre>`; });
             document.getElementById('previewModal').classList.add('active');
         }
@@ -263,7 +222,6 @@
         async function submitMkdir() { const folderName = document.getElementById('folderNameInput').value; if(!folderName) return; const target = currentPath==='/'?'/api/mkdir':`/api/mkdir${currentPath.replace(/\/$/,'')}`; await fetch(target, { method: 'POST', body: JSON.stringify({ folderName }) }); closeModal(); loadFiles(); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active')); }
         async function logout() { await fetch('/api/logout'); window.location.reload(); }
-
         initAuth();
     </script>
 </body>
