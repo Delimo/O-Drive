@@ -48,8 +48,6 @@
             <div>&copy; 2026 O-Drive. All rights reserved.</div>
         </footer>
     </div>
-
-    <!-- Modals -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button onclick="UI.closeModal('loginModal')" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
@@ -66,7 +64,6 @@
         <div class="upload-header"><span>上传任务</span><button onclick="UI.closeUploadManager()" style="background:none; border:none; color:#fff; cursor:pointer;">&times;</button></div>
         <div id="uploadList" class="upload-list"></div>
     </div>
-
     <script>
         let currentPath = '/', userRole = 'guest', isSearching = false, isEditing = false, currentPreviewPath = '';
         let viewMode = localStorage.getItem('viewMode') || 'list', sortBy = localStorage.getItem('sortBy') || 'name';
@@ -177,7 +174,6 @@
                 UI.updateFileList(); document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
             },
             clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
-            
             async openPreview(path, name) {
                 currentPreviewPath = path; isEditing = false; const content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn');
                 editBtn.style.display = 'none'; saveBtn.style.display = 'none'; title.textContent = "加载中..."; content.innerHTML = '<div style="color:var(--text-muted); padding:50px;">正在加载内容...</div>'; UI.showModal('previewModal');
@@ -188,8 +184,7 @@
                     else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="/api/preview${path}" controls autoplay style="width:80%; margin-top:100px;"></audio>`;
                     else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
                     else {
-                        const res = await fetch(`/api/preview${path}`); const text = await res.text();
-                        if (userRole === 'admin') editBtn.style.display = 'inline-flex';
+                        const res = await fetch(`/api/preview${path}`); const text = await res.text(); if (userRole === 'admin') editBtn.style.display = 'inline-flex';
                         if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; width:100%; text-align:left;">${marked.parse(text)}</div>`;
                         else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:13px; font-family:monospace; text-align:left;">${text}</pre>`;
                     }
@@ -218,7 +213,7 @@
                 manager.style.display = 'flex'; manager.style.opacity = '1';
                 for (let f of files) {
                     activeUploads++; const item = document.createElement('div'); item.className = 'upload-item';
-                    item.innerHTML = `<div class="upload-info"><span>${f.name}</span><span class="pct">0%</span></div><div class="progress-bg"><div class="progress-fill"></div></div>`;
+                    item.innerHTML = `<div class="upload-info"><span class="upload-filename">${f.name}</span><span class="pct">0%</span></div><div class="progress-bg"><div class="progress-fill"></div></div>`;
                     list.prepend(item);
                     const fd = new FormData(); fd.append('file', f);
                     const xhr = new XMLHttpRequest();
@@ -229,56 +224,18 @@
                     xhr.onerror = onFinish; xhr.send(fd);
                 }
             },
-            
-            // --- 核心修复：更健壮的光标重命名逻辑 ---
             startRenameSelected() {
-                const key = selectedPaths[0];
-                const item = [...fileData.folders, ...fileData.files].find(i => i.fullKey === key);
-                // 使用原生 loop 查找元素，避免 CSS.escape 可能出现的字符转义问题
-                let nameContainer = null;
-                document.querySelectorAll('.file-item').forEach(el => {
-                    if (el.dataset.key === key) nameContainer = el.querySelector('.file-name');
-                });
-                
+                const key = selectedPaths[0]; const item = [...fileData.folders, ...fileData.files].find(i => i.fullKey === key);
+                let nameContainer = null; document.querySelectorAll('.file-item').forEach(el => { if (el.dataset.key === key) nameContainer = el.querySelector('.file-name'); });
                 if(!nameContainer) return;
-                
-                let isSaving = false;
-                const oldName = item.name;
-                const input = document.createElement('input');
-                input.className = 'rename-input';
-                input.value = oldName;
-                
-                // 核心修复：彻底拦截所有鼠标行为，确保点击能够自由移动光标
-                ['mousedown', 'mouseup', 'click', 'dblclick'].forEach(evtType => {
-                    input.addEventListener(evtType, (e) => {
-                        e.stopPropagation();
-                    }, true);
-                });
-
-                nameContainer.replaceWith(input);
-                input.focus();
-
-                // 智能选中文件名，避开后缀
+                let isSaving = false; const oldName = item.name; const input = document.createElement('input');
+                input.className = 'rename-input'; input.value = oldName;
+                ['mousedown', 'mouseup', 'click', 'dblclick'].forEach(evt => { input.addEventListener(evt, (e) => e.stopPropagation(), true); });
+                nameContainer.replaceWith(input); input.focus();
                 const lastDot = oldName.lastIndexOf('.');
-                if (lastDot > 0 && item.sizeFormatted) {
-                    input.setSelectionRange(0, lastDot);
-                } else {
-                    input.select();
-                }
-                
-                const save = async () => {
-                    if (isSaving) return;
-                    const newName = input.value.trim();
-                    if (newName && newName !== oldName) {
-                        isSaving = true;
-                        const res = await fetch(`/api/files/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify({ newName }) });
-                        if(res.ok) { Message.success('重命名成功'); Actions.loadFiles(); }
-                        else { Message.error('重命名失败'); Actions.loadFiles(); }
-                    } else { Actions.loadFiles(); }
-                };
-                
-                input.onblur = save;
-                input.onkeydown = (ev) => { if(ev.key === 'Enter') { input.blur(); } };
+                if (lastDot > 0 && item.sizeFormatted) input.setSelectionRange(0, lastDot); else input.select();
+                const save = async () => { if (isSaving) return; const newName = input.value.trim(); if (newName && newName !== oldName) { isSaving = true; const res = await fetch(`/api/files/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify({ newName }) }); if(res.ok) { Message.success('重命名成功'); Actions.loadFiles(); } } else { Actions.loadFiles(); } };
+                input.onblur = save; input.onkeypress = (ev) => { if(ev.key === 'Enter') input.blur(); };
             }
         };
 
@@ -286,9 +243,9 @@
             getParentPath(p) { const pts = p.split('/').filter(x=>x); pts.pop(); return '/' + pts.join('/') + (pts.length? '/':''); },
             formatDate(ts) { return ts ? new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '-'; },
             getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','webp','gif'].includes(ext)?'🖼️':['mp4','webm'].includes(ext)?'🎬':['mp3','wav'].includes(ext)?'🎵':ext==='pdf'?'📕':['zip','rar','7z'].includes(ext)?'📦':'📄'; },
-            isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(ext); }
+            isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(ext); },
+            escapeHtml(text) { return text.replace(/[&<>"']/g, function(m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; }); }
         };
-
         Actions.init();
     </script>
 </body>
