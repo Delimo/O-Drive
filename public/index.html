@@ -70,7 +70,6 @@
         const UI = {
             showModal(id) { document.getElementById(id).classList.add('active'); },
             closeModal(id) { document.getElementById(id).classList.remove('active'); },
-            closePreview() { document.getElementById('previewContent').innerHTML = ''; this.closeModal('previewModal'); },
             updateAuth() {
                 const btnBox = document.getElementById('authButtons');
                 if (userRole === 'admin') {
@@ -117,7 +116,7 @@
                 [...folders, ...files].forEach(item => {
                     const isFolder = !item.sizeFormatted; const div = document.createElement('div'); div.className = 'file-item';
                     if (selectedPaths.includes(item.fullKey)) div.classList.add('selected');
-                    const acts = !isFolder ? `<button class="btn btn-sm" onclick="Actions.openPreview('${item.path}','${item.name}')">预览</button><button class="btn btn-sm" onclick="Actions.downloadFile('${item.path}')">下载</button>` : '';
+                    const acts = !isFolder ? `<button class="btn btn-sm" onclick="Actions.openPreview('${item.path}','${item.name}')">预览</button><button class="btn btn-sm" onclick="downloadFile('${item.path}')">下载</button>` : '';
                     if (viewMode === 'grid') div.innerHTML = `<div class="file-main"><div class="file-icon">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div><div class="file-info">${isFolder?'文件夹':item.sizeFormatted}</div><div class="file-actions" onclick="event.stopPropagation()">${acts}</div>`;
                     else div.innerHTML = `<div class="col-name"><div class="file-icon">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div><div class="file-info col-size">${isFolder?'文件夹':item.sizeFormatted}</div><div class="file-info col-time">${Utils.formatDate(item.time)}</div><div class="file-actions col-acts" onclick="event.stopPropagation()">${acts}</div>`;
                     div.onclick = (e) => { if (userRole === 'admin') Actions.toggleSelect(item.fullKey, div, e); };
@@ -132,7 +131,8 @@
                     list.appendChild(div);
                 });
             },
-            updateBatchUI() { const bt = document.getElementById('batchTools'); const pb = document.getElementById('pasteBtn'); bt.style.display = (userRole === 'admin' && selectedPaths.length > 0) ? 'flex' : 'none'; pb.style.display = (userRole === 'admin' && clipboard) ? 'inline-flex' : 'none'; if (clipboard) pb.textContent = `粘贴 (${clipboard.paths.length})`; }
+            updateBatchUI() { const bt = document.getElementById('batchTools'); const pb = document.getElementById('pasteBtn'); bt.style.display = (userRole === 'admin' && selectedPaths.length > 0) ? 'flex' : 'none'; pb.style.display = (userRole === 'admin' && clipboard) ? 'inline-flex' : 'none'; if (clipboard) pb.textContent = `粘贴 (${clipboard.paths.length})`; },
+            closePreview() { document.getElementById('previewContent').innerHTML = ''; this.closeModal('previewModal'); }
         };
 
         const Actions = {
@@ -177,11 +177,15 @@
                 UI.showModal('previewModal');
                 const ext = name.split('.').pop().toLowerCase();
                 try {
-                    if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<img src="/api/preview${path}" class="preview-media" style="object-fit:contain;">`;
-                    else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="/api/preview${path}" class="preview-media" controls autoplay></video>`;
-                    else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="/api/preview${path}" controls autoplay style="width:80%; margin-top:100px;"></audio>`;
-                    else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
-                    else {
+                    if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
+                        content.innerHTML = `<img src="/api/preview${path}" class="preview-media" style="object-fit:contain;">`;
+                    } else if (['mp4','webm'].includes(ext)) {
+                        content.innerHTML = `<video src="/api/preview${path}" class="preview-media" controls autoplay></video>`;
+                    } else if (['mp3','wav'].includes(ext)) {
+                        content.innerHTML = `<audio src="/api/preview${path}" controls autoplay style="width:80%; margin-top:100px;"></audio>`;
+                    } else if (ext === 'pdf') {
+                        content.innerHTML = `<iframe src="/api/preview${path}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
+                    } else {
                         const res = await fetch(`/api/preview${path}`); const text = await res.text();
                         if (userRole === 'admin') editBtn.style.display = 'inline-flex';
                         if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; width:100%; text-align:left;">${marked.parse(text)}</div>`;
@@ -203,7 +207,6 @@
             },
             toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
-            downloadFile(p) { window.open(`/api/download${p}`); },
             async submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); UI.closeModal('mkdirModal'); this.loadFiles(); },
             async uploadFiles(files) { if(userRole!=='admin') return; const target = currentPath==='/'?'/api/files':`/api/files${currentPath.replace(/\/$/,'')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } this.loadFiles(); }
         };
