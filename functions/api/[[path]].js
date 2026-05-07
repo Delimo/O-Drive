@@ -6,8 +6,7 @@ async function verifyAuth(request, env) {
   const token = cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
   const isGuestMode = (env.ALLOW_GUEST === "true" || env.ALLOW_GUEST === undefined);
   if (!token) return isGuestMode ? { role: 'guest' } : null;
-  try { return JSON.parse(atob(token.split('.')[1])); } 
-  catch (e) { return isGuestMode ? { role: 'guest' } : null; }
+  try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return isGuestMode ? { role: 'guest' } : null; }
 }
 
 async function addLog(env, request, action, details) {
@@ -21,7 +20,7 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
-  // 1. Auth Logic
+  // 1. 基础接口 (登录/登出/角色)
   if (path === '/api/login' && method === 'POST') {
     const { username, password } = await request.json();
     if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
@@ -40,68 +39,76 @@ export async function onRequest(context) {
   if (!auth) return jsonResponse({ success: false }, 401);
   if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
-  // 2. Resource Path & Privacy Check
-  let r2Path = decodeURIComponent(path.split('/').slice(3).join('/'));
-  const hiddenPaths = (await env.DB.prepare("SELECT key FROM settings").all()).results.map(r => r.key);
-  const isHidden = hiddenPaths.some(hp => r2Path === hp || r2Path.startsWith(hp + '/'));
-  if (isHidden && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
+  // 2. 批量操作与粘贴逻辑 (仅限管理员)
+  if (['POST', 'PUT', 'DELETE'].includes(method) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
 
-  // 3. API Routes
-  if (path === '/api/search') {
-    const q = url.searchParams.get('q')?.toLowerCase();
-    const scope = (url.searchParams.get('scope') || '/').slice(1);
-    const listed = await env.R2_BUCKET.list({ prefix: scope });
-    const matches = listed.objects.map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: (o.size/1024/1024).toFixed(2)+' MB', rawSize: o.size, time: o.uploaded.getTime() }))
-      .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey.startsWith(hp))));
-    return jsonResponse({ files: matches });
-  }
-
-  if (path.startsWith('/api/admin/') && auth.role === 'admin') {
-    if (path === '/api/admin/logs') return jsonResponse({ logs: (await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all()).results });
-    if (path === '/api/admin/settings/hidden') {
-      if (method === 'GET') return jsonResponse({ list: (await env.DB.prepare("SELECT key as path FROM settings").all()).results });
-      if (method === 'POST') { await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind((await request.json()).targetPath).run(); return jsonResponse({ success: true }); }
-      if (method === 'DELETE') { await env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(url.searchParams.get('path')).run(); return jsonResponse({ success: true }); }
+  // 批量删除
+  if (path === '/api/batch-delete' && method === 'POST') {
+    const { paths } = await request.json();
+    for (const p of paths) {
+      // 如果是目录，需要删除目录下所有文件
+      const listed = await env.R2_BUCKET.list({ prefix: p + '/' });
+      for (const obj of listed.objects) { await env.R2_BUCKET.delete(obj.key); }
+      await env.R2_BUCKET.delete(p);
     }
+    await addLog(env, request, 'BATCH_DELETE', paths.join(', '));
+    return jsonResponse({ success: true });
   }
 
-  // 4. File Operations
+  // 粘贴 (移动或复制)
+  if (path === '/api/paste' && method === 'POST') {
+    const { action, paths, targetDir } = await request.json();
+    const destPrefix = targetDir === '/' ? '' : (targetDir.endsWith('/') ? targetDir : targetDir + '/');
+
+    for (const srcPath of paths) {
+      const fileName = srcPath.split('/').pop();
+      const destPath = destPrefix + fileName;
+
+      // 处理文件夹递归移动/复制
+      const listed = await env.R2_BUCKET.list({ prefix: srcPath + '/' });
+      const objectsToProcess = [...listed.objects];
+      // 也要检查这个路径本身是否是一个文件（或者是占位符）
+      const self = await env.R2_BUCKET.head(srcPath);
+      if (self) {
+          await env.R2_BUCKET.put(destPath, (await env.R2_BUCKET.get(srcPath)).body);
+          if (action === 'move') await env.R2_BUCKET.delete(srcPath);
+      }
+
+      for (const obj of objectsToProcess) {
+        const subRelativePath = obj.key.slice(srcPath.length);
+        const subDestPath = destPath + subRelativePath;
+        const sourceObj = await env.R2_BUCKET.get(obj.key);
+        await env.R2_BUCKET.put(subDestPath, sourceObj.body);
+        if (action === 'move') await env.R2_BUCKET.delete(obj.key);
+      }
+    }
+    await addLog(env, request, action.toUpperCase(), `From ${paths[0]} to ${targetDir}`);
+    return jsonResponse({ success: true });
+  }
+
+  // 3. 原有文件操作逻辑精简
+  let r2Path = decodeURIComponent(path.split('/').slice(3).join('/'));
+
   if (path.startsWith('/api/files') && method === 'GET') {
     let prefix = r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '';
     const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
-    const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.slice(prefix.length, -1), path: '/' + p.slice(0, -1), fullKey: p.slice(0, -1) })).filter(f => auth.role === 'admin' || !hiddenPaths.includes(f.fullKey));
-    const files = (listed.objects || []).map(o => ({ name: o.key.slice(prefix.length), path: '/' + o.key, fullKey: o.key, sizeFormatted: (o.size/1024/1024).toFixed(2)+' MB', rawSize: o.size, time: o.uploaded.getTime() })).filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.includes(f.fullKey)));
+    const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.slice(prefix.length, -1), path: '/' + p.slice(0, -1), fullKey: p.slice(0, -1) }));
+    const files = (listed.objects || []).map(o => ({ name: o.key.slice(prefix.length), path: '/' + o.key, fullKey: o.key, sizeFormatted: (o.size/1024/1024).toFixed(2)+' MB', rawSize: o.size, time: o.uploaded.getTime() })).filter(f => f.name !== '' && f.name !== '.folder');
     return jsonResponse({ folders, files });
   }
-
-  // Only Admin write
-  if (['POST', 'PUT', 'DELETE'].includes(method) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
 
   if (path.startsWith('/api/mkdir')) {
     const { folderName } = await request.json();
     const key = (r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + folderName + '/.folder';
     await env.R2_BUCKET.put(key, new Uint8Array(0));
-    await addLog(env, request, 'MKDIR', folderName);
     return jsonResponse({ success: true });
   }
-
-  if (path.startsWith('/api/files') && method === 'POST') {
-    const file = (await request.formData()).get('file');
-    const key = (r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + file.name;
-    await env.R2_BUCKET.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
-    await addLog(env, request, 'UPLOAD', key);
-    return jsonResponse({ success: true });
-  }
-
-  if (path.startsWith('/api/files') && method === 'DELETE') { await env.R2_BUCKET.delete(r2Path); await addLog(env, request, 'DELETE', r2Path); return jsonResponse({ success: true }); }
 
   if (path.startsWith('/api/files') && method === 'PUT') {
     const { newName } = await request.json();
     const source = await env.R2_BUCKET.get(r2Path);
     const newKey = r2Path.substring(0, r2Path.lastIndexOf('/') + 1) + newName;
-    await env.R2_BUCKET.put(newKey, source.body, { httpMetadata: source.httpMetadata });
-    await env.R2_BUCKET.delete(r2Path);
-    await addLog(env, request, 'RENAME', `${r2Path} -> ${newName}`);
+    await env.R2_BUCKET.put(newKey, source.body); await env.R2_BUCKET.delete(r2Path);
     return jsonResponse({ success: true });
   }
 
