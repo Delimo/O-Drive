@@ -1,224 +1,84 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>O-Drive</title>
-    <link rel="stylesheet" href="/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>.admin-only { display: none; }</style>
-</head>
-<body>
-    <div class="header">
-        <div class="header-content">
-            <div class="header-left"><a class="logo-box" href="/"><span>☁️</span><span>O-Drive</span></a></div>
-            <div class="header-right">
-                <div class="search-bar"><span class="search-icon">🔍</span><input type="search" id="searchInput" placeholder="搜索..." onkeypress="if(event.key==='Enter')Actions.handleSearch()"></div>
-                <div id="authButtons"></div>
-            </div>
-        </div>
-    </div>
+:root {
+  --primary: #409eff; 
+  --background: #0f172a;
+  --surface: #1e293b;
+  --surface-light: #2d3748;
+  --surface-hover: #3a4659;
+  --border-color: #334155;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --error: #f56c6c;
+  --radius: 10px;
+  --header-height: 64px;
+}
 
-    <div class="container">
-        <div class="toolbar">
-            <div class="tools-left" id="breadcrumb"></div>
-            <div id="batchTools">
-                <button class="btn btn-sm" style="background:none; border:none" onclick="Actions.selectAll()">全选</button>
-                <div style="width:1px; height:14px; background:var(--border-color)"></div>
-                <button class="btn btn-sm" style="background:none; border:none" onclick="setClipboard('move')">移动</button>
-                <button class="btn btn-sm" style="background:none; border:none" onclick="setClipboard('copy')">复制</button>
-                <button class="btn btn-sm btn-danger" style="background:none; border:none" onclick="Actions.batchDelete()">删除</button>
-            </div>
-            <div class="tools-right">
-                <button id="pasteBtn" class="btn btn-primary" onclick="Actions.executePaste()" style="display:none">粘贴</button>
-                <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
-                <button class="btn admin-only" onclick="UI.showModal('mkdirModal')">新建文件夹</button>
-                <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
-                <div style="width:1px; height:16px; background:var(--surface-light); margin:0 4px;"></div>
-                <button id="sortBtn" class="tool-btn" onclick="Actions.toggleSortMode()">名称排序</button>
-                <button id="viewBtn" class="tool-btn" onclick="Actions.toggleViewMode()">网格视图</button>
-            </div>
-        </div>
-        <div class="explorer-card"><div id="fileList"></div></div>
-        <footer class="footer">
-            <div>项目：<a href="https://github.com/Delimo/O-Drive" target="_blank">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank">Delimo</a></div>
-            <div>Powered by Cloudflare Pages</div>
-            <div>&copy; 2026 O-Drive. All rights reserved.</div>
-        </footer>
-    </div>
+html, body { height: 100%; margin: 0; background: var(--background); color: var(--text); font-family: system-ui, -apple-system, sans-serif; }
 
-    <div id="loginModal" class="modal-overlay">
-        <div class="login-card">
-            <button onclick="UI.closeModal('loginModal')" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
-            <h1>管理端登录</h1>
-            <div class="input-wrapper"><input type="text" id="adminUser" placeholder="用户名"></div>
-            <div class="input-wrapper"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()"></div>
-            <button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.doLogin()">登录</button>
-            <p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p>
-        </div>
-    </div>
+/* --- Header & Auth --- */
+.header { height: var(--header-height); background: var(--surface); border-bottom: 1px solid var(--surface-light); position: sticky; top: 0; z-index: 100; width: 100%; }
+.header-content { max-width: 1200px; margin: 0 auto; height: 100%; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
+.header-left .logo-box { display: flex; align-items: center; text-decoration: none; gap: 10px; color: #fff; font-size: 18px; font-weight: 700; }
 
-    <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称" style="width:100%; padding:10px; margin:15px 0; background:var(--background); border:1px solid var(--border-color); color:#fff; border-radius:6px;"><button class="btn btn-primary" style="width:100%" onclick="Actions.submitMkdir()">创建</button><button class="btn" style="width:100%; margin-top:8px;" onclick="UI.closeModal('mkdirModal')">取消</button></div></div>
-    <div id="previewModal" class="modal-overlay" onclick="UI.closePreview()"><div class="preview-modal" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 id="previewTitle">预览</h3><div style="display:flex; gap:10px;"><button id="editBtn" class="btn btn-sm" style="display:none" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-sm btn-primary" style="display:none" onclick="Actions.saveTextContent()">保存</button><button onclick="UI.closePreview()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:28px; line-height:1">&times;</button></div></div><div id="previewContent" class="preview-body"></div></div></div>
+.header-right { display: flex; gap: 16px; align-items: center; }
+#authButtons { display: flex; gap: 12px; align-items: center; } 
 
-    <script>
-        let currentPath = '/', userRole = 'guest', isSearching = false, isEditing = false, currentPreviewPath = '';
-        let viewMode = localStorage.getItem('viewMode') || 'grid', sortBy = localStorage.getItem('sortBy') || 'name';
-        let fileData = { folders: [], files: [] }, selectedPaths = [], clipboard = null;
-        const sortModes = ['name', 'time', 'size'], sortNames = { name: '名称排序', time: '时间排序', size: '大小排序' };
+.search-bar { position: relative; width: 130px; }
+.search-bar input { width: 100%; background: var(--background); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px 6px 30px; color: #fff; outline: none; font-size: 13px; transition: width 0.2s; }
+.search-bar input:focus { border-color: var(--primary); width: 180px; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; pointer-events: none; font-size: 12px; }
 
-        const UI = {
-            showModal(id) { document.getElementById(id).classList.add('active'); },
-            closeModal(id) { document.getElementById(id).classList.remove('active'); },
-            updateAuth() {
-                const btnBox = document.getElementById('authButtons');
-                if (userRole === 'admin') {
-                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-flex');
-                    btnBox.innerHTML = `<a href="/admin.html" class="btn">控制面板</a><button class="btn" onclick="Actions.logout()">退出</button>`;
-                } else {
-                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-                    btnBox.innerHTML = `<button class="btn btn-primary" onclick="UI.showModal('loginModal')">登录</button>`;
-                }
-            },
-            renderBreadcrumb() {
-                if(isSearching) return;
-                const box = document.getElementById('breadcrumb');
-                const parts = currentPath.split('/').filter(p => p);
-                let html = `<span class="breadcrumb-item" onclick="Actions.navigateTo('/')">🏠 根目录</span>`;
-                if (parts.length > 3) {
-                    html += `<span style="opacity:0.5"> / </span><span>...</span>`;
-                    parts.slice(-2).forEach((p, i) => {
-                        const path = '/' + parts.slice(0, parts.length - 2 + i + 1).join('/') + '/';
-                        html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="Actions.navigateTo('${path}')">${p}</span>`;
-                    });
-                } else {
-                    let acc = '';
-                    parts.forEach(p => { acc += '/' + p; html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="Actions.navigateTo('${acc}/')">${p}</span>`; });
-                }
-                box.innerHTML = html;
-            },
-            updateFileList() {
-                const list = document.getElementById('fileList');
-                document.getElementById('sortBtn').textContent = sortNames[sortBy];
-                document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '网格视图' : '列表视图';
-                list.className = viewMode === 'grid' ? 'grid-layout' : 'list-layout';
-                list.innerHTML = '';
-                if (viewMode === 'list') list.innerHTML = `<div class="list-header"><div class="col-name">名称</div><div class="col-size">大小</div><div class="col-time">修改时间</div><div class="col-acts">操作</div></div>`;
-                if (currentPath !== '/' && !isSearching) {
-                    const parent = Utils.getParentPath(currentPath);
-                    const div = document.createElement('div'); div.className = 'file-item';
-                    if (viewMode === 'grid') div.innerHTML = `<div class="file-main"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="file-info">返回上级</div>`;
-                    else div.innerHTML = `<div class="col-name"><div class="file-icon">📁</div><div class="file-name">..</div></div><div class="col-size">-</div><div class="col-time">-</div><div class="col-acts"></div>`;
-                    div.ondblclick = () => Actions.navigateTo(parent); list.appendChild(div);
-                }
-                const folders = [...(fileData.folders || [])].sort((a,b) => a.name.localeCompare(b.name));
-                const files = [...(fileData.files || [])].sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
-                [...folders, ...files].forEach(item => {
-                    const isFolder = !item.sizeFormatted; const div = document.createElement('div'); div.className = 'file-item';
-                    if (selectedPaths.includes(item.fullKey)) div.classList.add('selected');
-                    const acts = !isFolder ? `<button class="btn btn-sm" onclick="Actions.openPreview('${item.path}','${item.name}')">预览</button><button class="btn btn-sm" onclick="downloadFile('${item.path}')">下载</button>` : '';
-                    if (viewMode === 'grid') div.innerHTML = `<div class="file-main"><div class="file-icon">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div><div class="file-info">${isFolder?'文件夹':item.sizeFormatted}</div><div class="file-actions" onclick="event.stopPropagation()">${acts}</div>`;
-                    else div.innerHTML = `<div class="col-name"><div class="file-icon">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div><div class="file-info col-size">${isFolder?'文件夹':item.sizeFormatted}</div><div class="file-info col-time">${Utils.formatDate(item.time)}</div><div class="file-actions col-acts" onclick="event.stopPropagation()">${acts}</div>`;
-                    div.onclick = (e) => { if (userRole === 'admin') Actions.toggleSelect(item.fullKey, div, e); };
-                    div.ondblclick = () => { if(isFolder) Actions.navigateTo(item.path); else if(Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name); };
-                    if (userRole === 'admin') {
-                        const nameEl = div.querySelector('.file-name');
-                        nameEl.ondblclick = (e) => { e.stopPropagation(); const oldName = item.name; const input = document.createElement('input'); input.className = 'rename-input'; input.value = oldName; nameEl.replaceWith(input); input.focus(); input.select();
-                            const save = async () => { if (input.value && input.value !== oldName) { await fetch(`/api/files/${item.fullKey}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) }); Actions.loadFiles(); } else { Actions.loadFiles(); } };
-                            input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') save(); };
-                        };
-                    }
-                    list.appendChild(div);
-                });
-            },
-            updateBatchUI() { const bt = document.getElementById('batchTools'); const pb = document.getElementById('pasteBtn'); bt.style.display = (userRole === 'admin' && selectedPaths.length > 0) ? 'flex' : 'none'; pb.style.display = (userRole === 'admin' && clipboard) ? 'inline-flex' : 'none'; if (clipboard) pb.textContent = `粘贴 (${clipboard.paths.length})`; },
-            closePreview() { document.getElementById('previewContent').innerHTML = ''; this.closeModal('previewModal'); }
-        };
+/* --- Layout --- */
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; min-height: calc(100vh - var(--header-height)); display: flex; flex-direction: column; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 0 15px; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 15px; height: 56px; flex-shrink: 0; }
+.tools-left { flex: 1; min-width: 0; display: flex; align-items: center; font-size: 14px; overflow: hidden; }
+.breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; white-space: nowrap; }
+.tools-right { display: flex; gap: 8px; align-items: center; margin-left: 15px; }
 
-        const Actions = {
-            async init() {
-                const res = await fetch('/api/auth/role');
-                const data = (res.status === 200) ? await res.json() : { role: 'guest' };
-                userRole = data.role || 'guest'; UI.updateAuth(); this.loadFiles();
-            },
-            async loadFiles() {
-                if (isSearching) return;
-                selectedPaths = []; UI.updateBatchUI();
-                const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`);
-                fileData = await res.json(); UI.updateFileList(); UI.renderBreadcrumb();
-            },
-            async doLogin() {
-                const u = document.getElementById('adminUser').value; const p = document.getElementById('adminPass').value;
-                const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:u, password:p}) });
-                if((await res.json()).success) window.location.reload();
-                else document.getElementById('loginError').textContent = '用户名或密码错误';
-            },
-            async logout() { await fetch('/api/logout'); window.location.reload(); },
-            navigateTo(p) { currentPath = p.endsWith('/') ? p : p + '/'; isSearching = false; this.loadFiles(); },
-            toggleSelect(key, el, e) { e.stopPropagation(); if (selectedPaths.includes(key)) selectedPaths = selectedPaths.filter(p => p !== key); else selectedPaths.push(key); UI.updateBatchUI(); UI.updateFileList(); },
-            selectAll() { selectedPaths = [...fileData.folders, ...fileData.files].map(i => i.fullKey); UI.updateFileList(); UI.updateBatchUI(); },
-            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); },
-            async executePaste() { await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); clipboard = null; this.loadFiles(); },
-            async batchDelete() { if (confirm(`确定删除选中的 ${selectedPaths.length} 项吗？`)) { await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); this.loadFiles(); } },
-            async handleSearch() {
-                const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch();
-                isSearching = true;
-                const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`);
-                fileData = { folders: [], files: (await res.json()).files || [] };
-                UI.updateFileList(); document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
-            },
-            clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
-            async openPreview(path, name) {
-                currentPreviewPath = path; isEditing = false;
-                const content = document.getElementById('previewContent'); const title = document.getElementById('previewTitle');
-                const editBtn = document.getElementById('editBtn'); const saveBtn = document.getElementById('saveBtn');
-                editBtn.style.display = 'none'; saveBtn.style.display = 'none';
-                title.textContent = "加载中..."; content.innerHTML = '<div style="color:var(--text-muted); padding:50px;">正在努力加载内容...</div>';
-                UI.showModal('previewModal');
-                const ext = name.split('.').pop().toLowerCase();
-                try {
-                    if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
-                        content.innerHTML = `<img src="/api/preview${path}" class="preview-media" style="object-fit:contain;">`;
-                    } else if (['mp4','webm'].includes(ext)) {
-                        content.innerHTML = `<video src="/api/preview${path}" class="preview-media" controls autoplay></video>`;
-                    } else if (['mp3','wav'].includes(ext)) {
-                        content.innerHTML = `<audio src="/api/preview${path}" controls autoplay style="width:80%; margin-top:100px;"></audio>`;
-                    } else if (ext === 'pdf') {
-                        content.innerHTML = `<iframe src="/api/preview${path}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
-                    } else {
-                        const res = await fetch(`/api/preview${path}`); const text = await res.text();
-                        if (userRole === 'admin') editBtn.style.display = 'inline-flex';
-                        if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; width:100%; text-align:left;">${marked.parse(text)}</div>`;
-                        else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:13px; font-family:monospace; text-align:left;">${text}</pre>`;
-                    }
-                    title.textContent = name;
-                } catch (e) { content.innerHTML = `<div style="color:var(--error); padding:50px;">预览失败</div>`; }
-            },
-            toggleEditMode() {
-                const pre = document.getElementById('textContent') || document.querySelector('.markdown-body');
-                const textarea = document.createElement('textarea'); textarea.className = 'edit-textarea'; textarea.id = 'editArea'; textarea.value = pre.innerText || pre.textContent;
-                document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewContent').appendChild(textarea);
-                document.getElementById('editBtn').style.display = 'none'; document.getElementById('saveBtn').style.display = 'inline-flex';
-            },
-            async saveTextContent() {
-                const content = document.getElementById('editArea').value;
-                const res = await fetch(`/api/save-text${currentPreviewPath}`, { method: 'POST', body: JSON.stringify({ content }) });
-                if ((await res.json()).success) { UI.closePreview(); this.loadFiles(); }
-            },
-            toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
-            toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
-            async submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); UI.closeModal('mkdirModal'); this.loadFiles(); },
-            async uploadFiles(files) { if(userRole!=='admin') return; const target = currentPath==='/'?'/api/files':`/api/files${currentPath.replace(/\/$/,'')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } this.loadFiles(); }
-        };
+#batchTools { display: none; gap: 8px; background: rgba(64, 158, 255, 0.1); padding: 0 12px; border-radius: 6px; height: 34px; align-items: center; border: 1px solid var(--primary); }
+.explorer-card { background: #161e2e; border: 1px solid var(--border-color); border-radius: var(--radius); min-height: 500px; padding: 20px; flex: 1; display: flex; flex-direction: column; }
 
-        const Utils = {
-            getParentPath(p) { const pts = p.split('/').filter(x=>x); pts.pop(); return '/' + pts.join('/') + (pts.length? '/':''); },
-            formatDate(ts) { return ts ? new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '-'; },
-            getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','webp','gif'].includes(ext)?'🖼️':['mp4','webm'].includes(ext)?'🎬':['mp3','wav'].includes(ext)?'🎵':ext==='pdf'?'📕':['zip','rar','7z'].includes(ext)?'📦':'📄'; },
-            isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(ext); }
-        };
+/* --- Buttons --- */
+.btn { height: 34px; padding: 0 15px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--primary); }
+.btn-primary { background: var(--primary) !important; border: none; }
+.btn-danger { background: rgba(245, 108, 108, 0.1) !important; color: var(--error) !important; border: 1px solid rgba(245, 108, 108, 0.3); }
+.tool-btn { background: var(--surface-light); color: #fff; border: 1px solid var(--border-color); height: 34px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0 16px; min-width: 100px; text-align: center; appearance: none; -webkit-appearance: none; outline: none; }
 
-        Actions.init();
-    </script>
-</body>
-</html>
+/* --- Grid Mode --- */
+.grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 15px; }
+.grid-layout .file-item { background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 240px; justify-content: space-between; align-items: center; transition: 0.2s; }
+.grid-layout .file-item:hover { border-color: var(--primary); transform: translateY(-2px); }
+.grid-layout .file-item.selected { border-color: var(--primary); background: rgba(64, 158, 255, 0.1); }
+.grid-layout .file-main { flex: 1; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; pointer-events: none; width: 100%; }
+.grid-layout .file-icon { font-size: 48px; margin-bottom: 12px; }
+.grid-layout .file-name { font-size: 13px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; pointer-events: auto; }
+.grid-layout .file-info { font-size: 11px; color: var(--text-muted); margin-bottom: 15px; }
+.grid-layout .file-actions { display: flex !important; flex-direction: row !important; gap: 8px !important; justify-content: center !important; }
+
+/* --- List Mode (重点修复对齐) --- */
+.list-layout { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.list-layout .list-header { display: flex; align-items: center; padding: 0 15px; height: 40px; color: var(--text-muted); font-size: 12px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px; }
+.list-layout .file-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); height: 52px; padding: 0 15px; border-radius: 8px; cursor: pointer; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; }
+.list-layout .file-item.selected { border-color: var(--primary); background: rgba(64, 158, 255, 0.1); }
+.list-layout .col-name { flex: 3; display: flex; align-items: center; min-width: 0; pointer-events: none; }
+.list-layout .col-size { width: 100px; text-align: center; font-size: 12px; }
+.list-layout .col-time { width: 180px; text-align: center; font-size: 12px; font-family: monospace; }
+.list-layout .col-acts { width: 150px; display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-shrink: 0; } /* 修复按钮间距 */
+.list-layout .file-icon { font-size: 22px; margin-right: 12px; }
+.list-layout .file-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: left; pointer-events: auto; }
+
+/* --- Login Modal (修正左对齐) --- */
+.login-card { background: #1a1a1a; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; border: 1px solid #333; position: relative; }
+.login-card h1 { font-size: 24px; text-align: center; margin-bottom: 30px; }
+.input-wrapper { position: relative; background: #262626; border-radius: 8px; border: 1px solid #4c4d4f; height: 44px; display: flex; align-items: center; margin-bottom: 20px; }
+.input-wrapper input { width: 100%; background: transparent; border: none; padding: 0 15px; color: #fff; outline: none; height: 100%; font-size: 14px; text-align: left !important; } /* 修正对齐 */
+
+/* Preview & Editor */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(10px); }
+.modal-overlay.active { display: flex; }
+.preview-modal { background: var(--surface); border: 1px solid var(--border-color); padding: 24px; border-radius: 16px; width: 95%; max-width: 1100px; height: 85vh; display: flex; flex-direction: column; }
+.preview-body { flex: 1; overflow: auto; background: var(--background); border-radius: 8px; display: flex; justify-content: center; align-items: flex-start; position: relative; }
+.edit-textarea { width: 100%; height: 100%; background: transparent; color: #cbd5e1; border: none; padding: 25px; font-family: monospace; font-size: 14px; line-height: 1.6; outline: none; resize: none; }
+.rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 100%; padding: 2px 5px; border-radius: 4px; text-align: inherit; outline: none; }
+.footer { margin-top: 50px; padding: 40px 0; text-align: center; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 13px; line-height: 2.2; }
+.footer a { color: var(--text); text-decoration: none; font-weight: 500; }
