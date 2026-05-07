@@ -34,7 +34,6 @@
             <button class="tab-btn" onclick="switchTab('privacy')">隐私管理</button>
         </div>
 
-        <!-- 日志标签页 -->
         <div id="logs-tab" class="tab-content active">
             <div class="card" style="padding:0">
                 <table class="log-table">
@@ -51,11 +50,10 @@
             </div>
         </div>
 
-        <!-- 隐私管理标签页 -->
         <div id="privacy-tab" class="tab-content">
             <div class="card">
                 <div class="tips">
-                    <b>配置说明：</b>请输入相对路径（如 <code>private_folder</code>）。隐藏后访客将完全无法感知该路径及其内部文件的存在。
+                    <b>配置说明：</b>请输入路径（如 <code>private_folder</code>）。隐藏后访客将完全无法感知该路径。
                 </div>
                 <div style="display:flex; gap:12px; margin-bottom:24px;">
                     <input type="text" id="hideInput" class="form-input" placeholder="输入路径..." style="margin:0; flex:1; background:var(--background); border:1px solid var(--border-color); border-radius:8px; color:white; padding:0 15px; outline:none;">
@@ -72,7 +70,8 @@
     <script>
         function switchTab(id) {
             document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
-            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.innerText.includes(id==='logs'?'操作':'隐私'));
+            const btns = Array.from(document.querySelectorAll('.tab-btn'));
+            const activeBtn = btns.find(btn => btn.innerText.includes(id==='logs'?'操作':'隐私'));
             if(activeBtn) activeBtn.classList.add('active');
             document.getElementById(id + '-tab').classList.add('active');
             id === 'logs' ? loadLogs() : loadHidden();
@@ -85,7 +84,7 @@
             document.getElementById('logTbody').innerHTML = data.logs.map(l => {
                 const time = new Date(l.timestamp).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
                 const color = l.action==='DELETE'?'var(--error)':l.action==='UPLOAD'?'var(--success)':'var(--primary)';
-                return `<tr><td style="color:var(--text-muted);font-size:12px">${time}</td><td><b style="color:${color}">${l.action}</b></td><td class="details-cell">${l.details}</td><td><code style="font-size:12px;opacity:0.7">${l.ip}</code></td></tr>`;
+                return `<tr><td style="color:var(--text-muted);font-size:12px">${time}</td><td><b style="color:${color}">${l.action}</b></td><td class="details-cell">${l.details}</td><td><code>${l.ip}</code></td></tr>`;
             }).join('');
         }
 
@@ -108,7 +107,6 @@
                 loadHidden();
             }
         }
-
         loadLogs();
     </script>
 </body>
