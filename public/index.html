@@ -18,14 +18,12 @@
                 </a>
             </div>
 
-            <!-- 搜索框与按钮组现在都放在右侧 -->
-            <div class="header-right">
-                <div class="search-bar">
-                    <span class="search-icon">🔍</span>
-                    <input type="search" id="searchInput" placeholder="搜索..." onkeypress="if(event.key==='Enter')handleSearch()">
-                </div>
-                <div id="authButtons"></div>
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="search" id="searchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')handleSearch()">
             </div>
+
+            <div class="header-right" id="authButtons"></div>
         </div>
     </div>
 
@@ -49,11 +47,7 @@
                 <button id="viewBtn" class="tool-btn" onclick="toggleViewMode()">网格视图</button>
             </div>
         </div>
-
-        <div class="explorer-card">
-            <div id="fileList"></div>
-        </div>
-
+        <div class="explorer-card"><div id="fileList"></div></div>
         <footer class="footer">
             <div>项目：<a href="https://github.com/Delimo/O-Drive" target="_blank">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank">Delimo</a></div>
             <div>Powered by Cloudflare Pages</div>
@@ -61,7 +55,7 @@
         </footer>
     </div>
 
-    <!-- 弹窗 -->
+    <!-- Login Modal -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button onclick="closeLoginModal()" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button>
@@ -78,8 +72,9 @@
             <p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p>
         </div>
     </div>
+
     <div id="mkdirModal" class="modal-overlay"><div class="modal"><h3>新建文件夹</h3><input type="text" id="folderNameInput" class="form-input" placeholder="名称"><button class="btn btn-primary" style="width:100%" onclick="submitMkdir()">创建</button><button class="btn" style="width:100%; margin-top:8px;" onclick="closeModal()">取消</button></div></div>
-    <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="preview-modal" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 id="previewTitle">预览</h3><div style="display:flex; gap:10px;"><button id="editBtn" class="btn btn-sm" style="display:none" onclick="toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-sm btn-primary" style="display:none" onclick="saveTextContent()">保存</button><button onclick="closePreview()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:28px;">&times;</button></div></div><div id="previewContent" class="preview-body"></div></div></div>
+    <div id="previewModal" class="modal-overlay" onclick="closePreview()"><div class="preview-modal" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 id="previewTitle">预览</h3><div style="display:flex; gap:10px;"><button id="editBtn" class="btn btn-sm" style="display:none" onclick="toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-sm btn-primary" style="display:none" onclick="saveTextContent()">保存</button><button onclick="closePreview()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:28px; line-height:1">&times;</button></div></div><div id="previewContent" class="preview-body"></div></div></div>
 
     <script>
         let currentPath = '/', userRole = 'guest', viewMode = localStorage.getItem('viewMode') || 'grid', sortBy = localStorage.getItem('sortBy') || 'name';
@@ -139,8 +134,8 @@
                 if (userRole === 'admin') {
                     const nameEl = div.querySelector('.file-name');
                     nameEl.ondblclick = (e) => { e.stopPropagation(); const oldName = item.name; const input = document.createElement('input'); input.className = 'rename-input'; input.value = oldName; nameEl.replaceWith(input); input.focus(); input.select();
-                        const save = async () => { if (input.value && input.value !== oldName) { await fetch(`/api/files/${item.fullKey}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) }); loadFiles(); } else { loadFiles(); } };
-                        input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') save(); };
+                        const saveRename = async () => { if (input.value && input.value !== oldName) { await fetch(`/api/files/${item.fullKey}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) }); loadFiles(); } else { loadFiles(); } };
+                        input.onblur = saveRename; input.onkeypress = (ev) => { if(ev.key==='Enter') saveRename(); };
                     };
                 }
                 list.appendChild(div);
@@ -160,7 +155,7 @@
         function getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','webp','gif'].includes(ext)?'🖼️':['mp4','webm'].includes(ext)?'🎬':['mp3','wav'].includes(ext)?'🎵':ext==='pdf'?'📕':['zip','rar','7z'].includes(ext)?'📦':'📄'; }
         function isPreviewable(n) { const ext = n.split('.').pop().toLowerCase(); return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(ext); }
         async function openPreview(path, name) {
-            const ext = name.split('.').pop().toLowerCase(), url = `/api/preview${path}`, content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn'); currentPreviewPath = path; editBtn.style.display = 'none'; saveBtn.style.display = 'none'; title.textContent = "加载中..."; content.innerHTML = '<div style="color:var(--text-muted); padding:50px;">加载中...</div>'; document.getElementById('previewModal').classList.add('active'); try { if (['jpg','jpeg','png','gif','webp'].includes(ext)) { content.innerHTML = `<img src="${url}" class="preview-media" style="object-fit:contain;">`; } else if (['mp4','webm'].includes(ext)) { content.innerHTML = `<video src="${url}" class="preview-media" controls autoplay></video>`; } else if (['mp3','wav'].includes(ext)) { content.innerHTML = `<audio src="${url}" controls autoplay style="width:80%; margin-top:100px;"></audio>`; } else if (ext === 'pdf') { content.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`; } else { const res = await fetch(url); const text = await res.text(); if (userRole === 'admin') editBtn.style.display = 'inline-flex'; if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; text-align:left;">${marked.parse(text)}</div>`; else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:13px; font-family:monospace; text-align:left;">${text}</pre>`; } title.textContent = name; } catch (e) { content.innerHTML = `<div style="color:var(--error); padding:50px;">预览失败</div>`; }
+            const ext = name.split('.').pop().toLowerCase(), url = `/api/preview${path}`, content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn'); currentPreviewPath = path; editBtn.style.display = 'none'; saveBtn.style.display = 'none'; title.textContent = "加载中..."; content.innerHTML = '<div style="color:var(--text-muted); padding:50px;">加载中...</div>'; document.getElementById('previewModal').classList.add('active'); try { if (['jpg','jpeg','png','gif','webp'].includes(ext)) { content.innerHTML = `<img src="${url}" class="preview-media" style="object-fit:contain;">`; } else if (['mp4','webm'].includes(ext)) { content.innerHTML = `<video src="${url}" class="preview-media" controls autoplay></video>`; } else if (['mp3','wav'].includes(ext)) { content.innerHTML = `<audio src="${url}" controls autoplay style="width:80%; margin-top:100px;"></audio>`; } else if (ext === 'pdf') { content.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`; } else { const res = await fetch(url); const text = await res.text(); if (userRole === 'admin') editBtn.style.display = 'inline-flex'; if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; width:100%; text-align:left;">${marked.parse(text)}</div>`; else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:13px; font-family:monospace; text-align:left;">${text}</pre>`; } title.textContent = name; } catch (e) { content.innerHTML = `<div style="color:var(--error); padding:50px;">预览失败</div>`; }
         }
         function closePreview() { document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewModal').classList.remove('active'); }
         function toggleEditMode() { const pre = document.getElementById('textContent') || document.querySelector('.markdown-body'); const textarea = document.createElement('textarea'); textarea.className = 'edit-textarea'; textarea.id = 'editArea'; textarea.value = pre.innerText || pre.textContent; document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewContent').appendChild(textarea); document.getElementById('editBtn').style.display = 'none'; document.getElementById('saveBtn').style.display = 'inline-flex'; }
@@ -170,11 +165,12 @@
         function downloadFile(p) { window.open(`/api/download${p}`); }
         function openLoginModal() { document.getElementById('loginModal').classList.add('active'); }
         function closeLoginModal() { document.getElementById('loginModal').classList.remove('active'); }
-        async function doLogin() { const u = document.getElementById('adminUser').value; const p = document.getElementById('adminPass').value; const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:u, password:p}) }); if((await res.json()).success) window.location.reload(); else alert('登录失败'); }
+        async function doLogin() { const u = document.getElementById('adminUser').value; const p = document.getElementById('adminPass').value; const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:u, password:p}) }); if((await res.json()).success) window.location.reload(); else alert('失败'); }
         async function logout() { await fetch('/api/logout'); window.location.reload(); }
         function showMkdir() { if(userRole==='admin') document.getElementById('mkdirModal').classList.add('active'); }
-        async function submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); closeModal(); loadFiles(); }
+        async function submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); document.getElementById('folderNameInput').value = ''; closeModal(); loadFiles(); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active')); }
+        async function uploadFiles(files) { if(userRole!=='admin') return; const target = currentPath==='/'?'/api/files':`/api/files${currentPath.replace(/\/$/,'')}`; for (let f of files) { const fd = new FormData(); fd.append('file', f); await fetch(target, { method: 'POST', body: fd }); } loadFiles(); }
 
         initAuth();
     </script>
