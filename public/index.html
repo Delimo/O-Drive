@@ -38,7 +38,15 @@
                 <button id="viewBtn" class="tool-btn" onclick="toggleViewMode()">图墙模式</button>
             </div>
         </div>
+
         <div class="explorer-card"><div id="fileList"></div></div>
+
+        <!-- 按照参考图设计的 Footer -->
+        <footer class="footer">
+            <div>项目：O-Drive | 地址：<a href="https://github.com/Delimo/O-Drive" target="_blank">GitHub</a></div>
+            <div>Powered by Cloudflare Pages</div>
+            <div>&copy; 2026 O-Drive. All rights reserved.</div>
+        </footer>
     </div>
 
     <!-- Login Modal -->
@@ -186,44 +194,11 @@
         }
 
         function setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; loadFiles(); }
-        async function executePaste() {
-            await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) });
-            clipboard = null; loadFiles();
-        }
-        async function batchDelete() {
-            if (confirm(`确定删除这 ${selectedPaths.length} 个项目吗？`)) {
-                await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) });
-                loadFiles();
-            }
-        }
-        function selectAll() {
-            selectedPaths = [...fileData.folders, ...fileData.files].map(i => i.fullKey);
-            updateViewUI(); updateBatchUI();
-        }
-        function renderBreadcrumb() {
-            if(isSearching) return;
-            const box = document.getElementById('breadcrumb');
-            const parts = currentPath.split('/').filter(p => p);
-            let html = `<span class="breadcrumb-item" onclick="navigateTo('/')">🏠 根目录</span>`;
-            if (parts.length > 3) {
-                html += `<span style="opacity:0.5"> / </span><span>...</span>`;
-                parts.slice(-2).forEach((p, i) => {
-                    const path = '/' + parts.slice(0, parts.length - 2 + i + 1).join('/') + '/';
-                    html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="navigateTo('${path}')">${p}</span>`;
-                });
-            } else {
-                let acc = '';
-                parts.forEach(p => { acc += '/' + p; html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="navigateTo('${acc}/')">${p}</span>`; });
-            }
-            box.innerHTML = html;
-        }
-        async function handleSearch() {
-            const q = document.getElementById('searchInput').value.trim(); if (!q) return clearSearch();
-            isSearching = true;
-            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`);
-            fileData = { folders: [], files: (await res.json()).files || [] };
-            updateViewUI(); document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
-        }
+        async function executePaste() { await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); clipboard = null; loadFiles(); }
+        async function batchDelete() { if (confirm(`确定删除这 ${selectedPaths.length} 个项目吗？`)) { await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); loadFiles(); } }
+        function selectAll() { selectedPaths = [...fileData.folders, ...fileData.files].map(i => i.fullKey); updateViewUI(); updateBatchUI(); }
+        function renderBreadcrumb() { if(isSearching) return; const box = document.getElementById('breadcrumb'); const parts = currentPath.split('/').filter(p => p); let html = `<span class="breadcrumb-item" onclick="navigateTo('/')">🏠 根目录</span>`; if (parts.length > 3) { html += `<span style="opacity:0.5"> / </span><span>...</span>`; parts.slice(-2).forEach((p, i) => { const path = '/' + parts.slice(0, parts.length - 2 + i + 1).join('/') + '/'; html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="navigateTo('${path}')">${p}</span>`; }); } else { let acc = ''; parts.forEach(p => { acc += '/' + p; html += `<span style="opacity:0.5"> / </span><span class="breadcrumb-item" onclick="navigateTo('${acc}/')">${p}</span>`; }); } box.innerHTML = html; }
+        async function handleSearch() { const q = document.getElementById('searchInput').value.trim(); if (!q) return clearSearch(); isSearching = true; const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`); fileData = { folders: [], files: (await res.json()).files || [] }; updateViewUI(); document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`; }
         function clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; loadFiles(); }
         function navigateTo(p) { currentPath = p.endsWith('/') ? p : p + '/'; loadFiles(); }
         function getParentPath(p) { const pts = p.split('/').filter(x=>x); pts.pop(); return '/' + pts.join('/') + (pts.length? '/':''); }
@@ -254,7 +229,7 @@
         function downloadFile(p) { window.open(`/api/download${p}`); }
         function openLoginModal() { document.getElementById('loginModal').classList.add('active'); }
         function closeLoginModal() { document.getElementById('loginModal').classList.remove('active'); }
-        async function doLogin() { const u = document.getElementById('adminUser').value; const p = document.getElementById('adminPass').value; const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:u, password:p}) }); if((await res.json()).success) window.location.reload(); else document.getElementById('loginError').textContent = '登录失败'; }
+        async function doLogin() { const u = document.getElementById('adminUser').value; const p = document.getElementById('adminPass').value; const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:u, password:p}) }); if((await res.json()).success) window.location.reload(); else alert('登录失败'); }
         async function logout() { await fetch('/api/logout'); window.location.reload(); }
         function showMkdir() { document.getElementById('mkdirModal').classList.add('active'); }
         async function submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); document.getElementById('folderNameInput').value = ''; closeModal(); loadFiles(); }
