@@ -32,7 +32,7 @@ export async function onRequest(context) {
     }
     return jsonResponse({ success: false }, 401);
   }
-  if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT' });
+  if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; SameSite=Strict; Max-Age=0' });
 
   const auth = await verifyAuth(request, env);
   if (!auth) return jsonResponse({ success: false }, 401);
@@ -42,10 +42,8 @@ export async function onRequest(context) {
   const hiddenRes = await env.DB.prepare("SELECT key FROM settings").all();
   const hiddenPaths = hiddenRes.results.map(r => r.key);
 
-  const isHidden = hiddenPaths.some(hp => r2Path === hp || r2Path.startsWith(hp + '/'));
-  if (isHidden && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
+  if (hiddenPaths.some(hp => r2Path === hp || r2Path.startsWith(hp + '/')) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
 
-  // 1. 搜索接口
   if (path === '/api/search') {
     const q = url.searchParams.get('q')?.toLowerCase();
     const scope = (url.searchParams.get('scope') || '/').slice(1);
@@ -55,7 +53,6 @@ export async function onRequest(context) {
     return jsonResponse({ files: matches });
   }
 
-  // 2. 后台管理
   if (path.startsWith('/api/admin/') && auth.role === 'admin') {
     if (path === '/api/admin/logs') return jsonResponse({ logs: (await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all()).results });
     if (path === '/api/admin/settings/hidden') {
@@ -65,7 +62,6 @@ export async function onRequest(context) {
     }
   }
 
-  // 3. 文件列表
   if (path.startsWith('/api/files') && method === 'GET') {
     let prefix = r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '';
     const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
@@ -74,22 +70,19 @@ export async function onRequest(context) {
     return jsonResponse({ folders, files });
   }
 
-  // 4. 管理员操作拦截
   if (['POST', 'PUT', 'DELETE'].includes(method) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
-
-  // 批量删除
-  if (path === '/api/batch-delete' && method === 'POST') {
+  
+  if (path === '/api/batch-delete') {
     const { paths } = await request.json();
     for (const p of paths) {
       const listed = await env.R2_BUCKET.list({ prefix: p + '/' });
-      for (const obj of listed.objects) { await env.R2_BUCKET.delete(obj.key); }
+      for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
       await env.R2_BUCKET.delete(p);
     }
     return jsonResponse({ success: true });
   }
 
-  // 粘贴 (移动/复制)
-  if (path === '/api/paste' && method === 'POST') {
+  if (path === '/api/paste') {
     const { action, paths, targetDir } = await request.json();
     const destPrefix = targetDir === '/' ? '' : (targetDir.endsWith('/') ? targetDir : targetDir + '/');
     for (const srcPath of paths) {
@@ -97,80 +90,52 @@ export async function onRequest(context) {
       const destPath = destPrefix + fileName;
       const listed = await env.R2_BUCKET.list({ prefix: srcPath + '/' });
       const self = await env.R2_BUCKET.get(srcPath);
-      if (self) { await env.R2_BUCKET.put(destPath, self.body); if (action === 'move') await env.R2_BUCKET.delete(srcPath); }
-      for (const obj of listed.objects) {
-        const subDest = destPath + obj.key.slice(srcPath.length);
-        await env.R2_BUCKET.put(subDest, (await env.R2_BUCKET.get(obj.key)).body);
-        if (action === 'move') await env.R2_BUCKET.delete(obj.key);
+      if (self) await env.R2_BUCKET.put(destPath, self.body);
+      for (const obj of listed.objects) await env.R2_BUCKET.put(destPath + obj.key.slice(srcPath.length), (await env.R2_BUCKET.get(obj.key)).body);
+      if (action === 'move') {
+        for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
+        await env.R2_BUCKET.delete(srcPath);
       }
     }
     return jsonResponse({ success: true });
   }
 
-  // 新建文件夹
   if (path.startsWith('/api/mkdir')) {
     const { folderName } = await request.json();
-    const key = (r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + folderName + '/.folder';
-    await env.R2_BUCKET.put(key, new Uint8Array(0));
+    await env.R2_BUCKET.put((r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + folderName + '/.folder', new Uint8Array(0));
     return jsonResponse({ success: true });
   }
 
-  // 上传
   if (path.startsWith('/api/files') && method === 'POST') {
     const file = (await request.formData()).get('file');
-    const key = (r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + file.name;
-    await env.R2_BUCKET.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
+    await env.R2_BUCKET.put((r2Path ? (r2Path.endsWith('/') ? r2Path : r2Path + '/') : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
     return jsonResponse({ success: true });
   }
 
-  // 单个删除
-  if (path.startsWith('/api/files') && method === 'DELETE') {
-      const listed = await env.R2_BUCKET.list({ prefix: r2Path + '/' });
-      for (const obj of listed.objects) { await env.R2_BUCKET.delete(obj.key); }
-      await env.R2_BUCKET.delete(r2Path);
-      return jsonResponse({ success: true });
-  }
-
-  // --- 重命名核心修复逻辑 ---
   if (path.startsWith('/api/files') && method === 'PUT') {
     const { newName } = await request.json();
-    const oldKey = r2Path;
-    const parentDir = oldKey.substring(0, oldKey.lastIndexOf('/') + 1);
+    const source = await env.R2_BUCKET.get(r2Path);
+    const parentDir = r2Path.substring(0, r2Path.lastIndexOf('/') + 1);
     const newKey = parentDir + newName;
-
-    // 1. 同步更新 D1 隐藏名单 (如果该路径在隐藏名单中)
-    await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, oldKey).run();
-
-    // 2. 检查是否是文件夹 (通过检查 .folder 占位符或是否存在子前缀)
-    const objectsInFolder = await env.R2_BUCKET.list({ prefix: oldKey + '/' });
-    const isFolder = objectsInFolder.objects.length > 0 || oldKey.endsWith('.folder');
-
-    if (isFolder || objectsInFolder.objects.length > 0) {
-        // 递归处理文件夹内所有内容
-        for (const obj of objectsInFolder.objects) {
-            const subRelativePath = obj.key.slice(oldKey.length);
-            const subDestPath = newKey + subRelativePath;
-            const sourceObj = await env.R2_BUCKET.get(obj.key);
-            await env.R2_BUCKET.put(subDestPath, sourceObj.body, { httpMetadata: sourceObj.httpMetadata });
-            await env.R2_BUCKET.delete(obj.key);
-        }
-        // 处理文件夹占位符本身（如果有）
-        const folderMarker = await env.R2_BUCKET.get(oldKey + '/.folder');
-        if (folderMarker) {
-            await env.R2_BUCKET.put(newKey + '/.folder', new Uint8Array(0));
-            await env.R2_BUCKET.delete(oldKey + '/.folder');
-        }
-    } else {
-        // 普通文件重命名
-        const source = await env.R2_BUCKET.get(oldKey);
-        if (source) {
-            await env.R2_BUCKET.put(newKey, source.body, { httpMetadata: source.httpMetadata });
-            await env.R2_BUCKET.delete(oldKey);
-        }
+    
+    // 递归处理文件夹内内容
+    const listed = await env.R2_BUCKET.list({ prefix: r2Path + '/' });
+    for (const obj of listed.objects) {
+        const subDest = newKey + obj.key.slice(r2Path.length);
+        await env.R2_BUCKET.put(subDest, (await env.R2_BUCKET.get(obj.key)).body);
+        await env.R2_BUCKET.delete(obj.key);
     }
-
-    await addLog(env, request, 'RENAME', `${oldKey} -> ${newName}`);
+    if (source) { await env.R2_BUCKET.put(newKey, source.body); await env.R2_BUCKET.delete(r2Path); }
+    // 同步隐藏设置
+    await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Path).run();
     return jsonResponse({ success: true });
+  }
+
+  if (path.startsWith('/api/files') && method === 'DELETE') {
+      const listed = await env.R2_BUCKET.list({ prefix: r2Path + '/' });
+      for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
+      await env.R2_BUCKET.delete(r2Path);
+      return jsonResponse({ success: true });
   }
 
   if (path.startsWith('/api/download') || path.startsWith('/api/preview')) {
