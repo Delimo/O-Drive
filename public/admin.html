@@ -9,17 +9,52 @@
 <body>
     <div class="header">
         <div class="header-content">
-            <div class="header-left"><a class="logo-box" href="/"><span>☁️</span><span class="logo-text">管理后台</span></a></div>
-            <div class="header-right"><a href="/" class="btn">返回云盘</a></div>
+            <div class="header-left">
+                <a class="logo-box" href="/">
+                    <span style="font-size:24px;">☁️</span>
+                    <span class="logo-text">管理后台</span>
+                </a>
+            </div>
+            <div class="header-right">
+                <a href="/" class="btn">返回云盘</a>
+            </div>
         </div>
     </div>
+
     <div class="container">
-        <div class="tabs"><button class="tab-btn active" onclick="switchTab('logs')">操作日志</button><button class="tab-btn" onclick="switchTab('privacy')">隐私管理</button></div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('logs')">操作日志</button>
+            <button class="tab-btn" onclick="switchTab('privacy')">隐私管理</button>
+        </div>
+
         <div class="admin-card">
-            <div id="logs-tab" class="tab-content active"><table class="log-table"><thead><tr><th style="width:180px">时间</th><th style="width:100px">动作</th><th>详情</th><th style="width:140px">IP 地址</th></tr></thead><tbody id="logTbody"></tbody></table></div>
-            <div id="privacy-tab" class="tab-content"><div class="privacy-tools"><input type="text" id="hideInput" class="privacy-input" placeholder="输入路径..."><button class="btn btn-primary" onclick="addHidden()">添加隐藏</button></div><table class="log-table"><thead><tr><th>路径</th><th>状态</th><th style="width:100px">操作</th></tr></thead><tbody id="hiddenTbody"></tbody></table></div>
+            <div id="logs-tab" class="tab-content active">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th style="width:180px">时间</th>
+                            <th style="width:100px">动作</th>
+                            <th>详情</th>
+                            <th style="width:140px">IP 地址</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTbody"></tbody>
+                </table>
+            </div>
+
+            <div id="privacy-tab" class="tab-content">
+                <div class="privacy-tools">
+                    <input type="text" id="hideInput" class="privacy-input" placeholder="输入隐藏路径 (如: work/docs)">
+                    <button class="btn btn-primary" onclick="addHidden()">添加隐藏</button>
+                </div>
+                <table class="log-table">
+                    <thead><tr><th>路径</th><th>状态</th><th style="width:100px">操作</th></tr></thead>
+                    <tbody id="hiddenTbody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
+
     <script>
         function switchTab(id) {
             document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
@@ -28,8 +63,10 @@
             document.getElementById(id + '-tab').classList.add('active');
             id === 'logs' ? loadLogs() : loadHidden();
         }
+
         async function loadLogs() {
-            const res = await fetch('/api/admin/logs'); if(res.status !== 200) return window.location.href='/';
+            const res = await fetch('/api/admin/logs'); 
+            if(res.status !== 200) return window.location.href='/';
             const data = await res.json();
             document.getElementById('logTbody').innerHTML = data.logs.map(l => {
                 const time = new Date(l.timestamp).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
@@ -37,16 +74,26 @@
                 return `<tr><td style="color:var(--text-muted);font-size:12px">${time}</td><td><b style="color:${color}">${l.action}</b></td><td class="details-cell">${l.details}</td><td><code>${l.ip}</code></td></tr>`;
             }).join('');
         }
+
         async function loadHidden() {
-            const res = await fetch('/api/admin/settings/hidden'); const data = await res.json();
+            const res = await fetch('/api/admin/settings/hidden');
+            const data = await res.json();
             document.getElementById('hiddenTbody').innerHTML = data.list.map(i => `<tr><td><code>${i.path}</code></td><td style="color:var(--error)">已隐藏</td><td><button class="btn btn-sm btn-danger" onclick="removeHidden('${i.path}')">取消</button></td></tr>`).join('');
         }
+
         async function addHidden() {
-            const path = document.getElementById('hideInput').value.trim(); if(!path) return;
+            const path = document.getElementById('hideInput').value.trim();
+            if(!path) return;
             await fetch('/api/admin/settings/hidden', { method: 'POST', body: JSON.stringify({ targetPath: path }) });
             document.getElementById('hideInput').value = ''; loadHidden();
         }
-        async function removeHidden(p) { if(confirm('确定取消?')) { await fetch(`/api/admin/settings/hidden?path=${encodeURIComponent(p)}`, { method: 'DELETE' }); loadHidden(); } }
+
+        async function removeHidden(p) {
+            if(confirm('确定取消隐藏吗?')) {
+                await fetch(`/api/admin/settings/hidden?path=${encodeURIComponent(p)}`, { method: 'DELETE' });
+                loadHidden();
+            }
+        }
         loadLogs();
     </script>
 </body>
