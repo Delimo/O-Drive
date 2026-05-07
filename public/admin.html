@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>控制面板</title>
+    <title>控制面板 - O-Drive</title>
     <link rel="stylesheet" href="/style.css">
     <style>
         .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--surface-light); padding-bottom: 12px; }
@@ -15,32 +15,51 @@
 </head>
 <body>
     <div class="header">
-        <div class="header-left"><a class="logo-box" href="/"><span style="font-size:24px;">☁️</span><span class="logo-text">管理后台</span></a></div>
-        <a href="/" class="btn">返回云盘</a>
+        <div class="header-content">
+            <div class="header-left">
+                <a class="logo-box" href="/">
+                    <span style="font-size:24px;">☁️</span>
+                    <span class="logo-text">管理后台</span>
+                </a>
+            </div>
+            <div class="header-right">
+                <a href="/" class="btn">返回云盘</a>
+            </div>
+        </div>
     </div>
+
     <div class="container">
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('logs')">操作日志</button>
             <button class="tab-btn" onclick="switchTab('privacy')">隐私管理</button>
         </div>
 
+        <!-- 日志标签页 -->
         <div id="logs-tab" class="tab-content active">
             <div class="card" style="padding:0">
                 <table class="log-table">
-                    <thead><tr><th class="col-time">时间</th><th class="col-action">动作</th><th>详情</th><th class="col-ip">IP</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th style="width:180px">时间</th>
+                            <th style="width:100px">动作</th>
+                            <th>详情</th>
+                            <th style="width:140px">IP 地址</th>
+                        </tr>
+                    </thead>
                     <tbody id="logTbody"></tbody>
                 </table>
             </div>
         </div>
 
+        <!-- 隐私管理标签页 -->
         <div id="privacy-tab" class="tab-content">
             <div class="card">
                 <div class="tips">
-                    <b>配置说明：</b>请输入路径（如 <code>private_folder</code>）。隐藏后访客将完全无法感知该路径及其内部文件的存在。
+                    <b>配置说明：</b>请输入相对路径（如 <code>private_folder</code>）。隐藏后访客将完全无法感知该路径及其内部文件的存在。
                 </div>
                 <div style="display:flex; gap:12px; margin-bottom:24px;">
-                    <input type="text" id="hideInput" class="form-input" placeholder="输入路径..." style="margin:0; flex:1">
-                    <button class="btn" style="background:var(--primary)" onclick="addHidden()">添加隐藏</button>
+                    <input type="text" id="hideInput" class="form-input" placeholder="输入路径..." style="margin:0; flex:1; background:var(--background); border:1px solid var(--border-color); border-radius:8px; color:white; padding:0 15px; outline:none;">
+                    <button class="btn btn-primary" onclick="addHidden()">添加隐藏</button>
                 </div>
                 <table>
                     <thead><tr><th>路径</th><th>状态</th><th style="width:100px">操作</th></tr></thead>
@@ -49,6 +68,7 @@
             </div>
         </div>
     </div>
+
     <script>
         function switchTab(id) {
             document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
@@ -57,25 +77,38 @@
             document.getElementById(id + '-tab').classList.add('active');
             id === 'logs' ? loadLogs() : loadHidden();
         }
+
         async function loadLogs() {
-            const res = await fetch('/api/admin/logs'); if(res.status!==200) return window.location.href='/login.html';
+            const res = await fetch('/api/admin/logs');
+            if(res.status !== 200) return window.location.href='/';
             const data = await res.json();
             document.getElementById('logTbody').innerHTML = data.logs.map(l => {
                 const time = new Date(l.timestamp).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
                 const color = l.action==='DELETE'?'var(--error)':l.action==='UPLOAD'?'var(--success)':'var(--primary)';
-                return `<tr><td class="col-time">${time}</td><td class="col-action" style="color:${color}">${l.action}</td><td class="details-cell">${l.details}</td><td class="col-ip">${l.ip}</td></tr>`;
+                return `<tr><td style="color:var(--text-muted);font-size:12px">${time}</td><td><b style="color:${color}">${l.action}</b></td><td class="details-cell">${l.details}</td><td><code style="font-size:12px;opacity:0.7">${l.ip}</code></td></tr>`;
             }).join('');
         }
+
         async function loadHidden() {
-            const data = await (await fetch('/api/admin/settings/hidden')).json();
+            const res = await fetch('/api/admin/settings/hidden');
+            const data = await res.json();
             document.getElementById('hiddenTbody').innerHTML = data.list.map(i => `<tr><td><code>${i.path}</code></td><td style="color:var(--error)">已隐藏</td><td><button class="btn btn-sm btn-danger" onclick="removeHidden('${i.path}')">取消</button></td></tr>`).join('');
         }
+
         async function addHidden() {
-            const path = document.getElementById('hideInput').value.trim(); if(!path) return;
+            const path = document.getElementById('hideInput').value.trim();
+            if(!path) return;
             await fetch('/api/admin/settings/hidden', { method: 'POST', body: JSON.stringify({ targetPath: path }) });
             document.getElementById('hideInput').value = ''; loadHidden();
         }
-        async function removeHidden(p) { if(confirm('确定取消?')) { await fetch(`/api/admin/settings/hidden?path=${encodeURIComponent(p)}`, { method: 'DELETE' }); loadHidden(); } }
+
+        async function removeHidden(p) {
+            if(confirm('确定取消隐藏吗?')) {
+                await fetch(`/api/admin/settings/hidden?path=${encodeURIComponent(p)}`, { method: 'DELETE' });
+                loadHidden();
+            }
+        }
+
         loadLogs();
     </script>
 </body>
