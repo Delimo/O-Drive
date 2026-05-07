@@ -122,15 +122,14 @@
                     div.ondblclick = () => Actions.navigateTo(parent); list.appendChild(div);
                 }
 
-                // 核心修复：严格过滤空文件夹名
-                const folders = [...(fileData.folders || [])].filter(f => f.name && f.name !== '').sort((a,b) => a.name.localeCompare(b.name));
-                const files = [...(fileData.files || [])].filter(f => f.name && f.name !== '').sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
+                const folders = [...(fileData.folders || [])].filter(f => f.name !== '').sort((a,b) => a.name.localeCompare(b.name));
+                const files = [...(fileData.files || [])].filter(f => f.name !== '').sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
                 
                 [...folders, ...files].forEach(item => {
                     const isFolder = !item.sizeFormatted; const div = document.createElement('div'); div.className = 'file-item';
                     div.dataset.key = item.fullKey;
                     if (selectedPaths.includes(item.fullKey)) div.classList.add('selected');
-                    const acts = !isFolder ? `<button class="btn btn-sm" onclick="Actions.openPreview('${item.path}','${item.name}')">预览</button><button class="btn btn-sm" onclick="downloadFile('${item.path}')">下载</button>` : '';
+                    const acts = !isFolder ? `<button class="btn btn-sm" onclick="Actions.openPreview('${item.path}','${item.name}')">预览</button><button class="btn btn-sm" onclick="Actions.downloadFile('${item.path}')">下载</button>` : '';
                     if (viewMode === 'grid') div.innerHTML = `<div class="file-main"><div class="file-icon">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div><div class="file-info">${isFolder?'文件夹':item.sizeFormatted}</div><div class="file-actions" onclick="event.stopPropagation()">${acts}</div>`;
                     else div.innerHTML = `<div class="col-name"><div class="file-icon">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div><div class="file-info col-size">${isFolder?'文件夹':item.sizeFormatted}</div><div class="file-info col-time">${Utils.formatDate(item.time)}</div><div class="file-actions col-acts" onclick="event.stopPropagation()">${acts}</div>`;
                     
@@ -173,37 +172,7 @@
                 const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) });
                 if(res.ok) { Message.success('粘贴成功'); clipboard = null; this.loadFiles(); }
             },
-            async batchDelete() { if (confirm(`确认删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('批量删除成功'); this.loadFiles(); } } },
-            
-            // --- 核心修复：重命名加锁与点击修复 ---
-            startRenameSelected() {
-                const key = selectedPaths[0];
-                const item = [...fileData.folders, ...fileData.files].find(i => i.fullKey === key);
-                const nameEl = document.querySelector(`[data-key="${CSS.escape(key)}"] .file-name`);
-                if(!nameEl) return;
-                
-                let isSaving = false; // 状态锁
-                const input = document.createElement('input');
-                input.className = 'rename-input'; input.value = item.name;
-                
-                // 允许点击输入框内容而不触发选中
-                input.onclick = (e) => e.stopPropagation();
-                
-                nameEl.replaceWith(input); input.focus(); input.select();
-                
-                const save = async () => {
-                    if (isSaving) return;
-                    const newName = input.value.trim();
-                    if (newName && newName !== item.name) {
-                        isSaving = true;
-                        const res = await fetch(`/api/files/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify({ newName }) });
-                        if(res.ok) { Message.success('重命名成功'); Actions.loadFiles(); }
-                    } else { Actions.loadFiles(); }
-                };
-                input.onblur = save; 
-                input.onkeypress = (ev) => { if(ev.key==='Enter') save(); };
-            },
-
+            async batchDelete() { if (confirm(`确认删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('已删除'); this.loadFiles(); } } },
             async handleSearch() {
                 const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch();
                 isSearching = true;
@@ -212,6 +181,7 @@
                 UI.updateFileList(); document.getElementById('breadcrumb').innerHTML = `<span style="color:var(--primary)">🔍 搜索: "${q}"</span>`;
             },
             clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
+            
             async openPreview(path, name) {
                 currentPreviewPath = path; isEditing = false; const content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn');
                 editBtn.style.display = 'none'; saveBtn.style.display = 'none'; title.textContent = "加载中..."; content.innerHTML = '<div style="color:var(--text-muted); padding:50px;">正在加载内容...</div>'; UI.showModal('previewModal');
@@ -222,7 +192,8 @@
                     else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="/api/preview${path}" controls autoplay style="width:80%; margin-top:100px;"></audio>`;
                     else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
                     else {
-                        const res = await fetch(`/api/preview${path}`); const text = await res.text(); if (userRole === 'admin') editBtn.style.display = 'inline-flex';
+                        const res = await fetch(`/api/preview${path}`); const text = await res.text();
+                        if (userRole === 'admin') editBtn.style.display = 'inline-flex';
                         if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; width:100%; text-align:left;">${marked.parse(text)}</div>`;
                         else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:13px; font-family:monospace; text-align:left;">${text}</pre>`;
                     }
@@ -244,6 +215,7 @@
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
             downloadFile(p) { window.open(`/api/download${p}`); },
             async submitMkdir() { const n = document.getElementById('folderNameInput').value; if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); UI.closeModal('mkdirModal'); this.loadFiles(); Message.success('文件夹已创建'); },
+            
             async uploadFiles(files) {
                 if(userRole!=='admin') return;
                 const manager = document.getElementById('uploadManager'); const list = document.getElementById('uploadList');
@@ -255,12 +227,54 @@
                     list.prepend(item);
                     const fd = new FormData(); fd.append('file', f);
                     const xhr = new XMLHttpRequest();
-                    xhr.open('POST', currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`, true);
+                    xhr.open('POST', '/api/files/' + currentPath.replace(/^\/|\/$/g, ''), true);
                     xhr.upload.onprogress = (e) => { if (e.lengthComputable) { const pct = Math.round((e.loaded / e.total) * 100); item.querySelector('.progress-fill').style.width = pct + '%'; item.querySelector('.pct').textContent = pct + '%'; } };
                     const onFinish = () => { activeUploads--; if (activeUploads === 0) { hideUploadTimeout = setTimeout(() => { manager.style.opacity = '0'; setTimeout(() => { manager.style.display = 'none'; list.innerHTML = ''; }, 500); }, 3000); } };
                     xhr.onload = () => { if (xhr.status === 200) { item.querySelector('.pct').textContent = '完成'; item.querySelector('.progress-fill').style.background = 'var(--success)'; this.loadFiles(); } else { item.querySelector('.pct').textContent = '失败'; } onFinish(); };
                     xhr.onerror = onFinish; xhr.send(fd);
                 }
+            },
+            // --- 核心修复：更智能的重命名逻辑 ---
+            startRenameSelected() {
+                const key = selectedPaths[0];
+                const item = [...fileData.folders, ...fileData.files].find(i => i.fullKey === key);
+                const nameContainer = document.querySelector(`[data-key="${CSS.escape(key)}"] .file-name`);
+                if(!nameContainer) return;
+                
+                let isSaving = false;
+                const oldName = item.name;
+                const input = document.createElement('input');
+                input.className = 'rename-input';
+                input.value = oldName;
+                
+                // 阻止点击输入框时触发文件的“选中/取消选中”
+                input.onmousedown = (e) => e.stopPropagation();
+                input.onclick = (e) => e.stopPropagation();
+
+                nameContainer.replaceWith(input);
+                input.focus();
+
+                // 智能选中逻辑：如果是文件，不选中后缀名
+                const lastDot = oldName.lastIndexOf('.');
+                if (lastDot > 0 && item.sizeFormatted) { // 仅对带后缀的文件生效
+                    input.setSelectionRange(0, lastDot);
+                } else {
+                    input.select(); // 文件夹全选
+                }
+                
+                const save = async () => {
+                    if (isSaving) return;
+                    const newName = input.value.trim();
+                    if (newName && newName !== oldName) {
+                        isSaving = true;
+                        const res = await fetch(`/api/files/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify({ newName }) });
+                        if(res.ok) { Message.success('重命名成功'); Actions.loadFiles(); }
+                        else { Message.error('重命名失败'); Actions.loadFiles(); }
+                    } else { Actions.loadFiles(); }
+                };
+                
+                input.onblur = save;
+                input.onkeydown = (ev) => { if(ev.key === 'Enter') { input.blur(); } };
             }
         };
 
