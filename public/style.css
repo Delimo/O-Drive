@@ -1,4 +1,7 @@
-/* --- style.css 最终稳固版 --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
     --primary: #3b82f6;
     --background: #020617;
@@ -18,11 +21,11 @@ html, body {
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-/* 预览框 Markdown 样式 */
+/* Markdown 预览 */
 .markdown-body { color: #cbd5e1; line-height: 1.6; font-size: 15px; }
 .markdown-body h1 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; margin: 1em 0; color: #fff; }
 .markdown-body p { margin-bottom: 1em; }
-.markdown-body code { background: #1e293b; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+.markdown-body code { background: #1e293b; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; }
 
 /* Toast 动画 */
 @keyframes toastIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
