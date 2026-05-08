@@ -1,7 +1,6 @@
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
-// 自动格式化文件大小
 function formatBytes(bytes, decimals = 2) {
     if (!+bytes) return '0 B';
     const k = 1024;
@@ -74,14 +73,6 @@ export async function onRequest(context) {
         await addLog(env, request, 'SAVE_TEXT', r2Key);
         return jsonResponse({ success: true });
     }
-    if (path.startsWith('/api/admin/')) {
-        if (path === '/api/admin/logs') return jsonResponse({ logs: (await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all()).results });
-        if (path === '/api/admin/settings/hidden') {
-            if (method === 'GET') return jsonResponse({ list: (await env.DB.prepare("SELECT key as path FROM settings").all()).results });
-            if (method === 'POST') { await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind((await request.json()).targetPath).run(); return jsonResponse({ success: true }); }
-            if (method === 'DELETE') { await env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(url.searchParams.get('path')).run(); return jsonResponse({ success: true }); }
-        }
-    }
     if (path === '/api/batch-delete') {
         const { paths } = await request.json();
         for (const p of paths) {
@@ -136,28 +127,6 @@ export async function onRequest(context) {
     const file = (await request.formData()).get('file');
     await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
     return jsonResponse({ success: true });
-  }
-  if (path.startsWith('/api/files') && method === 'PUT') {
-    const { newName } = await request.json();
-    const source = await env.R2_BUCKET.get(r2Key);
-    const parentDir = r2Key.includes('/') ? r2Key.substring(0, r2Key.lastIndexOf('/') + 1) : '';
-    const newKey = parentDir + newName;
-    const listed = await env.R2_BUCKET.list({ prefix: r2Key + '/' });
-    for (const obj of listed.objects) { await env.R2_BUCKET.put(newKey + obj.key.slice(r2Key.length), (await env.R2_BUCKET.get(obj.key)).body); await env.R2_BUCKET.delete(obj.key); }
-    if (source) { await env.R2_BUCKET.put(newKey, source.body); await env.R2_BUCKET.delete(r2Key); }
-    await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Key).run();
-    return jsonResponse({ success: true });
-  }
-  if (path.startsWith('/api/files') && method === 'DELETE') {
-      const listed = await env.R2_BUCKET.list({ prefix: r2Key + '/' });
-      for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
-      await env.R2_BUCKET.delete(r2Key);
-      return jsonResponse({ success: true });
-  }
-  if (path.startsWith('/api/download') || path.startsWith('/api/preview')) {
-    const obj = await env.R2_BUCKET.get(r2Key);
-    if (!obj) return new Response('404', { status: 404 });
-    return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': path.startsWith('/api/download') ? `attachment; filename="${encodeURIComponent(r2Key.split('/').pop())}"` : 'inline' }});
   }
   return jsonResponse({ message: 'Not Found' }, 404);
 }
