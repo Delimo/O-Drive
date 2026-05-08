@@ -8,6 +8,7 @@
     flex-direction: column; 
     min-height: 0; 
     box-sizing: border-box; 
+    overflow: hidden; /* 防止最外层出现滚动条 */
 }
 .toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 0 15px; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 12px; height: 56px; flex-shrink: 0; }
 .tools-left { flex: 1; min-width: 0; display: flex; align-items: center; font-size: 14px; overflow: hidden; }
@@ -28,14 +29,15 @@
     padding: 20px; 
     flex: 1; 
     overflow-y: auto; 
+    overflow-x: hidden; /* 彻底移除横向滚动条 */
     position: relative; 
     min-height: 0; 
 }
 
-/* 列表模式对齐优化 */
+/* 列表布局核心优化 */
 .list-layout { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 
-/* 关键修正：表头对齐 */
+/* 修正后的表头：不再使用负边距 */
 .list-header { 
     position: sticky; 
     top: -20px; 
@@ -43,41 +45,66 @@
     z-index: 10; 
     display: flex; 
     align-items: center; 
-    /* 与下方 file-item 的内边距+边线厚度完全一致 */
-    padding: 0 16px; 
+    padding: 0 15px; /* 与 file-item 保持一致 */
     height: 48px; 
     color: var(--text-muted); 
     font-size: 12px; 
     border-bottom: 1px solid var(--border-color); 
-    /* 移除之前的负边距，确保在容器内对齐 */
-    margin: -20px -20px 12px -20px; 
-    width: calc(100% + 40px); /* 补偿 card 的 padding */
+    margin-bottom: 8px;
 }
 
 .list-layout .file-item { 
     background: rgba(255,255,255,0.02); 
     border: 1px solid var(--border-color); 
-    height: 54px; 
+    height: 52px; 
     padding: 0 15px; 
     border-radius: 8px; 
     cursor: pointer; 
     display: flex !important; 
     flex-direction: row !important; 
     align-items: center !important; 
-    justify-content: space-between !important; 
     width: 100%; 
     box-sizing: border-box; 
     transition: 0.2s;
 }
 .list-layout .file-item:hover { background: rgba(255,255,255,0.05); border-color: var(--primary); }
 
-/* 列宽度固定，确保表头和内容共用一套宽度 */
-.col-name { flex: 3; display: flex; align-items: center; min-width: 0; pointer-events: none; gap: 10px; }
-.col-size { width: 100px; text-align: center; font-size: 12px; flex-shrink: 0; }
-.col-time { width: 180px; text-align: center; font-family: monospace; font-size: 12px; flex-shrink: 0; }
-.col-acts { width: 180px; display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-shrink: 0; }
+/* 关键列对齐：使用百分比和最小宽度确保对齐 */
+.col-name { 
+    flex: 1; /* 占据主要空间 */
+    display: flex; 
+    align-items: center; 
+    min-width: 0; 
+    gap: 12px; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.col-size { 
+    width: 120px; 
+    text-align: right; 
+    padding-right: 20px;
+    font-size: 12px; 
+    flex-shrink: 0; 
+}
+.col-time { 
+    width: 180px; 
+    text-align: center; 
+    font-family: monospace; 
+    font-size: 12px; 
+    flex-shrink: 0; 
+    color: var(--text-muted);
+}
+.col-acts { 
+    width: 160px; 
+    display: flex; 
+    gap: 8px; 
+    justify-content: flex-end; 
+    align-items: center; 
+    flex-shrink: 0; 
+}
 
-/* 网格模式保持不变 */
+/* 网格模式保持 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; width: 100%; }
 .grid-layout .file-item { background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 240px; justify-content: space-between; align-items: center; transition: 0.2s; box-sizing: border-box; }
 .grid-layout .file-main { flex: 1; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; pointer-events: none; width: 100%; }
@@ -86,17 +113,18 @@
 .grid-layout .file-info { font-size: 11px; color: var(--text-muted); margin-bottom: 15px; width: 100%; }
 .grid-layout .file-actions { display: flex !important; flex-direction: row !important; gap: 8px !important; justify-content: center !important; width: 100%; }
 
+/* 页脚：紧凑靠底 */
 .footer { 
-    margin-top: 15px; 
-    padding: 25px 0 30px 0; 
+    margin-top: 10px; 
+    padding: 20px 0; 
     text-align: center; 
     border-top: 1px solid rgba(255, 255, 255, 0.05); 
     flex-shrink: 0; 
 }
-.footer-info { color: rgba(255, 255, 255, 0.6); font-size: 15px; margin-bottom: 8px; letter-spacing: 0.5px; }
+.footer-info { color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 4px; letter-spacing: 0.5px; }
 .footer-brand { color: #ffffff; font-weight: 500; text-decoration: none; }
-.footer-powered { color: rgba(255, 255, 255, 0.4); font-size: 14px; margin-bottom: 12px; }
-.footer-copyright { color: rgba(255, 255, 255, 0.5); font-size: 14px; }
+.footer-powered { color: rgba(255, 255, 255, 0.35); font-size: 13px; margin-bottom: 6px; }
+.footer-copyright { color: rgba(255, 255, 255, 0.4); font-size: 13px; }
 
 .upload-manager { position: fixed; bottom: 20px; right: 20px; width: 320px; background: var(--surface); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 300; display: none; flex-direction: column; overflow: hidden; }
 .upload-item { margin: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
