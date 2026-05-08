@@ -40,9 +40,3 @@
 4. **构建与部署**：
    - 将本项目上传至 GitHub。
    - 连接至 Cloudflare Pages，构建输出目录选择 `public` 即可。
-
-## 📄 许可证
-
-项目遵循开源协议。
-项目：[O-Drive](https://github.com/Delimo/O-Drive) | 作者：[Delimo](https://github.com/Delimo)
-© 2026 O-Drive. All rights reserved.
