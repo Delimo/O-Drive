@@ -10,7 +10,7 @@
     <style>.admin-only { display: none; }</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden bg-background">
-    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center"></div>
 
     <main class="flex-1 flex flex-col min-h-0 max-w-7xl mx-auto w-full px-4 py-4 gap-3">
         <!-- Header -->
@@ -32,13 +32,15 @@
         <div class="bg-surface border border-border rounded-xl p-3 flex items-center justify-between gap-4 flex-shrink-0 overflow-x-auto no-scrollbar shadow-md">
             <div id="breadcrumb" class="flex items-center gap-1 text-sm font-medium text-primary whitespace-nowrap overflow-hidden"></div>
             <div class="flex items-center gap-2 flex-shrink-0">
+                <!-- 批量工具 -->
                 <div id="batchTools" class="hidden items-center gap-2 pr-3 border-r border-border/50 mr-1">
-                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.toggleSelectAll()" id="selectAllBtn">全选</button>
+                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.toggleSelectAll()">全选</button>
                     <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">更名</button>
-                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.setClipboard('move')">移动</button>
                     <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.setClipboard('copy')">复制</button>
+                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.setClipboard('move')">移动</button>
                     <button class="px-3 py-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg text-xs font-bold hover:bg-red-500 hover:text-white" onclick="Actions.batchDelete()">删除</button>
                 </div>
+                <!-- 粘贴区域 -->
                 <div id="pasteGroup" class="hidden items-center gap-2">
                     <button id="pasteBtn" class="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold" onclick="Actions.executePaste()">粘贴</button>
                     <button id="cancelPasteBtn" class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs text-white" onclick="Actions.clearClipboard()">取消</button>
@@ -54,7 +56,7 @@
             </div>
         </div>
 
-        <!-- Explorer Card -->
+        <!-- Explorer -->
         <div class="bg-surface border border-border rounded-xl flex-1 flex flex-col min-h-0 overflow-hidden relative shadow-inner">
             <div id="fileList" class="flex-1 overflow-y-auto p-4 custom-scroll relative"></div>
         </div>
@@ -70,14 +72,14 @@
         </footer>
     </main>
 
-    <!-- Modals (保持原样) -->
+    <!-- Modals -->
     <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4">
         <div class="bg-[#1a1a1a] border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
             <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button>
-            <h1 class="text-xl font-bold mb-6 text-center text-white">管理员登录</h1>
+            <h1 class="text-xl font-bold mb-6 text-center text-white">登录 O-Drive</h1>
             <input type="text" id="adminUser" placeholder="用户名" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-white">
             <input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-white">
-            <button class="w-full h-11 bg-primary text-white rounded-lg font-bold hover:brightness-110 active:scale-95 transition-all" onclick="Actions.doLogin()">登录</button>
+            <button class="w-full h-11 bg-primary text-white rounded-lg font-bold hover:brightness-110 transition-all" onclick="Actions.doLogin()">确认</button>
             <p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p>
         </div>
     </div>
@@ -102,7 +104,7 @@
         </div>
     </div>
     <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden">
-        <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-400"><span>上传进度</span><button onclick="UI.closeUploadManager()">&times;</button></div>
+        <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-400"><span>上传中...</span><button onclick="UI.closeUploadManager()">&times;</button></div>
         <div id="uploadList" class="max-h-80 overflow-y-auto"></div>
     </div>
 
@@ -116,7 +118,7 @@
             show(msg, type = 'info') {
                 const container = document.getElementById('toastContainer');
                 const div = document.createElement('div');
-                div.className = `toast-anim px-5 py-2.5 rounded-xl text-sm font-bold shadow-2xl flex items-center gap-2 pointer-events-auto ${type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-primary'} text-white`;
+                div.className = `toast-anim px-5 py-2.5 rounded-xl text-sm font-bold shadow-2xl flex items-center gap-2 pointer-events-auto ${type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-primary'} text-white my-1`;
                 div.innerHTML = `<span>${type==='success'?'✅':'⚠️'}</span> ${msg}`;
                 container.appendChild(div);
                 setTimeout(() => { div.style.opacity = '0'; div.style.transition = '0.3s'; setTimeout(() => div.remove(), 300); }, 3000);
@@ -134,7 +136,7 @@
                 const box = document.getElementById('authButtons');
                 if (userRole === 'admin') {
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-flex');
-                    box.innerHTML = `<a href="/admin.html" class="px-4 py-1.5 bg-slate-800 border border-border rounded-lg text-sm font-bold hover:bg-slate-700 transition-all text-white">管理</a><button onclick="Actions.logout()" class="px-3 opacity-60 text-sm text-white">退出</button>`;
+                    box.innerHTML = `<a href="/admin.html" class="px-4 py-1.5 bg-slate-800 border border-border rounded-lg text-sm font-bold hover:bg-slate-700 text-white">管理</a><button onclick="Actions.logout()" class="px-3 opacity-60 text-sm text-white">退出</button>`;
                 } else {
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
                     box.innerHTML = `<button class="px-5 py-1.5 bg-primary text-white rounded-lg font-bold active:scale-95 transition-all text-sm" onclick="UI.showModal('loginModal')">登录</button>`;
@@ -156,11 +158,11 @@
                 box.innerHTML = html;
             },
             updateFileList() {
-                const list = document.getElementById('fileList'); document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '网格' : '列表'; document.getElementById('sortBtn').textContent = sortNames[sortBy]; list.innerHTML = '';
+                const list = document.getElementById('fileList'); document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '网格' : '列表'; document.getElementById('sortBtn').textContent = sortModes.indexOf(sortBy) !== -1 ? sortNames[sortBy] : '名称'; list.innerHTML = '';
                 if (viewMode === 'list') {
                     const header = document.createElement('div');
                     header.className = "grid grid-cols-2 md:grid-cols-[1fr_100px_180px_160px] gap-4 px-4 py-3 border-b border-border text-[10px] uppercase tracking-widest text-slate-500 font-bold sticky top-0 bg-surface z-10";
-                    header.innerHTML = `<div>名称</div><div class="hidden md:block text-center">大小</div><div class="hidden md:block text-center">修改时间</div><div class="text-right pr-4">操作</div>`;
+                    header.innerHTML = `<div>名称</div><div class="hidden md:block text-center">大小</div><div class="hidden md:block text-center">修改时间</div><div class="text-right">操作</div>`;
                     list.appendChild(header);
                 }
                 const container = document.createElement('div');
@@ -177,7 +179,7 @@
                     const isFolder = !item.sizeFormatted; const el = document.createElement('div'); const isSelected = selectedPaths.includes(item.fullKey);
                     el.dataset.key = item.fullKey;
                     if (viewMode === 'grid') {
-                        el.className = `group bg-slate-900/40 border ${isSelected?'border-primary bg-primary/5':'border-border'} rounded-xl p-4 flex flex-col items-center text-center cursor-pointer hover:bg-slate-800 transition-all`;
+                        el.className = `group bg-slate-900/40 border ${isSelected?'border-primary bg-primary/10 ring-1 ring-primary':'border-border'} rounded-xl p-4 flex flex-col items-center text-center cursor-pointer hover:bg-slate-800 transition-all`;
                         el.innerHTML = `<div class="text-5xl mb-4 select-none">${isFolder?'📁':Utils.getFileIcon(item.name)}</div>
                             <div class="text-sm font-semibold truncate w-full mb-1 text-white">${item.name}</div>
                             <div class="text-[10px] text-slate-500 mb-4">${isFolder?'文件夹':item.sizeFormatted}</div>
@@ -194,48 +196,63 @@
             },
             updateBatchUI() {
                 const bt = document.getElementById('batchTools'); const pg = document.getElementById('pasteGroup');
-                const ren = document.getElementById('singleRenameBtn'); const total = fileData.folders.length + fileData.files.length;
+                const ren = document.getElementById('singleRenameBtn');
                 bt.classList.toggle('hidden', !(userRole === 'admin' && selectedPaths.length > 0));
                 bt.classList.toggle('flex', (userRole === 'admin' && selectedPaths.length > 0));
                 pg.classList.toggle('hidden', !(userRole === 'admin' && clipboard));
                 pg.classList.toggle('flex', (userRole === 'admin' && clipboard));
                 if (ren) ren.classList.toggle('hidden', selectedPaths.length !== 1);
-                if (clipboard) document.getElementById('pasteBtn').textContent = `粘贴 (${clipboard.paths.length})`;
+                if (clipboard) document.getElementById('pasteBtn').textContent = `${clipboard.action==='move'?'移动':'复制'} (${clipboard.paths.length})`;
             }
         };
 
         const Actions = {
             async init() { 
-                const res = await fetch('/api/auth/role'); 
-                userRole = (res.status === 200) ? (await res.json()).role : 'guest';
+                const res = await fetch('/api/auth/role'); userRole = (res.status === 200) ? (await res.json()).role : 'guest';
                 UI.updateAuth(); this.loadFiles();
                 const startYear = 2026; const currentYear = new Date().getFullYear();
                 document.getElementById('year-display').textContent = currentYear > startYear ? `${startYear} - ${currentYear}` : startYear;
             },
-            async loadFiles() { if (isSearching) return; selectedPaths = []; UI.updateBatchUI(); const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`); if (!res.ok) { if(res.status===401) return; Message.error('加载失败'); return; } fileData = await res.json(); UI.updateFileList(); UI.renderBreadcrumb(); },
-            async doLogin() { const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:document.getElementById('adminUser').value, password:document.getElementById('adminPass').value}) }); if((await res.json()).success) window.location.reload(); else document.getElementById('loginError').textContent = '验证失败'; },
+            async loadFiles() { if (isSearching) return; selectedPaths = []; UI.updateBatchUI(); const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`); if (!res.ok) return; fileData = await res.json(); UI.updateFileList(); UI.renderBreadcrumb(); },
+            async doLogin() { 
+                const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:document.getElementById('adminUser').value, password:document.getElementById('adminPass').value}) }); 
+                if((await res.json()).success) window.location.reload(); else document.getElementById('loginError').textContent = '验证失败'; 
+            },
             async logout() { await fetch('/api/logout'); window.location.reload(); },
             navigateTo(p) { currentPath = p.endsWith('/') ? p : p + '/'; isSearching = false; this.loadFiles(); },
             toggleSelect(key, el, e) { e.stopPropagation(); if (selectedPaths.includes(key)) selectedPaths = selectedPaths.filter(p => p !== key); else selectedPaths.push(key); UI.updateBatchUI(); UI.updateFileList(); },
             toggleSelectAll() { const allKeys = [...fileData.folders, ...fileData.files].filter(i=>i.name!==''&&i.name!=='.folder').map(i => i.fullKey); selectedPaths = (selectedPaths.length === allKeys.length) ? [] : allKeys; UI.updateFileList(); UI.updateBatchUI(); },
-            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); Message.success(`已加入列表`); },
-            clearClipboard() { clipboard = null; this.loadFiles(); Message.show('操作已取消'); },
-            async executePaste() { Message.show('正在粘贴...'); const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); if(res.ok) { Message.success('成功'); clipboard = null; this.loadFiles(); } else { Message.error('出错'); } },
-            async batchDelete() { if (confirm(`确认删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('已删除'); this.loadFiles(); } } },
+            setClipboard(action) { 
+                if (selectedPaths.length === 0) return;
+                clipboard = { action, paths: [...selectedPaths] }; // 核心修复：直接覆盖，不累加
+                selectedPaths = []; // 核心修复：清理选择
+                UI.updateBatchUI(); UI.updateFileList();
+                Message.success(`已加入${action==='move'?'移动':'复制'}列表`);
+            },
+            clearClipboard() { clipboard = null; UI.updateBatchUI(); this.loadFiles(); Message.show('操作已取消'); },
+            async executePaste() { 
+                Message.show('处理中...');
+                const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); 
+                if(res.ok) { Message.success('成功'); clipboard = null; this.loadFiles(); } else { Message.error('粘贴失败'); }
+            },
+            async batchDelete() { if (confirm(`确认永久删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('已删除'); this.loadFiles(); } } },
             async handleSearch() { const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch(); isSearching = true; const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`); fileData = { folders: [], files: (await res.json()).files || [] }; UI.updateFileList(); document.getElementById('breadcrumb').innerHTML = `<span class="text-white">🔍 搜索: "${q}"</span>`; },
             clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
             startRenameSelected() {
                 const key = selectedPaths[0]; const item = [...fileData.folders, ...fileData.files].find(i => i.fullKey === key);
-                const nameEl = Array.from(document.querySelectorAll('.file-name')).find(el => el.closest('[data-key]')?.dataset?.key === key);
+                // 修复选择器：在当前视图中找到对应的元素
+                const nameEl = Array.from(document.querySelectorAll('.file-name, .text-sm')).find(el => el.closest('[data-key]')?.dataset?.key === key);
                 if (item && nameEl) this.startInlineRename(item, nameEl);
             },
             async startInlineRename(item, el) {
-                const oldName = item.name; const input = document.createElement('input'); input.className = "bg-slate-900 border border-primary rounded px-2 py-0.5 text-white w-full outline-none text-sm"; input.value = oldName; el.replaceWith(input); input.focus();
+                const oldName = item.name; const input = document.createElement('input');
+                input.className = "bg-slate-900 border border-primary rounded px-2 py-0.5 text-white w-full outline-none text-sm";
+                input.value = oldName; el.replaceWith(input); input.focus();
                 const save = async () => {
                     const newName = input.value.trim();
                     if (newName && newName !== oldName) {
                         const res = await fetch(`/api/files/${encodeURIComponent(item.fullKey)}`, { method: 'PUT', body: JSON.stringify({ newName }) });
-                        if(res.ok) { Message.success('已更名'); this.loadFiles(); } else { this.loadFiles(); }
+                        if(res.ok) { Message.success('已完成'); this.loadFiles(); } else { Message.error('失败'); this.loadFiles(); }
                     } else { this.loadFiles(); }
                 };
                 input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') input.blur(); };
@@ -243,7 +260,7 @@
             async submitMkdir() { const n = document.getElementById('folderNameInput').value.trim(); if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); document.getElementById('folderNameInput').value = ''; UI.closeModal('mkdirModal'); this.loadFiles(); Message.success('已创建'); },
             async openPreview(path, name) {
                 currentPreviewPath = path; isEditing = false; const content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn');
-                editBtn.classList.add('hidden'); saveBtn.classList.add('hidden'); title.textContent = "解析中..."; UI.showModal('previewModal');
+                editBtn.classList.add('hidden'); saveBtn.classList.add('hidden'); title.textContent = "正在加载..."; UI.showModal('previewModal');
                 try {
                     const res = await fetch(`/api/preview${path}`); const ext = name.split('.').pop().toLowerCase();
                     if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<div class="flex items-center justify-center min-h-full p-4"><img src="/api/preview${path}" class="max-w-full max-h-full rounded-lg shadow-2xl"></div>`;
@@ -252,7 +269,7 @@
                     else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" class="w-full h-full border-none"></iframe>`;
                     else { const text = await res.text(); if (userRole === 'admin') editBtn.classList.remove('hidden'); if (ext === 'md') content.innerHTML = `<div class="markdown-body p-8 md:p-12">${marked.parse(text)}</div>`; else content.innerHTML = `<pre id="textContent" class="p-8 md:p-12 font-mono text-sm leading-relaxed whitespace-pre-wrap text-slate-300">${text}</pre>`; }
                     title.textContent = name;
-                } catch (e) { content.innerHTML = `<div class="p-12 text-red-500">无法预览</div>`; }
+                } catch (e) { content.innerHTML = `<div class="p-12 text-red-500">无法读取内容</div>`; }
             },
             toggleEditMode() { 
                 const pre = document.getElementById('textContent') || document.querySelector('.markdown-body');
@@ -270,7 +287,11 @@
             async uploadFiles(files) {
                 if(userRole!=='admin') return; const manager = document.getElementById('uploadManager'); const list = document.getElementById('uploadList'); manager.classList.replace('hidden', 'flex');
                 for (let f of files) {
-                    activeUploads++; const item = document.createElement('div'); item.className = 'p-4 border-b border-border bg-slate-900/20'; item.innerHTML = `<div class="flex justify-between text-[11px] mb-2 truncate text-slate-300"><span class="font-bold">${f.name}</span><span class="pct text-primary font-mono">0%</span></div><div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div class="progress-fill h-full bg-primary w-0 transition-all duration-300"></div></div>`; list.prepend(item);
+                    activeUploads++; const item = document.createElement('div');
+                    item.className = 'p-4 border-b border-border bg-slate-900/20';
+                    item.innerHTML = `<div class="flex justify-between text-[11px] mb-2 truncate text-slate-300"><span class="font-bold">${f.name}</span><span class="pct text-primary font-mono">0%</span></div>
+                        <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div class="progress-fill h-full bg-primary w-0 transition-all duration-300"></div></div>`;
+                    list.prepend(item);
                     const xhr = new XMLHttpRequest(); xhr.open('POST', '/api/files/' + currentPath.replace(/^\/|\/$/g, ''), true);
                     xhr.upload.onprogress = (e) => { if (e.lengthComputable) { const pct = Math.round((e.loaded / e.total) * 100); item.querySelector('.progress-fill').style.width = pct + '%'; item.querySelector('.pct').textContent = pct + '%'; } };
                     xhr.onload = () => { if (xhr.status === 200) { item.querySelector('.pct').textContent = '完成'; item.querySelector('.progress-fill').className="h-full bg-emerald-500 w-full"; this.loadFiles(); } else { item.querySelector('.pct').textContent = '失败'; } activeUploads--; if(activeUploads===0) setTimeout(()=>manager.classList.replace('flex', 'hidden'), 3000); };
