@@ -19,10 +19,10 @@
                 <span class="text-2xl text-primary">☁️</span> <span>O-Drive</span>
             </a>
             <div class="flex items-center gap-4">
-                <div class="relative group hidden md:block">
+                <div class="relative group hidden md:block text-slate-300">
                     <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 text-xs">🔍</span>
                     <input type="search" id="searchInput" placeholder="搜索..." onkeypress="if(event.key==='Enter')Actions.handleSearch()"
-                           class="bg-background border border-border rounded-lg py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-primary w-40 focus:w-60 transition-all text-white">
+                           class="bg-background border border-border rounded-lg py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-primary w-40 focus:w-60 transition-all">
                 </div>
                 <div id="authButtons" class="flex gap-2"></div>
             </div>
@@ -32,15 +32,13 @@
         <div class="bg-surface border border-border rounded-xl p-3 flex items-center justify-between gap-4 flex-shrink-0 overflow-x-auto no-scrollbar shadow-md">
             <div id="breadcrumb" class="flex items-center gap-1 text-sm font-medium text-primary whitespace-nowrap overflow-hidden"></div>
             <div class="flex items-center gap-2 flex-shrink-0">
-                <!-- 批量工具 -->
                 <div id="batchTools" class="hidden items-center gap-2 pr-3 border-r border-border/50 mr-1">
-                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.toggleSelectAll()">全选</button>
+                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.toggleSelectAll()" id="selectAllBtn">全选</button>
                     <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">更名</button>
                     <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.setClipboard('copy')">复制</button>
                     <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 text-white" onclick="Actions.setClipboard('move')">移动</button>
                     <button class="px-3 py-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg text-xs font-bold hover:bg-red-500 hover:text-white" onclick="Actions.batchDelete()">删除</button>
                 </div>
-                <!-- 粘贴区域 -->
                 <div id="pasteGroup" class="hidden items-center gap-2">
                     <button id="pasteBtn" class="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold" onclick="Actions.executePaste()">粘贴</button>
                     <button id="cancelPasteBtn" class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs text-white" onclick="Actions.clearClipboard()">取消</button>
@@ -76,10 +74,10 @@
     <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4">
         <div class="bg-[#1a1a1a] border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
             <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button>
-            <h1 class="text-xl font-bold mb-6 text-center text-white">登录 O-Drive</h1>
+            <h1 class="text-xl font-bold mb-6 text-center text-white">管理员登录</h1>
             <input type="text" id="adminUser" placeholder="用户名" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-white">
             <input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-white">
-            <button class="w-full h-11 bg-primary text-white rounded-lg font-bold hover:brightness-110 transition-all" onclick="Actions.doLogin()">确认</button>
+            <button class="w-full h-11 bg-primary text-white rounded-lg font-bold hover:brightness-110 active:scale-95 transition-all" onclick="Actions.doLogin()">登录</button>
             <p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p>
         </div>
     </div>
@@ -104,7 +102,7 @@
         </div>
     </div>
     <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden">
-        <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-400"><span>上传中...</span><button onclick="UI.closeUploadManager()">&times;</button></div>
+        <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-400"><span>上传进度</span><button onclick="UI.closeUploadManager()">&times;</button></div>
         <div id="uploadList" class="max-h-80 overflow-y-auto"></div>
     </div>
 
@@ -112,6 +110,7 @@
         let currentPath = '/', userRole = 'guest', isSearching = false, isEditing = false, currentPreviewPath = '';
         let viewMode = localStorage.getItem('viewMode') || 'list', sortBy = localStorage.getItem('sortBy') || 'name';
         let fileData = { folders: [], files: [] }, selectedPaths = [], clipboard = null;
+        let activeUploads = 0; // 确保此处定义
         const sortModes = ['name', 'time', 'size'], sortNames = { name: '名称', time: '时间', size: '大小' };
 
         const Message = {
@@ -136,7 +135,7 @@
                 const box = document.getElementById('authButtons');
                 if (userRole === 'admin') {
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-flex');
-                    box.innerHTML = `<a href="/admin.html" class="px-4 py-1.5 bg-slate-800 border border-border rounded-lg text-sm font-bold hover:bg-slate-700 text-white">管理</a><button onclick="Actions.logout()" class="px-3 opacity-60 text-sm text-white">退出</button>`;
+                    box.innerHTML = `<a href="/admin.html" class="px-4 py-1.5 bg-slate-800 border border-border rounded-lg text-sm font-bold hover:bg-slate-700 transition-all text-white">管理</a><button onclick="Actions.logout()" class="px-3 opacity-60 text-sm text-white">退出</button>`;
                 } else {
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
                     box.innerHTML = `<button class="px-5 py-1.5 bg-primary text-white rounded-lg font-bold active:scale-95 transition-all text-sm" onclick="UI.showModal('loginModal')">登录</button>`;
@@ -167,14 +166,19 @@
                 }
                 const container = document.createElement('div');
                 container.className = viewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 pt-2" : "flex flex-col gap-1 mt-2";
+                
+                // 返回上级
                 if (currentPath !== '/' && !isSearching) {
                     const parent = Utils.getParentPath(currentPath); const div = document.createElement('div');
                     if (viewMode === 'grid') { div.className = "bg-slate-900/40 border border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-all"; div.innerHTML = `<div class="text-4xl mb-3 opacity-30">📁</div><div class="text-sm font-medium text-white">..</div>`; }
-                    else { div.className = "px-4 py-3 hover:bg-slate-800/40 rounded-lg cursor-pointer flex gap-3 text-slate-500"; div.innerHTML = `<span class="opacity-50">📁</span><span class="text-sm">返回上级</span>`; }
+                    else { div.className = "grid grid-cols-2 md:grid-cols-[1fr_100px_180px_160px] gap-4 items-center px-4 py-3 hover:bg-slate-800/40 rounded-lg cursor-pointer text-slate-500"; div.innerHTML = `<div class="flex items-center gap-3"><span class="opacity-50">📁</span><span class="text-sm">返回上级 (..)</span></div>`; }
                     div.ondblclick = () => Actions.navigateTo(parent); container.appendChild(div);
                 }
-                const folders = [...(fileData.folders || [])].sort((a,b) => a.name.localeCompare(b.name));
-                const files = [...(fileData.files || [])].sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
+
+                // 过滤文件夹和文件（排除空名称）
+                const folders = [...(fileData.folders || [])].filter(f => f.name && f.name.trim() !== '').sort((a,b) => a.name.localeCompare(b.name));
+                const files = [...(fileData.files || [])].filter(f => f.name && f.name.trim() !== '').sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
+                
                 [...folders, ...files].forEach(item => {
                     const isFolder = !item.sizeFormatted; const el = document.createElement('div'); const isSelected = selectedPaths.includes(item.fullKey);
                     el.dataset.key = item.fullKey;
@@ -214,33 +218,19 @@
                 document.getElementById('year-display').textContent = currentYear > startYear ? `${startYear} - ${currentYear}` : startYear;
             },
             async loadFiles() { if (isSearching) return; selectedPaths = []; UI.updateBatchUI(); const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`); if (!res.ok) return; fileData = await res.json(); UI.updateFileList(); UI.renderBreadcrumb(); },
-            async doLogin() { 
-                const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:document.getElementById('adminUser').value, password:document.getElementById('adminPass').value}) }); 
-                if((await res.json()).success) window.location.reload(); else document.getElementById('loginError').textContent = '验证失败'; 
-            },
+            async doLogin() { const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:document.getElementById('adminUser').value, password:document.getElementById('adminPass').value}) }); if((await res.json()).success) window.location.reload(); else document.getElementById('loginError').textContent = '验证失败'; },
             async logout() { await fetch('/api/logout'); window.location.reload(); },
             navigateTo(p) { currentPath = p.endsWith('/') ? p : p + '/'; isSearching = false; this.loadFiles(); },
             toggleSelect(key, el, e) { e.stopPropagation(); if (selectedPaths.includes(key)) selectedPaths = selectedPaths.filter(p => p !== key); else selectedPaths.push(key); UI.updateBatchUI(); UI.updateFileList(); },
             toggleSelectAll() { const allKeys = [...fileData.folders, ...fileData.files].filter(i=>i.name!==''&&i.name!=='.folder').map(i => i.fullKey); selectedPaths = (selectedPaths.length === allKeys.length) ? [] : allKeys; UI.updateFileList(); UI.updateBatchUI(); },
-            setClipboard(action) { 
-                if (selectedPaths.length === 0) return;
-                clipboard = { action, paths: [...selectedPaths] }; // 核心修复：直接覆盖，不累加
-                selectedPaths = []; // 核心修复：清理选择
-                UI.updateBatchUI(); UI.updateFileList();
-                Message.success(`已加入${action==='move'?'移动':'复制'}列表`);
-            },
+            setClipboard(action) { if (selectedPaths.length === 0) return; clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; UI.updateBatchUI(); UI.updateFileList(); Message.success(`已加入${action==='move'?'移动':'复制'}列表`); },
             clearClipboard() { clipboard = null; UI.updateBatchUI(); this.loadFiles(); Message.show('操作已取消'); },
-            async executePaste() { 
-                Message.show('处理中...');
-                const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); 
-                if(res.ok) { Message.success('成功'); clipboard = null; this.loadFiles(); } else { Message.error('粘贴失败'); }
-            },
+            async executePaste() { Message.show('处理中...'); const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); if(res.ok) { Message.success('成功'); clipboard = null; this.loadFiles(); } else { Message.error('粘贴失败'); } },
             async batchDelete() { if (confirm(`确认永久删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('已删除'); this.loadFiles(); } } },
             async handleSearch() { const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch(); isSearching = true; const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`); fileData = { folders: [], files: (await res.json()).files || [] }; UI.updateFileList(); document.getElementById('breadcrumb').innerHTML = `<span class="text-white">🔍 搜索: "${q}"</span>`; },
             clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
             startRenameSelected() {
                 const key = selectedPaths[0]; const item = [...fileData.folders, ...fileData.files].find(i => i.fullKey === key);
-                // 修复选择器：在当前视图中找到对应的元素
                 const nameEl = Array.from(document.querySelectorAll('.file-name, .text-sm')).find(el => el.closest('[data-key]')?.dataset?.key === key);
                 if (item && nameEl) this.startInlineRename(item, nameEl);
             },
@@ -252,7 +242,7 @@
                     const newName = input.value.trim();
                     if (newName && newName !== oldName) {
                         const res = await fetch(`/api/files/${encodeURIComponent(item.fullKey)}`, { method: 'PUT', body: JSON.stringify({ newName }) });
-                        if(res.ok) { Message.success('已完成'); this.loadFiles(); } else { Message.error('失败'); this.loadFiles(); }
+                        if(res.ok) { Message.success('已重命名'); this.loadFiles(); } else { this.loadFiles(); }
                     } else { this.loadFiles(); }
                 };
                 input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') input.blur(); };
@@ -269,7 +259,7 @@
                     else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" class="w-full h-full border-none"></iframe>`;
                     else { const text = await res.text(); if (userRole === 'admin') editBtn.classList.remove('hidden'); if (ext === 'md') content.innerHTML = `<div class="markdown-body p-8 md:p-12">${marked.parse(text)}</div>`; else content.innerHTML = `<pre id="textContent" class="p-8 md:p-12 font-mono text-sm leading-relaxed whitespace-pre-wrap text-slate-300">${text}</pre>`; }
                     title.textContent = name;
-                } catch (e) { content.innerHTML = `<div class="p-12 text-red-500">无法读取内容</div>`; }
+                } catch (e) { content.innerHTML = `<div class="p-12 text-red-500">无法预览</div>`; }
             },
             toggleEditMode() { 
                 const pre = document.getElementById('textContent') || document.querySelector('.markdown-body');
@@ -285,7 +275,8 @@
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
             downloadFile(p) { window.open(`/api/download${p}`); },
             async uploadFiles(files) {
-                if(userRole!=='admin') return; const manager = document.getElementById('uploadManager'); const list = document.getElementById('uploadList'); manager.classList.replace('hidden', 'flex');
+                if(userRole!=='admin') return; const manager = document.getElementById('uploadManager'); const list = document.getElementById('uploadList');
+                manager.classList.replace('hidden', 'flex');
                 for (let f of files) {
                     activeUploads++; const item = document.createElement('div');
                     item.className = 'p-4 border-b border-border bg-slate-900/20';
