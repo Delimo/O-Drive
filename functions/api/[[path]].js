@@ -1,5 +1,4 @@
-/* --- [[path]].js 最终稳定版 --- */
-
+/* --- [[path]].js 最终修正版 --- */
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
@@ -37,7 +36,6 @@ export async function onRequest(context) {
     const now = Date.now();
     const attempt = await env.DB.prepare("SELECT * FROM login_attempts WHERE ip = ?").bind(ip).first();
     if (attempt && attempt.attempts >= 5 && (now - attempt.last_attempt < 600000)) return jsonResponse({ success: false, message: '尝试过多' }, 429);
-    
     if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=/g, '');
       const payload = btoa(JSON.stringify({ role: 'admin' })).replace(/=/g, '');
@@ -53,7 +51,6 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT' });
-
   const auth = await verifyAuth(request, env);
   if (!auth) return jsonResponse({ success: false }, 401);
   if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
@@ -69,7 +66,16 @@ export async function onRequest(context) {
   const hiddenPaths = hiddenRes.results.map(r => r.key);
   if (hiddenPaths.some(hp => r2Key === hp || r2Key.startsWith(hp + '/')) && auth.role !== 'admin') return jsonResponse({ success: false, message: 'Forbidden' }, 403);
 
+  // 管理员 API 路由 (找回这部分)
   if (auth.role === 'admin') {
+    if (path.startsWith('/api/admin/')) {
+        if (path === '/api/admin/logs') return jsonResponse({ logs: (await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all()).results });
+        if (path === '/api/admin/settings/hidden') {
+            if (method === 'GET') return jsonResponse({ list: (await env.DB.prepare("SELECT key as path FROM settings").all()).results });
+            if (method === 'POST') { await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind((await request.json()).targetPath).run(); return jsonResponse({ success: true }); }
+            if (method === 'DELETE') { await env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(url.searchParams.get('path')).run(); return jsonResponse({ success: true }); }
+        }
+    }
     if (path.startsWith('/api/save-text/') && method === 'POST') {
         const { content } = await request.json();
         await env.R2_BUCKET.put(r2Key, content, { httpMetadata: { contentType: 'text/plain' } });
@@ -99,6 +105,17 @@ export async function onRequest(context) {
                 await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(dest, src).run();
             }
         }
+        return jsonResponse({ success: true });
+    }
+    if (path.startsWith('/api/files') && method === 'PUT') {
+        const { newName } = await request.json();
+        const parentDir = r2Key.includes('/') ? r2Key.substring(0, r2Key.lastIndexOf('/') + 1) : '';
+        const newKey = parentDir + newName;
+        const source = await env.R2_BUCKET.get(r2Key);
+        if (source) { await env.R2_BUCKET.put(newKey, source.body); await env.R2_BUCKET.delete(r2Key); }
+        const listed = await env.R2_BUCKET.list({ prefix: r2Key + '/' });
+        for (const obj of listed.objects) { await env.R2_BUCKET.put(newKey + obj.key.slice(r2Key.length), (await env.R2_BUCKET.get(obj.key)).body); await env.R2_BUCKET.delete(obj.key); }
+        await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Key).run();
         return jsonResponse({ success: true });
     }
   }
@@ -131,12 +148,10 @@ export async function onRequest(context) {
     await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
     return jsonResponse({ success: true });
   }
-
   if (path.startsWith('/api/download') || path.startsWith('/api/preview')) {
     const obj = await env.R2_BUCKET.get(r2Key);
     if (!obj) return new Response('404', { status: 404 });
     return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': path.startsWith('/api/download') ? `attachment; filename="${encodeURIComponent(r2Key.split('/').pop())}"` : 'inline' }});
   }
-
   return jsonResponse({ message: 'Not Found' }, 404);
 }
