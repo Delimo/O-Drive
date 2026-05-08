@@ -44,7 +44,7 @@
         </div>
         <div class="explorer-card"><div id="fileList"></div></div>
 
-        <!-- 修正后的 Footer 布局 -->
+        <!-- 修正后的 Footer -->
         <footer class="footer">
             <div>项目：<a href="https://github.com/Delimo/O-Drive" target="_blank">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank">Delimo</a></div>
             <div>Powered by Cloudflare Pages</div>
@@ -52,7 +52,7 @@
         </footer>
     </div>
 
-    <!-- 登录弹窗 (修复输入框对齐) -->
+    <!-- 登录弹窗 (严格修复风格) -->
     <div id="loginModal" class="modal-overlay">
         <div class="login-card">
             <button onclick="UI.closeModal('loginModal')" class="modal-close">&times;</button>
@@ -131,6 +131,14 @@
                     else div.innerHTML = `<div class="col-name"><div class="file-icon">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div><div class="file-info col-size">${isFolder?'文件夹':item.sizeFormatted}</div><div class="file-info col-time">${Utils.formatDate(item.time)}</div><div class="file-actions col-acts" onclick="event.stopPropagation()">${acts}</div>`;
                     div.onclick = (e) => { if (userRole === 'admin') Actions.toggleSelect(item.fullKey, div, e); };
                     div.ondblclick = () => { if(isFolder) Actions.navigateTo(item.path); else if(Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name); };
+                    if (userRole === 'admin') {
+                        const nameEl = div.querySelector('.file-name');
+                        nameEl.ondblclick = (e) => { e.stopPropagation(); const oldName = item.name; const input = document.createElement('input'); input.className = 'rename-input'; input.value = oldName; nameEl.replaceWith(input); input.focus(); input.select();
+                            const save = async () => { if (input.value && input.value !== oldName) { await fetch(`/api/files/${encodeURIComponent(item.fullKey)}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) }); Actions.loadFiles(); Message.success('已更名'); } else { Actions.loadFiles(); } };
+                            input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') save(); };
+                            input.onclick = (ev) => ev.stopPropagation(); input.onmousedown = (ev) => ev.stopPropagation();
+                        };
+                    }
                     list.appendChild(div);
                 });
             },
