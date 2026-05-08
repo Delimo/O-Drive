@@ -1,4 +1,4 @@
-/* --- explorer.css 完美一致性版 --- */
+/* --- explorer.css 最终视觉统一加固版 --- */
 
 /* 1. 顶层容器布局 */
 html, body { 
@@ -22,7 +22,7 @@ html, body {
     box-sizing: border-box;
 }
 
-/* 2. 工具栏：彻底统一风格 */
+/* 2. 工具栏布局 */
 .toolbar { 
     display: flex; 
     justify-content: space-between; 
@@ -40,20 +40,55 @@ html, body {
     flex: 1; 
     display: flex; 
     align-items: center; 
-    gap: 15px; /* 增加间距 */
+    gap: 12px;
     overflow: hidden; 
 }
 
-/* 批量操作工具条：去除高亮边框和背景，使其融入背景 */
+/* 3. 批量操作工具条：强制按钮样式与右侧一致 */
 #batchTools { 
     display: none; 
-    gap: 6px; 
-    background: none !important; /* 去除蓝色背景 */
-    border: none !important;     /* 去除蓝色边框 */
+    gap: 8px; 
+    background: none !important; 
+    border: none !important; 
     padding: 0 !important; 
-    height: 100%; 
     align-items: center; 
     flex-shrink: 0;
+}
+
+/* 强制覆盖 HTML 里的 inline style (background:none) */
+#batchTools .btn { 
+    background: var(--surface-light) !important; /* 强制背景 */
+    border: 1px solid var(--border-color) !important; /* 强制边框 */
+    height: 34px !important;
+    padding: 0 16px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    cursor: pointer;
+}
+
+#batchTools .btn:hover {
+    background: var(--surface-hover) !important;
+    border-color: var(--primary) !important;
+}
+
+/* 针对删除按钮的特殊红色风格统一 */
+#batchTools .btn-danger {
+    background: rgba(245, 108, 108, 0.1) !important;
+    color: var(--error) !important;
+    border: 1px solid rgba(245, 108, 108, 0.3) !important;
+}
+#batchTools .btn-danger:hover {
+    background: var(--error) !important;
+    color: #fff !important;
+}
+
+/* 隐藏那个碍事的分割线小竖条 */
+#batchTools div[style*="width:1px"] {
+    display: none !important;
 }
 
 /* 右侧按钮组 */
@@ -62,7 +97,6 @@ html, body {
     gap: 8px; 
     align-items: center; 
     flex-shrink: 0;
-    margin-left: 10px;
 }
 
 /* 搜索框图标修复 */
@@ -73,7 +107,7 @@ html, body {
 }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
 
-/* 3. 文件卡片容器 */
+/* 4. 文件卡片容器 */
 .explorer-card { 
     background: #161e2e; 
     border: 1px solid var(--border-color); 
@@ -92,7 +126,7 @@ html, body {
     padding: 0 20px 20px 20px;
 }
 
-/* 4. 列表对齐：严格 Grid 方案 */
+/* 5. 列表对齐：严格 Grid 方案 */
 .list-layout { display: flex; flex-direction: column; gap: 6px; }
 
 .list-header, .list-layout .file-item {
@@ -113,18 +147,16 @@ html, body {
     background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); 
     height: 56px; border-radius: 8px; cursor: pointer; transition: 0.1s;
 }
-/* 选中的高亮样式：仅作用于文件行 */
 .list-layout .file-item.selected { 
     background: rgba(64, 158, 255, 0.15) !important; 
     border-color: var(--primary) !important; 
 }
-.list-layout .file-item:hover:not(.selected) { background: rgba(255,255,255,0.04); }
 
 .col-name { display: flex; align-items: center; gap: 12px; overflow: hidden; }
 .col-size, .col-time { text-align: center; font-size: 12px; color: var(--text-muted); }
 .col-acts { display: flex; gap: 10px; justify-content: flex-end; }
 
-/* 5. 预览与弹窗修复 */
+/* 6. 预览与弹窗修复 */
 .preview-modal { 
     background: var(--surface); border: 1px solid var(--border-color); 
     padding: 24px; border-radius: 16px; width: 95%; max-width: 1200px; 
@@ -139,13 +171,13 @@ html, body {
     font-size: 14px; line-height: 1.6; white-space: pre-wrap; text-align: left !important;
 }
 
-/* 6. 页脚 */
+/* 7. 页脚 */
 .footer { padding: 15px 0 25px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
 .footer-info { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 4px; }
 .footer-brand { color: #fff; font-weight: 500; text-decoration: none; }
 .footer-copyright { color: rgba(255,255,255,0.4); font-size: 12px; }
 
-/* 其他样式补丁 */
+/* 网格模式恢复 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; padding-top: 10px; }
 .grid-layout .file-item { flex-direction: column !important; height: 220px; justify-content: space-between; padding: 20px 15px; }
 .grid-layout .file-item.selected { border-color: var(--primary); background: rgba(64,158,255,0.15); }
