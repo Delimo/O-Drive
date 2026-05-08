@@ -1,4 +1,4 @@
-/* --- explorer.css 最终视觉完美版 --- */
+/* --- explorer.css 最终逻辑修正版 --- */
 
 /* 1. 顶层容器布局 */
 html, body { 
@@ -22,7 +22,7 @@ html, body {
     box-sizing: border-box;
 }
 
-/* 2. 工具栏：增加全局 gap 解决按钮贴合问题 */
+/* 2. 工具栏布局 */
 .toolbar { 
     display: flex; 
     justify-content: space-between; 
@@ -34,7 +34,7 @@ html, body {
     margin-bottom: 12px; 
     height: 56px; 
     flex-shrink: 0; 
-    gap: 20px; /* 核心修复：强制左右两端保持至少 20px 间距 */
+    gap: 20px; 
 }
 
 .tools-left { 
@@ -45,19 +45,19 @@ html, body {
     overflow: hidden; 
 }
 
-/* 3. 批量操作工具条：样式加固 */
+/* 3. 按钮样式统一 (核心修复：移除 display 的 !important) */
 #batchTools { 
     display: none; 
-    gap: 8px; /* 内部按钮间距 */
+    gap: 8px; 
     background: none !important; 
     border: none !important; 
     padding: 0 !important; 
     align-items: center; 
     flex-shrink: 0;
-    margin-left: 10px; /* 与面包屑路径保持间距 */
+    margin-left: 10px;
 }
 
-/* 统一按钮样式 */
+/* 统一所有按钮的背景和边框，但不强制其显示模式 */
 #batchTools .btn, .tools-right .btn { 
     background: var(--surface-light) !important; 
     border: 1px solid var(--border-color) !important; 
@@ -67,9 +67,9 @@ html, body {
     border-radius: 6px !important;
     color: #fff !important;
     font-weight: 600 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: inline-flex; /* 移除 !important，允许 JS 切换为 none */
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     white-space: nowrap;
 }
@@ -79,18 +79,20 @@ html, body {
     border-color: var(--primary) !important;
 }
 
-/* 危险操作（删除）按钮 */
+/* 粘贴按钮特殊样式（如果是 btn-primary） */
+.btn-primary {
+    background: var(--primary) !important;
+    border: none !important;
+}
+
+/* 删除按钮样式 */
 #batchTools .btn-danger {
     background: rgba(245, 108, 108, 0.1) !important;
     color: var(--error) !important;
     border: 1px solid rgba(245, 108, 108, 0.3) !important;
 }
-#batchTools .btn-danger:hover {
-    background: var(--error) !important;
-    color: #fff !important;
-}
 
-/* 隐藏原本 HTML 里的分割竖线 */
+/* 隐藏 HTML 里的旧竖线 */
 #batchTools div[style*="width:1px"] { display: none !important; }
 
 /* 右侧按钮组 */
@@ -101,7 +103,7 @@ html, body {
     flex-shrink: 0;
 }
 
-/* 搜索框 */
+/* 4. 搜索框 */
 .search-bar { position: relative; width: 160px; flex-shrink: 0; }
 .search-bar input { 
     width: 100%; background: var(--background); border: 1px solid var(--border-color); 
@@ -109,7 +111,7 @@ html, body {
 }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
 
-/* 4. 文件卡片容器 */
+/* 5. 文件列表卡片与 Grid 布局 */
 .explorer-card { 
     background: #161e2e; 
     border: 1px solid var(--border-color); 
@@ -121,14 +123,8 @@ html, body {
     min-height: 0;
 }
 
-#fileList {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0 20px 20px 20px;
-}
+#fileList { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 20px 20px 20px; }
 
-/* 5. 列表对齐：严格 Grid 方案 */
 .list-layout { display: flex; flex-direction: column; gap: 6px; }
 
 .list-header, .list-layout .file-item {
@@ -158,7 +154,7 @@ html, body {
 .col-size, .col-time { text-align: center; font-size: 12px; color: var(--text-muted); }
 .col-acts { display: flex; gap: 10px; justify-content: flex-end; }
 
-/* 6. 预览与弹窗修复 */
+/* 6. 预览修复 */
 .preview-modal { 
     background: var(--surface); border: 1px solid var(--border-color); 
     padding: 24px; border-radius: 16px; width: 95%; max-width: 1200px; 
@@ -179,9 +175,8 @@ html, body {
 .footer-brand { color: #fff; font-weight: 500; text-decoration: none; }
 .footer-copyright { color: rgba(255,255,255,0.4); font-size: 12px; }
 
-/* 网格模式恢复 */
+/* 其它模式 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; padding-top: 10px; }
 .grid-layout .file-item { flex-direction: column !important; height: 220px; justify-content: space-between; padding: 20px 15px; }
 .grid-layout .file-item.selected { border-color: var(--primary); background: rgba(64,158,255,0.15); }
 .breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; white-space: nowrap; }
-.rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 85%; padding: 4px 8px; border-radius: 4px; }
