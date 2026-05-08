@@ -1,14 +1,12 @@
-/* --- [[path]].js 完整代码 (已优化文件大小显示) --- */
-
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
-// 新增：自动格式化文件大小的工具函数
+// 自动格式化文件大小
 function formatBytes(bytes, decimals = 2) {
     if (!+bytes) return '0 B';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
@@ -33,13 +31,11 @@ export async function onRequest(context) {
   const method = request.method;
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
 
-  // 1. 登录路由
   if (path === '/api/login' && method === 'POST') {
     const { username, password } = await request.json();
     const now = Date.now();
     const attempt = await env.DB.prepare("SELECT * FROM login_attempts WHERE ip = ?").bind(ip).first();
     if (attempt && attempt.attempts >= 5 && (now - attempt.last_attempt < 600000)) return jsonResponse({ success: false, message: '尝试过多' }, 429);
-    
     if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=/g, '');
       const payload = btoa(JSON.stringify({ role: 'admin' })).replace(/=/g, '');
@@ -56,12 +52,10 @@ export async function onRequest(context) {
 
   if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT' });
 
-  // 2. 鉴权
   const auth = await verifyAuth(request, env);
   if (!auth) return jsonResponse({ success: false }, 401);
   if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
-  // 3. 路径解析核心
   let r2Key = "";
   if (path.startsWith('/api/files/')) r2Key = decodeURIComponent(path.slice(11));
   else if (path.startsWith('/api/download/')) r2Key = decodeURIComponent(path.slice(14));
@@ -69,14 +63,10 @@ export async function onRequest(context) {
   else if (path.startsWith('/api/mkdir/')) r2Key = decodeURIComponent(path.slice(11));
   else if (path.startsWith('/api/save-text/')) r2Key = decodeURIComponent(path.slice(15));
   
-  // 隐私拦截
   const hiddenRes = await env.DB.prepare("SELECT key FROM settings").all();
   const hiddenPaths = hiddenRes.results.map(r => r.key);
-  if (hiddenPaths.some(hp => r2Key === hp || r2Key.startsWith(hp + '/')) && auth.role !== 'admin') {
-      return jsonResponse({ success: false, message: 'Forbidden' }, 403);
-  }
+  if (hiddenPaths.some(hp => r2Key === hp || r2Key.startsWith(hp + '/')) && auth.role !== 'admin') return jsonResponse({ success: false, message: 'Forbidden' }, 403);
 
-  // 4. 管理员专用接口
   if (auth.role === 'admin') {
     if (path.startsWith('/api/save-text/') && method === 'POST') {
         const { content } = await request.json();
@@ -84,7 +74,6 @@ export async function onRequest(context) {
         await addLog(env, request, 'SAVE_TEXT', r2Key);
         return jsonResponse({ success: true });
     }
-
     if (path.startsWith('/api/admin/')) {
         if (path === '/api/admin/logs') return jsonResponse({ logs: (await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all()).results });
         if (path === '/api/admin/settings/hidden') {
@@ -93,7 +82,6 @@ export async function onRequest(context) {
             if (method === 'DELETE') { await env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(url.searchParams.get('path')).run(); return jsonResponse({ success: true }); }
         }
     }
-
     if (path === '/api/batch-delete') {
         const { paths } = await request.json();
         for (const p of paths) {
@@ -103,7 +91,6 @@ export async function onRequest(context) {
         }
         return jsonResponse({ success: true });
     }
-
     if (path === '/api/paste') {
         const { action, paths, targetDir } = await request.json();
         const destPrefix = targetDir === '/' ? '' : (targetDir.endsWith('/') ? targetDir : targetDir + '/');
@@ -122,19 +109,12 @@ export async function onRequest(context) {
     }
   }
 
-  // 5. 通用文件操作 (此处已更新 sizeFormatted)
   if (path === '/api/search') {
     const q = url.searchParams.get('q')?.toLowerCase();
     const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
     const listed = await env.R2_BUCKET.list({ prefix: scope });
-    const matches = listed.objects.map(o => ({ 
-        name: o.key.split('/').pop(), 
-        path: '/' + o.key, 
-        fullKey: o.key, 
-        sizeFormatted: formatBytes(o.size), // 自动格式化
-        rawSize: o.size, 
-        time: o.uploaded.getTime() 
-    })).filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey.startsWith(hp))));
+    const matches = listed.objects.map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: formatBytes(o.size), rawSize: o.size, time: o.uploaded.getTime() }))
+      .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey.startsWith(hp))));
     return jsonResponse({ files: matches });
   }
 
@@ -142,32 +122,21 @@ export async function onRequest(context) {
     let prefix = r2Key ? r2Key + '/' : '';
     const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
     const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.split('/').slice(-2, -1)[0], path: '/' + p.slice(0, -1), fullKey: p.slice(0, -1) })).filter(f => auth.role === 'admin' || !hiddenPaths.includes(f.fullKey));
-    const files = (listed.objects || []).map(o => ({ 
-        name: o.key.split('/').pop(), 
-        path: '/' + o.key, 
-        fullKey: o.key, 
-        sizeFormatted: formatBytes(o.size), // 自动格式化
-        rawSize: o.size, 
-        time: o.uploaded.getTime() 
-    })).filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.includes(f.fullKey)));
+    const files = (listed.objects || []).map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: formatBytes(o.size), rawSize: o.size, time: o.uploaded.getTime() })).filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.includes(f.fullKey)));
     return jsonResponse({ folders, files });
   }
 
-  // 6. 写操作
   if (['POST', 'PUT', 'DELETE'].includes(method) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
-
   if (path.startsWith('/api/mkdir')) {
     const { folderName } = await request.json();
     await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + folderName + '/.folder', new Uint8Array(0));
     return jsonResponse({ success: true });
   }
-
   if (path.startsWith('/api/files') && method === 'POST') {
     const file = (await request.formData()).get('file');
     await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
     return jsonResponse({ success: true });
   }
-
   if (path.startsWith('/api/files') && method === 'PUT') {
     const { newName } = await request.json();
     const source = await env.R2_BUCKET.get(r2Key);
@@ -179,19 +148,16 @@ export async function onRequest(context) {
     await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Key).run();
     return jsonResponse({ success: true });
   }
-
   if (path.startsWith('/api/files') && method === 'DELETE') {
       const listed = await env.R2_BUCKET.list({ prefix: r2Key + '/' });
       for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
       await env.R2_BUCKET.delete(r2Key);
       return jsonResponse({ success: true });
   }
-
   if (path.startsWith('/api/download') || path.startsWith('/api/preview')) {
     const obj = await env.R2_BUCKET.get(r2Key);
     if (!obj) return new Response('404', { status: 404 });
     return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': path.startsWith('/api/download') ? `attachment; filename="${encodeURIComponent(r2Key.split('/').pop())}"` : 'inline' }});
   }
-
   return jsonResponse({ message: 'Not Found' }, 404);
 }
