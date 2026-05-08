@@ -1,36 +1,38 @@
+/* --- style.css 核心全局样式 --- */
 :root {
-  --primary: #409eff; --background: #0f172a; --surface: #1e293b; --surface-light: #2d3748;
-  --surface-hover: #3a4659; --border-color: #334155; --text: #f8fafc; --text-muted: #94a3b8;
-  --error: #f56c6c; --success: #10b981; --radius: 12px; --header-height: 64px;
+  --primary: #3b82f6;
+  --background: #020617;
+  --surface: #0f172a;
+  --border: #1e293b;
 }
-html, body { height: 100vh; margin: 0; padding: 0; background: var(--background); color: var(--text); font-family: system-ui, -apple-system, sans-serif; overflow: hidden; display: flex; flex-direction: column; }
 
-.header { height: var(--header-height); background: var(--surface); border-bottom: 1px solid var(--surface-light); flex-shrink: 0; z-index: 100; width: 100%; }
-.header-content { max-width: 1200px; margin: 0 auto; height: 100%; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; }
-.header-left .logo-box { display: flex; align-items: center; text-decoration: none; gap: 10px; color: #fff; font-size: 18px; font-weight: 700; }
-.header-right { display: flex; gap: 16px; align-items: center; }
-#authButtons { display: flex; gap: 12px; align-items: center; }
+/* 基础重置 */
+html, body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* 禁止全屏滚动 */
+  background-color: var(--background);
+  color: #f8fafc;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
 
-.btn, .tool-btn { height: 34px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap; outline: none; appearance: none; -webkit-appearance: none; }
-.btn:hover, .tool-btn:hover { background: var(--surface-hover); border-color: var(--primary); }
-.btn-primary { background: var(--primary) !important; border: none; }
-.btn-danger { background: rgba(245, 108, 108, 0.1) !important; color: var(--error) !important; border: 1px solid rgba(245, 108, 108, 0.3); }
+/* 隐藏滚动条但保留功能 (针对不同浏览器) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* 现代滚动条 */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(10px); }
-.modal-overlay.active { display: flex; }
-.login-card, .mkdir-card { background: #1a1a1a; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; border: 1px solid #333; position: relative; }
-.input-wrapper { background: #262626; border-radius: 8px; border: 1px solid #4c4d4f; height: 44px; display: flex; align-items: center; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
-.input-wrapper input { width: 100%; background: transparent !important; border: none !important; padding: 0 15px !important; color: #fff !important; outline: none !important; height: 100%; font-size: 14px; text-align: left !important; }
-.modal-close { position: absolute; right: 20px; top: 20px; background: none; border: none; color: #666; font-size: 24px; cursor: pointer; }
-.modal-close:hover { color: #fff; }
-
-.toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-.toast { padding: 10px 20px; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: toastIn 0.3s ease-out; pointer-events: auto; min-width: 200px; text-align: center; }
+/* Toast 动画 */
 @keyframes toastIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.toast-success { background: var(--success); }
-.toast-error { background: var(--error); }
+.toast-anim { animation: toastIn 0.3s ease-out; }
+
+/* Markdown 预览基础样式 */
+.markdown-body { color: #cbd5e1; line-height: 1.6; }
+.markdown-body h1, .markdown-body h2 { color: #fff; margin-top: 1.5em; margin-bottom: 1em; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+.markdown-body p { margin-bottom: 1em; }
+.markdown-body code { background: #1e293b; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; }
