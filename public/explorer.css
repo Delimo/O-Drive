@@ -1,4 +1,4 @@
-/* --- explorer.css 完整优化版 --- */
+/* --- explorer.css 完美对齐 & 消除滚动条溢出版 --- */
 
 .container { 
     max-width: 1200px; 
@@ -37,7 +37,7 @@
 
 #batchTools { display: none; gap: 8px; background: rgba(64, 158, 255, 0.1); padding: 0 12px; border-radius: 6px; height: 34px; align-items: center; border: 1px solid var(--primary); }
 
-/* 关键修复：解决滚动条溢出圆角问题 */
+/* 卡片容器：负责裁剪圆角，解决图2的滚动条溢出问题 */
 .explorer-card { 
     background: #161e2e; 
     border: 1px solid var(--border-color); 
@@ -45,87 +45,79 @@
     flex: 1; 
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* 强制裁剪内部溢出，解决圆角被滚动条破坏的问题 */
+    overflow: hidden; /* 核心：裁剪溢出的滚动条 */
     position: relative; 
     min-height: 0; 
 }
 
-/* 内部列表容器承载滚动条 */
+/* 内部列表：负责垂直滚动 */
 #fileList {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
-    padding: 20px; /* 将原卡片的 padding 移到这里 */
+    overflow-x: hidden; /* 彻底移除横向滚动条 */
+    padding: 20px; 
 }
 
-/* 列表布局优化 */
+/* --- 列表布局核心 (Grid 方案) --- */
 .list-layout { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 
-/* 表头优化：移除负边距，改为与内容绝对对齐 */
+/* 定义统一的列宽模板：名称(自适应) 大小(120px) 修改时间(200px) 操作(160px) */
+.list-header, .list-layout .file-item {
+    display: grid !important;
+    grid-template-columns: 1fr 120px 200px 160px; /* 四列严格对齐 */
+    align-items: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
 .list-header { 
     position: sticky; 
-    top: 0; /* 配合 sticky 使用 */
+    top: -20px; /* 抵消父级 padding */
     background: #161e2e; 
     z-index: 10; 
-    display: flex; 
-    align-items: center; 
-    padding: 0 15px;
-    height: 48px; 
+    height: 50px; 
     color: var(--text-muted); 
     font-size: 12px; 
     border-bottom: 1px solid var(--border-color); 
-    margin-bottom: 10px;
-    width: 100%;
-    box-sizing: border-box;
+    margin: -20px -20px 10px -20px; /* 扩展表头宽度，使其横跨卡片 */
+    width: calc(100% + 40px);
 }
 
 .list-layout .file-item { 
     background: rgba(255,255,255,0.02); 
     border: 1px solid var(--border-color); 
-    height: 52px; 
-    padding: 0 15px; 
+    height: 56px; 
     border-radius: 8px; 
     cursor: pointer; 
-    display: flex !important; 
-    flex-direction: row !important; 
-    align-items: center !important; 
-    width: 100%; 
-    box-sizing: border-box; 
-    transition: 0.15s;
+    transition: 0.2s;
 }
 .list-layout .file-item:hover { background: rgba(255,255,255,0.05); border-color: var(--primary); }
 
-/* 关键列对齐修复 */
+/* 列内容对齐方式 */
 .col-name { 
-    flex: 1; 
     display: flex; 
     align-items: center; 
-    min-width: 0; 
     gap: 12px; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .col-size { 
-    width: 120px; 
-    text-align: center; /* 修复：设为居中 */
-    font-size: 12px; 
-    flex-shrink: 0; 
+    text-align: center; /* 居中对齐 */
 }
 .col-time { 
-    width: 180px; 
     text-align: center; 
     font-family: monospace; 
-    font-size: 12px; 
-    flex-shrink: 0; 
+    font-size: 12px;
+    color: var(--text-muted);
 }
 .col-acts { 
-    width: 160px; 
     display: flex; 
     gap: 8px; 
-    justify-content: flex-end; 
-    align-items: center; 
-    flex-shrink: 0; 
+    justify-content: flex-end; /* 按钮靠右 */
 }
 
-/* 网格模式 */
+/* 网格布局模式保持 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; width: 100%; }
 .grid-layout .file-item { background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 240px; justify-content: space-between; align-items: center; transition: 0.2s; box-sizing: border-box; }
 .grid-layout .file-main { flex: 1; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; pointer-events: none; width: 100%; }
@@ -134,7 +126,7 @@
 .grid-layout .file-info { font-size: 11px; color: var(--text-muted); margin-bottom: 15px; width: 100%; }
 .grid-layout .file-actions { display: flex !important; flex-direction: row !important; gap: 8px !important; justify-content: center !important; width: 100%; }
 
-/* 页脚：紧凑靠底 */
+/* 页脚样式 */
 .footer { 
     margin-top: 10px; 
     padding: 15px 0 25px 0; 
@@ -147,9 +139,6 @@
 .footer-powered { color: rgba(255, 255, 255, 0.3); font-size: 13px; margin-bottom: 6px; }
 .footer-copyright { color: rgba(255, 255, 255, 0.4); font-size: 12px; }
 
-.upload-manager { position: fixed; bottom: 20px; right: 20px; width: 320px; background: var(--surface); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 300; display: none; flex-direction: column; overflow: hidden; }
-.upload-item { margin: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
-.preview-modal { background: var(--surface); border: 1px solid var(--border-color); padding: 24px; border-radius: 16px; width: 95%; max-width: 1100px; height: 85vh; display: flex; flex-direction: column; }
-.preview-body { flex: 1; overflow: auto; background: var(--background); border-radius: 8px; display: flex; justify-content: center; align-items: flex-start; position: relative; }
+/* 预览与重命名输入框 */
 .edit-textarea { width: 100%; height: 100%; background: transparent; color: #cbd5e1; border: none; padding: 25px; font-family: monospace; font-size: 14px; line-height: 1.6; outline: none; resize: none; }
 .rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 100%; padding: 2px 5px; border-radius: 4px; text-align: inherit; outline: none; pointer-events: auto !important; }
