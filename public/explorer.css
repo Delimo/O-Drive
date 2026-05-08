@@ -1,6 +1,6 @@
-/* --- explorer.css 最终精简修复版 --- */
+/* --- explorer.css 最终加固版 --- */
 
-/* 基础布局：锁定高度，禁止外部滚动 */
+/* 1. 顶层容器：锁定高度，禁止外部滚动 */
 html, body { 
     height: 100vh; 
     margin: 0; 
@@ -22,7 +22,7 @@ html, body {
     box-sizing: border-box;
 }
 
-/* 顶部工具栏修复 */
+/* 2. 工具栏加固：增加 flex-shrink: 0 防止被压缩 */
 .toolbar { 
     display: flex; 
     justify-content: space-between; 
@@ -33,14 +33,31 @@ html, body {
     border: 1px solid var(--border-color); 
     margin-bottom: 12px; 
     height: 56px; 
-    flex-shrink: 0; 
+    flex-shrink: 0; /* 核心：无论下方卡片多大，工具栏严禁收缩 */
 }
 
-/* 搜索框修复：恢复原始紧凑布局 */
+/* 确保左右布局稳定 */
+.tools-left { 
+    flex: 1; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px;
+    overflow: hidden; 
+}
+
+.tools-right { 
+    display: flex; 
+    gap: 8px; 
+    align-items: center; 
+    flex-shrink: 0; /* 核心：防止右侧按钮挤压 */
+}
+
+/* 3. 搜索框：恢复稳定宽度 */
 .search-bar { 
     position: relative; 
     width: 150px; 
     transition: width 0.3s; 
+    flex-shrink: 0;
 }
 .search-bar input { 
     width: 100%; 
@@ -53,17 +70,8 @@ html, body {
     font-size: 13px;
     box-sizing: border-box;
 }
-.search-bar:focus-within { width: 220px; }
-.search-icon { 
-    position: absolute; 
-    left: 10px; 
-    top: 50%; 
-    transform: translateY(-50%); 
-    opacity: 0.5; 
-    font-size: 12px; 
-}
 
-/* 核心卡片：强制圆角内裁剪 */
+/* 4. 文件卡片容器：裁剪溢出的“盖子” */
 .explorer-card { 
     background: #161e2e; 
     border: 1px solid var(--border-color); 
@@ -75,17 +83,18 @@ html, body {
     min-height: 0;
 }
 
-/* 文件列表滚动区域 */
+/* 5. 文件列表滚动区域 */
 #fileList {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 20px 20px 20px;
+    overflow-x: hidden;
+    padding: 0 20px 20px 20px;
 }
 
-/* --- Grid 布局：核心对齐逻辑 --- */
+/* --- 列表对齐方案 (Grid) --- */
 .list-layout { display: flex; flex-direction: column; gap: 6px; }
 
-/* 定义 4 列：名称(自适应)、大小(100px)、时间(180px)、操作(160px) */
+/* 严格对齐：名称(自适应)、大小(100px)、时间(180px)、操作(160px) */
 .list-header, .list-layout .file-item {
     display: grid !important;
     grid-template-columns: 1fr 100px 180px 160px;
@@ -94,7 +103,6 @@ html, body {
     box-sizing: border-box;
 }
 
-/* 表头：吸顶对齐 */
 .list-header { 
     position: sticky;
     top: 0;
@@ -104,11 +112,10 @@ html, body {
     color: var(--text-muted); 
     font-size: 12px; 
     border-bottom: 1px solid var(--border-color); 
-    margin: 0 -20px 10px -20px; /* 拉伸表头背景 */
-    padding: 0 35px; /* 补偿拉伸后的间距 */
+    margin: 0 -20px 10px -20px;
+    padding: 0 35px;
 }
 
-/* 内容行 */
 .list-layout .file-item { 
     background: rgba(255,255,255,0.02); 
     border: 1px solid var(--border-color); 
@@ -118,7 +125,6 @@ html, body {
 }
 .list-layout .file-item:hover { background: rgba(255,255,255,0.05); border-color: var(--primary); }
 
-/* 列对齐微调 */
 .col-name { display: flex; align-items: center; gap: 10px; overflow: hidden; }
 .file-name { text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 .col-size { text-align: center; font-size: 12px; }
@@ -137,8 +143,10 @@ html, body {
 .footer-copyright { color: rgba(255, 255, 255, 0.4); font-size: 12px; }
 
 /* 网格模式恢复 */
-.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; }
-.grid-layout .file-item { flex-direction: column !important; height: 220px; justify-content: space-between; padding: 20px 15px; }
+.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; padding-top: 10px; }
+.grid-layout .file-item { flex-direction: column !important; height: 220px; justify-content: space-between; padding: 20px 15px; border-radius: var(--radius); }
 
-/* 重命名框 */
+/* 其他小组件 */
+.breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; white-space: nowrap; }
+#batchTools { display: none; gap: 8px; background: rgba(64, 158, 255, 0.1); padding: 0 12px; border-radius: 6px; height: 34px; align-items: center; border: 1px solid var(--primary); }
 .rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 90%; padding: 4px; border-radius: 4px; }
