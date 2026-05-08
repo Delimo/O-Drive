@@ -1,0 +1,12 @@
+{
+  "name": "o-drive",
+  "version": "2.0.0",
+  "description": "Cloudflare R2 Web Drive",
+  "main": "index.js",
+  "scripts": {
+    "build": "tailwindcss -i ./public/style.css -o ./public/main.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1"
+  }
+}
