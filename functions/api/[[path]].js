@@ -1,4 +1,5 @@
-/* --- [[path]].js 逻辑加固版 --- */
+/* --- [[path]].js 逻辑加固 & 游客模式修复版 --- */
+
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
@@ -25,162 +26,162 @@ async function addLog(env, request, action, details) {
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const url = new URL(request.url); const path = url.pathname; const method = request.method;
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const method = request.method;
 
-  // 1. 登录与注销
-  if (path === '/api/login' && method === 'POST') {
-    const { username, password } = await request.json();
-    const now = Date.now();
-    const attempt = await env.DB.prepare("SELECT * FROM login_attempts WHERE ip = ?").bind(request.headers.get('cf-connecting-ip')).first();
-    if (attempt && attempt.attempts >= 5 && (now - attempt.last_attempt < 600000)) return jsonResponse({ success: false, message: '尝试过多' }, 429);
-    if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
-      const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=/g, '');
-      const payload = btoa(JSON.stringify({ role: 'admin' })).replace(/=/g, '');
-      const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.ADMIN_PASSWORD), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-      const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${header}.${payload}`));
-      const signature = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-      return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=${header}.${payload}.${signature}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
+  try {
+    // 1. 基础路由：登录/退出
+    if (path === '/api/login' && method === 'POST') {
+      const { username, password } = await request.json();
+      if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
+        const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=/g, '');
+        const payload = btoa(JSON.stringify({ role: 'admin' })).replace(/=/g, '');
+        const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.ADMIN_PASSWORD), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${header}.${payload}`));
+        const signature = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+        return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=${header}.${payload}.${signature}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
+      }
+      return jsonResponse({ success: false }, 401);
     }
-    return jsonResponse({ success: false }, 401);
-  }
-  if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0' });
+    if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0' });
 
-  const auth = await verifyAuth(request, env);
-  if (!auth) return jsonResponse({ success: false }, 401);
-  if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
+    // 2. 鉴权逻辑
+    const auth = await verifyAuth(request, env);
+    if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
+    if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
-  let r2Key = "";
-  if (path.startsWith('/api/files/')) r2Key = decodeURIComponent(path.slice(11));
-  else if (path.startsWith('/api/download/')) r2Key = decodeURIComponent(path.slice(14));
-  else if (path.startsWith('/api/preview/')) r2Key = decodeURIComponent(path.slice(13));
-  else if (path.startsWith('/api/mkdir/')) r2Key = decodeURIComponent(path.slice(11));
-  else if (path.startsWith('/api/save-text/')) r2Key = decodeURIComponent(path.slice(15));
+    // 3. 获取隐藏路径配置 (增加 try-catch 保护)
+    let hiddenPaths = [];
+    try {
+        const hiddenRes = await env.DB.prepare("SELECT key FROM settings").all();
+        hiddenPaths = hiddenRes.results.map(r => r.key);
+    } catch (dbErr) { console.error("Settings table error:", dbErr); }
 
-  // 管理员接口
-  if (auth.role === 'admin') {
-    // 日志分页逻辑
-    if (path === '/api/admin/logs') {
-        const page = parseInt(url.searchParams.get('page') || '1');
-        const size = parseInt(url.searchParams.get('size') || '20');
-        const offset = (page - 1) * size;
-        const total = await env.DB.prepare("SELECT COUNT(*) as count FROM logs").first('count');
-        const logs = await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT ? OFFSET ?").bind(size, offset).all();
-        return jsonResponse({ logs: logs.results, totalPages: Math.ceil(total / size), currentPage: page });
-    }
+    // 4. 解析 R2 资源 Key
+    let r2Key = "";
+    if (path.startsWith('/api/files/')) r2Key = decodeURIComponent(path.slice(11));
+    else if (path.startsWith('/api/download/')) r2Key = decodeURIComponent(path.slice(14));
+    else if (path.startsWith('/api/preview/')) r2Key = decodeURIComponent(path.slice(13));
+    else if (path.startsWith('/api/mkdir/')) r2Key = decodeURIComponent(path.slice(11));
+    else if (path.startsWith('/api/save-text/')) r2Key = decodeURIComponent(path.slice(15));
 
-    if (path === '/api/admin/settings/hidden') {
-        if (method === 'GET') return jsonResponse({ list: (await env.DB.prepare("SELECT key as path FROM settings").all()).results });
-        if (method === 'POST') { await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind((await request.json()).targetPath).run(); return jsonResponse({ success: true }); }
-        if (method === 'DELETE') { await env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(url.searchParams.get('path')).run(); return jsonResponse({ success: true }); }
+    // 5. 权限与隐私过滤
+    if (hiddenPaths.some(hp => r2Key === hp || r2Key.startsWith(hp + '/')) && auth.role !== 'admin') {
+        return jsonResponse({ success: false, message: 'Forbidden' }, 403);
     }
 
-    if (path.startsWith('/api/save-text/') && method === 'POST') {
-        const { content } = await request.json();
-        await env.R2_BUCKET.put(r2Key, content, { httpMetadata: { contentType: 'text/plain' } });
-        await addLog(env, request, 'SAVE_TEXT', r2Key);
-        return jsonResponse({ success: true });
+    // 6. 管理员功能
+    if (auth.role === 'admin') {
+      if (path === '/api/admin/logs') {
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const size = parseInt(url.searchParams.get('size') || '20');
+          const offset = (page - 1) * size;
+          const totalRes = await env.DB.prepare("SELECT COUNT(*) as count FROM logs").first();
+          const total = totalRes ? totalRes.count : 0;
+          const logs = await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT ? OFFSET ?").bind(size, offset).all();
+          return jsonResponse({ logs: logs.results, totalPages: Math.ceil(total / size), currentPage: page });
+      }
+      if (path === '/api/admin/settings/hidden') {
+          if (method === 'GET') return jsonResponse({ list: hiddenPaths.map(p => ({path: p})) });
+          if (method === 'POST') { await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind((await request.json()).targetPath).run(); return jsonResponse({ success: true }); }
+          if (method === 'DELETE') { await env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(url.searchParams.get('path')).run(); return jsonResponse({ success: true }); }
+      }
+      if (path === '/api/batch-delete' && method === 'POST') {
+          const { paths } = await request.json();
+          for (const p of paths) {
+              const listed = await env.R2_BUCKET.list({ prefix: p + '/' });
+              for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
+              await env.R2_BUCKET.delete(p);
+          }
+          return jsonResponse({ success: true });
+      }
+      if (path === '/api/paste' && method === 'POST') {
+          const { action, paths, targetDir } = await request.json();
+          const destPrefix = targetDir === '/' ? '' : (targetDir.endsWith('/') ? targetDir : targetDir + '/');
+          for (const src of paths) {
+              const name = src.split('/').pop(); const dest = destPrefix + name;
+              const item = await env.R2_BUCKET.get(src);
+              if (item) await env.R2_BUCKET.put(dest, item.body, { httpMetadata: item.httpMetadata });
+              const listed = await env.R2_BUCKET.list({ prefix: src + '/' });
+              for (const obj of listed.objects) {
+                  const subDest = dest + obj.key.slice(src.length);
+                  const subItem = await env.R2_BUCKET.get(obj.key);
+                  await env.R2_BUCKET.put(subDest, subItem.body, { httpMetadata: subItem.httpMetadata });
+                  if (action === 'move') await env.R2_BUCKET.delete(obj.key);
+              }
+              if (action === 'move') {
+                  await env.R2_BUCKET.delete(src);
+                  try { await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(dest, src).run(); } catch(e){}
+              }
+          }
+          return jsonResponse({ success: true });
+      }
+      if (path.startsWith('/api/files/') && method === 'PUT') {
+          const { newName } = await request.json();
+          const parentDir = r2Key.includes('/') ? r2Key.substring(0, r2Key.lastIndexOf('/') + 1) : '';
+          const newKey = parentDir + newName;
+          const item = await env.R2_BUCKET.get(r2Key);
+          if (item) { await env.R2_BUCKET.put(newKey, item.body, { httpMetadata: item.httpMetadata }); await env.R2_BUCKET.delete(r2Key); }
+          const listed = await env.R2_BUCKET.list({ prefix: r2Key + '/' });
+          for (const obj of listed.objects) {
+              const subDest = newKey + obj.key.slice(r2Key.length);
+              const subItem = await env.R2_BUCKET.get(obj.key);
+              await env.R2_BUCKET.put(subDest, subItem.body, { httpMetadata: subItem.httpMetadata });
+              await env.R2_BUCKET.delete(obj.key);
+          }
+          try { await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Key).run(); } catch(e){}
+          return jsonResponse({ success: true });
+      }
+      if (path.startsWith('/api/save-text/') && method === 'POST') {
+          await env.R2_BUCKET.put(r2Key, (await request.json()).content, { httpMetadata: { contentType: 'text/plain' } });
+          return jsonResponse({ success: true });
+      }
     }
 
-    if (path === '/api/batch-delete') {
-        const { paths } = await request.json();
-        for (const p of paths) {
-            const listed = await env.R2_BUCKET.list({ prefix: p + '/' });
-            for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key);
-            await env.R2_BUCKET.delete(p);
-            await addLog(env, request, 'DELETE', p);
-        }
-        return jsonResponse({ success: true });
+    // 7. 公共 API：搜索与列表
+    if (path === '/api/search') {
+      const q = url.searchParams.get('q')?.toLowerCase();
+      const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
+      const listed = await env.R2_BUCKET.list({ prefix: scope });
+      const matches = listed.objects.map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: formatBytes(o.size), rawSize: o.size, time: o.uploaded.getTime() }))
+        .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey.startsWith(hp))));
+      return jsonResponse({ files: matches });
     }
 
-    // 关键修复：稳健的复制/移动逻辑
-    if (path === '/api/paste') {
-        const { action, paths, targetDir } = await request.json();
-        const destPrefix = targetDir === '/' ? '' : (targetDir.endsWith('/') ? targetDir : targetDir + '/');
-        
-        for (const src of paths) {
-            const name = src.split('/').pop();
-            const dest = destPrefix + name;
-            
-            // 1. 处理自身（文件或文件夹标识）
-            const item = await env.R2_BUCKET.get(src);
-            if (item) {
-                await env.R2_BUCKET.put(dest, item.body, { httpMetadata: item.httpMetadata });
-            }
-
-            // 2. 递归处理内容 (如果是文件夹)
-            const listed = await env.R2_BUCKET.list({ prefix: src + '/' });
-            for (const obj of listed.objects) {
-                const subDest = dest + obj.key.slice(src.length);
-                const subItem = await env.R2_BUCKET.get(obj.key);
-                await env.R2_BUCKET.put(subDest, subItem.body, { httpMetadata: subItem.httpMetadata });
-                if (action === 'move') await env.R2_BUCKET.delete(obj.key);
-            }
-
-            if (action === 'move') {
-                await env.R2_BUCKET.delete(src);
-                await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(dest, src).run();
-            }
-            await addLog(env, request, action.toUpperCase(), `${src} -> ${dest}`);
-        }
-        return jsonResponse({ success: true });
+    if (path.startsWith('/api/files') && method === 'GET') {
+      let prefix = r2Key ? r2Key + '/' : '';
+      const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
+      const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.split('/').slice(-2, -1)[0], path: '/' + p.slice(0, -1), fullKey: p.slice(0, -1) })).filter(f => auth.role === 'admin' || !hiddenPaths.includes(f.fullKey));
+      const files = (listed.objects || []).map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: formatBytes(o.size), rawSize: o.size, time: o.uploaded.getTime() })).filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.includes(f.fullKey)));
+      return jsonResponse({ folders, files });
     }
 
-    if (path.startsWith('/api/files/') && method === 'PUT') {
-        const { newName } = await request.json();
-        const parentDir = r2Key.includes('/') ? r2Key.substring(0, r2Key.lastIndexOf('/') + 1) : '';
-        const newKey = parentDir + newName;
-        
-        const item = await env.R2_BUCKET.get(r2Key);
-        if (item) {
-            await env.R2_BUCKET.put(newKey, item.body, { httpMetadata: item.httpMetadata });
-            await env.R2_BUCKET.delete(r2Key);
-        }
-        const listed = await env.R2_BUCKET.list({ prefix: r2Key + '/' });
-        for (const obj of listed.objects) {
-            const subDest = newKey + obj.key.slice(r2Key.length);
-            const subItem = await env.R2_BUCKET.get(obj.key);
-            await env.R2_BUCKET.put(subDest, subItem.body, { httpMetadata: subItem.httpMetadata });
-            await env.R2_BUCKET.delete(obj.key);
-        }
-        await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Key).run();
-        await addLog(env, request, 'RENAME', `${r2Key} -> ${newKey}`);
-        return jsonResponse({ success: true });
+    // 8. 只读操作：预览与下载 (支持游客)
+    if (path.startsWith('/api/download/') || path.startsWith('/api/preview/')) {
+      const obj = await env.R2_BUCKET.get(r2Key);
+      if (!obj) return new Response('404 Not Found', { status: 404 });
+      return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': path.startsWith('/api/download/') ? `attachment; filename="${encodeURIComponent(r2Key.split('/').pop())}"` : 'inline' }});
     }
-  }
 
-  // 通用文件操作
-  if (path === '/api/search') {
-    const q = url.searchParams.get('q')?.toLowerCase();
-    const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
-    const listed = await env.R2_BUCKET.list({ prefix: scope });
-    const matches = listed.objects.map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: formatBytes(o.size), rawSize: o.size, time: o.uploaded.getTime() }))
-      .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey.startsWith(hp))));
-    return jsonResponse({ files: matches });
-  }
+    // 9. 写操作拦截 (Admin Only)
+    if (['POST', 'PUT', 'DELETE'].includes(method) && auth.role !== 'admin') {
+      return jsonResponse({ success: false, message: 'Forbidden' }, 403);
+    }
+    if (path.startsWith('/api/mkdir')) {
+      await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + (await request.json()).folderName + '/.folder', new Uint8Array(0));
+      return jsonResponse({ success: true });
+    }
+    if (path.startsWith('/api/files') && method === 'POST') {
+      const file = (await request.formData()).get('file');
+      await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
+      return jsonResponse({ success: true });
+    }
 
-  if (path.startsWith('/api/files') && method === 'GET') {
-    let prefix = r2Key ? r2Key + '/' : '';
-    const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
-    const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.split('/').slice(-2, -1)[0], path: '/' + p.slice(0, -1), fullKey: p.slice(0, -1) })).filter(f => auth.role === 'admin' || !hiddenPaths.includes(f.fullKey));
-    const files = (listed.objects || []).map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: formatBytes(o.size), rawSize: o.size, time: o.uploaded.getTime() })).filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.includes(f.fullKey)));
-    return jsonResponse({ folders, files });
-  }
+    return jsonResponse({ message: 'API Route Not Found' }, 404);
 
-  if (['POST', 'PUT', 'DELETE'].includes(method) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
-  if (path.startsWith('/api/mkdir')) {
-    const { folderName } = await request.json();
-    await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + folderName + '/.folder', new Uint8Array(0));
-    return jsonResponse({ success: true });
+  } catch (err) {
+    // 全局异常捕获，确保返回的是 JSON 而不是 HTML
+    return jsonResponse({ success: false, message: err.message, stack: err.stack }, 500);
   }
-  if (path.startsWith('/api/files') && method === 'POST') {
-    const file = (await request.formData()).get('file');
-    await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
-    return jsonResponse({ success: true });
-  }
-  if (path.startsWith('/api/download') || path.startsWith('/api/preview')) {
-    const obj = await env.R2_BUCKET.get(r2Key);
-    if (!obj) return new Response('404', { status: 404 });
-    return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': path.startsWith('/api/download') ? `attachment; filename="${encodeURIComponent(r2Key.split('/').pop())}"` : 'inline' }});
-  }
-  return jsonResponse({ message: 'Not Found' }, 404);
 }
