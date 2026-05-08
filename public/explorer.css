@@ -1,4 +1,4 @@
-/* --- explorer.css 最终视觉统一加固版 --- */
+/* --- explorer.css 最终视觉完美版 --- */
 
 /* 1. 顶层容器布局 */
 html, body { 
@@ -22,7 +22,7 @@ html, body {
     box-sizing: border-box;
 }
 
-/* 2. 工具栏布局 */
+/* 2. 工具栏：增加全局 gap 解决按钮贴合问题 */
 .toolbar { 
     display: flex; 
     justify-content: space-between; 
@@ -34,6 +34,7 @@ html, body {
     margin-bottom: 12px; 
     height: 56px; 
     flex-shrink: 0; 
+    gap: 20px; /* 核心修复：强制左右两端保持至少 20px 间距 */
 }
 
 .tools-left { 
@@ -44,21 +45,22 @@ html, body {
     overflow: hidden; 
 }
 
-/* 3. 批量操作工具条：强制按钮样式与右侧一致 */
+/* 3. 批量操作工具条：样式加固 */
 #batchTools { 
     display: none; 
-    gap: 8px; 
+    gap: 8px; /* 内部按钮间距 */
     background: none !important; 
     border: none !important; 
     padding: 0 !important; 
     align-items: center; 
     flex-shrink: 0;
+    margin-left: 10px; /* 与面包屑路径保持间距 */
 }
 
-/* 强制覆盖 HTML 里的 inline style (background:none) */
-#batchTools .btn { 
-    background: var(--surface-light) !important; /* 强制背景 */
-    border: 1px solid var(--border-color) !important; /* 强制边框 */
+/* 统一按钮样式 */
+#batchTools .btn, .tools-right .btn { 
+    background: var(--surface-light) !important; 
+    border: 1px solid var(--border-color) !important; 
     height: 34px !important;
     padding: 0 16px !important;
     font-size: 12px !important;
@@ -67,15 +69,17 @@ html, body {
     font-weight: 600 !important;
     display: inline-flex !important;
     align-items: center !important;
+    justify-content: center !important;
     cursor: pointer;
+    white-space: nowrap;
 }
 
-#batchTools .btn:hover {
+#batchTools .btn:hover, .tools-right .btn:hover {
     background: var(--surface-hover) !important;
     border-color: var(--primary) !important;
 }
 
-/* 针对删除按钮的特殊红色风格统一 */
+/* 危险操作（删除）按钮 */
 #batchTools .btn-danger {
     background: rgba(245, 108, 108, 0.1) !important;
     color: var(--error) !important;
@@ -86,10 +90,8 @@ html, body {
     color: #fff !important;
 }
 
-/* 隐藏那个碍事的分割线小竖条 */
-#batchTools div[style*="width:1px"] {
-    display: none !important;
-}
+/* 隐藏原本 HTML 里的分割竖线 */
+#batchTools div[style*="width:1px"] { display: none !important; }
 
 /* 右侧按钮组 */
 .tools-right { 
@@ -99,7 +101,7 @@ html, body {
     flex-shrink: 0;
 }
 
-/* 搜索框图标修复 */
+/* 搜索框 */
 .search-bar { position: relative; width: 160px; flex-shrink: 0; }
 .search-bar input { 
     width: 100%; background: var(--background); border: 1px solid var(--border-color); 
