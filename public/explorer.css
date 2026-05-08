@@ -1,9 +1,4 @@
-.container { 
-    max-width: 1200px; margin: 0 auto; padding: 20px; 
-    height: calc(100vh - var(--header-height)); 
-    display: flex; flex-direction: column; box-sizing: border-box; 
-}
-
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; height: calc(100vh - var(--header-height)); display: flex; flex-direction: column; box-sizing: border-box; }
 .toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 0 15px; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 12px; height: 56px; flex-shrink: 0; }
 .tools-left { flex: 1; min-width: 0; display: flex; align-items: center; font-size: 14px; overflow: hidden; }
 .breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; white-space: nowrap; }
@@ -16,23 +11,10 @@
 
 #batchTools { display: none; gap: 8px; background: rgba(64, 158, 255, 0.1); padding: 0 12px; border-radius: 6px; height: 34px; align-items: center; border: 1px solid var(--primary); }
 
-/* --- 核心：文件列表外框与滚动 --- */
-.explorer-card { 
-    background: #161e2e; border: 1px solid var(--border-color); border-radius: var(--radius); 
-    padding: 20px; flex: 1; overflow-y: auto; /* 允许纵向滚动 */
-    position: relative;
-}
+.explorer-card { background: #161e2e; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px; flex: 1; overflow-y: auto; position: relative; }
+.list-header { position: sticky; top: -20px; background: #161e2e; z-index: 10; display: flex; align-items: center; padding: 0 15px; height: 44px; color: var(--text-muted); font-size: 12px; border-bottom: 1px solid var(--border-color); margin: -20px -20px 10px -20px; }
 
-/* 列表模式：表头吸顶 */
-.list-header { 
-    position: sticky; top: -20px; /* 对冲父元素的 padding */
-    background: #161e2e; z-index: 10;
-    display: flex; align-items: center; padding: 0 15px; height: 44px; 
-    color: var(--text-muted); font-size: 12px; border-bottom: 1px solid var(--border-color); 
-    margin: -20px -20px 10px -20px; /* 让边框延伸到头 */
-}
-
-/* 布局模式公用 */
+/* Layouts */
 .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 15px; }
 .grid-layout .file-item { background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 240px; justify-content: space-between; align-items: center; transition: 0.2s; }
 .grid-layout .file-item.selected { border-color: var(--primary); background: rgba(64, 158, 255, 0.1); }
@@ -50,8 +32,7 @@
 .list-layout .col-time { width: 180px; text-align: center; font-family: monospace; font-size: 12px; }
 .list-layout .col-acts { width: 150px; display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
 
-/* 其他样式 */
-.footer { margin-top: 15px; padding: 15px 0; text-align: center; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+/* Extra UI */
 .rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 100%; padding: 2px 5px; border-radius: 4px; text-align: inherit; outline: none; }
 .upload-manager { position: fixed; bottom: 20px; right: 20px; width: 320px; background: var(--surface); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 300; display: none; flex-direction: column; overflow: hidden; transition: opacity 0.5s; }
 .upload-item { margin: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
