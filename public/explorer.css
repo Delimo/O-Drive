@@ -1,6 +1,6 @@
-/* --- explorer.css 最终精简修正版 --- */
+/* --- explorer.css 最终加固修复版 --- */
 
-/* 1. 顶层容器加固：锁定高度 */
+/* 1. 基础容器：锁定高度 */
 html, body { 
     height: 100vh; 
     margin: 0; 
@@ -21,7 +21,7 @@ html, body {
     box-sizing: border-box;
 }
 
-/* 2. 工具栏与搜索框修复 */
+/* 2. 工具栏修复 */
 .toolbar { 
     display: flex; 
     justify-content: space-between; 
@@ -35,34 +35,58 @@ html, body {
     flex-shrink: 0; 
 }
 
-/* 搜索框：精准定位图标 */
-.search-bar { 
-    position: relative !important; 
-    width: 160px; 
+.tools-left { 
+    flex: 1; 
+    display: flex; 
+    align-items: center; 
+    gap: 12px;
+    overflow: hidden; 
+}
+
+.tools-right { 
+    display: flex; 
+    gap: 8px; 
+    align-items: center; 
+    flex-shrink: 0; 
+}
+
+/* 批量操作工具条 */
+#batchTools { 
+    display: none; 
+    gap: 8px; 
+    background: rgba(64, 158, 255, 0.1); 
+    padding: 0 12px; 
+    border-radius: 6px; 
+    height: 34px; 
+    align-items: center; 
+    border: 1px solid var(--primary); 
     flex-shrink: 0;
 }
+
+/* 搜索框图标修复 */
+.search-bar { position: relative; width: 160px; flex-shrink: 0; }
 .search-bar input { 
     width: 100%; 
-    background: var(--background) !important; 
-    border: 1px solid var(--border-color) !important; 
+    background: var(--background); 
+    border: 1px solid var(--border-color); 
     border-radius: 6px; 
-    padding: 6px 10px 6px 32px !important; /* 给图标留位置 */
-    color: #fff !important; 
+    padding: 6px 10px 6px 32px; 
+    color: #fff; 
+    outline: none; 
     font-size: 13px;
     box-sizing: border-box;
 }
 .search-icon { 
-    position: absolute !important; 
-    left: 10px !important; 
-    top: 50% !important; 
-    transform: translateY(-50%) !important; 
-    opacity: 0.6; 
-    font-size: 14px !important;
+    position: absolute; 
+    left: 10px; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    opacity: 0.5; 
+    font-size: 14px;
     pointer-events: none;
-    z-index: 5;
 }
 
-/* 3. 文件卡片容器 */
+/* 3. 卡片容器：圆角裁剪 */
 .explorer-card { 
     background: #161e2e; 
     border: 1px solid var(--border-color); 
@@ -74,7 +98,7 @@ html, body {
     min-height: 0;
 }
 
-/* 文件列表滚动区域 */
+/* 4. 文件列表：内层滚动 */
 #fileList {
     flex: 1;
     overflow-y: auto;
@@ -82,12 +106,13 @@ html, body {
     padding: 0 20px 20px 20px;
 }
 
-/* --- 列表对齐：使用 Grid 确保绝对对齐 --- */
+/* --- 列表对齐：严格 Grid 方案 --- */
 .list-layout { display: flex; flex-direction: column; gap: 6px; }
 
+/* 严格对齐模板：名称(自适应)、大小(100px)、时间(180px)、操作(180px) */
 .list-header, .list-layout .file-item {
     display: grid !important;
-    grid-template-columns: 1fr 100px 180px 160px; /* 严格四列 */
+    grid-template-columns: 1fr 100px 180px 180px; 
     align-items: center;
     padding: 0 15px;
     box-sizing: border-box;
@@ -102,57 +127,64 @@ html, body {
     color: var(--text-muted); 
     font-size: 12px; 
     border-bottom: 1px solid var(--border-color); 
-    margin: 0 -20px 10px -20px;
-    padding: 0 35px;
+    margin: 0 -20px 10px -20px; /* 扩展表头背景 */
+    padding: 0 35px; /* 补偿拉伸后的文字对齐 */
 }
 
+/* 文件项样式 */
 .list-layout .file-item { 
     background: rgba(255,255,255,0.02); 
     border: 1px solid var(--border-color); 
-    height: 52px; 
+    height: 56px; 
     border-radius: 8px; 
     cursor: pointer; 
+    transition: 0.15s;
 }
-.list-layout .file-item:hover { background: rgba(255,255,255,0.05); border-color: var(--primary); }
+.list-layout .file-item:hover { background: rgba(255,255,255,0.05); }
 
-.col-name { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+/* 核心修复：选中高亮状态 */
+.list-layout .file-item.selected { 
+    background: rgba(64, 158, 255, 0.15) !important; 
+    border-color: var(--primary) !important; 
+}
+
+/* 列内容对齐 */
+.col-name { display: flex; align-items: center; gap: 12px; overflow: hidden; }
 .file-name { text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
-.col-size { text-align: center; font-size: 12px; }
+.col-size { text-align: center; font-size: 12px; color: var(--text-muted); }
 .col-time { text-align: center; font-family: monospace; font-size: 12px; color: var(--text-muted); }
-.col-acts { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* 4. 页脚项目信息修复 (对应你最初要求的精致风格) */
+/* 核心修复：按钮协调度 */
+.col-acts { 
+    display: flex; 
+    gap: 10px; 
+    justify-content: flex-end; 
+    height: 100%;
+    align-items: center;
+}
+.col-acts .btn {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+/* 5. 页脚项目信息 */
 .footer { 
-    padding: 20px 0 25px 0; 
+    padding: 15px 0 25px 0; 
     text-align: center; 
     border-top: 1px solid rgba(255, 255, 255, 0.05); 
     flex-shrink: 0; 
-    line-height: 1.6 !important;
 }
-.footer-info { 
-    color: rgba(255, 255, 255, 0.6) !important; 
-    font-size: 14px !important; 
-    margin-bottom: 4px; 
-}
-.footer-brand { 
-    color: #ffffff !important; 
-    font-weight: 500 !important; 
-    text-decoration: none; 
-}
-.footer-powered { 
-    color: rgba(255, 255, 255, 0.4) !important; 
-    font-size: 13px !important; 
-    margin-bottom: 4px; 
-}
-.footer-copyright { 
-    color: rgba(255, 255, 255, 0.45) !important; 
-    font-size: 12px !important; 
-}
+.footer-info { color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 6px; }
+.footer-brand { color: #ffffff; font-weight: 500; text-decoration: none; }
+.footer-powered { color: rgba(255, 255, 255, 0.35); font-size: 13px; margin-bottom: 6px; }
+.footer-copyright { color: rgba(255, 255, 255, 0.4); font-size: 12px; }
 
-/* 网格模式补丁 */
+/* 网格模式恢复 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; padding-top: 10px; }
 .grid-layout .file-item { flex-direction: column !important; height: 220px; justify-content: space-between; padding: 20px 15px; border-radius: var(--radius); }
+.grid-layout .file-item.selected { border-color: var(--primary); background: rgba(64, 158, 255, 0.1); }
 
 /* 其他修复 */
-.tools-right { display: flex; gap: 8px; align-items: center; }
-.rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 90%; padding: 4px; }
+.breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; white-space: nowrap; }
+.rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 85%; padding: 4px 8px; border-radius: 4px; }
