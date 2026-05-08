@@ -2,7 +2,7 @@
     max-width: 1200px; 
     width: 100%; 
     margin: 0 auto; 
-    padding: 20px 20px 10px 20px; /* 减小底部 padding */
+    padding: 20px 20px 10px 20px; 
     flex: 1; 
     display: flex; 
     flex-direction: column; 
@@ -21,7 +21,6 @@
 
 #batchTools { display: none; gap: 8px; background: rgba(64, 158, 255, 0.1); padding: 0 12px; border-radius: 6px; height: 34px; align-items: center; border: 1px solid var(--primary); }
 
-/* 核心修改：让卡片自动向下占满 */
 .explorer-card { 
     background: #161e2e; 
     border: 1px solid var(--border-color); 
@@ -33,6 +32,52 @@
     min-height: 0; 
 }
 
+/* 列表模式对齐优化 */
+.list-layout { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+
+/* 关键修正：表头对齐 */
+.list-header { 
+    position: sticky; 
+    top: -20px; 
+    background: #161e2e; 
+    z-index: 10; 
+    display: flex; 
+    align-items: center; 
+    /* 与下方 file-item 的内边距+边线厚度完全一致 */
+    padding: 0 16px; 
+    height: 48px; 
+    color: var(--text-muted); 
+    font-size: 12px; 
+    border-bottom: 1px solid var(--border-color); 
+    /* 移除之前的负边距，确保在容器内对齐 */
+    margin: -20px -20px 12px -20px; 
+    width: calc(100% + 40px); /* 补偿 card 的 padding */
+}
+
+.list-layout .file-item { 
+    background: rgba(255,255,255,0.02); 
+    border: 1px solid var(--border-color); 
+    height: 54px; 
+    padding: 0 15px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    display: flex !important; 
+    flex-direction: row !important; 
+    align-items: center !important; 
+    justify-content: space-between !important; 
+    width: 100%; 
+    box-sizing: border-box; 
+    transition: 0.2s;
+}
+.list-layout .file-item:hover { background: rgba(255,255,255,0.05); border-color: var(--primary); }
+
+/* 列宽度固定，确保表头和内容共用一套宽度 */
+.col-name { flex: 3; display: flex; align-items: center; min-width: 0; pointer-events: none; gap: 10px; }
+.col-size { width: 100px; text-align: center; font-size: 12px; flex-shrink: 0; }
+.col-time { width: 180px; text-align: center; font-family: monospace; font-size: 12px; flex-shrink: 0; }
+.col-acts { width: 180px; display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-shrink: 0; }
+
+/* 网格模式保持不变 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; width: 100%; }
 .grid-layout .file-item { background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 240px; justify-content: space-between; align-items: center; transition: 0.2s; box-sizing: border-box; }
 .grid-layout .file-main { flex: 1; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; pointer-events: none; width: 100%; }
@@ -41,15 +86,6 @@
 .grid-layout .file-info { font-size: 11px; color: var(--text-muted); margin-bottom: 15px; width: 100%; }
 .grid-layout .file-actions { display: flex !important; flex-direction: row !important; gap: 8px !important; justify-content: center !important; width: 100%; }
 
-.list-layout { display: flex; flex-direction: column; gap: 4px; width: 100%; }
-.list-header { position: sticky; top: -20px; background: #161e2e; z-index: 10; display: flex; align-items: center; padding: 0 15px; height: 44px; color: var(--text-muted); font-size: 12px; border-bottom: 1px solid var(--border-color); margin: -20px -20px 10px -20px; }
-.list-layout .file-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); height: 52px; padding: 0 15px; border-radius: 8px; cursor: pointer; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; width: 100%; box-sizing: border-box; }
-.col-name { flex: 3; display: flex; align-items: center; min-width: 0; pointer-events: none; justify-content: flex-start !important; }
-.col-size { width: 100px; text-align: center; font-size: 12px; }
-.col-time { width: 180px; text-align: center; font-family: monospace; font-size: 12px; }
-.col-acts { width: 180px; display: flex; gap: 10px; justify-content: center; align-items: center; }
-
-/* 核心修改：重新设计的页脚 */
 .footer { 
     margin-top: 15px; 
     padding: 25px 0 30px 0; 
@@ -62,7 +98,7 @@
 .footer-powered { color: rgba(255, 255, 255, 0.4); font-size: 14px; margin-bottom: 12px; }
 .footer-copyright { color: rgba(255, 255, 255, 0.5); font-size: 14px; }
 
-.upload-manager { position: fixed; bottom: 20px; right: 20px; width: 320px; background: var(--surface); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 300; display: none; flex-direction: column; overflow: hidden; transition: opacity 0.5s; }
+.upload-manager { position: fixed; bottom: 20px; right: 20px; width: 320px; background: var(--surface); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 300; display: none; flex-direction: column; overflow: hidden; }
 .upload-item { margin: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
 .preview-modal { background: var(--surface); border: 1px solid var(--border-color); padding: 24px; border-radius: 16px; width: 95%; max-width: 1100px; height: 85vh; display: flex; flex-direction: column; }
 .preview-body { flex: 1; overflow: auto; background: var(--background); border-radius: 8px; display: flex; justify-content: center; align-items: flex-start; position: relative; }
