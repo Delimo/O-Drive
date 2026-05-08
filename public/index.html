@@ -31,10 +31,8 @@
                 <button class="btn btn-sm btn-danger" onclick="Actions.batchDelete()">删除</button>
             </div>
             <div class="tools-right">
-                <!-- 粘贴按钮组 -->
                 <button id="pasteBtn" class="btn btn-primary" onclick="Actions.executePaste()" style="display:none">粘贴</button>
                 <button id="cancelPasteBtn" class="btn" onclick="Actions.clearClipboard()" style="display:none">取消</button>
-                
                 <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
                 <button class="btn admin-only" onclick="UI.showModal('mkdirModal')">新建文件夹</button>
                 <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
@@ -44,13 +42,13 @@
         </div>
         <div class="explorer-card"><div id="fileList"></div></div>
         <footer class="footer">
-            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank" class="footer-brand">Delimo</a></div>
+            <div class="footer-info">项目：<span class="footer-brand">O-Drive</span> | 作者：<span class="footer-brand">Delimo</span></div>
             <div class="footer-powered">Powered by Cloudflare Pages</div>
             <div class="footer-copyright">&copy; <span id="year-display">2026</span> O-Drive. All rights reserved.</div>
         </footer>
     </div>
 
-    <!-- 弹窗部分略 (保持你原有的 Modal HTML 即可) -->
+    <!-- 弹窗部分保持原样 -->
     <div id="loginModal" class="modal-overlay"><div class="login-card"><button onclick="UI.closeModal('loginModal')" class="modal-close">&times;</button><h1>管理端登录</h1><div class="input-wrapper"><input type="text" id="adminUser" placeholder="用户名"></div><div class="input-wrapper"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()"></div><button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.doLogin()">登录</button><p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p></div></div>
     <div id="mkdirModal" class="modal-overlay"><div class="mkdir-card"><button class="modal-close" onclick="UI.closeModal('mkdirModal')">&times;</button><h1 class="modal-title">新建文件夹</h1><div class="input-wrapper"><input type="text" id="folderNameInput" placeholder="请输入文件夹名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()"></div><button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.submitMkdir()">创建</button></div></div>
     <div id="previewModal" class="modal-overlay" onclick="UI.closePreview()"><div class="preview-modal" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 id="previewTitle">预览</h3><div style="display:flex; gap:10px;"><button id="editBtn" class="btn btn-sm" style="display:none" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-sm btn-primary" style="display:none" onclick="Actions.saveTextContent()">保存</button><button onclick="UI.closePreview()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:28px; line-height:1">&times;</button></div></div><div id="previewContent" class="preview-body"></div></div></div>
@@ -121,9 +119,9 @@
                 const sel = document.getElementById('selectAllBtn');
                 const total = fileData.folders.length + fileData.files.length;
                 bt.style.display = (userRole === 'admin' && selectedPaths.length > 0) ? 'flex' : 'none';
-                const hasClipboard = (userRole === 'admin' && clipboard);
-                pb.style.display = hasClipboard ? 'inline-flex' : 'none';
-                cpb.style.display = hasClipboard ? 'inline-flex' : 'none';
+                const showPaste = (userRole === 'admin' && clipboard);
+                pb.style.display = showPaste ? 'inline-flex' : 'none';
+                cpb.style.display = showPaste ? 'inline-flex' : 'none';
                 ren.style.display = (selectedPaths.length === 1) ? 'inline-flex' : 'none';
                 sel.textContent = (selectedPaths.length === total && total > 0) ? "取消全选" : "全选";
                 if (clipboard) pb.textContent = `粘贴 (${clipboard.paths.length})`;
@@ -160,7 +158,7 @@
                     else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="/api/preview${path}" class="preview-media" controls autoplay></video>`;
                     else if (['mp3','wav'].includes(ext)) content.innerHTML = `<audio src="/api/preview${path}" controls autoplay style="width:80%; margin-top:100px;"></audio>`;
                     else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
-                    else { const res = await fetch(`/api/preview${path}`); const text = await res.text(); if (userRole === 'admin') editBtn.style.display = 'inline-flex'; if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; width:100%; text-align:left;">${marked.parse(text)}</div>`; else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:13px; font-family:monospace; text-align:left;">${text}</pre>`; }
+                    else { const res = await fetch(`/api/preview${path}`); const text = await res.text(); if (userRole === 'admin') editBtn.style.display = 'inline-flex'; if (ext === 'md') content.innerHTML = `<div class="markdown-body" style="color:var(--text); padding:40px; width:100%; text-align:left;">${marked.parse(text)}</div>`; else content.innerHTML = `<pre id="textContent" style="color:var(--text); padding:30px; width:100%; white-space:pre-wrap; font-size:14px; font-family:monospace; text-align:left;">${text}</pre>`; }
                     title.textContent = name;
                 } catch (e) { content.innerHTML = `<div style="color:var(--error); padding:50px;">预览失败</div>`; }
             },
@@ -169,7 +167,6 @@
             toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
             downloadFile(p) { window.open(`/api/download${p}`); },
-            async submitMkdir() { const n = document.getElementById('folderNameInput').value.trim(); if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); document.getElementById('folderNameInput').value = ''; UI.closeModal('mkdirModal'); this.loadFiles(); Message.success('创建成功'); },
             async uploadFiles(files) {
                 if(userRole!=='admin') return;
                 const manager = document.getElementById('uploadManager'); const list = document.getElementById('uploadList');
