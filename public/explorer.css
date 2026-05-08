@@ -1,16 +1,16 @@
-/* --- explorer.css 完美对齐 & 消除滚动条溢出版 --- */
+/* --- explorer.css 终极修复版：解决溢出 & 完美对齐 --- */
 
 .container { 
     max-width: 1200px; 
     width: 100%; 
     margin: 0 auto; 
-    padding: 20px 20px 10px 20px; 
+    padding: 20px 20px 0 20px; 
+    /* 关键：强制容器占满除 Header 以外的所有高度 */
     flex: 1; 
     display: flex; 
     flex-direction: column; 
     min-height: 0; 
-    box-sizing: border-box; 
-    overflow: hidden; 
+    box-sizing: border-box;
 }
 
 .toolbar { 
@@ -30,115 +30,102 @@
 .breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; white-space: nowrap; }
 .tools-right { display: flex; gap: 8px; align-items: center; margin-left: 15px; }
 
+/* 搜索框 */
 .search-bar { position: relative; width: 130px; transition: width 0.3s; flex-shrink: 0; }
 .search-bar input { width: 100%; background: var(--background); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px 6px 30px; color: #fff; outline: none; font-size: 13px; }
 .search-bar:focus-within { width: 220px; }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; pointer-events: none; font-size: 12px; }
 
+/* 批量操作工具 */
 #batchTools { display: none; gap: 8px; background: rgba(64, 158, 255, 0.1); padding: 0 12px; border-radius: 6px; height: 34px; align-items: center; border: 1px solid var(--primary); }
 
-/* 卡片容器：负责裁剪圆角，解决图2的滚动条溢出问题 */
+/* --- 核心卡片容器：解决溢出的关键 --- */
 .explorer-card { 
     background: #161e2e; 
     border: 1px solid var(--border-color); 
     border-radius: var(--radius); 
-    flex: 1; 
+    flex: 1;                /* 占据剩余所有空间 */
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* 核心：裁剪溢出的滚动条 */
+    min-height: 0;          /* 必须加这一行，否则 flex 子元素不会缩小 */
+    overflow: hidden;       /* 强制裁剪，圆角内绝不溢出 */
     position: relative; 
-    min-height: 0; 
 }
 
-/* 内部列表：负责垂直滚动 */
+/* 内部列表滚动区域 */
 #fileList {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden; /* 彻底移除横向滚动条 */
-    padding: 20px; 
+    overflow-y: auto;       /* 只在这里产生滚动条 */
+    overflow-x: hidden;
+    padding: 0 20px 20px 20px; 
 }
 
-/* --- 列表布局核心 (Grid 方案) --- */
+/* --- 列表对齐方案 (Grid) --- */
 .list-layout { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 
-/* 定义统一的列宽模板：名称(自适应) 大小(120px) 修改时间(200px) 操作(160px) */
+/* 定义列宽：名称(自适应) 大小(120px) 修改时间(180px) 操作(160px) */
 .list-header, .list-layout .file-item {
     display: grid !important;
-    grid-template-columns: 1fr 120px 200px 160px; /* 四列严格对齐 */
+    grid-template-columns: 1fr 120px 180px 160px; 
     align-items: center;
-    padding: 0 20px;
+    padding: 0 15px;
     box-sizing: border-box;
+    width: 100%;
 }
 
+/* 表头：吸顶且不溢出 */
 .list-header { 
     position: sticky; 
-    top: -20px; /* 抵消父级 padding */
+    top: 0; 
     background: #161e2e; 
-    z-index: 10; 
+    z-index: 20; 
     height: 50px; 
     color: var(--text-muted); 
     font-size: 12px; 
     border-bottom: 1px solid var(--border-color); 
-    margin: -20px -20px 10px -20px; /* 扩展表头宽度，使其横跨卡片 */
-    width: calc(100% + 40px);
+    margin-bottom: 10px;
 }
 
 .list-layout .file-item { 
     background: rgba(255,255,255,0.02); 
     border: 1px solid var(--border-color); 
-    height: 56px; 
+    height: 52px; 
     border-radius: 8px; 
     cursor: pointer; 
-    transition: 0.2s;
+    transition: 0.1s;
 }
 .list-layout .file-item:hover { background: rgba(255,255,255,0.05); border-color: var(--primary); }
 
-/* 列内容对齐方式 */
-.col-name { 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+/* 列对齐 */
+.col-name { display: flex; align-items: center; gap: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-size { text-align: center; font-size: 12px; color: var(--text-muted); }
+.col-time { text-align: center; font-family: monospace; font-size: 12px; color: var(--text-muted); }
+.col-acts { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* 网格模式 (Grid 模式不需要改动，但要确保不溢出) */
+.grid-layout { 
+    display: grid !important; 
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; 
+    gap: 15px !important; 
+    padding-top: 10px;
 }
-.col-size { 
-    text-align: center; /* 居中对齐 */
-}
-.col-time { 
-    text-align: center; 
-    font-family: monospace; 
-    font-size: 12px;
-    color: var(--text-muted);
-}
-.col-acts { 
-    display: flex; 
-    gap: 8px; 
-    justify-content: flex-end; /* 按钮靠右 */
+.grid-layout .file-item { 
+    background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius); 
+    padding: 25px 15px; text-align: center; cursor: pointer; display: flex !important; 
+    flex-direction: column !important; height: 220px; justify-content: space-between; align-items: center; 
 }
 
-/* 网格布局模式保持 */
-.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; width: 100%; }
-.grid-layout .file-item { background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 240px; justify-content: space-between; align-items: center; transition: 0.2s; box-sizing: border-box; }
-.grid-layout .file-main { flex: 1; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; pointer-events: none; width: 100%; }
-.grid-layout .file-icon { font-size: 48px; margin-bottom: 12px; }
-.grid-layout .file-name { font-size: 13px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; pointer-events: auto; }
-.grid-layout .file-info { font-size: 11px; color: var(--text-muted); margin-bottom: 15px; width: 100%; }
-.grid-layout .file-actions { display: flex !important; flex-direction: row !important; gap: 8px !important; justify-content: center !important; width: 100%; }
-
-/* 页脚样式 */
+/* 页脚：保持在最底部，不占多余空间 */
 .footer { 
-    margin-top: 10px; 
-    padding: 15px 0 25px 0; 
+    padding: 20px 0; 
     text-align: center; 
     border-top: 1px solid rgba(255, 255, 255, 0.05); 
     flex-shrink: 0; 
 }
-.footer-info { color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 4px; letter-spacing: 0.5px; }
+.footer-info { color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 4px; }
 .footer-brand { color: #ffffff; font-weight: 500; text-decoration: none; }
-.footer-powered { color: rgba(255, 255, 255, 0.3); font-size: 13px; margin-bottom: 6px; }
+.footer-powered { color: rgba(255, 255, 255, 0.3); font-size: 13px; margin-bottom: 4px; }
 .footer-copyright { color: rgba(255, 255, 255, 0.4); font-size: 12px; }
 
-/* 预览与重命名输入框 */
-.edit-textarea { width: 100%; height: 100%; background: transparent; color: #cbd5e1; border: none; padding: 25px; font-family: monospace; font-size: 14px; line-height: 1.6; outline: none; resize: none; }
-.rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 100%; padding: 2px 5px; border-radius: 4px; text-align: inherit; outline: none; pointer-events: auto !important; }
+/* 重命名输入框修复 */
+.rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 90%; padding: 4px 8px; border-radius: 4px; outline: none; }
