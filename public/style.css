@@ -1,54 +1,70 @@
 :root {
-  --primary: #409eff; --background: #0f172a; --surface: #1e293b; --surface-light: #2d3748;
-  --surface-hover: #3a4659; --border-color: #334155; --text: #f8fafc; --text-muted: #94a3b8;
-  --error: #f56c6c; --success: #10b981; --radius: 10px; --header-height: 64px;
+  --primary: #409eff; 
+  --background: #0f172a;
+  --surface: #1e293b;
+  --surface-light: #2d3748;
+  --surface-hover: #3a4659;
+  --border-color: #334155;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --error: #f56c6c;
+  --success: #10b981;
+  --radius: 12px;
+  --header-height: 64px;
 }
+
 html, body { height: 100%; margin: 0; background: var(--background); color: var(--text); font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
 
-/* Header & Auth */
+/* --- 全局滚动条美化 (针对 Chrome/Safari/Edge) --- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* Header & Content Layout */
 .header { height: var(--header-height); background: var(--surface); border-bottom: 1px solid var(--surface-light); position: relative; z-index: 100; width: 100%; }
 .header-content { max-width: 1200px; margin: 0 auto; height: 100%; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
 .header-left .logo-box { display: flex; align-items: center; text-decoration: none; gap: 10px; color: #fff; font-size: 18px; font-weight: 700; }
 .header-right { display: flex; gap: 16px; align-items: center; }
 #authButtons { display: flex; gap: 12px; align-items: center; }
 
-.btn, .tool-btn { height: 34px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap; outline: none; appearance: none; -webkit-appearance: none; }
-.btn:hover, .tool-btn:hover { background: var(--surface-hover); border-color: var(--primary); }
+.btn { height: 34px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; color: #fff; background: var(--surface-light); text-decoration: none; white-space: nowrap; outline: none; }
+.btn:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--primary); }
 .btn-primary { background: var(--primary) !important; border: none; }
 .btn-danger { background: rgba(245, 108, 108, 0.1) !important; color: var(--error) !important; border: 1px solid rgba(245, 108, 108, 0.3); }
 
-/* --- 登录弹窗布局修复 --- */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(10px); }
+/* --- 登录弹窗严格修复 (参照图2) --- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(8px); }
 .modal-overlay.active { display: flex; }
-.login-card { background: #1a1a1a; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; border: 1px solid #333; position: relative; }
-.login-card h1 { font-size: 24px; text-align: center; margin-bottom: 30px; font-weight: 600; color: #fff; }
 
+.login-card { background: #1a1a1a; padding: 40px; border-radius: 20px; width: 100%; max-width: 420px; border: 1px solid #2e2e2e; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+.login-card h1 { font-size: 26px; text-align: center; margin: 0 0 35px 0; font-weight: 700; color: #fff; letter-spacing: 1px; }
+
+/* 输入框外壳 */
 .input-wrapper { 
-  position: relative; background: #262626; border-radius: 8px; border: 1px solid #4c4d4f; 
-  height: 44px; display: flex; align-items: center; margin-bottom: 20px; width: 100%; box-sizing: border-box;
+  background: #262626; border-radius: 8px; border: 1px solid #3d3d3d; 
+  height: 46px; display: flex; align-items: center; margin-bottom: 18px; width: 100%; box-sizing: border-box; 
+  transition: border-color 0.2s;
 }
-/* 强制左对齐并清除浏览器默认白框 */
+.input-wrapper:focus-within { border-color: var(--primary); }
 .input-wrapper input { 
   width: 100%; background: transparent !important; border: none !important; padding: 0 15px !important;
   color: #fff !important; outline: none !important; height: 100%; font-size: 14px; text-align: left !important;
 }
 
-/* 消息提示 */
-.toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-.toast { padding: 10px 20px; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: toastIn 0.3s ease-out; pointer-events: auto; min-width: 200px; text-align: center; }
-@keyframes toastIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.toast-success { background: var(--success); }
-.toast-error { background: var(--error); }
+/* 右上角关闭按钮 */
+.modal-close { position: absolute; right: 20px; top: 20px; background: none; border: none; color: #555; font-size: 24px; cursor: pointer; transition: 0.2s; line-height: 1; }
+.modal-close:hover { color: #fff; }
 
-/* 页脚区域 */
+/* 底部区域 */
 .footer {
-    margin-top: 20px;
-    padding: 20px 0;
+    margin-top: 60px; /* 增加与上方的间距 */
+    padding: 30px 0 50px 0;
     text-align: center;
     border-top: 1px solid var(--border-color);
     color: var(--text-muted);
     font-size: 13px;
     line-height: 1.8;
 }
-.footer a { color: var(--text-muted); text-decoration: none; font-weight: 500; transition: color 0.2s; }
-.footer a:hover { color: var(--primary); }
+.footer a { color: var(--text-muted); text-decoration: none; border-bottom: 1px solid transparent; transition: 0.2s; }
+.footer a:hover { color: var(--primary); border-bottom-color: var(--primary); }
