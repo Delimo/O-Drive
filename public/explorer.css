@@ -1,182 +1,95 @@
-/* --- explorer.css 最终逻辑修正版 --- */
+/* --- explorer.css 完美加固版 --- */
 
-/* 1. 顶层容器布局 */
 html, body { 
-    height: 100vh; 
-    margin: 0; 
-    overflow: hidden; 
-    display: flex; 
-    flex-direction: column; 
-    background: var(--background);
+    height: 100vh; margin: 0; overflow: hidden; 
+    display: flex; flex-direction: column; background: var(--background);
 }
 
 .container { 
-    max-width: 1200px; 
-    width: 100%; 
-    margin: 0 auto; 
-    padding: 15px 20px 0 20px; 
-    flex: 1; 
-    display: flex; 
-    flex-direction: column; 
-    min-height: 0; 
-    box-sizing: border-box;
+    max-width: 1200px; width: 100%; margin: 0 auto; 
+    padding: 15px 20px 0 20px; flex: 1; 
+    display: flex; flex-direction: column; min-height: 0; box-sizing: border-box;
 }
 
-/* 2. 工具栏布局 */
+/* 工具栏 */
 .toolbar { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    background: var(--surface); 
-    padding: 0 15px; 
-    border-radius: var(--radius); 
-    border: 1px solid var(--border-color); 
-    margin-bottom: 12px; 
-    height: 56px; 
-    flex-shrink: 0; 
-    gap: 20px; 
+    display: flex; justify-content: space-between; align-items: center; 
+    background: var(--surface); padding: 0 15px; border-radius: var(--radius); 
+    border: 1px solid var(--border-color); margin-bottom: 12px; height: 56px; 
+    flex-shrink: 0; gap: 15px;
 }
 
-.tools-left { 
-    flex: 1; 
-    display: flex; 
-    align-items: center; 
-    gap: 12px;
-    overflow: hidden; 
-}
+.tools-left { flex: 1; display: flex; align-items: center; gap: 12px; overflow: hidden; }
+.tools-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
-/* 3. 按钮样式统一 (核心修复：移除 display 的 !important) */
+/* 批量操作条 */
 #batchTools { 
-    display: none; 
-    gap: 8px; 
-    background: none !important; 
-    border: none !important; 
-    padding: 0 !important; 
-    align-items: center; 
-    flex-shrink: 0;
-    margin-left: 10px;
+    display: none; gap: 8px; background: none !important; border: none !important; 
+    padding: 0 !important; align-items: center; flex-shrink: 0;
 }
 
-/* 统一所有按钮的背景和边框，但不强制其显示模式 */
-#batchTools .btn, .tools-right .btn { 
-    background: var(--surface-light) !important; 
-    border: 1px solid var(--border-color) !important; 
-    height: 34px !important;
-    padding: 0 16px !important;
-    font-size: 12px !important;
-    border-radius: 6px !important;
-    color: #fff !important;
-    font-weight: 600 !important;
-    display: inline-flex; /* 移除 !important，允许 JS 切换为 none */
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    white-space: nowrap;
+/* 按钮样式统一 */
+.btn, .tool-btn, #batchTools .btn { 
+    background: var(--surface-light) !important; border: 1px solid var(--border-color) !important; 
+    height: 34px !important; padding: 0 16px !important; font-size: 12px !important; 
+    font-weight: 600 !important; border-radius: 6px !important; color: #fff !important;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; white-space: nowrap; transition: 0.2s;
 }
+.btn:hover { background: var(--surface-hover) !important; border-color: var(--primary) !important; }
+.btn-primary { background: var(--primary) !important; border: none !important; }
+.btn-danger { background: rgba(245,108,108,0.1) !important; color: var(--error) !important; border: 1px solid rgba(245,108,108,0.2) !important; }
 
-#batchTools .btn:hover, .tools-right .btn:hover {
-    background: var(--surface-hover) !important;
-    border-color: var(--primary) !important;
-}
-
-/* 粘贴按钮特殊样式（如果是 btn-primary） */
-.btn-primary {
-    background: var(--primary) !important;
-    border: none !important;
-}
-
-/* 删除按钮样式 */
-#batchTools .btn-danger {
-    background: rgba(245, 108, 108, 0.1) !important;
-    color: var(--error) !important;
-    border: 1px solid rgba(245, 108, 108, 0.3) !important;
-}
-
-/* 隐藏 HTML 里的旧竖线 */
-#batchTools div[style*="width:1px"] { display: none !important; }
-
-/* 右侧按钮组 */
-.tools-right { 
-    display: flex; 
-    gap: 8px; 
-    align-items: center; 
-    flex-shrink: 0;
-}
-
-/* 4. 搜索框 */
+/* 搜索框 */
 .search-bar { position: relative; width: 160px; flex-shrink: 0; }
 .search-bar input { 
     width: 100%; background: var(--background); border: 1px solid var(--border-color); 
     border-radius: 6px; padding: 6px 10px 6px 32px; color: #fff; outline: none; font-size: 13px;
 }
-.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; pointer-events: none; }
 
-/* 5. 文件列表卡片与 Grid 布局 */
+/* 文件卡片与滚动 */
 .explorer-card { 
-    background: #161e2e; 
-    border: 1px solid var(--border-color); 
-    border-radius: var(--radius); 
-    flex: 1; 
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; 
-    min-height: 0;
+    background: #161e2e; border: 1px solid var(--border-color); border-radius: var(--radius); 
+    flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;
 }
-
 #fileList { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 20px 20px 20px; }
 
+/* 列表 Grid 方案 */
 .list-layout { display: flex; flex-direction: column; gap: 6px; }
-
 .list-header, .list-layout .file-item {
-    display: grid !important;
-    grid-template-columns: 1fr 100px 180px 180px; 
-    align-items: center;
-    padding: 0 15px;
-    box-sizing: border-box;
+    display: grid !important; grid-template-columns: 1fr 100px 180px 180px; 
+    align-items: center; padding: 0 15px; box-sizing: border-box;
 }
-
 .list-header { 
     position: sticky; top: 0; z-index: 10; background: #161e2e; height: 50px; 
     color: var(--text-muted); font-size: 12px; border-bottom: 1px solid var(--border-color); 
     margin: 0 -20px 10px -20px; padding: 0 35px;
 }
-
-.list-layout .file-item { 
-    background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); 
-    height: 56px; border-radius: 8px; cursor: pointer; transition: 0.1s;
-}
-.list-layout .file-item.selected { 
-    background: rgba(64, 158, 255, 0.15) !important; 
-    border-color: var(--primary) !important; 
-}
+.list-layout .file-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); height: 56px; border-radius: 8px; transition: 0.1s; }
+.list-layout .file-item.selected { background: rgba(64,158,255,0.15) !important; border-color: var(--primary) !important; }
 
 .col-name { display: flex; align-items: center; gap: 12px; overflow: hidden; }
 .col-size, .col-time { text-align: center; font-size: 12px; color: var(--text-muted); }
 .col-acts { display: flex; gap: 10px; justify-content: flex-end; }
 
-/* 6. 预览修复 */
-.preview-modal { 
+/* 上传任务 */
+.upload-manager { 
+    position: fixed; bottom: 20px; right: 20px; width: 320px; 
     background: var(--surface); border: 1px solid var(--border-color); 
-    padding: 24px; border-radius: 16px; width: 95%; max-width: 1200px; 
-    height: 85vh; display: flex; flex-direction: column; 
+    border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+    z-index: 300; display: none; flex-direction: column; overflow: hidden; 
 }
-.preview-body { 
-    flex: 1; overflow: auto; background: var(--background); 
-    border-radius: 8px; display: block !important; position: relative; 
-}
-#textContent, .markdown-body {
-    width: 100%; padding: 30px; box-sizing: border-box; color: var(--text);
-    font-size: 14px; line-height: 1.6; white-space: pre-wrap; text-align: left !important;
-}
+.upload-header { padding: 12px 15px; background: rgba(255,255,255,0.03); display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.upload-item { margin: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
 
-/* 7. 页脚 */
+/* 页脚 */
 .footer { padding: 15px 0 25px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
 .footer-info { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 4px; }
 .footer-brand { color: #fff; font-weight: 500; text-decoration: none; }
 .footer-copyright { color: rgba(255,255,255,0.4); font-size: 12px; }
 
-/* 其它模式 */
-.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; padding-top: 10px; }
-.grid-layout .file-item { flex-direction: column !important; height: 220px; justify-content: space-between; padding: 20px 15px; }
-.grid-layout .file-item.selected { border-color: var(--primary); background: rgba(64,158,255,0.15); }
-.breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; white-space: nowrap; }
+/* 预览模态框修复 */
+.preview-modal { background: var(--surface); border: 1px solid var(--border-color); padding: 24px; border-radius: 16px; width: 95%; max-width: 1200px; height: 85vh; display: flex; flex-direction: column; }
+.preview-body { flex: 1; overflow: auto; background: var(--background); border-radius: 8px; display: block !important; position: relative; }
+#textContent, .markdown-body { width: 100%; padding: 30px; box-sizing: border-box; color: var(--text); font-size: 14px; line-height: 1.6; white-space: pre-wrap; text-align: left !important; }
