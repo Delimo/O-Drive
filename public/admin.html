@@ -4,63 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>控制面板 - O-Drive</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/style.css">
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: { primary: '#3b82f6', background: '#020617', surface: '#0f172a', border: '#1e293b' } } }
-        }
-    </script>
+    <link rel="stylesheet" href="/main.css">
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden bg-background">
     <main class="flex-1 flex flex-col max-w-5xl mx-auto w-full px-4 py-6 gap-4">
-        <!-- Header (卡片模块) -->
-        <div class="bg-surface border border-border rounded-xl px-5 h-16 flex items-center justify-between shadow-lg">
+        <!-- Header (卡片) -->
+        <div class="bg-surface border border-border rounded-xl px-5 h-16 flex items-center justify-between shadow-xl">
             <div class="flex items-center gap-3">
                 <span class="text-2xl">⚙️</span>
-                <h1 class="font-bold text-white tracking-tight">管理后台</h1>
+                <h1 class="font-bold text-white tracking-tight">管理控制台</h1>
             </div>
-            <a href="/" class="px-4 py-1.5 bg-slate-800 rounded-lg text-sm font-bold hover:bg-slate-700 transition-all">返回云盘</a>
+            <a href="/" class="px-4 py-1.5 bg-slate-800 border border-border rounded-lg text-sm font-bold hover:bg-slate-700 transition-all text-white">返回云盘</a>
         </div>
 
         <!-- Tabs -->
-        <div class="flex gap-2 p-1 bg-surface/50 border border-border rounded-xl w-fit">
+        <div class="flex gap-2 p-1 bg-surface/50 border border-border rounded-xl w-fit shadow-md">
             <button id="btn-logs" onclick="switchTab('logs')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all bg-primary text-white shadow-lg">操作日志</button>
             <button id="btn-privacy" onclick="switchTab('privacy')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 hover:text-white">隐私管理</button>
         </div>
 
         <!-- Content Card -->
-        <div class="bg-surface border border-border rounded-2xl flex-1 overflow-hidden flex flex-col shadow-2xl">
-            <!-- 日志 -->
+        <div class="bg-surface border border-border rounded-2xl flex-1 overflow-hidden flex flex-col shadow-2xl relative">
+            <!-- 日志选项卡 -->
             <div id="logs-tab" class="flex-1 flex flex-col overflow-hidden">
                 <div class="overflow-y-auto flex-1 custom-scroll">
                     <table class="w-full text-left border-collapse">
                         <thead class="sticky top-0 bg-slate-900 text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border z-10">
-                            <tr>
-                                <th class="px-6 py-4 w-44">时间</th>
-                                <th class="px-6 py-4 w-28">动作</th>
-                                <th class="px-6 py-4">详情</th>
-                                <th class="px-6 py-4 w-40 text-right">IP</th>
-                            </tr>
+                            <tr><th class="px-6 py-4 w-44">时间</th><th class="px-6 py-4 w-28">动作</th><th class="px-6 py-4">详情</th><th class="px-6 py-4 w-40 text-right">IP</th></tr>
                         </thead>
                         <tbody id="logTbody" class="text-xs divide-y divide-border/30"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- 隐私 -->
+            <!-- 隐私选项卡 -->
             <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden">
                 <div class="flex gap-3 mb-8 bg-slate-900/50 p-4 rounded-xl border border-border shadow-inner">
                     <input type="text" id="hideInput" placeholder="输入隐藏路径 (如: docs/private)" 
-                           class="flex-1 bg-background border border-border rounded-lg px-4 text-sm outline-none focus:border-primary transition-all">
+                           class="flex-1 bg-background border border-border rounded-lg px-4 text-sm outline-none focus:border-primary text-white transition-all">
                     <button class="px-6 bg-primary text-white rounded-lg font-bold text-sm hover:brightness-110 active:scale-95 transition-all" onclick="addHidden()">添加</button>
                 </div>
                 <div class="overflow-y-auto flex-1 custom-scroll">
                     <table class="w-full text-left">
                         <thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr><th class="px-4 py-3">路径</th><th class="px-4 py-3 text-right">操作</th></tr>
+                            <tr><th class="px-4 py-3">已屏蔽路径</th><th class="px-4 py-3 text-right">操作</th></tr>
                         </thead>
-                        <tbody id="hiddenTbody" class="text-sm divide-y divide-border/30"></tbody>
+                        <tbody id="hiddenTbody" class="text-sm divide-y divide-border/30 text-slate-300"></tbody>
                     </table>
                 </div>
             </div>
@@ -82,23 +71,21 @@
                 loadHidden();
             }
         }
-
         async function loadLogs() {
             const res = await fetch('/api/admin/logs'); 
-            if(res.status !== 200) return window.location.href='/'; // 路由修复后这里不会再报错
+            if(res.status !== 200) return window.location.href='/';
             const data = await res.json();
             document.getElementById('logTbody').innerHTML = data.logs.map(l => {
                 const time = new Date(l.timestamp).toLocaleString('zh-CN', { hour12: false });
                 const color = l.action==='DELETE'?'text-red-400':l.action==='UPLOAD'?'text-emerald-400':'text-primary';
                 return `<tr class="hover:bg-slate-800/30 transition-colors">
                     <td class="px-6 py-4 text-slate-500 font-mono">${time}</td>
-                    <td class="px-6 py-4"><span class="${color} font-bold">${l.action}</span></td>
+                    <td class="px-6 py-4 font-bold ${color}">${l.action}</td>
                     <td class="px-6 py-4 text-slate-300 font-mono break-all">${l.details}</td>
                     <td class="px-6 py-4 text-right text-slate-500 font-mono">${l.ip}</td>
                 </tr>`;
             }).join('');
         }
-
         async function loadHidden() {
             const res = await fetch('/api/admin/settings/hidden');
             const data = await res.json();
@@ -107,19 +94,17 @@
                     <td class="px-4 py-4"><code class="bg-slate-900 px-2 py-1 rounded text-primary text-xs font-mono">${i.path}</code></td>
                     <td class="px-4 py-4 text-right">
                         <button class="px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/20 rounded hover:bg-red-500 hover:text-white text-xs transition-all" 
-                                onclick="removeHidden('${i.path}')">取消</button>
+                                onclick="removeHidden('${i.path}')">取消屏蔽</button>
                     </td>
                 </tr>`).join('');
         }
-
         async function addHidden() {
             const path = document.getElementById('hideInput').value.trim(); if(!path) return;
             await fetch('/api/admin/settings/hidden', { method: 'POST', body: JSON.stringify({ targetPath: path }) });
             document.getElementById('hideInput').value = ''; loadHidden();
         }
-
         async function removeHidden(p) {
-            if(confirm('确定取消对该路径的隐私隐藏吗?')) {
+            if(confirm('确定取消对该路径的隐藏吗?')) {
                 await fetch(`/api/admin/settings/hidden?path=${encodeURIComponent(p)}`, { method: 'DELETE' });
                 loadHidden();
             }
