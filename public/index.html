@@ -4,110 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>O-Drive</title>
-    <!-- Tailwind CSS & style.css -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/style.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { primary: '#3b82f6', background: '#020617', surface: '#0f172a', border: '#1e293b' }
-                }
-            }
+            theme: { extend: { colors: { primary: '#3b82f6', background: '#020617', surface: '#0f172a', border: '#1e293b' } } }
         }
     </script>
     <style>.admin-only { display: none; }</style>
 </head>
-<body class="flex flex-col h-screen text-slate-200">
+<body class="flex flex-col h-screen overflow-hidden">
     <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none"></div>
 
-    <!-- Header -->
-    <header class="h-16 bg-surface border-b border-border flex-shrink-0 z-50">
-        <div class="max-w-7xl mx-auto h-full px-4 flex items-center justify-between">
-            <a href="/" class="flex items-center gap-2 text-lg font-bold text-white">
+    <main class="flex-1 flex flex-col min-h-0 max-w-7xl mx-auto w-full px-4 py-4 gap-3">
+        <!-- 1. Header (卡片模块风格) -->
+        <header class="bg-surface border border-border rounded-xl px-5 h-16 flex items-center justify-between flex-shrink-0 shadow-lg">
+            <a href="/" class="flex items-center gap-2 text-lg font-bold text-white tracking-tight">
                 <span class="text-2xl">☁️</span> <span>O-Drive</span>
             </a>
             <div class="flex items-center gap-4">
-                <div class="relative group hidden sm:block">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 text-xs">🔍</span>
-                    <input type="search" id="searchInput" placeholder="搜索文件..." 
-                           onkeypress="if(event.key==='Enter')Actions.handleSearch()"
-                           class="bg-background border border-border rounded-md py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-primary w-40 focus:w-64 transition-all">
+                <div class="relative group hidden md:block">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 text-xs">🔍</span>
+                    <input type="search" id="searchInput" placeholder="搜索..." onkeypress="if(event.key==='Enter')Actions.handleSearch()"
+                           class="bg-background border border-border rounded-lg py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-primary w-40 focus:w-60 transition-all">
                 </div>
-                <div id="authButtons" class="flex items-center gap-2 text-sm font-semibold"></div>
+                <div id="authButtons" class="flex gap-2"></div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <main class="flex-1 flex flex-col min-h-0 max-w-7xl mx-auto w-full px-4 py-4 overflow-hidden">
-        <!-- Toolbar -->
-        <div class="bg-surface border border-border rounded-xl p-3 mb-3 flex items-center justify-between gap-4 flex-shrink-0 overflow-x-auto no-scrollbar">
-            <div id="breadcrumb" class="flex items-center gap-1 text-sm whitespace-nowrap overflow-hidden text-ellipsis min-w-0 flex-1 font-medium text-primary"></div>
+        <!-- 2. Toolbar (卡片模块风格) -->
+        <div class="bg-surface border border-border rounded-xl p-3 flex items-center justify-between gap-4 flex-shrink-0 overflow-x-auto no-scrollbar shadow-md">
+            <div id="breadcrumb" class="flex items-center gap-1 text-sm font-medium text-primary whitespace-nowrap overflow-hidden"></div>
             
             <div class="flex items-center gap-2 flex-shrink-0">
-                <div id="batchTools" class="hidden items-center gap-2 pr-2 border-r border-border mr-2">
-                    <button class="px-3 py-1.5 bg-slate-800 border border-border rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors" onclick="Actions.toggleSelectAll()">全选</button>
-                    <button class="px-3 py-1.5 bg-slate-800 border border-border rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors" onclick="Actions.setClipboard('move')">移动</button>
-                    <button class="px-3 py-1.5 bg-red-500/10 text-red-500 border border-red-500/30 rounded-lg text-xs font-bold hover:bg-red-500 hover:text-white transition-colors" onclick="Actions.batchDelete()">删除</button>
+                <!-- 批量工具 -->
+                <div id="batchTools" class="hidden items-center gap-2 pr-3 border-r border-border/50 mr-1">
+                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700" onclick="Actions.toggleSelectAll()" id="selectAllBtn">全选</button>
+                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700 hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">重命名</button>
+                    <button class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700" onclick="Actions.setClipboard('move')">移动</button>
+                    <button class="px-3 py-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg text-xs font-bold hover:bg-red-500 hover:text-white" onclick="Actions.batchDelete()">删除</button>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <button id="pasteBtn" class="hidden px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold" onclick="Actions.executePaste()">粘贴</button>
-                    <button id="cancelPasteBtn" class="hidden px-3 py-1.5 bg-slate-800 border border-border rounded-lg text-xs" onclick="Actions.clearClipboard()">取消</button>
-                    
-                    <button class="admin-only px-3 py-1.5 bg-slate-800 border border-border rounded-lg text-xs font-bold hover:border-primary" onclick="document.getElementById('fileInput').click()">上传</button>
-                    <button id="viewBtn" class="px-3 py-1.5 bg-slate-800 border border-border rounded-lg text-xs font-bold" onclick="Actions.toggleViewMode()">列表</button>
+                <!-- 粘贴控制 -->
+                <div id="pasteGroup" class="hidden items-center gap-2">
+                    <button id="pasteBtn" class="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold" onclick="Actions.executePaste()">粘贴</button>
+                    <button id="cancelPasteBtn" class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs" onclick="Actions.clearClipboard()">取消</button>
+                    <div class="w-px h-4 bg-border mx-1"></div>
                 </div>
+                
+                <button class="admin-only px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700" onclick="document.getElementById('fileInput').click()">上传</button>
+                <button class="admin-only px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700" onclick="UI.showModal('mkdirModal')">新建</button>
+                <div class="hidden sm:flex items-center gap-2">
+                    <div class="w-px h-4 bg-border mx-1"></div>
+                    <button id="sortBtn" class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold" onclick="Actions.toggleSortMode()">排序</button>
+                    <button id="viewBtn" class="px-3 py-1.5 bg-slate-800 rounded-lg text-xs font-bold" onclick="Actions.toggleViewMode()">视图</button>
+                </div>
+                <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
             </div>
         </div>
 
-        <!-- File Card -->
-        <div class="bg-surface border border-border rounded-xl flex-1 flex flex-col min-h-0 overflow-hidden relative shadow-2xl shadow-black/50">
-            <div id="fileList" class="flex-1 overflow-y-auto p-4 custom-scroll">
-                <!-- 动态内容渲染 -->
-            </div>
+        <!-- 3. Explorer Card -->
+        <div class="bg-surface border border-border rounded-xl flex-1 flex flex-col min-h-0 overflow-hidden relative shadow-inner">
+            <div id="fileList" class="flex-1 overflow-y-auto p-4 custom-scroll relative"></div>
         </div>
 
-        <!-- Footer -->
-        <footer class="py-6 text-center flex-shrink-0">
-            <div class="text-slate-400 text-sm mb-1 tracking-wide">项目：<span class="text-white font-medium">O-Drive</span> | 作者：<span class="text-white font-medium">Delimo</span></div>
-            <div class="text-slate-500 text-[12px] mb-2 font-normal">Powered by Cloudflare Pages</div>
-            <div class="text-slate-500 text-[12px] opacity-80">&copy; <span id="year-display">2026</span> O-Drive. All rights reserved.</div>
+        <!-- 4. Footer -->
+        <footer class="py-4 text-center flex-shrink-0">
+            <div class="text-slate-400 text-sm mb-1">项目：<span class="text-slate-100">O-Drive</span> | 作者：<span class="text-slate-100">Delimo</span></div>
+            <div class="text-slate-500 text-[11px] mb-1">Powered by Cloudflare Pages</div>
+            <div class="text-slate-500 text-[11px] opacity-60">&copy; <span id="year-display"></span> O-Drive. All rights reserved.</div>
         </footer>
     </main>
 
     <!-- Modals -->
-    <div id="loginModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[200] hidden items-center justify-center p-4">
-        <div class="bg-[#1a1a1a] border border-border p-8 rounded-2xl w-full max-w-md relative shadow-2xl">
-            <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-2xl opacity-50 hover:opacity-100">&times;</button>
-            <h1 class="text-2xl font-bold mb-6 text-center">管理端登录</h1>
-            <input type="text" id="adminUser" placeholder="用户名" class="w-full bg-[#262626] border border-slate-700 rounded-lg h-12 px-4 mb-4 focus:outline-none focus:border-primary">
-            <input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()" class="w-full bg-[#262626] border border-slate-700 rounded-lg h-12 px-4 mb-6 focus:outline-none focus:border-primary">
-            <button class="w-full h-12 bg-primary text-white rounded-lg font-bold hover:brightness-110 active:scale-[0.98] transition-all" onclick="Actions.doLogin()">登录</button>
+    <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4">
+        <div class="bg-[#1a1a1a] border border-border p-8 rounded-2xl w-full max-w-sm relative">
+            <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button>
+            <h1 class="text-xl font-bold mb-6 text-center">管理端登录</h1>
+            <input type="text" id="adminUser" placeholder="用户名" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary">
+            <input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary">
+            <button class="w-full h-11 bg-primary text-white rounded-lg font-bold hover:brightness-110 active:scale-95 transition-all" onclick="Actions.doLogin()">登录</button>
             <p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p>
         </div>
     </div>
 
-    <div id="previewModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] hidden flex-col p-4 md:p-10" onclick="UI.closePreview()">
-        <div class="bg-surface border border-border rounded-2xl w-full h-full max-w-6xl mx-auto flex flex-col shadow-2xl" onclick="event.stopPropagation()">
-            <div class="flex items-center justify-between p-4 border-b border-border">
-                <h3 id="previewTitle" class="font-bold truncate max-w-[70%] text-slate-100">预览</h3>
-                <div class="flex items-center gap-3 text-sm">
-                    <button id="editBtn" class="hidden px-4 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700" onclick="Actions.toggleEditMode()">编辑</button>
-                    <button id="saveBtn" class="hidden px-4 py-1.5 bg-primary rounded-lg text-white" onclick="Actions.saveTextContent()">保存并关闭</button>
-                    <button onclick="UI.closePreview()" class="text-2xl leading-none opacity-50 hover:opacity-100">&times;</button>
-                </div>
+    <div id="mkdirModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4">
+        <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm">
+            <h1 class="text-lg font-bold mb-4">新建文件夹</h1>
+            <input type="text" id="folderNameInput" placeholder="请输入名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()" 
+                   class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm">
+            <div class="flex gap-2">
+                <button class="flex-1 h-11 bg-slate-800 rounded-lg font-bold" onclick="UI.closeModal('mkdirModal')">取消</button>
+                <button class="flex-1 h-11 bg-primary text-white rounded-lg font-bold" onclick="Actions.submitMkdir()">创建</button>
             </div>
-            <div id="previewContent" class="flex-1 overflow-auto bg-background rounded-b-2xl relative block"></div>
         </div>
     </div>
 
-    <!-- Upload Panel -->
+    <div id="previewModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] hidden flex-col p-4 md:p-10" onclick="UI.closePreview()">
+        <div class="bg-surface border border-border rounded-2xl w-full h-full max-w-6xl mx-auto flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between p-4 border-b border-border bg-slate-900/50">
+                <h3 id="previewTitle" class="font-bold truncate text-sm">预览</h3>
+                <div class="flex items-center gap-3">
+                    <button id="editBtn" class="hidden px-4 py-1.5 bg-slate-800 rounded-lg text-xs" onclick="Actions.toggleEditMode()">编辑</button>
+                    <button id="saveBtn" class="hidden px-4 py-1.5 bg-primary text-white rounded-lg text-xs" onclick="Actions.saveTextContent()">保存</button>
+                    <button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100">&times;</button>
+                </div>
+            </div>
+            <div id="previewContent" class="flex-1 overflow-auto bg-background relative block"></div>
+        </div>
+    </div>
+
     <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden">
-        <div class="bg-slate-800/50 px-4 py-3 flex justify-between items-center border-b border-border">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">上传任务</span>
-            <button onclick="UI.closeUploadManager()" class="opacity-50 hover:opacity-100">&times;</button>
+        <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-400">
+            <span>上传任务</span>
+            <button onclick="UI.closeUploadManager()">&times;</button>
         </div>
         <div id="uploadList" class="max-h-80 overflow-y-auto"></div>
     </div>
@@ -116,16 +127,17 @@
         let currentPath = '/', userRole = 'guest', isSearching = false, isEditing = false, currentPreviewPath = '';
         let viewMode = localStorage.getItem('viewMode') || 'list', sortBy = localStorage.getItem('sortBy') || 'name';
         let fileData = { folders: [], files: [] }, selectedPaths = [], clipboard = null;
-        let activeUploads = 0, hideUploadTimeout = null;
+        let activeUploads = 0;
+        const sortModes = ['name', 'time', 'size'], sortNames = { name: '名称', time: '时间', size: '大小' };
 
         const Message = {
             show(msg, type = 'info') {
                 const container = document.getElementById('toastContainer');
                 const div = document.createElement('div');
-                div.className = `toast-anim px-5 py-2.5 rounded-lg text-sm font-bold shadow-xl flex items-center gap-2 pointer-events-auto ${type === 'success' ? 'bg-emerald-500 text-white' : type === 'error' ? 'bg-red-500 text-white' : 'bg-primary text-white'}`;
+                div.className = `toast-anim px-5 py-2.5 rounded-xl text-sm font-bold shadow-2xl flex items-center gap-2 pointer-events-auto ${type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-primary'} text-white`;
                 div.innerHTML = `<span>${type==='success'?'✅':'⚠️'}</span> ${msg}`;
                 container.appendChild(div);
-                setTimeout(() => { div.style.opacity = '0'; div.style.transform = 'translateY(-20px)'; div.style.transition = 'all 0.3s'; setTimeout(() => div.remove(), 300); }, 3000);
+                setTimeout(() => { div.style.opacity = '0'; div.style.transition = '0.3s'; setTimeout(() => div.remove(), 300); }, 3000);
             },
             success(msg) { this.show(msg, 'success'); },
             error(msg) { this.show(msg, 'error'); }
@@ -137,98 +149,98 @@
             closePreview() { document.getElementById('previewContent').innerHTML = ''; this.closeModal('previewModal'); },
             closeUploadManager() { document.getElementById('uploadManager').classList.add('hidden'); },
             updateAuth() {
-                const btnBox = document.getElementById('authButtons');
+                const box = document.getElementById('authButtons');
                 if (userRole === 'admin') {
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-flex');
-                    btnBox.innerHTML = `<a href="/admin.html" class="px-4 py-1.5 bg-slate-800 border border-border rounded-lg hover:bg-slate-700">管理</a><button onclick="Actions.logout()" class="px-4 py-1.5">退出</button>`;
+                    box.innerHTML = `<a href="/admin.html" class="px-4 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700">管理</a><button onclick="Actions.logout()" class="px-3 opacity-60">退出</button>`;
                 } else {
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-                    btnBox.innerHTML = `<button class="px-5 py-1.5 bg-primary text-white rounded-lg active:scale-95 transition-all" onclick="UI.showModal('loginModal')">管理员登录</button>`;
+                    box.innerHTML = `<button class="px-5 py-1.5 bg-primary text-white rounded-lg font-bold active:scale-95 transition-all" onclick="UI.showModal('loginModal')">登录</button>`;
                 }
             },
             renderBreadcrumb() {
                 if(isSearching) return;
                 const box = document.getElementById('breadcrumb');
                 const parts = currentPath.split('/').filter(p => p);
-                let html = `<button class="hover:text-white transition-colors" onclick="Actions.navigateTo('/')">🏠 根目录</button>`;
+                let html = `<button class="hover:text-white" onclick="Actions.navigateTo('/')">🏠 根目录</button>`;
                 if (parts.length > 2) {
-                    html += `<span class="opacity-30">/</span><span class="opacity-50">...</span>`;
+                    html += `<span class="opacity-20 mx-1">/</span><span class="opacity-40">...</span>`;
                     parts.slice(-2).forEach((p, i) => {
                         const path = '/' + parts.slice(0, parts.length - 2 + i + 1).join('/') + '/';
-                        html += `<span class="opacity-30">/</span><button class="hover:text-white truncate max-w-[100px]" onclick="Actions.navigateTo('${path}')">${p}</button>`;
+                        html += `<span class="opacity-20 mx-1">/</span><button class="hover:text-white truncate max-w-[80px]" onclick="Actions.navigateTo('${path}')">${p}</button>`;
                     });
                 } else {
                     let acc = '';
-                    parts.forEach(p => {
-                        acc += '/' + p;
-                        html += `<span class="opacity-30">/</span><button class="hover:text-white truncate max-w-[150px]" onclick="Actions.navigateTo('${acc}/')">${p}</button>`;
-                    });
+                    parts.forEach(p => { acc += '/' + p; html += `<span class="opacity-20 mx-1">/</span><button class="hover:text-white" onclick="Actions.navigateTo('${acc}/')">${p}</button>`; });
                 }
                 box.innerHTML = html;
             },
             updateFileList() {
                 const list = document.getElementById('fileList');
                 document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '网格' : '列表';
+                document.getElementById('sortBtn').textContent = sortNames[sortBy];
                 list.innerHTML = '';
 
                 if (viewMode === 'list') {
                     const header = document.createElement('div');
-                    header.className = "grid grid-cols-2 md:grid-cols-[1fr_100px_180px_160px] gap-4 px-4 py-3 border-b border-border text-[11px] uppercase tracking-widest text-slate-500 font-bold sticky top-0 bg-surface z-10";
-                    header.innerHTML = `<div>名称</div><div class="hidden md:block text-center">大小</div><div class="hidden md:block text-center">修改时间</div><div class="text-right">操作</div>`;
+                    header.className = "grid grid-cols-[1fr_100px_180px_160px] gap-4 px-4 py-3 border-b border-border text-[10px] uppercase tracking-widest text-slate-500 font-bold sticky top-0 bg-surface z-10 hidden md:grid";
+                    header.innerHTML = `<div>名称</div><div class="text-center">大小</div><div class="text-center">修改时间</div><div class="text-right pr-4">操作</div>`;
                     list.appendChild(header);
                 }
 
                 const container = document.createElement('div');
-                container.className = viewMode === 'grid' 
-                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pt-4" 
-                    : "flex flex-col gap-1 mt-2";
+                container.className = viewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 pt-2" : "flex flex-col gap-1 mt-2";
 
                 if (currentPath !== '/' && !isSearching) {
                     const parent = Utils.getParentPath(currentPath);
-                    const backItem = document.createElement('div');
+                    const div = document.createElement('div');
                     if (viewMode === 'grid') {
-                        backItem.className = "group bg-slate-900/50 border border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-all";
-                        backItem.innerHTML = `<div class="text-4xl mb-3 opacity-50 group-hover:scale-110 transition-transform">📁</div><div class="text-sm font-medium">..</div>`;
+                        div.className = "bg-slate-900/40 border border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary";
+                        div.innerHTML = `<div class="text-4xl mb-3 opacity-30">📁</div><div class="text-sm">..</div>`;
                     } else {
-                        backItem.className = "grid grid-cols-2 gap-4 px-4 py-3 border border-transparent rounded-lg cursor-pointer hover:bg-slate-800/50 text-slate-500";
-                        backItem.innerHTML = `<div class="flex items-center gap-3"><span>📁</span> <span class="font-medium text-sm">返回上级</span></div>`;
+                        div.className = "px-4 py-3 hover:bg-slate-800/40 rounded-lg cursor-pointer flex gap-3 text-slate-500";
+                        div.innerHTML = `<span class="opacity-50">📁</span><span class="text-sm">返回上级</span>`;
                     }
-                    backItem.ondblclick = () => Actions.navigateTo(parent);
-                    container.appendChild(backItem);
+                    div.ondblclick = () => Actions.navigateTo(parent);
+                    container.appendChild(div);
                 }
 
-                const items = [...(fileData.folders || []), ...(fileData.files || [])].filter(i => i.name !== '' && i.name !== '.folder');
+                const folders = [...(fileData.folders || [])].sort((a,b) => a.name.localeCompare(b.name));
+                const files = [...(fileData.files || [])].sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
                 
-                items.forEach(item => {
+                [...folders, ...files].forEach(item => {
+                    if (item.name === '' || item.name === '.folder') return;
                     const isFolder = !item.sizeFormatted;
                     const el = document.createElement('div');
                     const isSelected = selectedPaths.includes(item.fullKey);
 
                     if (viewMode === 'grid') {
-                        el.className = `group bg-slate-900/50 border ${isSelected ? 'border-primary ring-1 ring-primary' : 'border-border'} rounded-xl p-4 flex flex-col items-center text-center cursor-pointer hover:bg-slate-800 transition-all`;
-                        el.innerHTML = `
-                            <div class="text-5xl mb-4 group-hover:scale-110 transition-transform select-none">${isFolder?'📁':Utils.getFileIcon(item.name)}</div>
-                            <div class="text-sm font-semibold truncate w-full mb-1 px-1">${item.name}</div>
+                        el.className = `group bg-slate-900/40 border ${isSelected?'border-primary bg-primary/5':'border-border'} rounded-xl p-4 flex flex-col items-center text-center cursor-pointer hover:bg-slate-800 transition-all`;
+                        el.innerHTML = `<div class="text-5xl mb-4 select-none">${isFolder?'📁':Utils.getFileIcon(item.name)}</div>
+                            <div class="text-sm font-semibold truncate w-full mb-1">${item.name}</div>
                             <div class="text-[10px] text-slate-500 mb-4">${isFolder?'文件夹':item.sizeFormatted}</div>
-                            <div class="flex gap-1 mt-auto overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 ${!isFolder?`<button class="p-1 px-2 bg-slate-800 rounded text-[10px] hover:bg-primary" onclick="event.stopPropagation();Actions.openPreview('${item.path}','${item.name}')">预览</button>`:''}
                                 ${!isFolder?`<button class="p-1 px-2 bg-slate-800 rounded text-[10px] hover:bg-primary" onclick="event.stopPropagation();Actions.downloadFile('${item.path}')">下载</button>`:''}
                             </div>`;
                     } else {
-                        el.className = `grid grid-cols-2 md:grid-cols-[1fr_100px_180px_160px] gap-4 items-center px-4 py-2 border ${isSelected ? 'border-primary bg-primary/10' : 'border-slate-800/30 bg-slate-900/30'} rounded-lg cursor-pointer hover:bg-slate-800/60 transition-all`;
-                        el.innerHTML = `
-                            <div class="flex items-center gap-3 overflow-hidden">
-                                <span class="text-xl select-none flex-shrink-0">${isFolder?'📁':Utils.getFileIcon(item.name)}</span>
-                                <span class="text-sm font-medium truncate">${item.name}</span>
+                        el.className = `grid grid-cols-2 md:grid-cols-[1fr_100px_180px_160px] gap-4 items-center px-4 py-2 border ${isSelected?'border-primary/50 bg-primary/10':'border-transparent bg-slate-900/20'} hover:bg-slate-800/40 rounded-lg cursor-pointer transition-all`;
+                        el.innerHTML = `<div class="flex items-center gap-3 overflow-hidden">
+                                <span class="text-xl flex-shrink-0 select-none">${isFolder?'📁':Utils.getFileIcon(item.name)}</span>
+                                <span class="text-sm truncate file-name">${item.name}</span>
                             </div>
                             <div class="hidden md:block text-xs text-center text-slate-500">${isFolder?'文件夹':item.sizeFormatted}</div>
                             <div class="hidden md:block text-xs text-center text-slate-500 font-mono">${Utils.formatDate(item.time)}</div>
                             <div class="flex justify-end gap-2">
-                                ${!isFolder?`<button class="p-1 px-3 bg-slate-800 rounded-md text-[11px] font-bold hover:bg-primary transition-colors" onclick="event.stopPropagation();Actions.openPreview('${item.path}','${item.name}')">预览</button>`:''}
-                                ${!isFolder?`<button class="p-1 px-3 bg-slate-800 rounded-md text-[11px] font-bold hover:bg-primary transition-colors" onclick="event.stopPropagation();Actions.downloadFile('${item.path}')">下载</button>`:''}
+                                ${!isFolder?`<button class="p-1 px-3 bg-slate-800 rounded text-[11px] font-bold hover:bg-primary" onclick="event.stopPropagation();Actions.openPreview('${item.path}','${item.name}')">预览</button>`:''}
+                                ${!isFolder?`<button class="p-1 px-3 bg-slate-800 rounded text-[11px] font-bold hover:bg-primary" onclick="event.stopPropagation();Actions.downloadFile('${item.path}')">下载</button>`:''}
                             </div>`;
+                        
+                        if (userRole === 'admin') {
+                            const nameEl = el.querySelector('.file-name');
+                            nameEl.ondblclick = (e) => { e.stopPropagation(); Actions.startInlineRename(item, nameEl); };
+                        }
                     }
-
                     el.onclick = (e) => { if (userRole === 'admin') Actions.toggleSelect(item.fullKey, el, e); };
                     el.ondblclick = () => { if(isFolder) Actions.navigateTo(item.path); else if(Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name); };
                     container.appendChild(el);
@@ -237,81 +249,110 @@
             },
             updateBatchUI() {
                 const bt = document.getElementById('batchTools');
-                const pb = document.getElementById('pasteBtn');
-                const cpb = document.getElementById('cancelPasteBtn');
+                const pg = document.getElementById('pasteGroup');
+                const ren = document.getElementById('singleRenameBtn');
                 const sel = document.getElementById('selectAllBtn');
                 const total = fileData.folders.length + fileData.files.length;
                 
-                const hasSelection = (userRole === 'admin' && selectedPaths.length > 0);
-                bt.classList.toggle('hidden', !hasSelection);
-                bt.classList.toggle('flex', hasSelection);
-
-                const hasClipboard = (userRole === 'admin' && clipboard);
-                pb.classList.toggle('hidden', !hasClipboard);
-                cpb.classList.toggle('hidden', !hasClipboard);
-                if (clipboard) pb.textContent = `粘贴 (${clipboard.paths.length})`;
+                bt.classList.toggle('hidden', !(userRole === 'admin' && selectedPaths.length > 0));
+                bt.classList.toggle('flex', (userRole === 'admin' && selectedPaths.length > 0));
                 
-                if (sel) sel.textContent = (selectedPaths.length === total && total > 0) ? "取消全选" : "全选";
+                pg.classList.toggle('hidden', !(userRole === 'admin' && clipboard));
+                pg.classList.toggle('flex', (userRole === 'admin' && clipboard));
+                
+                if (ren) ren.classList.toggle('hidden', selectedPaths.length !== 1);
+                if (sel) sel.textContent = (selectedPaths.length === total && total > 0) ? "取消" : "全选";
+                if (clipboard) document.getElementById('pasteBtn').textContent = `粘贴 (${clipboard.paths.length})`;
             }
         };
 
         const Actions = {
             async init() { 
                 const res = await fetch('/api/auth/role'); 
-                const data = (res.status === 200) ? await res.json() : { role: 'guest' }; 
-                userRole = data.role || 'guest'; 
-                UI.updateAuth(); 
-                this.loadFiles(); 
+                userRole = (res.status === 200) ? (await res.json()).role : 'guest';
+                UI.updateAuth(); this.loadFiles();
                 document.getElementById('year-display').textContent = new Date().getFullYear();
             },
             async loadFiles() { if (isSearching) return; selectedPaths = []; UI.updateBatchUI(); const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`); fileData = await res.json(); UI.updateFileList(); UI.renderBreadcrumb(); },
-            async doLogin() { const u = document.getElementById('adminUser').value; const p = document.getElementById('adminPass').value; const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:u, password:p}) }); if((await res.json()).success) window.location.reload(); else document.getElementById('loginError').textContent = '用户名或密码错误'; },
+            async doLogin() { 
+                const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:document.getElementById('adminUser').value, password:document.getElementById('adminPass').value}) }); 
+                if((await res.json()).success) window.location.reload(); else document.getElementById('loginError').textContent = '用户名或密码错误'; 
+            },
             async logout() { await fetch('/api/logout'); window.location.reload(); },
             navigateTo(p) { currentPath = p.endsWith('/') ? p : p + '/'; isSearching = false; this.loadFiles(); },
             toggleSelect(key, el, e) { e.stopPropagation(); if (selectedPaths.includes(key)) selectedPaths = selectedPaths.filter(p => p !== key); else selectedPaths.push(key); UI.updateBatchUI(); UI.updateFileList(); },
-            toggleSelectAll() { const totalKeys = [...fileData.folders, ...fileData.files].map(i => i.fullKey); selectedPaths = (selectedPaths.length === totalKeys.length) ? [] : totalKeys; UI.updateFileList(); UI.updateBatchUI(); },
-            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); Message.success(`已加入待${action==='move'?'移动':'复制'}列表`); },
+            toggleSelectAll() { const allKeys = [...fileData.folders, ...fileData.files].filter(i=>i.name!==''&&i.name!=='.folder').map(i => i.fullKey); selectedPaths = (selectedPaths.length === allKeys.length) ? [] : allKeys; UI.updateFileList(); UI.updateBatchUI(); },
+            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); Message.success(`已存入待${action==='move'?'移动':'复制'}列表`); },
             clearClipboard() { clipboard = null; this.loadFiles(); Message.show('操作已取消'); },
-            async executePaste() { const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); if(res.ok) { Message.success('操作成功'); clipboard = null; this.loadFiles(); } },
-            async batchDelete() { if (confirm(`确认删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('已成功删除'); this.loadFiles(); } } },
-            async handleSearch() { const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch(); isSearching = true; const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`); fileData = { folders: [], files: (await res.json()).files || [] }; UI.updateFileList(); document.getElementById('breadcrumb').innerHTML = `<span class="text-white">🔍 搜索结果: "${q}"</span>`; },
+            async executePaste() { 
+                const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); 
+                if(res.ok) { Message.success('操作成功'); clipboard = null; this.loadFiles(); } 
+            },
+            async batchDelete() { 
+                if (confirm(`确认永久删除选中的 ${selectedPaths.length} 项吗？`)) { 
+                    const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); 
+                    if(res.ok) { Message.success('删除成功'); this.loadFiles(); } 
+                } 
+            },
+            async handleSearch() { 
+                const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch();
+                isSearching = true; const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`); 
+                fileData = { folders: [], files: (await res.json()).files || [] }; UI.updateFileList(); 
+                document.getElementById('breadcrumb').innerHTML = `<span class="text-white">🔍 搜索: "${q}"</span>`;
+            },
             clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
+            startRenameSelected() {
+                const key = selectedPaths[0]; const item = [...fileData.folders, ...fileData.files].find(i => i.fullKey === key);
+                const nameEl = Array.from(document.querySelectorAll('.file-item, div')).find(el => el.dataset?.key === key)?.querySelector('.file-name');
+                if (item && nameEl) this.startInlineRename(item, nameEl);
+            },
+            async startInlineRename(item, el) {
+                const oldName = item.name; const input = document.createElement('input');
+                input.className = "bg-background border border-primary rounded px-2 py-0.5 text-white w-full outline-none";
+                input.value = oldName; el.replaceWith(input); input.focus();
+                const save = async () => {
+                    const newName = input.value.trim();
+                    if (newName && newName !== oldName) {
+                        const res = await fetch(`/api/files/${encodeURIComponent(item.fullKey)}`, { method: 'PUT', body: JSON.stringify({ newName }) });
+                        if(res.ok) { Message.success('重命名成功'); this.loadFiles(); } else { Message.error('失败'); this.loadFiles(); }
+                    } else { this.loadFiles(); }
+                };
+                input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') input.blur(); };
+            },
+            async submitMkdir() { 
+                const n = document.getElementById('folderNameInput').value.trim(); if(!n) return;
+                await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) });
+                document.getElementById('folderNameInput').value = ''; UI.closeModal('mkdirModal'); this.loadFiles(); Message.success('文件夹已创建'); 
+            },
             async openPreview(path, name) {
                 currentPreviewPath = path; isEditing = false; const content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn');
-                editBtn.classList.add('hidden'); saveBtn.classList.add('hidden'); title.textContent = "正在加载..."; 
-                content.innerHTML = '<div class="flex items-center justify-center h-64 text-slate-500 animate-pulse">正在解析内容...</div>'; 
-                UI.showModal('previewModal');
+                editBtn.classList.add('hidden'); saveBtn.classList.add('hidden'); title.textContent = "解析中..."; content.innerHTML = '<div class="flex items-center justify-center h-64 text-slate-500 animate-pulse">正在加载内容...</div>'; UI.showModal('previewModal');
                 const ext = name.split('.').pop().toLowerCase();
                 try {
                     const res = await fetch(`/api/preview${path}`);
-                    if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<div class="flex items-center justify-center min-h-full p-4"><img src="/api/preview${path}" class="max-w-full max-h-full shadow-2xl rounded-lg"></div>`;
-                    else if (['mp4','webm'].includes(ext)) content.innerHTML = `<div class="flex items-center justify-center h-full bg-black"><video src="/api/preview${path}" class="max-w-full max-h-full" controls autoplay></video></div>`;
+                    if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<div class="flex items-center justify-center min-h-full p-4"><img src="/api/preview${path}" class="max-w-full max-h-full rounded-lg shadow-2xl"></div>`;
+                    else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="/api/preview${path}" class="w-full h-full" controls autoplay></video>`;
                     else if (['mp3','wav'].includes(ext)) content.innerHTML = `<div class="flex items-center justify-center h-full"><audio src="/api/preview${path}" controls autoplay class="w-2/3"></audio></div>`;
                     else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" class="w-full h-full border-none"></iframe>`;
                     else {
-                        const text = await res.text();
-                        if (userRole === 'admin') editBtn.classList.remove('hidden');
+                        const text = await res.text(); if (userRole === 'admin') editBtn.classList.remove('hidden');
                         if (ext === 'md') content.innerHTML = `<div class="markdown-body p-8 md:p-12">${marked.parse(text)}</div>`;
                         else content.innerHTML = `<pre id="textContent" class="p-8 md:p-12 font-mono text-sm leading-relaxed whitespace-pre-wrap">${text}</pre>`;
                     }
                     title.textContent = name;
-                } catch (e) { content.innerHTML = `<div class="p-12 text-red-500">预览失败: 文件无法读取</div>`; }
+                } catch (e) { content.innerHTML = `<div class="p-12 text-red-500">无法读取预览内容</div>`; }
             },
             toggleEditMode() { 
                 const pre = document.getElementById('textContent') || document.querySelector('.markdown-body');
                 const textarea = document.createElement('textarea');
-                textarea.className = 'w-full h-full bg-slate-950 text-slate-300 p-8 md:p-12 font-mono text-sm leading-relaxed outline-none resize-none';
-                textarea.id = 'editArea';
-                textarea.value = pre.innerText || pre.textContent;
-                const container = document.getElementById('previewContent');
-                container.innerHTML = ''; container.appendChild(textarea);
-                document.getElementById('editBtn').classList.add('hidden');
-                document.getElementById('saveBtn').classList.remove('hidden');
+                textarea.className = 'w-full h-full bg-slate-950 text-slate-300 p-8 font-mono text-sm leading-relaxed outline-none resize-none';
+                textarea.id = 'editArea'; textarea.value = pre.innerText || pre.textContent;
+                document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewContent').appendChild(textarea);
+                document.getElementById('editBtn').classList.add('hidden'); document.getElementById('saveBtn').classList.remove('hidden');
             },
             async saveTextContent() {
-                const content = document.getElementById('editArea').value;
-                const res = await fetch(`/api/save-text/${currentPreviewPath.replace(/^\//, '')}`, { method: 'POST', body: JSON.stringify({ content }) });
-                if (res.ok) { Message.success('修改已成功保存'); UI.closePreview(); this.loadFiles(); }
+                const res = await fetch(`/api/save-text/${currentPreviewPath.replace(/^\//, '')}`, { method: 'POST', body: JSON.stringify({ content: document.getElementById('editArea').value }) });
+                if (res.ok) { Message.success('修改已保存'); UI.closePreview(); this.loadFiles(); }
             },
             toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
             toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
@@ -321,32 +362,15 @@
                 const manager = document.getElementById('uploadManager'); const list = document.getElementById('uploadList');
                 manager.classList.remove('hidden'); manager.classList.add('flex');
                 for (let f of files) {
-                    activeUploads++;
-                    const item = document.createElement('div');
-                    item.className = 'p-4 border-b border-border bg-slate-900/30';
-                    item.innerHTML = `
-                        <div class="flex justify-between text-xs mb-2 truncate"><span class="font-bold">${f.name}</span> <span class="pct text-primary">0%</span></div>
-                        <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div class="progress-fill h-full bg-primary w-0 transition-all duration-300"></div></div>
-                    `;
+                    activeUploads++; const item = document.createElement('div');
+                    item.className = 'p-4 border-b border-border bg-slate-900/20';
+                    item.innerHTML = `<div class="flex justify-between text-[11px] mb-2 truncate"><span class="font-bold">${f.name}</span><span class="pct text-primary font-mono">0%</span></div>
+                        <div class="h-1 bg-slate-800 rounded-full overflow-hidden"><div class="progress-fill h-full bg-primary w-0 transition-all duration-300"></div></div>`;
                     list.prepend(item);
-                    const fd = new FormData(); fd.append('file', f);
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/api/files/' + currentPath.replace(/^\/|\/$/g, ''), true);
-                    xhr.upload.onprogress = (e) => {
-                        if (e.lengthComputable) {
-                            const pct = Math.round((e.loaded / e.total) * 100);
-                            item.querySelector('.progress-fill').style.width = pct + '%';
-                            item.querySelector('.pct').textContent = pct + '%';
-                        }
-                    };
-                    const onFinish = () => {
-                        activeUploads--;
-                        if (activeUploads === 0) {
-                            setTimeout(() => { manager.classList.add('hidden'); list.innerHTML = ''; }, 3000);
-                        }
-                    };
-                    xhr.onload = () => { if (xhr.status === 200) { item.querySelector('.pct').textContent = '已完成'; item.querySelector('.progress-fill').classList.replace('bg-primary', 'bg-emerald-500'); this.loadFiles(); } else { item.querySelector('.pct').textContent = '失败'; item.querySelector('.progress-fill').classList.replace('bg-primary', 'bg-red-500'); } onFinish(); };
-                    xhr.onerror = onFinish; xhr.send(fd);
+                    const xhr = new XMLHttpRequest(); xhr.open('POST', '/api/files/' + currentPath.replace(/^\/|\/$/g, ''), true);
+                    xhr.upload.onprogress = (e) => { if (e.lengthComputable) { const pct = Math.round((e.loaded / e.total) * 100); item.querySelector('.progress-fill').style.width = pct + '%'; item.querySelector('.pct').textContent = pct + '%'; } };
+                    xhr.onload = () => { if (xhr.status === 200) { item.querySelector('.pct').textContent = '完成'; item.querySelector('.progress-fill').className="h-full bg-emerald-500 w-full"; this.loadFiles(); } else { item.querySelector('.pct').textContent = '失败'; } activeUploads--; if(activeUploads===0) setTimeout(()=>manager.classList.add('hidden'), 3000); };
+                    const fd = new FormData(); fd.append('file', f); xhr.send(fd);
                 }
             }
         };
@@ -356,13 +380,8 @@
             formatDate(ts) { return ts ? new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '-'; },
             getFileIcon(n) {
                 const ext = n.split('.').pop().toLowerCase();
-                if(['jpg','jpeg','png','webp','gif'].includes(ext)) return '🖼️';
-                if(['mp4','webm'].includes(ext)) return '🎬';
-                if(['mp3','wav'].includes(ext)) return '🎵';
-                if(ext==='pdf') return '📕';
-                if(['zip','rar','7z'].includes(ext)) return '📦';
-                if(['txt','md','js','html','css'].includes(ext)) return '📄';
-                return '📄';
+                const map = { jpg:'🖼️', jpeg:'🖼️', png:'🖼️', webp:'🖼️', gif:'🖼️', mp4:'🎬', webm:'🎬', mp3:'🎵', wav:'🎵', pdf:'📕', zip:'📦', rar:'📦', '7z':'📦' };
+                return map[ext] || '📄';
             },
             isPreviewable(n) { return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(n.split('.').pop().toLowerCase()); }
         };
