@@ -20,6 +20,7 @@
             </div>
         </div>
     </div>
+
     <div class="container">
         <div class="toolbar">
             <div class="tools-left" id="breadcrumb"></div>
@@ -42,14 +43,27 @@
             </div>
         </div>
         <div class="explorer-card"><div id="fileList"></div></div>
+
+        <!-- 修正后的 Footer 布局 -->
         <footer class="footer">
             <div>项目：<a href="https://github.com/Delimo/O-Drive" target="_blank">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank">Delimo</a></div>
-            <div>Powered by Cloudflare Pages &copy; 2026 O-Drive.</div>
+            <div>Powered by Cloudflare Pages</div>
+            <div>&copy; 2026 O-Drive. All rights reserved.</div>
         </footer>
     </div>
 
-    <!-- Modals -->
-    <div id="loginModal" class="modal-overlay"><div class="login-card"><button onclick="UI.closeModal('loginModal')" style="position:absolute;right:20px;top:20px;background:none;border:none;color:#666;font-size:24px;cursor:pointer;">&times;</button><h1 style="font-size:22px; text-align:center; margin-bottom:30px;">管理端登录</h1><div class="input-wrapper"><input type="text" id="adminUser" placeholder="用户名"></div><div class="input-wrapper"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()"></div><button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.doLogin()">登录</button><p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p></div></div>
+    <!-- 登录弹窗 (修复输入框对齐) -->
+    <div id="loginModal" class="modal-overlay">
+        <div class="login-card">
+            <button onclick="UI.closeModal('loginModal')" class="modal-close">&times;</button>
+            <h1>管理端登录</h1>
+            <div class="input-wrapper"><input type="text" id="adminUser" placeholder="用户名"></div>
+            <div class="input-wrapper"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()"></div>
+            <button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.doLogin()">登录</button>
+            <p id="loginError" style="color:var(--error); text-align:center; margin-top:15px; font-size:12px;"></p>
+        </div>
+    </div>
+
     <div id="mkdirModal" class="modal-overlay"><div class="mkdir-card"><button class="modal-close" onclick="UI.closeModal('mkdirModal')">&times;</button><h1 class="modal-title">新建文件夹</h1><div class="input-wrapper"><input type="text" id="folderNameInput" placeholder="请输入文件夹名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()"></div><button class="btn btn-primary" style="width:100%; height:44px;" onclick="Actions.submitMkdir()">创建</button></div></div>
     <div id="previewModal" class="modal-overlay" onclick="UI.closePreview()"><div class="preview-modal" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 id="previewTitle">预览</h3><div style="display:flex; gap:10px;"><button id="editBtn" class="btn btn-sm" style="display:none" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-sm btn-primary" style="display:none" onclick="Actions.saveTextContent()">保存</button><button onclick="UI.closePreview()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:28px; line-height:1">&times;</button></div></div><div id="previewContent" class="preview-body"></div></div></div>
     <div id="uploadManager" class="upload-manager"><div class="upload-header"><span>上传任务</span><button onclick="UI.closeUploadManager()" style="background:none; border:none; color:#fff; cursor:pointer;">&times;</button></div><div id="uploadList" class="upload-list"></div></div>
@@ -117,14 +131,6 @@
                     else div.innerHTML = `<div class="col-name"><div class="file-icon">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div></div><div class="file-info col-size">${isFolder?'文件夹':item.sizeFormatted}</div><div class="file-info col-time">${Utils.formatDate(item.time)}</div><div class="file-actions col-acts" onclick="event.stopPropagation()">${acts}</div>`;
                     div.onclick = (e) => { if (userRole === 'admin') Actions.toggleSelect(item.fullKey, div, e); };
                     div.ondblclick = () => { if(isFolder) Actions.navigateTo(item.path); else if(Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name); };
-                    if (userRole === 'admin') {
-                        const nameEl = div.querySelector('.file-name');
-                        nameEl.ondblclick = (e) => { e.stopPropagation(); const oldName = item.name; const input = document.createElement('input'); input.className = 'rename-input'; input.value = oldName; nameEl.replaceWith(input); input.focus(); input.select();
-                            const save = async () => { if (input.value && input.value !== oldName) { await fetch(`/api/files/${encodeURIComponent(item.fullKey)}`, { method: 'PUT', body: JSON.stringify({ newName: input.value }) }); Actions.loadFiles(); Message.success('重命名成功'); } else { Actions.loadFiles(); } };
-                            input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') save(); };
-                            input.onclick = (ev) => ev.stopPropagation(); input.onmousedown = (ev) => ev.stopPropagation();
-                        };
-                    }
                     list.appendChild(div);
                 });
             },
@@ -157,7 +163,7 @@
                 selectedPaths = (selectedPaths.length === totalKeys.length) ? [] : totalKeys;
                 UI.updateFileList(); UI.updateBatchUI();
             },
-            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); Message.success('已加入剪贴板'); },
+            setClipboard(action) { clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; this.loadFiles(); Message.success('已存入剪贴板'); },
             async executePaste() {
                 const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) });
                 if(res.ok) { Message.success('粘贴成功'); clipboard = null; this.loadFiles(); }
