@@ -1,5 +1,17 @@
+/* --- [[path]].js 完整代码 (已优化文件大小显示) --- */
+
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
+
+// 新增：自动格式化文件大小的工具函数
+function formatBytes(bytes, decimals = 2) {
+    if (!+bytes) return '0 B';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
 
 async function verifyAuth(request, env) {
   const cookie = request.headers.get('Cookie') || '';
@@ -49,13 +61,13 @@ export async function onRequest(context) {
   if (!auth) return jsonResponse({ success: false }, 401);
   if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
-  // 3. 路径解析核心 (根据不同的 API 前缀提取真正的 R2 Key)
+  // 3. 路径解析核心
   let r2Key = "";
   if (path.startsWith('/api/files/')) r2Key = decodeURIComponent(path.slice(11));
   else if (path.startsWith('/api/download/')) r2Key = decodeURIComponent(path.slice(14));
   else if (path.startsWith('/api/preview/')) r2Key = decodeURIComponent(path.slice(13));
   else if (path.startsWith('/api/mkdir/')) r2Key = decodeURIComponent(path.slice(11));
-  else if (path.startsWith('/api/save-text/')) r2Key = decodeURIComponent(path.slice(15)); // 修复保存路径提取
+  else if (path.startsWith('/api/save-text/')) r2Key = decodeURIComponent(path.slice(15));
   
   // 隐私拦截
   const hiddenRes = await env.DB.prepare("SELECT key FROM settings").all();
@@ -66,7 +78,6 @@ export async function onRequest(context) {
 
   // 4. 管理员专用接口
   if (auth.role === 'admin') {
-    // 文本保存 (修正路由匹配)
     if (path.startsWith('/api/save-text/') && method === 'POST') {
         const { content } = await request.json();
         await env.R2_BUCKET.put(r2Key, content, { httpMetadata: { contentType: 'text/plain' } });
@@ -111,13 +122,19 @@ export async function onRequest(context) {
     }
   }
 
-  // 5. 通用文件操作
+  // 5. 通用文件操作 (此处已更新 sizeFormatted)
   if (path === '/api/search') {
     const q = url.searchParams.get('q')?.toLowerCase();
     const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
     const listed = await env.R2_BUCKET.list({ prefix: scope });
-    const matches = listed.objects.map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: (o.size/1024/1024).toFixed(2)+' MB', rawSize: o.size, time: o.uploaded.getTime() }))
-      .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey.startsWith(hp))));
+    const matches = listed.objects.map(o => ({ 
+        name: o.key.split('/').pop(), 
+        path: '/' + o.key, 
+        fullKey: o.key, 
+        sizeFormatted: formatBytes(o.size), // 自动格式化
+        rawSize: o.size, 
+        time: o.uploaded.getTime() 
+    })).filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey.startsWith(hp))));
     return jsonResponse({ files: matches });
   }
 
@@ -125,11 +142,18 @@ export async function onRequest(context) {
     let prefix = r2Key ? r2Key + '/' : '';
     const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
     const folders = (listed.delimitedPrefixes || []).map(p => ({ name: p.split('/').slice(-2, -1)[0], path: '/' + p.slice(0, -1), fullKey: p.slice(0, -1) })).filter(f => auth.role === 'admin' || !hiddenPaths.includes(f.fullKey));
-    const files = (listed.objects || []).map(o => ({ name: o.key.split('/').pop(), path: '/' + o.key, fullKey: o.key, sizeFormatted: (o.size/1024/1024).toFixed(2)+' MB', rawSize: o.size, time: o.uploaded.getTime() })).filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.includes(f.fullKey)));
+    const files = (listed.objects || []).map(o => ({ 
+        name: o.key.split('/').pop(), 
+        path: '/' + o.key, 
+        fullKey: o.key, 
+        sizeFormatted: formatBytes(o.size), // 自动格式化
+        rawSize: o.size, 
+        time: o.uploaded.getTime() 
+    })).filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !hiddenPaths.includes(f.fullKey)));
     return jsonResponse({ folders, files });
   }
 
-  // 6. 写操作拦截 (Admin Only)
+  // 6. 写操作
   if (['POST', 'PUT', 'DELETE'].includes(method) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
 
   if (path.startsWith('/api/mkdir')) {
