@@ -4,8 +4,7 @@ const jsonResponse = (data, status = 200, headers = {}) =>
 
 function formatBytes(bytes, decimals = 2) {
     if (!+bytes) return '0 B';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
+    const k = 1024; const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
@@ -26,9 +25,7 @@ async function addLog(env, request, action, details) {
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const url = new URL(request.url);
-  const path = url.pathname;
-  const method = request.method;
+  const url = new URL(request.url); const path = url.pathname; const method = request.method;
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
 
   if (path === '/api/login' && method === 'POST') {
@@ -66,7 +63,7 @@ export async function onRequest(context) {
   const hiddenPaths = hiddenRes.results.map(r => r.key);
   if (hiddenPaths.some(hp => r2Key === hp || r2Key.startsWith(hp + '/')) && auth.role !== 'admin') return jsonResponse({ success: false, message: 'Forbidden' }, 403);
 
-  // 管理员 API 路由 (找回这部分)
+  // 管理员专用 API
   if (auth.role === 'admin') {
     if (path.startsWith('/api/admin/')) {
         if (path === '/api/admin/logs') return jsonResponse({ logs: (await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100").all()).results });
@@ -96,9 +93,9 @@ export async function onRequest(context) {
         const destPrefix = targetDir === '/' ? '' : (targetDir.endsWith('/') ? targetDir : targetDir + '/');
         for (const src of paths) {
             const name = src.split('/').pop(); const dest = destPrefix + name;
-            const listed = await env.R2_BUCKET.list({ prefix: src + '/' });
             const self = await env.R2_BUCKET.get(src);
             if (self) await env.R2_BUCKET.put(dest, self.body);
+            const listed = await env.R2_BUCKET.list({ prefix: src + '/' });
             for (const obj of listed.objects) await env.R2_BUCKET.put(dest + obj.key.slice(src.length), (await env.R2_BUCKET.get(obj.key)).body);
             if (action === 'move') {
                 for (const obj of listed.objects) await env.R2_BUCKET.delete(obj.key); await env.R2_BUCKET.delete(src);
@@ -107,7 +104,7 @@ export async function onRequest(context) {
         }
         return jsonResponse({ success: true });
     }
-    if (path.startsWith('/api/files') && method === 'PUT') {
+    if (path.startsWith('/api/files/') && method === 'PUT') {
         const { newName } = await request.json();
         const parentDir = r2Key.includes('/') ? r2Key.substring(0, r2Key.lastIndexOf('/') + 1) : '';
         const newKey = parentDir + newName;
@@ -115,7 +112,6 @@ export async function onRequest(context) {
         if (source) { await env.R2_BUCKET.put(newKey, source.body); await env.R2_BUCKET.delete(r2Key); }
         const listed = await env.R2_BUCKET.list({ prefix: r2Key + '/' });
         for (const obj of listed.objects) { await env.R2_BUCKET.put(newKey + obj.key.slice(r2Key.length), (await env.R2_BUCKET.get(obj.key)).body); await env.R2_BUCKET.delete(obj.key); }
-        await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Key).run();
         return jsonResponse({ success: true });
     }
   }
