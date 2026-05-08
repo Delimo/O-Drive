@@ -1,6 +1,6 @@
-/* --- explorer.css 最终稳固版 --- */
+/* --- explorer.css 完美一致性版 --- */
 
-/* 1. 顶层容器加固：锁定全屏高度 */
+/* 1. 顶层容器布局 */
 html, body { 
     height: 100vh; 
     margin: 0; 
@@ -22,7 +22,7 @@ html, body {
     box-sizing: border-box;
 }
 
-/* 2. 工具栏修复：强制单行显示 */
+/* 2. 工具栏：彻底统一风格 */
 .toolbar { 
     display: flex; 
     justify-content: space-between; 
@@ -33,40 +33,36 @@ html, body {
     border: 1px solid var(--border-color); 
     margin-bottom: 12px; 
     height: 56px; 
-    flex-shrink: 0; /* 严禁收缩高度 */
-    overflow: hidden;
+    flex-shrink: 0; 
 }
 
 .tools-left { 
-    flex: 1; /* 占据剩余空间 */
+    flex: 1; 
     display: flex; 
     align-items: center; 
-    gap: 12px;
-    overflow: hidden; /* 空间不足时自动截断路径 */
+    gap: 15px; /* 增加间距 */
+    overflow: hidden; 
 }
 
-/* 关键修复：强制右侧按钮组不换行 */
-.tools-right { 
-    display: flex !important; 
-    flex-direction: row !important; 
-    flex-wrap: nowrap !important; /* 强制不换行 */
-    gap: 8px; 
-    align-items: center; 
-    flex-shrink: 0; /* 严禁挤压按钮宽度 */
-}
-
-/* 批量操作工具条修复 */
+/* 批量操作工具条：去除高亮边框和背景，使其融入背景 */
 #batchTools { 
     display: none; 
-    gap: 8px; 
-    background: rgba(64, 158, 255, 0.15); 
-    padding: 0 12px; 
-    border-radius: 6px; 
-    height: 36px; 
+    gap: 6px; 
+    background: none !important; /* 去除蓝色背景 */
+    border: none !important;     /* 去除蓝色边框 */
+    padding: 0 !important; 
+    height: 100%; 
     align-items: center; 
-    border: 1px solid var(--primary); 
-    flex-shrink: 0; /* 严禁收缩 */
-    margin: 0 10px;
+    flex-shrink: 0;
+}
+
+/* 右侧按钮组 */
+.tools-right { 
+    display: flex; 
+    gap: 8px; 
+    align-items: center; 
+    flex-shrink: 0;
+    margin-left: 10px;
 }
 
 /* 搜索框图标修复 */
@@ -77,7 +73,7 @@ html, body {
 }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
 
-/* 3. 文件卡片：圆角裁剪 */
+/* 3. 文件卡片容器 */
 .explorer-card { 
     background: #161e2e; 
     border: 1px solid var(--border-color); 
@@ -96,7 +92,7 @@ html, body {
     padding: 0 20px 20px 20px;
 }
 
-/* 4. 列表布局对齐 (Grid) */
+/* 4. 列表对齐：严格 Grid 方案 */
 .list-layout { display: flex; flex-direction: column; gap: 6px; }
 
 .list-header, .list-layout .file-item {
@@ -113,15 +109,16 @@ html, body {
     margin: 0 -20px 10px -20px; padding: 0 35px;
 }
 
-/* 高亮样式隔离 */
 .list-layout .file-item { 
     background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); 
     height: 56px; border-radius: 8px; cursor: pointer; transition: 0.1s;
 }
+/* 选中的高亮样式：仅作用于文件行 */
 .list-layout .file-item.selected { 
-    background: rgba(64, 158, 255, 0.2) !important; 
+    background: rgba(64, 158, 255, 0.15) !important; 
     border-color: var(--primary) !important; 
 }
+.list-layout .file-item:hover:not(.selected) { background: rgba(255,255,255,0.04); }
 
 .col-name { display: flex; align-items: center; gap: 12px; overflow: hidden; }
 .col-size, .col-time { text-align: center; font-size: 12px; color: var(--text-muted); }
@@ -148,8 +145,9 @@ html, body {
 .footer-brand { color: #fff; font-weight: 500; text-decoration: none; }
 .footer-copyright { color: rgba(255,255,255,0.4); font-size: 12px; }
 
-/* 其他样式保持 */
+/* 其他样式补丁 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; padding-top: 10px; }
 .grid-layout .file-item { flex-direction: column !important; height: 220px; justify-content: space-between; padding: 20px 15px; }
 .grid-layout .file-item.selected { border-color: var(--primary); background: rgba(64,158,255,0.15); }
 .breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 600; white-space: nowrap; }
+.rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 85%; padding: 4px 8px; border-radius: 4px; }
