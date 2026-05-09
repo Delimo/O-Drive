@@ -1,0 +1,15 @@
+export const state = {
+  currentPath: '/',
+  userRole: 'guest',
+  isSearching: false,
+  isEditing: false,
+  currentPreviewPath: '',
+  viewMode: localStorage.getItem('viewMode') || 'list',
+  sortBy: localStorage.getItem('sortBy') || 'name',
+  fileData: { folders: [], files: [] },
+  selectedPaths: [],
+  clipboard: null,
+  activeUploads: 0,
+  sortModes: ['name', 'time', 'size'],
+  sortNames: { name: '名称', time: '时间', size: '大小' },
+};

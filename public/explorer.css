@@ -1,0 +1,87 @@
+/* --- explorer.css 工业级全量加固版 --- */
+
+/* 1. 基础布局 */
+html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: flex; flex-direction: column; background: #020617; color: #f8fafc; font-family: Inter, system-ui, sans-serif; }
+
+.container { 
+    max-width: 1000px; width: 100%; margin: 0 auto; 
+    padding: 10px 20px 0 20px; flex: 1; 
+    display: flex; flex-direction: column; min-height: 0; box-sizing: border-box; 
+}
+
+/* 2. 模块卡片 */
+.header-card, .toolbar-card, .explorer-card {
+    background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;
+    flex-shrink: 0; width: 100%; box-sizing: border-box;
+}
+.header-card { height: 60px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.toolbar-card { height: 56px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 12px; }
+.explorer-card { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; margin-top: 12px; }
+
+/* 3. 工具栏加固 */
+.tools-left { flex: 1; display: flex; align-items: center; gap: 12px; overflow: hidden; min-width: 0; }
+#breadcrumb { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; color: #3b82f6; }
+.tools-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* 粘贴组和批量工具初始必须全部隐藏，由脚本逻辑精准控制 */
+#batchTools, #pasteGroup { display: none; align-items: center; gap: 8px; flex-shrink: 0; }
+#batchTools { padding-right: 12px; border-right: 1px solid #1e293b; margin-right: 4px; }
+
+/* 4. 搜索框：强制锁定深色，修复图中的白色问题 */
+.search-bar { position: relative; width: 160px; flex-shrink: 0; }
+.search-bar input { 
+    width: 100%; 
+    background: #020617 !important; /* 强制深色 */
+    border: 1px solid #1e293b; 
+    border-radius: 6px; 
+    padding: 6px 10px 6px 32px; 
+    color: #fff !important; 
+    outline: none; 
+    font-size: 13px;
+    box-sizing: border-box;
+}
+.search-bar input:focus { border-color: #3b82f6; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.4; pointer-events: none; z-index: 10; }
+
+/* 5. 文件列表：Windows 级效果 */
+#fileList { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0; position: relative; scrollbar-gutter: stable; }
+.grid-row-layout { display: grid !important; grid-template-columns: 1fr 100px 180px 160px; align-items: center; padding: 0 20px; box-sizing: border-box; width: 100%; }
+
+.list-header { 
+    position: sticky; top: 0; z-index: 50; background: #151d2f !important; 
+    height: 50px; color: #64748b; font-size: 11px; font-weight: 800; 
+    text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1e293b; 
+}
+.file-item-row { background: transparent; border-bottom: 1px solid rgba(255,255,255,0.02); height: 54px; cursor: pointer; }
+.file-item-row:hover { background: rgba(255, 255, 255, 0.03) !important; }
+.file-item-row.selected { background: rgba(59, 130, 246, 0.12) !important; border-left: 3px solid #3b82f6; }
+
+/* 6. 网格模式修复 */
+.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; gap: 16px !important; padding: 20px; box-sizing: border-box; width: 100%; }
+.grid-item { 
+    height: 220px; width: 100% !important; background: rgba(255, 255, 255, 0.02); border: 1px solid #1e293b; 
+    border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; 
+    display: flex !important; flex-direction: column !important; align-items: center; box-sizing: border-box; overflow: hidden; 
+}
+.grid-item:hover { background: rgba(255, 255, 255, 0.05); transform: translateY(-2px); transition: 0.2s; }
+.grid-item.selected { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 0 1px #3b82f6; }
+
+.grid-item .file-icon { height: 60px; font-size: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.grid-item .file-name { 
+    flex: 1; font-size: 13px; font-weight: 500; color: #fff; width: 100%; line-height: 1.4; 
+    height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
+    overflow: hidden; word-break: break-all; text-overflow: ellipsis; margin: 8px 0;
+}
+.grid-item .file-info { font-size: 10px; color: #64748b; margin-bottom: 12px; flex-shrink: 0; }
+
+/* 7. 页脚与按钮 */
+.footer { padding: 25px 0 35px 0; text-align: center; flex-shrink: 0; }
+.footer-info { color: rgba(255, 255, 255, 0.35); font-size: 12px; margin-bottom: 2px; }
+.footer-brand { color: rgba(255, 255, 255, 0.6); font-weight: 400; text-decoration: none; }
+.footer-brand:hover { color: #3b82f6; }
+.footer-powered, .footer-copyright { color: rgba(255, 255, 255, 0.25); font-size: 11px; margin-bottom: 4px; }
+
+.btn { background: #1e293b; border: 1px solid #334155; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+.btn:hover { background: #334155; border-color: #3b82f6; }
+.btn-primary { background: #3b82f6 !important; border: none !important; }
+.btn-danger { color: #f87171; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); }
