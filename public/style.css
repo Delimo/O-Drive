@@ -1,29 +1,46 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+/* --- style.css 现代通用审美版 --- */
 :root {
-    --primary: #3b82f6;
-    --background: #020617;
-    --surface: #0f172a;
-    --border: #1e293b;
+    /* 核心配色 - 现代中性 Slate 系列 */
+    --primary: #2563eb;          /* 更加明亮的专业蓝 */
+    --background: #f8fafc;       /* 浅灰色背景，护眼且干净 */
+    --surface: #ffffff;          /* 白色卡片面 */
+    --border: #e2e8f0;           /* 浅灰色边框 */
+    --text-main: #1e293b;        /* 深灰色文字 */
+    --text-muted: #64748b;       /* 柔和的辅助文字 */
+    --hover: #f1f5f9;            /* 悬停色 */
+}
+
+/* 自动适配深色模式 - 给喜欢暗色的用户保留，但调得更柔和 */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #0f172a;   /* 深蓝黑 */
+        --surface: #1e293b;      /* 深灰色面 */
+        --border: #334155;       /* 深色边框 */
+        --text-main: #f1f5f9;    /* 亮白字 */
+        --text-muted: #94a3b8;   /* 灰字 */
+        --hover: #2d3748;
+    }
 }
 
 html, body {
     height: 100vh; margin: 0; padding: 0; overflow: hidden;
-    background-color: var(--background); color: #f8fafc;
-    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background-color: var(--background); color: var(--text-main);
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    transition: background-color 0.3s ease;
 }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
+/* 滚动条美化 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-.custom-scroll { scrollbar-gutter: stable; }
+/* Markdown 预览优化 */
+.markdown-body { color: var(--text-main); line-height: 1.6; font-size: 15px; }
+.markdown-body h1, .markdown-body h2 { color: var(--text-main); font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; margin: 1.2em 0 0.6em; }
+.markdown-body p { margin-bottom: 1em; }
+.markdown-body code { background: var(--hover); padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
 
-.markdown-body { color: #cbd5e1; line-height: 1.6; font-size: 15px; }
-.markdown-body h1 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; margin: 1em 0; color: #fff; }
-
+/* Toast 动画 */
 @keyframes toastIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .toast-anim { animation: toastIn 0.3s ease-out; }
