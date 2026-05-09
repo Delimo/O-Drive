@@ -1,58 +1,51 @@
-/* --- explorer.css 紧凑对齐版 --- */
+/* --- explorer.css 完美加固最终版 --- */
 
-/* 1. 基础布局：锁定全屏 */
+/* 1. 顶层布局：锁定全屏 */
 html, body { height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--background); }
 
-/* 核心修改：将 max-width 设为 1000px 让整体更紧凑 */
+/* 整体宽度锁定 1000px */
 .container { 
     max-width: 1000px; width: 100%; margin: 0 auto; 
     padding: 15px 20px 0 20px; flex: 1; 
     display: flex; flex-direction: column; min-height: 0; box-sizing: border-box; 
 }
 
-/* 2. 工具栏 */
+/* 2. 工具栏布局修复 */
 .toolbar { 
     display: flex; justify-content: space-between; align-items: center; 
     background: #0f172a; padding: 0 15px; border-radius: 12px; 
     border: 1px solid #1e293b; margin-bottom: 12px; height: 56px; 
-    flex-shrink: 0; gap: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
 .tools-left { flex: 1; display: flex; align-items: center; gap: 12px; overflow: hidden; }
-.tools-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-#batchTools { display: none; gap: 8px; background: none !important; border: none !important; align-items: center; flex-shrink: 0; }
+.tools-right { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
 
-/* 按钮统一样式 */
+/* 批量操作工具：显隐由 JS 控制，CSS 负责不挤压 */
+#batchTools { 
+    display: none; gap: 6px; background: none !important; border: none !important; 
+    align-items: center; flex-shrink: 0;
+}
+
+/* 3. 按钮统一样式 */
 .btn, .tool-btn, #batchTools .btn { 
     background: #1e293b !important; border: 1px solid #334155 !important; 
-    height: 34px !important; padding: 0 16px !important; font-size: 12px !important; font-weight: 600 !important; 
+    height: 32px !important; padding: 0 14px !important; font-size: 12px !important; font-weight: 600 !important; 
     border-radius: 6px !important; color: #fff !important; display: inline-flex; align-items: center; justify-content: center; 
     cursor: pointer; white-space: nowrap; transition: 0.15s; 
 }
 .btn:hover { background: #334155 !important; border-color: #3b82f6 !important; }
 .btn-primary { background: #3b82f6 !important; border: none !important; }
-.btn-danger { color: #f87171 !important; background: rgba(248, 113, 113, 0.1) !important; border-color: rgba(248, 113, 113, 0.2) !important; }
+.btn-danger { color: #f87171 !important; background: rgba(248, 113, 113, 0.1) !important; border: 1px solid rgba(248, 113, 113, 0.2) !important; }
 .btn-danger:hover { background: #ef4444 !important; color: #fff !important; }
 
-/* 搜索框 */
-.search-bar { position: relative; width: 160px; flex-shrink: 0; }
-.search-bar input { width: 100%; background: #020617; border: 1px solid #1e293b; border-radius: 6px; padding: 6px 10px 6px 32px; color: #fff; outline: none; font-size: 13px; }
-
-/* 3. 文件展示大框 */
+/* 4. 文件展示大框：一体化滚动 */
 .explorer-card { 
-    background: #0f172a; 
-    border: 1px solid #1e293b; 
-    border-radius: 12px; 
-    flex: 1; 
-    display: flex; 
-    flex-direction: column; 
-    overflow: hidden; 
-    min-height: 0;
+    background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; 
+    flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;
 }
-
-/* 内部滚动区域 */
 #fileList { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0; position: relative; }
 
-/* 4. 列表模式 - Grid 定义 */
+/* 5. 列表对齐：严格 Grid */
 .grid-row-layout {
     display: grid !important;
     grid-template-columns: 1fr 100px 180px 160px;
@@ -61,48 +54,31 @@ html, body { height: 100vh; margin: 0; overflow: hidden; display: flex; flex-dir
     box-sizing: border-box;
 }
 
-/* 列表表头 */
+/* 悬浮表头：Windows 效果 */
 .list-header { 
     position: sticky; top: 0; z-index: 50; 
     background: #151d2f !important; 
-    height: 50px; color: #64748b; font-size: 11px; font-weight: 700; 
+    height: 50px; color: #64748b; font-size: 11px; font-weight: 800; 
     text-transform: uppercase; letter-spacing: 0.05em;
     border-bottom: 1px solid #1e293b;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
-/* 内容行 */
-.file-item-row { 
-    background: transparent; 
-    border-bottom: 1px solid rgba(30, 41, 59, 0.5); 
-    height: 52px; 
-    cursor: pointer; 
-    transition: all 0.1s ease;
-}
+.file-item-row { background: transparent; border-bottom: 1px solid rgba(30, 41, 59, 0.5); height: 52px; cursor: pointer; transition: background 0.1s; }
 .file-item-row:hover { background: rgba(255, 255, 255, 0.03) !important; }
 .file-item-row.selected { background: rgba(59, 130, 246, 0.12) !important; position: relative; }
 .file-item-row.selected::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #3b82f6; }
 
-/* 列内部对齐 */
 .col-name { display: flex; align-items: center; gap: 12px; overflow: hidden; }
 .col-size, .col-time { text-align: center; font-size: 12px; color: #94a3b8; }
 .col-acts { display: flex; gap: 8px; justify-content: center; }
 
-/* 5. 网格布局 */
+/* 6. 网格视图与其它 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; gap: 15px !important; padding: 20px; box-sizing: border-box; }
 .grid-item { background: rgba(255, 255, 255, 0.02); border: 1px solid #1e293b; border-radius: 10px; padding: 20px 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 210px; justify-content: space-between; align-items: center; box-sizing: border-box; overflow: hidden; transition: all 0.2s ease; }
-.grid-item:hover { background: rgba(255, 255, 255, 0.05); border-color: #334155; transform: translateY(-2px); }
-.grid-item.selected { border-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.1) !important; box-shadow: 0 0 0 1px #3b82f6; }
+.grid-item:hover { background: rgba(255, 255, 255, 0.05); transform: translateY(-2px); }
+.grid-item.selected { border-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.1) !important; }
 
-/* 6. 页脚 */
 .footer { padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
-.footer-info { color: #94a3b8; font-size: 14px; margin-bottom: 4px; }
-.footer-brand { color: #fff; text-decoration: none; font-weight: 500; }
-.footer-brand:hover { color: #3b82f6; }
-.footer-powered { color: rgba(255,255,255,0.35); font-size: 12px; margin-bottom: 6px; }
-.footer-copyright { color: rgba(255,255,255,0.4); font-size: 12px; }
-
-/* 其它面板 */
 .preview-modal { background: #0f172a; border: 1px solid #1e293b; padding: 24px; border-radius: 16px; width: 95%; max-width: 1000px; height: 85vh; display: flex; flex-direction: column; }
-.preview-body { flex: 1; overflow: auto; background: #020617; border-radius: 8px; display: block !important; position: relative; }
-#textContent, .markdown-body { width: 100%; padding: 30px; box-sizing: border-box; color: var(--text); font-size: 14px; line-height: 1.6; white-space: pre-wrap; text-align: left !important; }
 .rename-input { background: #020617; border: 1px solid #3b82f6; color: #fff; width: 90%; padding: 4px 8px; border-radius: 4px; }
