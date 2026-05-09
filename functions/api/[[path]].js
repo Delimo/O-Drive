@@ -1,3 +1,4 @@
+/* --- [[path]].js 逻辑最终加固版 --- */
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
@@ -42,7 +43,7 @@ export async function onRequest(context) {
     if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0' });
 
     const auth = await verifyAuth(request, env);
-    if (!auth) return jsonResponse({ success: false }, 401);
+    if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
     if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
     let hiddenPaths = [];
@@ -55,7 +56,7 @@ export async function onRequest(context) {
     else if (path.startsWith('/api/mkdir/')) r2Key = decodeURIComponent(path.slice(11));
     else if (path.startsWith('/api/save-text/')) r2Key = decodeURIComponent(path.slice(15));
 
-    if (hiddenPaths.some(hp => r2Key === hp || r2Key.startsWith(hp + '/')) && auth.role !== 'admin') return jsonResponse({ success: false }, 403);
+    if (hiddenPaths.some(hp => r2Key === hp || r2Key.startsWith(hp + '/')) && auth.role !== 'admin') return jsonResponse({ success: false, message: 'Forbidden' }, 403);
 
     if (auth.role === 'admin') {
       if (path === '/api/admin/logs') {
