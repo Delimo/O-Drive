@@ -1,4 +1,4 @@
-/* --- [[path]].js 最终稳定版 --- */
+/* --- [[path]].js 最终逻辑加固版 --- */
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
@@ -43,7 +43,7 @@ export async function onRequest(context) {
     if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0' });
 
     const auth = await verifyAuth(request, env);
-    if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
+    if (!auth) return jsonResponse({ success: false }, 401);
     if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
     let hiddenPaths = [];
@@ -101,6 +101,7 @@ export async function onRequest(context) {
               const subObj = await env.R2_BUCKET.get(item.key);
               if (subObj) { await env.R2_BUCKET.put(subKey, subObj.body, { httpMetadata: subObj.httpMetadata }); await env.R2_BUCKET.delete(item.key); }
           }
+          await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Key).run();
           await addLog(env, request, 'RENAME', `${r2Key} -> ${newName}`);
           return jsonResponse({ success: true });
       }
@@ -112,6 +113,23 @@ export async function onRequest(context) {
               await env.R2_BUCKET.delete(p);
           }
           await addLog(env, request, 'DELETE', `Batch delete ${paths.length} items`);
+          return jsonResponse({ success: true });
+      }
+      if (path.startsWith('/api/mkdir')) {
+          const { folderName } = await request.json();
+          await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + folderName + '/.folder', new Uint8Array(0));
+          await addLog(env, request, 'MKDIR', folderName);
+          return jsonResponse({ success: true });
+      }
+      if (path.startsWith('/api/files') && method === 'POST') {
+          const file = (await request.formData()).get('file');
+          await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
+          await addLog(env, request, 'UPLOAD', file.name);
+          return jsonResponse({ success: true });
+      }
+      if (path.startsWith('/api/save-text/') && method === 'POST') {
+          await env.R2_BUCKET.put(r2Key, (await request.json()).content, { httpMetadata: { contentType: 'text/plain' } });
+          await addLog(env, request, 'SAVE_TEXT', r2Key);
           return jsonResponse({ success: true });
       }
     }
@@ -135,21 +153,6 @@ export async function onRequest(context) {
       const obj = await env.R2_BUCKET.get(r2Key);
       if (!obj) return new Response('404', { status: 404 });
       return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': path.startsWith('/api/download/') ? `attachment; filename="${encodeURIComponent(r2Key.split('/').pop())}"` : 'inline' }});
-    }
-
-    if (auth.role === 'admin') {
-        if (path.startsWith('/api/mkdir')) {
-            const { folderName } = await request.json();
-            await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + folderName + '/.folder', new Uint8Array(0));
-            await addLog(env, request, 'MKDIR', folderName);
-            return jsonResponse({ success: true });
-        }
-        if (path.startsWith('/api/files') && method === 'POST') {
-            const file = (await request.formData()).get('file');
-            await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
-            await addLog(env, request, 'UPLOAD', file.name);
-            return jsonResponse({ success: true });
-        }
     }
     return jsonResponse({ message: 'Not Found' }, 404);
   } catch (err) {
