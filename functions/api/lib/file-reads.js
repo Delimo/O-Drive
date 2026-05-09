@@ -25,7 +25,11 @@ export async function handleListFiles(env, hiddenPaths, auth, r2Key) {
   const prefix = r2Key ? r2Key + '/' : '';
   const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
   const folders = (listed.delimitedPrefixes || [])
-    .map(p => ({ name: p.split('/').slice(-2, -1)[0], path: '/' + p.slice(0, -1), fullKey: p.slice(0, -1) }))
+    .map(p => {
+      const fullKey = p.slice(0, -1);
+      return { name: fullKey.split('/').slice(-1)[0], path: '/' + fullKey, fullKey };
+    })
+    .filter(f => f.fullKey && f.name && f.name !== '.folder')
     .filter(f => auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths));
   const files = (listed.objects || [])
     .map(mapEntry)

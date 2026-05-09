@@ -1,7 +1,7 @@
 /* --- style.css 现代通用审美版 --- */
 :root {
     /* 核心配色 - 现代中性 Slate 系列 */
-    --primary: #2563eb;          /* 更加明亮的专业蓝 */
+    --primary: #60a5fa;          /* 更加柔和的蓝 */
     --background: #f8fafc;       /* 浅灰色背景，护眼且干净 */
     --surface: #ffffff;          /* 白色卡片面 */
     --border: #e2e8f0;           /* 浅灰色边框 */
@@ -13,12 +13,12 @@
 /* 自动适配深色模式 - 给喜欢暗色的用户保留，但调得更柔和 */
 @media (prefers-color-scheme: dark) {
     :root {
-        --background: #0f172a;   /* 深蓝黑 */
-        --surface: #1e293b;      /* 深灰色面 */
-        --border: #334155;       /* 深色边框 */
-        --text-main: #f1f5f9;    /* 亮白字 */
+        --background: #0b1220;   /* 更柔和的深色底 */
+        --surface: #111827;      /* 深色面板 */
+        --border: #243244;       /* 柔和边框 */
+        --text-main: #e5eefb;    /* 亮色文字 */
         --text-muted: #94a3b8;   /* 灰字 */
-        --hover: #2d3748;
+        --hover: #172033;
     }
 }
 

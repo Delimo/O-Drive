@@ -1,7 +1,7 @@
 /* --- explorer.css 工业级全量加固版 --- */
 
 /* 1. 基础布局 */
-html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: flex; flex-direction: column; background: #020617; color: #f8fafc; font-family: Inter, system-ui, sans-serif; }
+html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: flex; flex-direction: column; background: #0b1220; color: #e5eefb; font-family: Inter, system-ui, sans-serif; }
 
 .container { 
     max-width: 1000px; width: 100%; margin: 0 auto; 
@@ -11,7 +11,7 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 
 /* 2. 模块卡片 */
 .header-card, .toolbar-card, .explorer-card {
-    background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;
+    background: #111827; border: 1px solid #243244; border-radius: 12px;
     flex-shrink: 0; width: 100%; box-sizing: border-box;
 }
 .header-card { height: 60px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
@@ -20,7 +20,7 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 
 /* 3. 工具栏加固 */
 .tools-left { flex: 1; display: flex; align-items: center; gap: 12px; overflow: hidden; min-width: 0; }
-#breadcrumb { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; color: #3b82f6; }
+#breadcrumb { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; color: #93c5fd; }
 .tools-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 .breadcrumb-root {
@@ -28,9 +28,9 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
     align-items: center;
     height: 36px;
     padding: 0 14px;
-    border: 1px solid rgba(51, 65, 85, 0.9);
+    border: 1px solid rgba(51, 65, 85, 0.95);
     border-radius: 8px;
-    background: rgba(15, 23, 42, 0.72);
+    background: rgba(17, 24, 39, 0.82);
     color: #f8fafc;
     font-size: 14px;
     font-weight: 800;
@@ -39,21 +39,21 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 }
 
 .breadcrumb-root:hover {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.12);
+    border-color: #60a5fa;
+    background: rgba(96, 165, 250, 0.12);
     color: #fff;
 }
 
 /* 粘贴组和批量工具初始必须全部隐藏，由脚本逻辑精准控制 */
 #batchTools, #pasteGroup { display: none; align-items: center; gap: 8px; flex-shrink: 0; }
-#batchTools { padding-right: 12px; border-right: 1px solid #1e293b; margin-right: 4px; }
+#batchTools { padding-right: 12px; border-right: 1px solid #243244; margin-right: 4px; }
 
 /* 4. 搜索框：强制锁定深色，修复图中的白色问题 */
 .search-bar { position: relative; width: 160px; flex-shrink: 0; }
 .search-bar input { 
     width: 100%; 
-    background: #020617 !important; /* 强制深色 */
-    border: 1px solid #1e293b; 
+    background: #0b1220 !important;
+    border: 1px solid #243244; 
     border-radius: 6px; 
     padding: 6px 10px 6px 32px; 
     color: #fff !important; 
@@ -61,7 +61,7 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
     font-size: 13px;
     box-sizing: border-box;
 }
-.search-bar input:focus { border-color: #3b82f6; }
+.search-bar input:focus { border-color: #60a5fa; }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.4; pointer-events: none; z-index: 10; }
 
 /* 5. 文件列表：Windows 级效果 */
@@ -69,24 +69,24 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 .grid-row-layout { display: grid !important; grid-template-columns: 1fr 100px 180px 160px; align-items: center; padding: 0 20px; box-sizing: border-box; width: 100%; }
 
 .list-header { 
-    position: sticky; top: 0; z-index: 50; background: #151d2f !important; 
+    position: sticky; top: 0; z-index: 50; background: #0f172a !important; 
     height: 50px; color: #64748b; font-size: 11px; font-weight: 800; 
-    text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1e293b; 
+    text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #243244; 
 }
 .file-item-row { background: transparent; border-bottom: 1px solid rgba(255,255,255,0.02); height: 54px; cursor: pointer; }
-.file-item-row:hover { background: rgba(255, 255, 255, 0.03) !important; }
-.file-item-row.selected { background: rgba(59, 130, 246, 0.12) !important; border-left: 3px solid #3b82f6; }
+.file-item-row:hover { background: rgba(255, 255, 255, 0.04) !important; }
+.file-item-row.selected { background: rgba(96, 165, 250, 0.12) !important; border-left: 3px solid #60a5fa; }
 
 /* 6. 网格模式修复 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; gap: 16px !important; padding: 20px; box-sizing: border-box; width: 100%; }
 .grid-item { 
     position: relative;
-    height: 220px; width: 100% !important; background: rgba(255, 255, 255, 0.02); border: 1px solid #1e293b; 
+    height: 220px; width: 100% !important; background: rgba(255, 255, 255, 0.02); border: 1px solid #243244; 
     border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; 
     display: flex !important; flex-direction: column !important; align-items: center; box-sizing: border-box; overflow: hidden; 
 }
 .grid-item:hover { background: rgba(255, 255, 255, 0.05); transform: translateY(-2px); transition: 0.2s; }
-.grid-item.selected { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 0 1px #3b82f6; }
+.grid-item.selected { border-color: #60a5fa; background: rgba(96, 165, 250, 0.1); box-shadow: 0 0 0 1px #60a5fa; }
 
 .grid-item .file-icon { height: 60px; font-size: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grid-item .file-name { 
@@ -94,12 +94,14 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
     height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
     overflow: hidden; word-break: break-all; text-overflow: ellipsis; margin: 8px 0;
 }
+.grid-item .file-size { font-size: 10px; color: #94a3b8; margin-top: auto; margin-bottom: 10px; flex-shrink: 0; }
 .grid-item .file-info { font-size: 10px; color: #64748b; margin-bottom: 12px; flex-shrink: 0; }
 
 .file-actions {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 30px;
 }
 
 .grid-item .file-actions,
@@ -115,17 +117,6 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
     pointer-events: auto;
 }
 
-.grid-item .file-actions {
-    position: absolute;
-    left: 50%;
-    bottom: 12px;
-    transform: translateX(-50%) translateY(4px);
-}
-
-.grid-item:hover .file-actions {
-    transform: translateX(-50%) translateY(0);
-}
-
 .file-item-row .file-actions {
     justify-content: flex-end;
 }
@@ -136,7 +127,7 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
     padding: 0 10px;
     border-radius: 8px;
     border: 1px solid rgba(51, 65, 85, 0.95);
-    background: rgba(15, 23, 42, 0.94);
+    background: rgba(17, 24, 39, 0.94);
     color: #dbeafe;
     font-size: 11px;
     font-weight: 800;
@@ -147,8 +138,8 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 }
 
 .file-action-btn:hover {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.18);
+    border-color: #60a5fa;
+    background: rgba(96, 165, 250, 0.18);
     color: #fff;
 }
 
@@ -159,9 +150,9 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 .footer-brand:hover { color: #3b82f6; }
 .footer-powered, .footer-copyright { color: rgba(255, 255, 255, 0.25); font-size: 11px; margin-bottom: 4px; }
 
-.btn { min-width: 56px; height: 40px; background: rgba(15, 23, 42, 0.72); border: 1px solid rgba(51, 65, 85, 0.95); padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 800; color: #f8fafc; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease; }
-.btn:hover { background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #fff; }
-.btn-primary { background: #3b82f6 !important; border: none !important; }
-.btn-danger { color: #f87171; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); }
-.btn-danger-soft { color: #fecaca; background: rgba(127, 29, 29, 0.18); border-color: rgba(248, 113, 113, 0.28); }
+.btn { min-width: 56px; height: 40px; background: rgba(17, 24, 39, 0.82); border: 1px solid rgba(51, 65, 85, 0.95); padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 800; color: #e5eefb; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease; }
+.btn:hover { background: rgba(96, 165, 250, 0.12); border-color: #60a5fa; color: #fff; }
+.btn-primary { background: #60a5fa !important; border: none !important; }
+.btn-danger { color: #fca5a5; background: rgba(127, 29, 29, 0.12); border-color: rgba(248, 113, 113, 0.2); }
+.btn-danger-soft { color: #fecaca; background: rgba(127, 29, 29, 0.14); border-color: rgba(248, 113, 113, 0.28); }
 .btn-danger-soft:hover { background: rgba(248, 113, 113, 0.18); border-color: rgba(248, 113, 113, 0.58); color: #fff; }

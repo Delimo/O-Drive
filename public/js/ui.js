@@ -118,7 +118,7 @@ export const UI = {
       const div = document.createElement('div');
       if (state.viewMode === 'grid') {
         div.className = 'grid-item';
-        div.innerHTML = `<div class="file-icon opacity-30 text-slate-500 text-4xl mb-3">📁</div><div class="file-name text-white">..</div><div class="file-info text-slate-500">返回上级</div><div class="file-actions"></div>`;
+        div.innerHTML = `<div class="file-icon opacity-30 text-slate-500 text-4xl mb-3">📁</div><div class="file-name text-white">..</div><div class="file-size text-slate-500">返回上级</div><div class="file-actions"></div>`;
       } else {
         div.className = 'grid-row-layout h-[52px] hover:bg-slate-800/40 border-b border-white/5 cursor-pointer text-slate-500';
         div.innerHTML = `<div class="col-name"><span class="opacity-50 text-xl text-white">📁</span><span class="text-sm font-medium text-slate-400">返回上级 (..)</span></div><div></div><div></div><div></div>`;
@@ -142,7 +142,7 @@ export const UI = {
 
       if (state.viewMode === 'grid') {
         el.className = `grid-item ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="file-icon select-none">${isFolder ? '📁' : Utils.getFileIcon(item.name)}</div><div class="file-name text-white">${safeName}</div><div class="text-[10px] text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}</div>`;
+        el.innerHTML = `<div class="file-icon select-none">${isFolder ? '📁' : Utils.getFileIcon(item.name)}</div><div class="file-name text-white">${safeName}</div><div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}</div>`;
       } else {
         el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
         el.innerHTML = `<div class="col-name text-white"><span class="text-xl flex-shrink-0 select-none">${isFolder ? '📁' : Utils.getFileIcon(item.name)}</span><span class="text-sm truncate file-name text-slate-200">${safeName}</span></div><div class="col-size hidden md:block text-slate-400 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-white">${!isFolder ? `<div class="file-actions"><button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button></div>` : ''}</div>`;
