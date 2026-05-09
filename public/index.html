@@ -6,18 +6,19 @@
     <title>O-Drive</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/main.css">
-    <link rel="stylesheet" href="/explorer.css">
+    <link rel="stylesheet" href="/style.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         tailwind.config = { theme: { extend: { colors: { primary: '#3b82f6', background: '#020617', surface: '#0f172a', border: '#1e293b' } } } }
     </script>
+    <style>.admin-only { display: none; }</style>
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden bg-background">
     <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center"></div>
     <main class="container">
         <!-- Header -->
         <header class="bg-surface border border-border rounded-xl px-5 h-16 flex items-center justify-between flex-shrink-0 shadow-xl">
-            <a href="/" class="flex items-center gap-2 text-lg font-bold text-white tracking-tight"><span class="text-2xl text-primary font-bold">☁️</span> <span>O-Drive</span></a>
+            <a href="/" class="flex items-center gap-2 text-lg font-bold text-white tracking-tight"><span class="text-2xl text-primary">☁️</span> <span>O-Drive</span></a>
             <div class="flex items-center gap-4">
                 <div class="relative group hidden md:block text-slate-300">
                     <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 text-xs">🔍</span>
@@ -31,16 +32,20 @@
         <div class="bg-surface border border-border rounded-xl p-3 flex items-center justify-between gap-4 flex-shrink-0 mt-3 overflow-x-auto no-scrollbar shadow-md">
             <div id="breadcrumb" class="flex items-center gap-1 text-sm font-medium text-primary whitespace-nowrap overflow-hidden"></div>
             <div class="flex items-center gap-2 flex-shrink-0">
-                <div id="batchTools" class="hidden items-center gap-2 pr-3 border-r border-border/50 mr-1">
-                    <button class="btn" onclick="Actions.toggleSelectAll()">全选</button>
-                    <button class="btn hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">更名</button>
-                    <button class="btn" onclick="Actions.setClipboard('copy')">复制</button>
+                <!-- 批量工具 -->
+                <div id="batchTools" class="items-center">
+                    <button class="btn" onclick="Actions.toggleSelectAll()" id="selectAllBtn">全选</button>
+                    <button class="btn" id="singleRenameBtn" onclick="Actions.startRenameSelected()">更名</button>
+                    <!-- 已调换顺序：移动在前，复制在后 -->
                     <button class="btn" onclick="Actions.setClipboard('move')">移动</button>
+                    <button class="btn" onclick="Actions.setClipboard('copy')">复制</button>
                     <button class="btn btn-danger" onclick="Actions.batchDelete()">删除</button>
                 </div>
+                <!-- 粘贴区域 -->
                 <div id="pasteGroup" class="hidden items-center gap-2">
                     <button id="pasteBtn" class="btn btn-primary" onclick="Actions.executePaste()">粘贴</button>
                     <button id="cancelPasteBtn" class="btn" onclick="Actions.clearClipboard()">取消</button>
+                    <div class="w-px h-4 bg-border mx-1"></div>
                 </div>
                 <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
                 <button class="btn admin-only" onclick="UI.showModal('mkdirModal')">新建</button>
@@ -52,21 +57,23 @@
             </div>
         </div>
 
+        <!-- Explorer Card -->
         <div class="explorer-card mt-3">
             <div id="fileList" class="custom-scroll"></div>
         </div>
 
+        <!-- Footer -->
         <footer class="footer">
-            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank" class="footer-brand">Delimo</a></div>
+            <div class="text-slate-400 text-sm mb-1 tracking-wide">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank" class="footer-brand">Delimo</a></div>
             <div class="text-slate-500 text-[11px] mb-1 font-normal">Powered by Cloudflare Pages</div>
             <div class="text-slate-500 text-[11px] opacity-60">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
         </footer>
     </main>
 
     <!-- Modals -->
-    <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4"><div class="bg-[#1a1a1a] border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl"><button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button><h1 class="text-xl font-bold mb-6 text-center text-white text-white">管理员登录</h1><input type="text" id="adminUser" placeholder="用户名" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-white"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-white"><button class="w-full h-11 bg-primary text-white rounded-lg font-bold" onclick="Actions.doLogin()">登录</button><p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p></div></div>
-    <div id="mkdirModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4"><div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl"><h1 class="text-lg font-bold mb-4 text-white text-center">新建文件夹</h1><input type="text" id="folderNameInput" placeholder="名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-white"><div class="flex gap-2"><button class="btn flex-1" onclick="UI.closeModal('mkdirModal')">取消</button><button class="btn btn-primary flex-1" onclick="Actions.submitMkdir()">创建</button></div></div></div>
-    <div id="previewModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] hidden flex-col p-4 md:p-10" onclick="UI.closePreview()"><div class="bg-surface border border-border rounded-2xl w-full h-full max-w-6xl mx-auto flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()"><div class="flex items-center justify-between p-4 border-b border-border bg-slate-900/50 text-white"><h3 id="previewTitle" class="font-bold truncate text-sm">预览</h3><div class="flex items-center gap-3"><button id="editBtn" class="btn hidden text-white" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-primary hidden text-white" onclick="Actions.saveTextContent()">保存</button><button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100 text-white">&times;</button></div></div><div id="previewContent" class="flex-1 overflow-auto bg-background relative block text-left"></div></div></div>
+    <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4"><div class="bg-[#1a1a1a] border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl"><button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button><h1 class="text-xl font-bold mb-6 text-center text-white">登录 O-Drive</h1><input type="text" id="adminUser" placeholder="用户名" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-white"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-white"><button class="w-full h-11 bg-primary text-white rounded-lg font-bold" onclick="Actions.doLogin()">确认</button><p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p></div></div>
+    <div id="mkdirModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4"><div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl"><h1 class="text-lg font-bold mb-4 text-white">新建文件夹</h1><input type="text" id="folderNameInput" placeholder="名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-white"><div class="flex gap-2"><button class="btn flex-1" onclick="UI.closeModal('mkdirModal')">取消</button><button class="btn btn-primary flex-1" onclick="Actions.submitMkdir()">创建</button></div></div></div>
+    <div id="previewModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] hidden flex-col p-4 md:p-10" onclick="UI.closePreview()"><div class="bg-surface border border-border rounded-2xl w-full h-full max-w-6xl mx-auto flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()"><div class="flex items-center justify-between p-4 border-b border-border bg-slate-900/50 text-white"><h3 id="previewTitle" class="font-bold truncate text-sm">预览</h3><div class="flex items-center gap-3"><button id="editBtn" class="btn hidden text-white" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-primary hidden text-white" onclick="Actions.saveTextContent()">保存并关闭</button><button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100 text-white">&times;</button></div></div><div id="previewContent" class="flex-1 overflow-auto bg-background relative block text-left"></div></div></div>
     <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden text-white"><div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-400"><span>上传进度</span><button onclick="UI.closeUploadManager()">&times;</button></div><div id="uploadList" class="max-h-80 overflow-y-auto"></div></div>
 
     <script>
@@ -144,7 +151,8 @@
             },
             updateBatchUI() {
                 const bt = document.getElementById('batchTools'); const pg = document.getElementById('pasteGroup'); const ren = document.getElementById('singleRenameBtn');
-                bt.style.display = (userRole === 'admin' && selectedPaths.length > 0) ? 'flex' : 'none';
+                const hasSelection = (userRole === 'admin' && selectedPaths.length > 0);
+                bt.style.display = hasSelection ? 'flex' : 'none';
                 pg.classList.toggle('hidden', !(userRole === 'admin' && clipboard));
                 pg.classList.toggle('flex', (userRole === 'admin' && clipboard));
                 if (ren) ren.classList.toggle('hidden', selectedPaths.length !== 1);
