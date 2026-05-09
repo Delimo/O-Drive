@@ -1,4 +1,4 @@
-/* --- [[path]].js 逻辑最终加固版 --- */
+/* --- [[path]].js 最终日志强化版 --- */
 const jsonResponse = (data, status = 200, headers = {}) => 
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
@@ -18,9 +18,14 @@ async function verifyAuth(request, env) {
   try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return isGuestMode ? { role: 'guest' } : null; }
 }
 
+// 核心日志函数
 async function addLog(env, request, action, details) {
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-  try { await env.DB.prepare("INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)").bind(action, details, ip).run(); } catch (e) {}
+  try { 
+    await env.DB.prepare("INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)").bind(action, details, ip).run(); 
+  } catch (e) {
+    console.error("Log error:", e);
+  }
 }
 
 export async function onRequest(context) {
@@ -28,6 +33,7 @@ export async function onRequest(context) {
   const url = new URL(request.url); const path = url.pathname; const method = request.method;
 
   try {
+    // 登录退出
     if (path === '/api/login' && method === 'POST') {
       const { username, password } = await request.json();
       if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
@@ -43,7 +49,7 @@ export async function onRequest(context) {
     if (path === '/api/logout') return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0' });
 
     const auth = await verifyAuth(request, env);
-    if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
+    if (!auth) return jsonResponse({ success: false }, 401);
     if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
     let hiddenPaths = [];
@@ -58,7 +64,9 @@ export async function onRequest(context) {
 
     if (hiddenPaths.some(hp => r2Key === hp || r2Key.startsWith(hp + '/')) && auth.role !== 'admin') return jsonResponse({ success: false, message: 'Forbidden' }, 403);
 
+    // 管理员专用逻辑
     if (auth.role === 'admin') {
+      // 日志查询
       if (path === '/api/admin/logs') {
           const page = parseInt(url.searchParams.get('page') || '1');
           const size = parseInt(url.searchParams.get('size') || '20');
@@ -67,11 +75,24 @@ export async function onRequest(context) {
           const logs = await env.DB.prepare("SELECT * FROM logs ORDER BY timestamp DESC LIMIT ? OFFSET ?").bind(size, (page - 1) * size).all();
           return jsonResponse({ logs: logs.results, totalPages: Math.ceil(total / size), currentPage: page });
       }
+      // 隐私设置
       if (path === '/api/admin/settings/hidden') {
           if (method === 'GET') return jsonResponse({ list: hiddenPaths.map(p => ({path: p})) });
           if (method === 'POST') { await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind((await request.json()).targetPath).run(); return jsonResponse({ success: true }); }
           if (method === 'DELETE') { await env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(url.searchParams.get('path')).run(); return jsonResponse({ success: true }); }
       }
+      // 批量删除
+      if (path === '/api/batch-delete' && method === 'POST') {
+          const { paths } = await request.json();
+          for (const p of paths) {
+              const listed = await env.R2_BUCKET.list({ prefix: p + '/' });
+              for (const o of listed.objects) await env.R2_BUCKET.delete(o.key);
+              await env.R2_BUCKET.delete(p);
+              await addLog(env, request, 'DELETE', p); // 记录删除日志
+          }
+          return jsonResponse({ success: true });
+      }
+      // 复制、移动、粘贴
       if (path === '/api/paste' && method === 'POST') {
           const { action, paths, targetDir } = await request.json();
           let destDir = targetDir.replace(/^\/|\/$/g, '');
@@ -88,9 +109,11 @@ export async function onRequest(context) {
                   if (subObj) { await env.R2_BUCKET.put(newSubKey, subObj.body, { httpMetadata: subObj.httpMetadata }); if (action === 'move') await env.R2_BUCKET.delete(item.key); }
               }
               if (action === 'move') try { await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(destKey, srcKey).run(); } catch(e){}
+              await addLog(env, request, action.toUpperCase(), `${srcKey} -> ${destKey}`); // 记录复制/移动日志
           }
           return jsonResponse({ success: true });
       }
+      // 重命名
       if (path.startsWith('/api/files/') && method === 'PUT') {
           const { newName } = await request.json();
           const parentDir = r2Key.includes('/') ? r2Key.substring(0, r2Key.lastIndexOf('/') + 1) : '';
@@ -103,23 +126,36 @@ export async function onRequest(context) {
               if (subObj) { await env.R2_BUCKET.put(subKey, subObj.body, { httpMetadata: subObj.httpMetadata }); await env.R2_BUCKET.delete(item.key); }
           }
           try { await env.DB.prepare("UPDATE settings SET key = ? WHERE key = ?").bind(newKey, r2Key).run(); } catch(e){}
+          await addLog(env, request, 'RENAME', `${r2Key} -> ${newName}`); // 记录重命名日志
           return jsonResponse({ success: true });
       }
-      if (path === '/api/batch-delete' && method === 'POST') {
-          const { paths } = await request.json();
-          for (const p of paths) {
-              const listed = await env.R2_BUCKET.list({ prefix: p + '/' });
-              for (const o of listed.objects) await env.R2_BUCKET.delete(o.key);
-              await env.R2_BUCKET.delete(p);
-          }
-          return jsonResponse({ success: true });
-      }
+      // 保存文本
       if (path.startsWith('/api/save-text/') && method === 'POST') {
-          await env.R2_BUCKET.put(r2Key, (await request.json()).content, { httpMetadata: { contentType: 'text/plain' } });
+          const { content } = await request.json();
+          await env.R2_BUCKET.put(r2Key, content, { httpMetadata: { contentType: 'text/plain' } });
+          await addLog(env, request, 'SAVE_TEXT', r2Key); // 记录保存日志
+          return jsonResponse({ success: true });
+      }
+      // 新建文件夹
+      if (path.startsWith('/api/mkdir')) {
+          const { folderName } = await request.json();
+          const folderKey = (r2Key ? r2Key + '/' : '') + folderName + '/.folder';
+          await env.R2_BUCKET.put(folderKey, new Uint8Array(0));
+          await addLog(env, request, 'MKDIR', folderName); // 记录新建日志
+          return jsonResponse({ success: true });
+      }
+      // 上传文件
+      if (path.startsWith('/api/files') && method === 'POST') {
+          const formData = await request.formData();
+          const file = formData.get('file');
+          const uploadKey = (r2Key ? r2Key + '/' : '') + file.name;
+          await env.R2_BUCKET.put(uploadKey, file.stream(), { httpMetadata: { contentType: file.type } });
+          await addLog(env, request, 'UPLOAD', file.name); // 记录上传日志
           return jsonResponse({ success: true });
       }
     }
 
+    // 只读接口
     if (path === '/api/search') {
       const q = url.searchParams.get('q')?.toLowerCase();
       const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
@@ -140,15 +176,7 @@ export async function onRequest(context) {
       if (!obj) return new Response('404', { status: 404 });
       return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream', 'Content-Disposition': path.startsWith('/api/download/') ? `attachment; filename="${encodeURIComponent(r2Key.split('/').pop())}"` : 'inline' }});
     }
-    if (path.startsWith('/api/mkdir')) {
-      await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + (await request.json()).folderName + '/.folder', new Uint8Array(0));
-      return jsonResponse({ success: true });
-    }
-    if (path.startsWith('/api/files') && method === 'POST') {
-      const file = (await request.formData()).get('file');
-      await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + file.name, file.stream(), { httpMetadata: { contentType: file.type } });
-      return jsonResponse({ success: true });
-    }
+
     return jsonResponse({ message: 'Not Found' }, 404);
   } catch (err) {
     return jsonResponse({ success: false, message: err.message }, 500);
