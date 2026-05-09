@@ -90,8 +90,8 @@
         </div>
     </div>
 
-    <div id="previewModal" class="preview-overlay text-white" onclick="UI.closePreview()">
-        <div class="preview-modal" onclick="event.stopPropagation()">
+    <div id="previewModal" class="fixed inset-0 hidden items-center justify-center bg-black/80 backdrop-blur-sm z-[500] p-4 text-white" onclick="UI.closePreview()">
+        <div class="w-full max-w-6xl h-[85vh] bg-[#0f172a] border border-border rounded-2xl overflow-hidden flex flex-col shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between p-4 border-b border-border bg-slate-900/50 text-white">
                 <h3 id="previewTitle" class="font-bold truncate text-sm">预览</h3>
                 <div class="flex items-center gap-3">
@@ -100,7 +100,7 @@
                     <button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100">&times;</button>
                 </div>
             </div>
-            <div id="previewContent" class="preview-body"></div>
+            <div id="previewContent" class="flex-1 overflow-auto bg-[#020617]"></div>
         </div>
     </div>
 
