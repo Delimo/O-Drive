@@ -1,73 +1,250 @@
-/* --- explorer.css 工业级稳定版 --- */
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>O-Drive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/main.css">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/explorer.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { primary: '#2563eb' } } } }
+    </script>
+    <style>.admin-only { display: none; }</style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center"></div>
+    <main class="container">
+        <!-- Header -->
+        <header class="header-card">
+            <a href="/" class="flex items-center gap-2 text-lg font-bold tracking-tight">
+                <span class="text-2xl">☁️</span> <span class="text-slate-800 dark:text-white">O-Drive</span>
+            </a>
+            <div class="flex items-center gap-4">
+                <div class="relative group hidden md:block">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 text-xs text-slate-500">🔍</span>
+                    <input type="search" id="searchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')Actions.handleSearch()" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-primary w-40 focus:w-60 transition-all">
+                </div>
+                <div id="authButtons"></div>
+            </div>
+        </header>
 
-/* 1. 基础布局 */
-html, body { height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--background); color: var(--text-main); transition: background-color 0.3s ease; }
+        <!-- Toolbar -->
+        <div class="toolbar-card">
+            <div id="breadcrumb" class="flex items-center gap-1 text-sm font-semibold text-primary whitespace-nowrap overflow-hidden"></div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <!-- 批量工具：已调换顺序 -->
+                <div id="batchTools">
+                    <button class="btn" onclick="Actions.toggleSelectAll()" id="selectAllBtn">全选</button>
+                    <button class="btn" onclick="Actions.setClipboard('move')">移动</button>
+                    <button class="btn" onclick="Actions.setClipboard('copy')">复制</button>
+                    <button class="btn hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">更名</button>
+                    <button class="btn btn-danger" onclick="Actions.batchDelete()">删除</button>
+                </div>
+                <!-- 粘贴逻辑 -->
+                <div id="pasteGroup" class="hidden items-center gap-2">
+                    <button id="pasteBtn" class="btn btn-primary" onclick="Actions.executePaste()">粘贴</button>
+                    <button id="cancelPasteBtn" class="btn" onclick="Actions.clearClipboard()">取消</button>
+                </div>
+                
+                <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
+                <button class="btn admin-only" onclick="UI.showModal('mkdirModal')">新建</button>
+                <div class="hidden sm:flex items-center gap-2">
+                    <button id="sortBtn" class="btn" onclick="Actions.toggleSortMode()">名称</button>
+                    <button id="viewBtn" class="btn" onclick="Actions.toggleViewMode()">视图</button>
+                </div>
+                <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
+            </div>
+        </div>
 
-.container { 
-    max-width: 1000px; width: 100%; margin: 0 auto; 
-    padding: 15px 20px 0 20px; flex: 1; 
-    display: flex; flex-direction: column; min-height: 0; box-sizing: border-box; 
-}
+        <!-- Explorer Card -->
+        <div class="explorer-card">
+            <div id="fileList" class="custom-scroll"></div>
+        </div>
 
-/* 2. 模块卡片化 */
-.header-card, .toolbar-card, .explorer-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-    flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank" class="footer-brand">Delimo</a></div>
+            <div class="footer-powered">Powered by Cloudflare Pages</div>
+            <div class="footer-copyright">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
+        </footer>
+    </main>
 
-.header-card { height: 60px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-.toolbar-card { padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
-.explorer-card { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; margin-top: 12px; }
+    <!-- Modals -->
+    <div id="loginModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] hidden items-center justify-center p-4"><div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-sm relative shadow-2xl"><button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button><h1 class="text-xl font-bold mb-6 text-center text-slate-800 dark:text-white">管理员登录</h1><input type="text" id="adminUser" placeholder="用户名" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-slate-800 dark:text-white"><input type="password" id="adminPass" placeholder="密码" onkeypress="if(event.key==='Enter')Actions.doLogin()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-slate-800 dark:text-white"><button class="w-full h-11 bg-primary text-white rounded-lg font-bold" onclick="Actions.doLogin()">登录</button><p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p></div></div>
+    <div id="mkdirModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] hidden items-center justify-center p-4"><div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl"><h1 class="text-lg font-bold mb-4 text-center text-slate-800 dark:text-white">新建文件夹</h1><input type="text" id="folderNameInput" placeholder="名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-800 dark:text-white"><div class="flex gap-2"><button class="btn flex-1" onclick="UI.closeModal('mkdirModal')">取消</button><button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitMkdir()">创建</button></div></div></div>
+    <div id="previewModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] hidden flex-col p-4 md:p-10" onclick="UI.closePreview()"><div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full h-full max-w-6xl mx-auto flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()"><div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-white"><h3 id="previewTitle" class="font-bold truncate text-sm">预览</h3><div class="flex items-center gap-3"><button id="editBtn" class="btn hidden" onclick="Actions.toggleEditMode()">编辑</button><button id="saveBtn" class="btn btn-primary hidden" onclick="Actions.saveTextContent()">保存</button><button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100">&times;</button></div></div><div id="previewContent" class="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950 relative block text-left"></div></div></div>
+    <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden"><div class="bg-slate-50 dark:bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-500"><span>上传进度</span><button onclick="UI.closeUploadManager()" class="text-lg">&times;</button></div><div id="uploadList" class="max-h-80 overflow-y-auto"></div></div>
 
-#fileList { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0; position: relative; }
+    <script>
+        let currentPath = '/', userRole = 'guest', isSearching = false, isEditing = false, currentPreviewPath = '';
+        let viewMode = localStorage.getItem('viewMode') || 'list', sortBy = localStorage.getItem('sortBy') || 'name', fileData = { folders: [], files: [] }, selectedPaths = [], clipboard = null, activeUploads = 0;
+        const sortModes = ['name', 'time', 'size'], sortNames = { name: '名称', time: '时间', size: '大小' };
 
-/* 3. 按钮与工具栏 */
-#batchTools { 
-    display: none; 
-    align-items: center; 
-    gap: 8px; /* 核心修复：解决按钮贴在一起的问题 */
-    background: none !important; border: none !important; flex-shrink: 0;
-}
+        const Message = {
+            show(msg, type = 'info') {
+                const container = document.getElementById('toastContainer'); if(!container) return; const div = document.createElement('div');
+                div.className = `toast-anim px-5 py-2.5 rounded-xl text-sm font-bold shadow-2xl flex items-center gap-2 pointer-events-auto ${type === 'success' ? 'bg-emerald-500 text-white' : type === 'error' ? 'bg-red-500 text-white' : 'bg-primary text-white'} my-1`;
+                div.innerHTML = `<span>${type==='success'?'✅':'⚠️'}</span> ${msg}`; container.appendChild(div);
+                setTimeout(() => { div.style.opacity = '0'; div.style.transition = '0.3s'; setTimeout(() => div.remove(), 300); }, 3000);
+            },
+            success(msg) { this.show(msg, 'success'); }, error(msg) { this.show(msg, 'error'); }
+        };
 
-.btn, .tool-btn, #batchTools .btn { 
-    background: var(--surface) !important; border: 1px solid var(--border) !important; 
-    height: 32px !important; padding: 0 14px !important; font-size: 12px !important; font-weight: 600 !important; 
-    border-radius: 6px !important; color: var(--text-main) !important; display: inline-flex; align-items: center; justify-content: center; 
-    cursor: pointer; white-space: nowrap; transition: 0.15s; 
-}
-.btn:hover { background: var(--hover) !important; border-color: var(--text-muted) !important; }
-.btn-primary { background: var(--primary) !important; color: white !important; border: none !important; }
-.btn-danger { color: #dc2626 !important; background: #fef2f2 !important; border-color: #fecaca !important; }
-.btn-danger:hover { background: #dc2626 !important; color: white !important; }
+        const UI = {
+            showModal(id) { document.getElementById(id).classList.replace('hidden', 'flex'); },
+            closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden'); },
+            closePreview() { document.getElementById('previewContent').innerHTML = ''; this.closeModal('previewModal'); },
+            closeUploadManager() { document.getElementById('uploadManager').classList.add('hidden'); },
+            updateAuth() {
+                const box = document.getElementById('authButtons'); if(!box) return;
+                if (userRole === 'admin') {
+                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-flex');
+                    box.innerHTML = `<a href="/admin.html" class="btn">管理</a><button onclick="Actions.logout()" class="btn ml-2">退出</button>`;
+                } else {
+                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+                    box.innerHTML = `<button class="btn btn-primary font-bold text-white" onclick="UI.showModal('loginModal')">登录</button>`;
+                }
+            },
+            renderBreadcrumb() {
+                if(isSearching) return; const box = document.getElementById('breadcrumb'); if(!box) return;
+                const parts = currentPath.split('/').filter(p => p); let html = `<button class="hover:text-primary transition-colors" onclick="Actions.navigateTo('/')">🏠 根目录</button>`;
+                if (parts.length > 2) {
+                    html += `<span class="opacity-20 mx-1">/</span><span class="opacity-40">...</span>`;
+                    parts.slice(-2).forEach((p, i) => { const path = '/' + parts.slice(0, parts.length - 2 + i + 1).join('/') + '/'; html += `<span class="opacity-20 mx-1">/</span><button class="hover:text-primary" onclick="Actions.navigateTo('${path}')">${p}</button>`; });
+                } else { let acc = ''; parts.forEach(p => { acc += '/' + p; html += `<span class="opacity-20 mx-1">/</span><button class="hover:text-primary" onclick="Actions.navigateTo('${acc}/')">${p}</button>`; }); }
+                box.innerHTML = html;
+            },
+            updateFileList() {
+                const list = document.getElementById('fileList'); if(!list) return;
+                document.getElementById('viewBtn').textContent = viewMode === 'grid' ? '网格' : '列表';
+                document.getElementById('sortBtn').textContent = sortNames[sortBy] || '名称';
+                list.innerHTML = '';
+                if (viewMode === 'list') {
+                    const header = document.createElement('div'); header.className = "list-header grid-row-layout hidden md:grid";
+                    header.innerHTML = `<div>名称</div><div class="text-center">大小</div><div class="text-center">修改时间</div><div class="text-center">操作</div>`;
+                    list.appendChild(header);
+                }
+                const container = document.createElement('div');
+                container.className = viewMode === 'grid' ? "grid-layout" : "list-layout";
+                if (currentPath !== '/' && !isSearching) {
+                    const parent = Utils.getParentPath(currentPath); const div = document.createElement('div');
+                    if (viewMode === 'grid') { div.className = "grid-item"; div.innerHTML = `<div class="file-icon opacity-30 text-slate-500">📁</div><div class="file-name">..</div>`; }
+                    else { div.className = "grid-row-layout h-[52px] hover:bg-slate-100 dark:hover:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800/50 cursor-pointer text-slate-400"; div.innerHTML = `<div class="col-name"><span class="opacity-50 text-xl">📁</span><span class="text-sm font-medium">返回上级 (..)</span></div><div></div><div></div><div></div>`; }
+                    div.ondblclick = () => Actions.navigateTo(parent); container.appendChild(div);
+                }
+                const folders = [...(fileData.folders || [])].filter(f => f.name && f.name.trim() !== '').sort((a,b) => a.name.localeCompare(b.name));
+                const files = [...(fileData.files || [])].filter(f => f.name && f.name.trim() !== '').sort((a,b) => sortBy==='time'?(b.time-a.time):sortBy==='size'?(b.rawSize-a.rawSize):a.name.localeCompare(b.name));
+                [...folders, ...files].forEach(item => {
+                    const isFolder = !item.sizeFormatted; const el = document.createElement('div'); const isSelected = selectedPaths.includes(item.fullKey);
+                    el.dataset.key = item.fullKey;
+                    if (viewMode === 'grid') {
+                        el.className = `grid-item ${isSelected?'selected':''}`;
+                        el.innerHTML = `<div class="file-icon select-none">${isFolder?'📁':Utils.getFileIcon(item.name)}</div><div class="file-name">${item.name}</div><div class="text-[10px] text-slate-500">${isFolder?'文件夹':item.sizeFormatted}</div><div class="flex gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">${!isFolder?`<button class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-[10px] hover:bg-primary hover:text-white transition-all" onclick="event.stopPropagation();Actions.openPreview('${item.path}','${item.name}')">预览</button>`:''}${!isFolder?`<button class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-[10px] hover:bg-primary hover:text-white transition-all" onclick="event.stopPropagation();Actions.downloadFile('${item.path}')">下载</button>`:''}</div>`;
+                    } else {
+                        el.className = `grid-row-layout file-item-row ${isSelected?'selected':''}`;
+                        el.innerHTML = `<div class="col-name"><span class="text-xl flex-shrink-0 select-none">${isFolder?'📁':Utils.getFileIcon(item.name)}</span><span class="text-sm truncate file-name">${item.name}</span></div><div class="col-size hidden md:block">${isFolder?'文件夹':item.sizeFormatted}</div><div class="col-time hidden md:block font-mono text-slate-500">${Utils.formatDate(item.time)}</div><div class="col-acts">${!isFolder?`<button class="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded text-[11px] font-bold hover:bg-primary hover:text-white transition-all" onclick="event.stopPropagation();Actions.openPreview('${item.path}','${item.name}')">预览</button>`:''}${!isFolder?`<button class="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded text-[11px] font-bold hover:bg-primary hover:text-white transition-all" onclick="event.stopPropagation();Actions.downloadFile('${item.path}')">下载</button>`:''}</div>`;
+                        if (userRole === 'admin') { const nameEl = el.querySelector('.file-name'); nameEl.ondblclick = (e) => { e.stopPropagation(); Actions.startInlineRename(item, nameEl); }; }
+                    }
+                    el.onclick = (e) => { if (userRole === 'admin') Actions.toggleSelect(item.fullKey, el, e); };
+                    el.ondblclick = () => { if(isFolder) Actions.navigateTo(item.path); else if(Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name); };
+                    container.appendChild(el);
+                });
+                list.appendChild(container);
+            },
+            updateBatchUI() {
+                const bt = document.getElementById('batchTools'); const pg = document.getElementById('pasteGroup'); const ren = document.getElementById('singleRenameBtn'); if(!bt || !pg) return;
+                const hasSelection = (userRole === 'admin' && selectedPaths.length > 0); bt.style.display = hasSelection ? 'flex' : 'none';
+                const hasClipboard = (userRole === 'admin' && clipboard); pg.classList.toggle('hidden', !hasClipboard); pg.classList.toggle('flex', hasClipboard);
+                if (ren) ren.classList.toggle('hidden', selectedPaths.length !== 1);
+                const pb = document.getElementById('pasteBtn'); if (clipboard && pb) pb.textContent = `${clipboard.action==='move'?'移动':'复制'} (${clipboard.paths.length})`;
+            }
+        };
 
-/* 4. 列表 Grid 布局 */
-.grid-row-layout { display: grid !important; grid-template-columns: 1fr 100px 180px 160px; align-items: center; padding: 0 20px; box-sizing: border-box; width: 100%; }
-.list-header { position: sticky; top: 0; z-index: 50; background: var(--surface) !important; height: 50px; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid var(--border); }
-.file-item-row { background: transparent; border-bottom: 1px solid var(--border); height: 52px; cursor: pointer; transition: 0.1s; }
-.file-item-row:hover { background: var(--hover) !important; }
-.file-item-row.selected { background: rgba(37, 99, 235, 0.08) !important; border-left: 3px solid var(--primary); }
+        const Actions = {
+            async init() { 
+                const res = await fetch('/api/auth/role'); userRole = (res.status === 200) ? (await res.json()).role : 'guest';
+                UI.updateAuth(); this.loadFiles();
+                const startYear = 2026; const currentYear = new Date().getFullYear();
+                const yearDisp = document.getElementById('year-display'); if(yearDisp) yearDisp.textContent = currentYear > startYear ? `${startYear} - ${currentYear}` : startYear;
+            },
+            async loadFiles() { if (isSearching) return; selectedPaths = []; UI.updateBatchUI(); const res = await fetch(currentPath === '/' ? '/api/files' : `/api/files${currentPath.replace(/\/$/, '')}`); if (!res.ok) return; fileData = await res.json(); UI.updateFileList(); UI.renderBreadcrumb(); },
+            async doLogin() { const res = await fetch('/api/login', { method:'POST', body: JSON.stringify({username:document.getElementById('adminUser').value, password:document.getElementById('adminPass').value}) }); if((await res.json()).success) window.location.reload(); else document.getElementById('loginError').textContent = '验证失败'; },
+            async logout() { await fetch('/api/logout'); window.location.reload(); },
+            navigateTo(p) { currentPath = p.endsWith('/') ? p : p + '/'; isSearching = false; this.loadFiles(); },
+            toggleSelect(key, el, e) { e.stopPropagation(); if (selectedPaths.includes(key)) selectedPaths = selectedPaths.filter(p => p !== key); else selectedPaths.push(key); UI.updateBatchUI(); UI.updateFileList(); },
+            toggleSelectAll() { const allKeys = [...fileData.folders, ...fileData.files].filter(i=>i.name!==''&&i.name!=='.folder').map(i => i.fullKey); selectedPaths = (selectedPaths.length === allKeys.length) ? [] : allKeys; UI.updateFileList(); UI.updateBatchUI(); },
+            setClipboard(action) { if (selectedPaths.length === 0) return; clipboard = { action, paths: [...selectedPaths] }; selectedPaths = []; UI.updateBatchUI(); UI.updateFileList(); Message.success(`已加入${action==='move'?'移动':'复制'}列表`); },
+            clearClipboard() { clipboard = null; UI.updateBatchUI(); this.loadFiles(); Message.show('操作已取消'); },
+            async executePaste() { Message.show('处理中...'); const res = await fetch('/api/paste', { method: 'POST', body: JSON.stringify({ ...clipboard, targetDir: currentPath }) }); if(res.ok) { Message.success('成功'); clipboard = null; this.loadFiles(); } else { Message.error('失败'); } },
+            async batchDelete() { if (confirm(`确认删除选中的 ${selectedPaths.length} 项吗？`)) { const res = await fetch('/api/batch-delete', { method: 'POST', body: JSON.stringify({ paths: selectedPaths }) }); if(res.ok) { Message.success('已删除'); this.loadFiles(); } } },
+            async handleSearch() { const q = document.getElementById('searchInput').value.trim(); if (!q) return this.clearSearch(); isSearching = true; const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(currentPath)}`); fileData = { folders: [], files: (await res.json()).files || [] }; UI.updateFileList(); document.getElementById('breadcrumb').innerHTML = `<span class="text-primary font-bold">🔍 搜索结果: "${q}"</span>`; },
+            clearSearch() { isSearching = false; document.getElementById('searchInput').value = ''; this.loadFiles(); },
+            startRenameSelected() {
+                const key = selectedPaths[0]; const item = [...fileData.folders, ...fileData.files].find(i => i.fullKey === key);
+                const nameEl = Array.from(document.querySelectorAll('.file-name')).find(el => el.closest('[data-key]')?.dataset?.key === key);
+                if (item && nameEl) this.startInlineRename(item, nameEl);
+            },
+            async startInlineRename(item, el) {
+                const oldName = item.name; const input = document.createElement('input'); input.className = "rename-input relative z-50 text-inherit"; input.value = oldName;
+                ['mousedown', 'mouseup', 'click', 'dblclick'].forEach(evt => { input.addEventListener(evt, e => e.stopPropagation()); });
+                el.replaceWith(input); input.focus();
+                const save = async () => { const newName = input.value.trim(); if (newName && newName !== oldName) { const res = await fetch(`/api/files/${encodeURIComponent(item.fullKey)}`, { method: 'PUT', body: JSON.stringify({ newName }) }); if(res.ok) { Message.success('已完成'); this.loadFiles(); } else { this.loadFiles(); } } else { this.loadFiles(); } };
+                input.onblur = save; input.onkeypress = (ev) => { if(ev.key==='Enter') input.blur(); };
+            },
+            async submitMkdir() { const n = document.getElementById('folderNameInput').value.trim(); if(!n) return; await fetch(`/api/mkdir${currentPath.replace(/\/$/,'')}`, { method:'POST', body: JSON.stringify({folderName:n}) }); document.getElementById('folderNameInput').value = ''; UI.closeModal('mkdirModal'); this.loadFiles(); Message.success('已创建'); },
+            async openPreview(path, name) {
+                currentPreviewPath = path; isEditing = false; const content = document.getElementById('previewContent'), title = document.getElementById('previewTitle'), editBtn = document.getElementById('editBtn'), saveBtn = document.getElementById('saveBtn');
+                editBtn.classList.add('hidden'); saveBtn.classList.add('hidden'); title.textContent = "解析中..."; UI.showModal('previewModal');
+                try {
+                    const res = await fetch(`/api/preview${path}`); const ext = name.split('.').pop().toLowerCase();
+                    if (['jpg','jpeg','png','gif','webp'].includes(ext)) content.innerHTML = `<div class="flex items-center justify-center min-h-full p-4"><img src="/api/preview${path}" class="max-w-full max-h-full rounded-lg shadow-2xl border border-slate-200 dark:border-slate-800"></div>`;
+                    else if (['mp4','webm'].includes(ext)) content.innerHTML = `<video src="/api/preview${path}" class="w-full h-full" controls autoplay></video>`;
+                    else if (['mp3','wav'].includes(ext)) content.innerHTML = `<div class="flex items-center justify-center h-full p-20 text-white"><audio src="/api/preview${path}" controls autoplay class="w-full max-w-xl"></audio></div>`;
+                    else if (ext === 'pdf') content.innerHTML = `<iframe src="/api/preview${path}" class="w-full h-full border-none"></iframe>`;
+                    else { const text = await res.text(); if (userRole === 'admin') editBtn.classList.remove('hidden'); if (ext === 'md') content.innerHTML = `<div class="markdown-body p-8 md:p-12 text-left">${marked.parse(text)}</div>`; else content.innerHTML = `<pre id="textContent" class="p-8 md:p-12 font-mono text-sm leading-relaxed whitespace-pre-wrap text-left text-inherit">${text}</pre>`; }
+                    title.textContent = name;
+                } catch (e) { content.innerHTML = `<div class="p-12 text-red-500 text-center">无法预览内容</div>`; }
+            },
+            toggleEditMode() { 
+                const pre = document.getElementById('textContent') || document.querySelector('.markdown-body');
+                const textarea = document.createElement('textarea'); textarea.className = "w-full h-full bg-white dark:bg-slate-950 text-inherit p-8 font-mono text-sm outline-none resize-none"; textarea.id = 'editArea'; textarea.value = pre.innerText || pre.textContent;
+                document.getElementById('previewContent').innerHTML = ''; document.getElementById('previewContent').appendChild(textarea);
+                document.getElementById('editBtn').classList.add('hidden'); document.getElementById('saveBtn').classList.remove('hidden');
+            },
+            async saveTextContent() {
+                const res = await fetch(`/api/save-text/${currentPreviewPath.replace(/^\//, '')}`, { method: 'POST', body: JSON.stringify({ content: document.getElementById('editArea').value }) });
+                if (res.ok) { Message.success('已保存'); UI.closePreview(); this.loadFiles(); }
+            },
+            toggleViewMode() { viewMode = viewMode==='grid'?'list':'grid'; localStorage.setItem('viewMode', viewMode); UI.updateFileList(); },
+            toggleSortMode() { let idx = sortModes.indexOf(sortBy); sortBy = sortModes[(idx + 1) % sortModes.length]; localStorage.setItem('sortBy', sortBy); UI.updateFileList(); },
+            downloadFile(p) { window.open(`/api/download${p}`); },
+            async uploadFiles(files) {
+                if(userRole!=='admin') return; const manager = document.getElementById('uploadManager'); const list = document.getElementById('uploadList');
+                manager.classList.replace('hidden', 'flex');
+                for (let f of files) {
+                    activeUploads++; const item = document.createElement('div');
+                    item.className = 'p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20';
+                    item.innerHTML = `<div class="flex justify-between text-[11px] mb-2 truncate font-medium"><span class="truncate pr-4 text-inherit">${f.name}</span><span class="pct text-primary font-mono">0%</span></div>
+                        <div class="h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div class="progress-fill h-full bg-primary w-0 transition-all duration-300"></div></div>`;
+                    list.prepend(item);
+                    const xhr = new XMLHttpRequest(); xhr.open('POST', '/api/files/' + currentPath.replace(/^\/|\/$/g, ''), true);
+                    xhr.upload.onprogress = (e) => { if (e.lengthComputable) { const pct = Math.round((e.loaded / e.total) * 100); item.querySelector('.progress-fill').style.width = pct + '%'; item.querySelector('.pct').textContent = pct + '%'; } };
+                    xhr.onload = () => { if (xhr.status === 200) { item.querySelector('.pct').textContent = '完成'; item.querySelector('.progress-fill').className="h-full bg-emerald-500 w-full"; this.loadFiles(); } else { item.querySelector('.pct').textContent = '失败'; } activeUploads--; if(activeUploads===0) setTimeout(()=>manager.classList.replace('flex', 'hidden'), 3000); };
+                    const fd = new FormData(); fd.append('file', f); xhr.send(fd);
+                }
+            }
+        };
 
-.col-name { display: flex; align-items: center; gap: 12px; overflow: hidden; font-weight: 500; }
-.col-size, .col-time { text-align: center; font-size: 12px; color: var(--text-muted); }
-.col-acts { display: flex; gap: 8px; justify-content: center; }
-
-/* 5. 网格布局 */
-.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important; gap: 15px !important; padding: 20px; box-sizing: border-box; }
-.grid-item { width: 100% !important; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 180px; justify-content: space-between; align-items: center; box-sizing: border-box; overflow: hidden; transition: all 0.2s; }
-.grid-item:hover { border-color: var(--primary); background: var(--hover); transform: translateY(-2px); }
-.grid-item.selected { border-color: var(--primary); background: rgba(37, 99, 235, 0.05); }
-.grid-item .file-name { font-size: 13px; font-weight: 600; color: var(--text-main); width: 100%; line-height: 1.4; max-height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; }
-
-/* 搜索框 */
-.search-bar { position: relative; width: 160px; flex-shrink: 0; }
-.search-bar input { width: 100%; background: var(--hover); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px 6px 32px; color: var(--text-main); outline: none; font-size: 13px; }
-.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; pointer-events: none; }
-
-/* 6. 页脚与其它 */
-.footer { padding: 30px 0 40px; text-align: center; flex-shrink: 0; }
-.footer-info { color: var(--text-muted); font-size: 12px; margin-bottom: 4px; }
-.footer-brand { color: var(--text-main); font-weight: 500; text-decoration: none; }
-.footer-powered, .footer-copyright { color: var(--text-muted); font-size: 11px; opacity: 0.8; }
-.preview-modal { background: var(--surface); border: 1px solid var(--border); padding: 24px; border-radius: 16px; width: 95%; max-width: 1000px; height: 85vh; display: flex; flex-direction: column; }
-.preview-body { flex: 1; overflow: auto; background: var(--background); border-radius: 8px; display: block !important; position: relative; }
-.rename-input { background: var(--surface); border: 1px solid var(--primary); color: var(--text-main); width: 90%; padding: 4px 8px; border-radius: 4px; outline: none; }
+        const Utils = {
+            getParentPath(p) { const pts = p.split('/').filter(x=>x); pts.pop(); return '/' + pts.join('/') + (pts.length? '/':''); },
+            formatDate(ts) { return ts ? new Date(ts).toLocaleString('zh-CN', { hour12: false }) : '-'; },
+            getFileIcon(n) { const ext = n.split('.').pop().toLowerCase(); const map = { jpg:'🖼️', jpeg:'🖼️', png:'🖼️', webp:'🖼️', gif:'🖼️', mp4:'🎬', webm:'🎬', mp3:'🎵', wav:'🎵', pdf:'📕', zip:'📦', rar:'📦', '7z':'📦' }; return map[ext] || '📄'; },
+            isPreviewable(n) { return ['jpg','jpeg','png','gif','webp','mp4','webm','mp3','wav','txt','pdf','md','js','css','html','json','py','sh','sql','php','yml','yaml'].includes(n.split('.').pop().toLowerCase()); }
+        };
+        Actions.init();
+    </script>
+</body>
+</html>
