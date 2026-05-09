@@ -1,119 +1,93 @@
-/* --- explorer.css 完美对齐 & 视觉加固版 --- */
+/* --- explorer.css 最终 Windows 对齐版 --- */
 
-/* 1. 顶层布局：锁定全屏 */
-html, body { height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--background); }
-.container { max-width: 1200px; width: 100%; margin: 0 auto; padding: 15px 20px 0 20px; flex: 1; display: flex; flex-direction: column; min-height: 0; box-sizing: border-box; }
+/* 1. 基础容器锁定 */
+.container { 
+    max-width: 1200px; width: 100%; margin: 0 auto; 
+    padding: 15px 20px 0 20px; flex: 1; 
+    display: flex; flex-direction: column; min-height: 0; box-sizing: border-box;
+}
 
 /* 2. 工具栏 */
-.toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 0 15px; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 12px; height: 56px; flex-shrink: 0; gap: 15px; }
-.tools-left { flex: 1; display: flex; align-items: center; gap: 12px; overflow: hidden; }
-.tools-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-#batchTools { display: none; gap: 8px; background: none !important; border: none !important; align-items: center; flex-shrink: 0; }
-
-/* 按钮统一样式 */
-.btn, .tool-btn, #batchTools .btn { 
-    background: var(--surface-light) !important; border: 1px solid var(--border-color) !important; 
-    height: 34px !important; padding: 0 16px !important; font-size: 12px !important; font-weight: 600 !important; 
-    border-radius: 6px !important; color: #fff !important; display: inline-flex; align-items: center; justify-content: center; 
-    cursor: pointer; white-space: nowrap; transition: 0.15s; 
+.toolbar { 
+    display: flex; justify-content: space-between; align-items: center; 
+    background: #0f172a; padding: 0 15px; border-radius: 12px; 
+    border: 1px solid #1e293b; margin-bottom: 12px; height: 56px; 
+    flex-shrink: 0; gap: 15px; shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
 }
-.btn:hover { background: var(--surface-hover) !important; border-color: var(--primary) !important; }
-.btn-primary { background: var(--primary) !important; border: none !important; }
-.btn-danger { background: rgba(245,108,108,0.1) !important; color: var(--error) !important; border: 1px solid rgba(245,108,108,0.2) !important; }
 
-/* 搜索框 */
-.search-bar { position: relative; width: 160px; flex-shrink: 0; }
-.search-bar input { width: 100%; background: var(--background); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px 6px 32px; color: #fff; outline: none; font-size: 13px; }
-.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
-
-/* 3. 文件卡片框：实现 Windows 级遮挡的效果 */
+/* 3. 文件展示大框 (消失的框在这里) */
 .explorer-card { 
-    background: #161e2e; 
-    border: 1px solid var(--border-color); 
-    border-radius: var(--radius); 
+    background: #0f172a; /* 显式的深色背景 */
+    border: 1px solid #1e293b; /* 显式的边框 */
+    border-radius: 12px; 
     flex: 1; 
     display: flex; 
     flex-direction: column; 
-    overflow: hidden; /* 裁剪滚动条溢出 */
+    overflow: hidden; 
     min-height: 0;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
-/* 内部滚动容器 */
+/* 内部滚动区域 */
 #fileList { 
     flex: 1; 
     overflow-y: auto; 
     overflow-x: hidden; 
-    padding: 0; /* 移除 padding，由内部元素控制 */
+    padding: 0; /* 移除内边距，让表头贴顶 */
     position: relative; 
 }
 
-/* 4. 列表模式 - 核心对齐逻辑 */
-.list-layout { display: flex; flex-direction: column; width: 100%; }
-
-/* 定义严格的列宽模板：名称(自适应) 大小(100px) 时间(180px) 操作(160px) */
-.list-header, .list-layout .file-item {
+/* 4. 列表 Grid 定义：名称(自适应) 大小(100px) 时间(180px) 操作(160px) */
+.grid-row-layout {
     display: grid !important;
-    grid-template-columns: 1fr 100px 180px 160px; 
+    grid-template-columns: 1fr 100px 180px 160px;
     align-items: center;
     padding: 0 20px;
     box-sizing: border-box;
 }
 
-/* 列表表头：Windows 风格置顶 */
+/* 粘性表头：Windows 级遮挡效果 */
 .list-header { 
-    position: sticky; 
-    top: 0; 
-    z-index: 50; 
-    background: #161e2e !important; /* 确保不透明 */
-    height: 52px; 
-    color: var(--text-muted); 
+    position: sticky; top: 0; z-index: 50; 
+    background: #151d2f !important; /* 稍微亮一点的深蓝，确保不透明 */
+    height: 50px; 
+    color: #64748b; 
     font-size: 11px; 
     font-weight: 700; 
     text-transform: uppercase; 
     letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--border-color); 
+    border-bottom: 1px solid #1e293b;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-/* 文件行样式 */
-.list-layout .file-item { 
+/* 内容行 */
+.file-item-row { 
     background: transparent; 
-    border-bottom: 1px solid rgba(255,255,255,0.02); 
+    border-bottom: 1px solid rgba(30, 41, 59, 0.5); 
     height: 52px; 
     cursor: pointer; 
     transition: background 0.1s;
 }
-.list-layout .file-item:hover { background: rgba(255,255,255,0.04); }
-.list-layout .file-item.selected { 
-    background: rgba(64, 158, 255, 0.15) !important; 
-}
+.file-item-row:hover { background: rgba(255,255,255,0.03); }
+.file-item-row.selected { background: rgba(59, 130, 246, 0.15) !important; }
 
+/* 列内部对齐 */
 .col-name { display: flex; align-items: center; gap: 12px; overflow: hidden; }
-.col-size, .col-time { text-align: center; font-size: 12px; color: var(--text-muted); }
-.col-acts { display: flex; gap: 8px; justify-content: flex-end; }
+.col-size, .col-time { text-align: center; font-size: 12px; color: #64748b; }
+.col-acts { display: flex; gap: 10px; justify-content: flex-end; }
 
-/* 5. 网格视图：解决溢出 */
-.grid-layout { 
-    display: grid !important; 
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; 
-    gap: 15px !important; 
-    padding: 20px; 
-    width: 100%; 
-    box-sizing: border-box;
-}
-.grid-layout .file-item { 
-    background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; 
-    padding: 15px; text-align: center; cursor: pointer; display: flex !important; 
-    flex-direction: column !important; height: 210px; justify-content: space-between; align-items: center; 
-    box-sizing: border-box; overflow: hidden; 
-}
+/* 5. 网格布局 */
+.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 15px !important; padding: 20px; box-sizing: border-box; }
+.grid-item { background: rgba(255,255,255,0.03); border: 1px solid #1e293b; border-radius: 8px; padding: 20px 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 210px; justify-content: space-between; align-items: center; box-sizing: border-box; overflow: hidden; }
+.grid-item.selected { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); }
 
-/* 6. 页脚与其它 */
-.footer { padding: 15px 0 25px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
-.footer-info { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 4px; }
-.footer-brand { color: #fff; font-weight: 500; text-decoration: none; }
-.footer-copyright { color: rgba(255,255,255,0.4); font-size: 12px; }
+/* 6. 通用组件 */
+.btn { background: #1e293b; border: 1px solid #334155; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; display: inline-flex; align-items: center; }
+.btn:hover { background: #334155; border-color: #3b82f6; }
+.btn-primary { background: #3b82f6 !important; border: none; }
+.btn-danger { color: #f87171; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); }
 
-.preview-modal { background: var(--surface); border: 1px solid var(--border-color); padding: 24px; border-radius: 16px; width: 95%; max-width: 1200px; height: 85vh; display: flex; flex-direction: column; }
-.preview-body { flex: 1; overflow: auto; background: var(--background); border-radius: 8px; display: block !important; position: relative; }
-#textContent, .markdown-body { width: 100%; padding: 30px; box-sizing: border-box; color: var(--text); font-size: 14px; line-height: 1.6; white-space: pre-wrap; text-align: left !important; }
-.rename-input { background: var(--background); border: 1px solid var(--primary); color: #fff; width: 90%; padding: 4px 8px; border-radius: 4px; }
+.footer { padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
+.footer-info { color: #94a3b8; font-size: 14px; margin-bottom: 4px; }
+.footer-brand { color: #fff; text-decoration: none; font-weight: 500; }
+.footer-brand:hover { color: #3b82f6; }
