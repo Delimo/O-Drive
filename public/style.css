@@ -1,4 +1,7 @@
-/* --- style.css 最终精简版 --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
     --primary: #3b82f6;
     --background: #020617;
@@ -12,13 +15,13 @@ html, body {
     font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-/* 现代滚动条 */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-/* Markdown 预览 */
+.custom-scroll { scrollbar-gutter: stable; }
+
 .markdown-body { color: #cbd5e1; line-height: 1.6; font-size: 15px; }
 .markdown-body h1 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; margin: 1em 0; color: #fff; }
 
