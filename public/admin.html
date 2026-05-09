@@ -14,8 +14,8 @@
 </head>
 <body class="flex flex-col h-screen overflow-hidden bg-background text-slate-200">
     <main class="container">
-        <!-- Header -->
-        <header class="bg-surface border border-border rounded-xl px-5 h-16 flex items-center justify-between flex-shrink-0 shadow-xl mt-4">
+        <!-- Header (与主页高度统一) -->
+        <header class="bg-surface border border-border rounded-xl px-5 h-16 flex items-center justify-between flex-shrink-0 shadow-xl">
             <div class="flex items-center gap-3">
                 <span class="text-2xl text-primary font-bold">⚙️</span>
                 <h1 class="font-bold text-white tracking-tight text-lg">管理控制台</h1>
@@ -24,14 +24,14 @@
         </header>
 
         <!-- Tabs -->
-        <div class="flex gap-2 p-2 bg-surface border border-border rounded-xl w-fit shadow-md mt-4 text-white">
+        <div class="flex gap-2 p-2 bg-surface border border-border rounded-xl w-fit shadow-md mt-3">
             <button id="btn-logs" onclick="switchTab('logs')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all bg-primary text-white shadow-lg">操作日志</button>
             <button id="btn-privacy" onclick="switchTab('privacy')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 hover:text-white">隐私管理</button>
         </div>
 
         <!-- Content Card -->
-        <div class="explorer-card mt-4 mb-4">
-            <!-- 日志 -->
+        <div class="explorer-card mt-3">
+            <!-- 日志选项卡 -->
             <div id="logs-tab" class="flex-1 flex flex-col overflow-hidden">
                 <div id="fileList" class="overflow-y-auto flex-1 custom-scroll">
                     <table class="w-full text-left border-collapse">
@@ -40,7 +40,7 @@
                                 <th class="px-6 py-4 w-44">时间</th>
                                 <th class="px-6 py-4 w-28">动作</th>
                                 <th class="px-6 py-4">详情</th>
-                                <th class="px-6 py-4 w-40">IP</th> <!-- 修复：移除 text-right -->
+                                <th class="px-6 py-4 w-40">IP</th>
                             </tr>
                         </thead>
                         <tbody id="logTbody" class="text-xs divide-y divide-border/30"></tbody>
@@ -49,7 +49,7 @@
                 <!-- 分页 -->
                 <div class="p-4 border-t border-border flex items-center justify-between bg-slate-900/30 text-xs">
                     <div class="text-slate-500">共 <span id="totalPages" class="text-slate-300 font-bold">0</span> 页</div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 text-white">
                         <button onclick="changePage(-1)" class="btn">上一页</button>
                         <span class="px-4 py-2 font-bold text-primary font-mono bg-background rounded-lg border border-border">第 <span id="currentPage">1</span> 页</span>
                         <button onclick="changePage(1)" class="btn">下一页</button>
@@ -58,7 +58,7 @@
             </div>
 
             <!-- 隐私管理 -->
-            <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden">
+            <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-white">
                 <div class="flex flex-col sm:flex-row gap-3 mb-8 bg-slate-900/50 p-4 rounded-xl border border-border shadow-inner">
                     <input type="text" id="hideInput" placeholder="输入屏蔽路径 (如: docs/private)" class="flex-1 bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-white transition-all">
                     <button class="btn btn-primary h-11 px-8" onclick="addHidden()">添加屏蔽</button>
@@ -66,7 +66,7 @@
                 <div class="overflow-y-auto flex-1 custom-scroll">
                     <table class="w-full text-left">
                         <thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr><th class="px-4 py-3 text-white">已屏蔽路径</th><th class="px-4 py-3 text-right text-white">操作</th></tr>
+                            <tr><th class="px-4 py-3">已屏蔽路径</th><th class="px-4 py-3 text-right">操作</th></tr>
                         </thead>
                         <tbody id="hiddenTbody" class="text-sm divide-y divide-border/30 text-slate-300"></tbody>
                     </table>
@@ -100,15 +100,9 @@
             document.getElementById('logTbody').innerHTML = data.logs.map(l => {
                 const time = new Date(l.timestamp).toLocaleString('zh-CN', { hour12: false });
                 const color = l.action==='DELETE'?'text-red-400':l.action==='UPLOAD'?'text-emerald-400':'text-primary';
-                return `<tr class="hover:bg-slate-800/30 transition-colors">
-                    <td class="px-6 py-4 text-slate-500 font-mono">${time}</td>
-                    <td class="px-6 py-4 font-bold ${color}">${l.action}</td>
-                    <td class="px-6 py-4 text-slate-300 font-mono break-all">${l.details}</td>
-                    <td class="px-6 py-4 text-slate-500 font-mono">${l.ip}</td> <!-- 修复：移除 text-right -->
-                </tr>`;
+                return `<tr class="hover:bg-slate-800/30 transition-colors"><td class="px-6 py-4 text-slate-500 font-mono">${time}</td><td class="px-6 py-4 font-bold ${color}">${l.action}</td><td class="px-6 py-4 text-slate-300 font-mono break-all">${l.details}</td><td class="px-6 py-4 text-slate-500 font-mono">${l.ip}</td></tr>`;
             }).join('');
         }
-
         function changePage(dir) { const next = currentPage + dir; if (next >= 1 && next <= totalPages) { currentPage = next; loadLogs(); } }
         async function loadHidden() { const res = await fetch('/api/admin/settings/hidden'); const data = await res.json(); document.getElementById('hiddenTbody').innerHTML = data.list.map(i => `<tr class="hover:bg-slate-800/30 transition-colors"><td class="px-4 py-4 font-mono text-primary">${i.path}</td><td class="px-4 py-4 text-right"><button class="px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/20 rounded hover:bg-red-500 hover:text-white text-xs transition-all font-bold" onclick="removeHidden('${i.path}')">取消屏蔽</button></td></tr>`).join(''); }
         async function addHidden() { const path = document.getElementById('hideInput').value.trim(); if(!path) return; await fetch('/api/admin/settings/hidden', { method: 'POST', body: JSON.stringify({ targetPath: path }) }); document.getElementById('hideInput').value = ''; loadHidden(); }
