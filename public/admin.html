@@ -20,7 +20,7 @@
                 <span class="text-2xl text-primary font-bold">⚙️</span>
                 <h1 class="font-bold text-white tracking-tight text-lg">管理控制台</h1>
             </div>
-            <a href="/" class="btn">返回云盘</a>
+            <a href="/" class="btn text-white">返回云盘</a>
         </header>
 
         <!-- Tabs -->
@@ -31,9 +31,10 @@
 
         <!-- Content Card -->
         <div class="explorer-card mt-4 mb-4">
+            <!-- 日志 -->
             <div id="logs-tab" class="flex-1 flex flex-col overflow-hidden">
                 <div id="fileList" class="overflow-y-auto flex-1 custom-scroll">
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-left border-collapse text-white">
                         <thead class="sticky top-0 bg-[#151d2f] text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border z-10">
                             <tr><th class="px-6 py-4 w-44">时间</th><th class="px-6 py-4 w-28">动作</th><th class="px-6 py-4">详情</th><th class="px-6 py-4 w-40">IP</th></tr>
                         </thead>
@@ -50,13 +51,14 @@
                 </div>
             </div>
 
+            <!-- 隐私 -->
             <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-white">
                 <div class="flex flex-col sm:flex-row gap-3 mb-8 bg-slate-900/50 p-4 rounded-xl border border-border shadow-inner">
                     <input type="text" id="hideInput" placeholder="输入屏蔽路径..." class="flex-1 bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-white transition-all">
-                    <button class="btn btn-primary h-11 px-8" onclick="addHidden()">添加</button>
+                    <button class="btn btn-primary h-11 px-8 text-white" onclick="addHidden()">添加</button>
                 </div>
                 <div class="overflow-y-auto flex-1 custom-scroll">
-                    <table class="w-full text-left"><thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border"><tr><th class="px-4 py-3">已屏蔽路径</th><th class="px-4 py-3 text-right">操作</th></tr></thead><tbody id="hiddenTbody" class="text-sm divide-y divide-border/30 text-slate-300"></tbody></table>
+                    <table class="w-full text-left text-white"><thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border"><tr><th class="px-4 py-3">已屏蔽路径</th><th class="px-4 py-3 text-right">操作</th></tr></thead><tbody id="hiddenTbody" class="text-sm divide-y divide-border/30 text-slate-300"></tbody></table>
                 </div>
             </div>
         </div>
