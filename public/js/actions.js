@@ -3,6 +3,15 @@ import { api } from './api.js';
 import { UI, Message } from './ui.js';
 import { sanitizeHtml, escapeHtml } from './utils.js';
 
+const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+const videoExts = ['mp4', 'webm'];
+const audioExts = ['mp3', 'wav', 'ogg', 'flac'];
+const textExts = ['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'];
+
+function previewUrl(path) {
+  return `/api/preview/${path.replace(/^\//, '').split('/').map(encodeURIComponent).join('/')}`;
+}
+
 export const Actions = {
   async init() {
     const { res, data } = await api.getRole();
@@ -170,36 +179,42 @@ export const Actions = {
     const title = document.getElementById('previewTitle');
     const editBtn = document.getElementById('editBtn');
     const saveBtn = document.getElementById('saveBtn');
+    const url = previewUrl(path);
+    const ext = name.split('.').pop().toLowerCase();
+
     editBtn.classList.add('hidden');
     saveBtn.classList.add('hidden');
     title.textContent = '加载中...';
+    content.innerHTML = '<div class="p-12 text-slate-400 text-center">正在加载预览...</div>';
     UI.showModal('previewModal');
 
     try {
-      const res = await api.preview(path);
-      const ext = name.split('.').pop().toLowerCase();
-      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-        content.innerHTML = `<img src="${escapeHtml(`/api/preview${path}`)}" class="media-content" id="previewImg">`;
+      if (imageExts.includes(ext)) {
+        content.innerHTML = `<img src="${escapeHtml(url)}" class="media-content" id="previewImg">`;
         const img = document.getElementById('previewImg');
         img.ondblclick = () => {
           if (!document.fullscreenElement) img.requestFullscreen();
           else document.exitFullscreen();
         };
-      } else if (['mp4', 'webm'].includes(ext)) {
-        content.innerHTML = `<video src="${escapeHtml(`/api/preview${path}`)}" class="media-content" controls autoplay></video>`;
-      } else if (['mp3', 'wav'].includes(ext)) {
-        content.innerHTML = `<div class="flex items-center justify-center h-full p-20 text-white"><audio src="${escapeHtml(`/api/preview${path}`)}" controls autoplay class="w-full max-w-xl"></audio></div>`;
+      } else if (videoExts.includes(ext)) {
+        content.innerHTML = `<video src="${escapeHtml(url)}" class="media-content" controls autoplay></video>`;
+      } else if (audioExts.includes(ext)) {
+        content.innerHTML = `<div class="flex items-center justify-center h-full p-20 text-white"><audio src="${escapeHtml(url)}" controls autoplay class="w-full max-w-xl"></audio></div>`;
       } else if (ext === 'pdf') {
-        content.innerHTML = `<iframe src="${escapeHtml(`/api/preview${path}`)}" class="w-full h-full border-none"></iframe>`;
-      } else {
+        content.innerHTML = `<iframe src="${escapeHtml(url)}" class="w-full h-full border-none"></iframe>`;
+      } else if (textExts.includes(ext)) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
         if (state.userRole === 'admin') editBtn.classList.remove('hidden');
         if (ext === 'md') content.innerHTML = `<div class="markdown-body p-8 md:p-12 text-left text-slate-200 font-sans">${sanitizeHtml(marked.parse(text))}</div>`;
         else content.innerHTML = `<pre id="textContent" class="p-8 md:p-12 font-mono text-sm leading-relaxed whitespace-pre-wrap text-slate-300 text-left">${escapeHtml(text)}</pre>`;
+      } else {
+        content.innerHTML = '<div class="p-12 text-slate-400 text-center">该文件类型暂不支持在线预览</div>';
       }
       title.textContent = name;
     } catch (e) {
-      content.innerHTML = `<div class="p-12 text-red-500 text-center">无法预览内容</div>`;
+      content.innerHTML = `<div class="p-12 text-red-400 text-center">无法预览内容${e?.message ? `：${escapeHtml(e.message)}` : ''}</div>`;
     }
   },
 
@@ -207,7 +222,7 @@ export const Actions = {
     const pre = document.getElementById('textContent') || document.querySelector('.markdown-body');
     if (!pre) return;
     const textarea = document.createElement('textarea');
-    textarea.className = 'w-full h-full bg-[#020617] text-slate-300 p-8 font-mono text-sm outline-none resize-none';
+    textarea.className = 'w-full h-full bg-[#0b1220] text-slate-300 p-8 font-mono text-sm outline-none resize-none';
     textarea.id = 'editArea';
     textarea.value = pre.innerText || pre.textContent;
     document.getElementById('previewContent').innerHTML = '';
