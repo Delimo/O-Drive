@@ -75,7 +75,7 @@ export const UI = {
     if (!box) return;
 
     const parts = state.currentPath.split('/').filter(Boolean);
-    let html = `<button class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white hover:border-primary/60 hover:text-primary transition-colors" onclick="Actions.navigateTo('/')"><span class="text-sm">☁</span><span>全部文件</span></button>`;
+    let html = `<button class="breadcrumb-root" onclick="Actions.navigateTo('/')">全部文件</button>`;
 
     if (parts.length > 2) {
       html += `<span class="opacity-20 mx-1 text-white">/</span><span class="opacity-40 text-white">...</span>`;
