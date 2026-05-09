@@ -67,12 +67,23 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 /* 5. 文件列表：Windows 级效果 */
 #fileList { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0; position: relative; scrollbar-gutter: stable; }
 .list-layout { width: 100%; }
-.grid-row-layout { display: grid !important; grid-template-columns: 1fr 100px 180px 160px; align-items: center; padding: 0 20px; box-sizing: border-box; width: 100%; }
+.grid-row-layout { display: grid !important; grid-template-columns: minmax(0, 1fr) 120px 180px 180px; align-items: center; padding: 0 20px; box-sizing: border-box; width: 100%; }
 
 .list-header { 
     position: sticky; top: 0; z-index: 50; background: #0f172a !important; 
     height: 50px; color: #64748b; font-size: 11px; font-weight: 800; 
     text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #243244; 
+}
+.list-header > div {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+.list-header > div:nth-child(1) {
+    justify-content: flex-start;
+}
+.list-header > div:nth-child(n+2) {
+    justify-content: center;
 }
 .file-item-row { background: transparent; border-bottom: 1px solid rgba(255,255,255,0.02); height: 54px; cursor: pointer; }
 .file-item-row:hover { background: rgba(255, 255, 255, 0.04) !important; }
@@ -130,8 +141,8 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 }
 
 .file-item-row .file-actions {
-    width: 100%;
-    justify-content: flex-end;
+    width: auto;
+    justify-content: center;
 }
 
 .file-action-btn {
