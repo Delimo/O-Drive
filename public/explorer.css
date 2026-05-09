@@ -1,6 +1,6 @@
-/* --- explorer.css 最终视觉加固版 --- */
+/* --- explorer.css 精致页脚优化版 --- */
 
-/* 1. 基础布局：锁定全屏 */
+/* 1. 基础布局 */
 html, body { height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; background: #020617; }
 .container { 
     max-width: 1000px; width: 100%; margin: 0 auto; 
@@ -29,7 +29,6 @@ html, body { height: 100vh; margin: 0; overflow: hidden; display: flex; flex-dir
 .btn:hover { background: #334155 !important; border-color: #3b82f6 !important; }
 .btn-primary { background: #3b82f6 !important; border: none !important; }
 .btn-danger { color: #f87171 !important; background: rgba(248, 113, 113, 0.1) !important; border: 1px solid rgba(248, 113, 113, 0.2) !important; }
-.btn-danger:hover { background: #ef4444 !important; color: #fff !important; }
 
 /* 4. 文件展示大框 */
 .explorer-card { 
@@ -38,9 +37,8 @@ html, body { height: 100vh; margin: 0; overflow: hidden; display: flex; flex-dir
 }
 #fileList { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0; position: relative; }
 
-/* 5. 列表视图布局 */
 .grid-row-layout { display: grid !important; grid-template-columns: 1fr 100px 180px 160px; align-items: center; padding: 0 20px; box-sizing: border-box; }
-.list-header { position: sticky; top: 0; z-index: 50; background: #151d2f !important; height: 50px; color: #64748b; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1e293b; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+.list-header { position: sticky; top: 0; z-index: 50; background: #151d2f !important; height: 50px; color: #64748b; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1e293b; }
 .file-item-row { background: transparent; border-bottom: 1px solid rgba(255,255,255,0.02); height: 52px; cursor: pointer; transition: 0.1s; }
 .file-item-row:hover { background: rgba(255, 255, 255, 0.03) !important; }
 .file-item-row.selected { background: rgba(59, 130, 246, 0.12) !important; position: relative; }
@@ -50,36 +48,49 @@ html, body { height: 100vh; margin: 0; overflow: hidden; display: flex; flex-dir
 .col-size, .col-time { text-align: center; font-size: 12px; color: #94a3b8; }
 .col-acts { display: flex; gap: 8px; justify-content: center; }
 
-/* 6. 网格视图修复：重点解决长文件名溢出 */
-.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; gap: 15px !important; padding: 20px; box-sizing: border-box; width: 100%; }
+/* 5. 网格布局 */
+.grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; gap: 15px !important; padding: 20px; box-sizing: border-box; }
 .grid-item { background: rgba(255, 255, 255, 0.02); border: 1px solid #1e293b; border-radius: 10px; padding: 15px; text-align: center; cursor: pointer; display: flex !important; flex-direction: column !important; height: 210px; justify-content: space-between; align-items: center; box-sizing: border-box; overflow: hidden; transition: all 0.2s ease; }
-.grid-item:hover { background: rgba(255, 255, 255, 0.05); transform: translateY(-2px); }
-.grid-item.selected { border-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.1) !important; }
+.grid-item .file-name { font-size: 13px; font-weight: 500; color: #fff; width: 100%; line-height: 1.4; max-height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; text-overflow: ellipsis; padding: 0 4px; }
 
-.grid-item .file-main { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
-.grid-item .file-icon { font-size: 44px; margin-bottom: 12px; flex-shrink: 0; }
-
-/* 关键修复：长文件名强制换行与截断 */
-.grid-item .file-name { 
-    font-size: 13px; 
-    font-weight: 500; 
-    color: #fff;
-    width: 100%;
-    line-height: 1.4;
-    max-height: 2.8em; /* 两行的高度 */
-    display: -webkit-box;
-    -webkit-line-clamp: 2; /* 限制两行 */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    word-break: break-all; /* 强制所有字符断行 */
-    text-overflow: ellipsis;
-    padding: 0 4px;
+/* 6. 页脚优化：让三行文字搭配更和谐 */
+.footer { 
+    padding: 25px 0 35px 0; 
+    text-align: center; 
+    border-top: 1px solid rgba(255, 255, 255, 0.05); 
+    flex-shrink: 0; 
 }
 
-.grid-item .file-info { font-size: 11px; color: #64748b; margin-top: 4px; flex-shrink: 0; }
+/* 第一行：项目与作者 (调小、调暗) */
+.footer-info { 
+    color: rgba(255, 255, 255, 0.4); /* 调暗标签 */
+    font-size: 12px; /* 调小字号 */
+    margin-bottom: 2px; 
+    letter-spacing: 0.02em;
+}
 
-/* 7. 其余 */
-.footer { padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
-.footer-info { color: #94a3b8; font-size: 14px; margin-bottom: 4px; }
-.footer-brand { color: #fff; text-decoration: none; font-weight: 500; }
-.rename-input { background: #020617; border: 1px solid #3b82f6; color: #fff; width: 90%; padding: 4px 8px; border-radius: 4px; }
+/* 第一行内的重点词 (取消加粗，使用半透明白) */
+.footer-brand { 
+    color: rgba(255, 255, 255, 0.7); 
+    font-weight: 400; 
+    text-decoration: none; 
+    transition: color 0.2s;
+}
+.footer-brand:hover { color: #3b82f6; }
+
+/* 第二行：Powered by */
+.footer-powered { 
+    color: rgba(255, 255, 255, 0.3); 
+    font-size: 11px; 
+    margin-bottom: 5px; 
+}
+
+/* 第三行：Copyright */
+.footer-copyright { 
+    color: rgba(255, 255, 255, 0.35); 
+    font-size: 11px; 
+}
+
+/* 其它面板 */
+.preview-modal { background: #0f172a; border: 1px solid #1e293b; padding: 24px; border-radius: 16px; width: 95%; max-width: 1000px; height: 85vh; display: flex; flex-direction: column; }
+.preview-body { flex: 1; overflow: auto; background: #020617; border-radius: 8px; display: block !important; position: relative; }
