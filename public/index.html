@@ -20,7 +20,7 @@
     <main class="container">
         <header class="header-card">
             <a href="/" class="flex items-center gap-2 text-lg font-bold text-white tracking-tight">
-                <span class="text-2xl text-primary font-bold">🏠</span><span>O-Drive</span>
+                <span class="text-2xl text-primary font-bold">☁</span><span>O-Drive</span>
             </a>
             <div class="flex items-center gap-4">
                 <div class="search-bar hidden md:block">
@@ -41,7 +41,7 @@
                     <button class="btn" onclick="Actions.setClipboard('move')">移动</button>
                     <button class="btn" onclick="Actions.setClipboard('copy')">复制</button>
                     <button class="btn hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">重命名</button>
-                    <button class="btn btn-danger font-bold" onclick="Actions.batchDelete()">删除</button>
+                    <button class="btn btn-danger-soft font-bold" onclick="Actions.batchDelete()">删除</button>
                 </div>
                 <div id="pasteGroup" class="admin-only hidden">
                     <button id="pasteBtn" class="btn btn-primary font-bold" onclick="Actions.executePaste()">粘贴</button>

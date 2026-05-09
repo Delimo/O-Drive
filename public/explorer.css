@@ -59,6 +59,7 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 /* 6. 网格模式修复 */
 .grid-layout { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; gap: 16px !important; padding: 20px; box-sizing: border-box; width: 100%; }
 .grid-item { 
+    position: relative;
     height: 220px; width: 100% !important; background: rgba(255, 255, 255, 0.02); border: 1px solid #1e293b; 
     border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; 
     display: flex !important; flex-direction: column !important; align-items: center; box-sizing: border-box; overflow: hidden; 
@@ -74,6 +75,58 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 }
 .grid-item .file-info { font-size: 10px; color: #64748b; margin-bottom: 12px; flex-shrink: 0; }
 
+.file-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.grid-item .file-actions,
+.file-item-row .file-actions {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.grid-item:hover .file-actions,
+.file-item-row:hover .file-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.grid-item .file-actions {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%) translateY(4px);
+}
+
+.grid-item:hover .file-actions {
+    transform: translateX(-50%) translateY(0);
+}
+
+.file-item-row .file-actions {
+    justify-content: flex-end;
+}
+
+.file-action-btn {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(51, 65, 85, 0.9);
+    background: rgba(15, 23, 42, 0.92);
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.file-action-btn:hover {
+    border-color: #3b82f6;
+    background: #3b82f6;
+    color: #fff;
+}
+
 /* 7. 页脚与按钮 */
 .footer { padding: 25px 0 35px 0; text-align: center; flex-shrink: 0; }
 .footer-info { color: rgba(255, 255, 255, 0.35); font-size: 12px; margin-bottom: 2px; }
@@ -85,3 +138,5 @@ html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; display: fl
 .btn:hover { background: #334155; border-color: #3b82f6; }
 .btn-primary { background: #3b82f6 !important; border: none !important; }
 .btn-danger { color: #f87171; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); }
+.btn-danger-soft { color: #fecaca; background: rgba(248, 113, 113, 0.08); border-color: rgba(248, 113, 113, 0.25); }
+.btn-danger-soft:hover { background: rgba(248, 113, 113, 0.18); border-color: rgba(248, 113, 113, 0.5); color: #fff; }

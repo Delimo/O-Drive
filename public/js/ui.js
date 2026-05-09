@@ -75,7 +75,7 @@ export const UI = {
     if (!box) return;
 
     const parts = state.currentPath.split('/').filter(Boolean);
-    let html = `<button class="hover:text-primary transition-colors text-white" onclick="Actions.navigateTo('/')">根目录</button>`;
+    let html = `<button class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white hover:border-primary/60 hover:text-primary transition-colors" onclick="Actions.navigateTo('/')"><span class="text-sm">☁</span><span>全部文件</span></button>`;
 
     if (parts.length > 2) {
       html += `<span class="opacity-20 mx-1 text-white">/</span><span class="opacity-40 text-white">...</span>`;
@@ -142,10 +142,10 @@ export const UI = {
 
       if (state.viewMode === 'grid') {
         el.className = `grid-item ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="file-icon select-none">${isFolder ? '📁' : Utils.getFileIcon(item.name)}</div><div class="file-name text-white">${safeName}</div><div class="text-[10px] text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="px-2 py-1 bg-slate-800 rounded text-[10px] hover:bg-primary text-white" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="px-2 py-1 bg-slate-800 rounded text-[10px] hover:bg-primary text-white" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}</div>`;
+        el.innerHTML = `<div class="file-icon select-none">${isFolder ? '📁' : Utils.getFileIcon(item.name)}</div><div class="file-name text-white">${safeName}</div><div class="text-[10px] text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}</div>`;
       } else {
         el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="col-name text-white"><span class="text-xl flex-shrink-0 select-none">${isFolder ? '📁' : Utils.getFileIcon(item.name)}</span><span class="text-sm truncate file-name text-slate-200">${safeName}</span></div><div class="col-size hidden md:block text-slate-400 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-white">${!isFolder ? `<button class="px-3 py-1 bg-slate-800 rounded text-[11px] font-bold hover:bg-primary" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button>` : ''}${!isFolder ? `<button class="px-3 py-1 bg-slate-800 rounded text-[11px] font-bold hover:bg-primary" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}</div>`;
+        el.innerHTML = `<div class="col-name text-white"><span class="text-xl flex-shrink-0 select-none">${isFolder ? '📁' : Utils.getFileIcon(item.name)}</span><span class="text-sm truncate file-name text-slate-200">${safeName}</span></div><div class="col-size hidden md:block text-slate-400 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-white">${!isFolder ? `<div class="file-actions"><button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button></div>` : ''}</div>`;
         if (state.userRole === 'admin') {
           const nameEl = el.querySelector('.file-name');
           nameEl.ondblclick = e => {
