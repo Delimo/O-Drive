@@ -10,130 +10,129 @@
     <style>.admin-only { display: none; }</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
-    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center"></div>
 
-    <main class="container">
-        <!-- header -->
-        <header class="header-card">
-            <a href="/" class="flex items-center gap-2 text-lg font-bold text-slate-900 tracking-tight">
-                <span class="text-2xl text-primary font-bold">☁</span><span>O-Drive</span>
-            </a>
-            <div class="flex items-center gap-4">
-                <div class="search-bar hidden md:block">
-                    <span class="search-icon">🔍</span>
-                    <input type="search" id="searchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')Actions.handleSearch()">
-                </div>
-                <div id="authButtons"></div>
-            </div>
-        </header>
+<div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center"></div>
 
-        <!-- toolbar -->
-        <div class="toolbar-card">
-            <div class="tools-left">
-                <div id="breadcrumb" class="text-sm font-medium text-primary"></div>
+<main class="container">
+    <!-- header -->
+    <header class="header-card">
+        <a href="/" class="flex items-center gap-2 text-lg font-bold text-slate-900 tracking-tight">
+            <span class="text-2xl text-primary font-bold">☁</span><span>O-Drive</span>
+        </a>
+        <div class="flex items-center gap-4">
+            <div class="search-bar hidden md:block">
+                <span class="search-icon">🔍</span>
+                <input type="search" id="searchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')Actions.handleSearch()">
             </div>
-            <div class="tools-right">
-                <div id="batchTools" class="admin-only">
-                    <button class="btn" onclick="Actions.toggleSelectAll()" id="selectAllBtn">全选</button>
-                    <button class="btn" onclick="Actions.setClipboard('move')">移动</button>
-                    <button class="btn" onclick="Actions.setClipboard('copy')">复制</button>
-                    <button class="btn hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">重命名</button>
-                    <button class="btn btn-danger-soft font-bold" onclick="Actions.batchDelete()">删除</button>
-                </div>
-                <div id="pasteGroup" class="admin-only hidden">
-                    <button id="pasteBtn" class="btn btn-primary font-bold" onclick="Actions.executePaste()">粘贴</button>
-                    <button id="cancelPasteBtn" class="btn" onclick="Actions.clearClipboard()">取消</button>
-                </div>
-                <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
-                <button class="btn admin-only" onclick="UI.showModal('mkdirModal')">新建</button>
-                <div class="hidden sm:flex items-center gap-2">
-                    <button id="sortBtn" class="btn" onclick="Actions.toggleSortMode()">名称</button>
-                    <button id="viewBtn" class="btn" onclick="Actions.toggleViewMode()">列表</button>
-                    <button class="btn" onclick="Actions.openFilters()">筛选</button>
-                    <button class="btn admin-only" onclick="Actions.openTrash()">回收站</button>
-                </div>
-                <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
-            </div>
+            <div id="authButtons"></div>
         </div>
+    </header>
 
-        <!-- explorer -->
-        <div class="explorer-card">
-            <div id="fileList" class="custom-scroll relative"></div>
+    <!-- toolbar -->
+    <div class="toolbar-card">
+        <div class="tools-left">
+            <div id="breadcrumb" class="text-sm font-medium text-primary"></div>
         </div>
-
-        <!-- footer -->
-        <footer class="footer">
-            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank" class="footer-brand">Delimo</a></div>
-            <div class="footer-powered">Powered by Cloudflare Pages</div>
-            <div class="footer-copyright">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
-        </footer>
-    </main>
-
-    <!-- 登录模态框 -->
-    <div id="loginModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
-        <div class="bg-surface border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
-            <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button>
-            <form onsubmit="Actions.doLogin(); return false;">
-                <h1 class="text-xl font-bold mb-6 text-center">登录管理后台</h1>
-                <input type="text" id="adminUser" placeholder="用户名" autocomplete="username"
-                       class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-slate-900">
-                <input type="password" id="adminPass" placeholder="密码" autocomplete="current-password"
-                       class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-slate-900">
-                <button type="submit" class="btn btn-primary w-full h-11 rounded-lg font-bold">登录</button>
-            </form>
-            <p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p>
+        <div class="tools-right">
+            <div id="batchTools" class="admin-only">
+                <button class="btn" onclick="Actions.toggleSelectAll()" id="selectAllBtn">全选</button>
+                <button class="btn" onclick="Actions.setClipboard('move')">移动</button>
+                <button class="btn" onclick="Actions.setClipboard('copy')">复制</button>
+                <button class="btn hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">重命名</button>
+                <button class="btn btn-danger-soft font-bold" onclick="Actions.batchDelete()">删除</button>
+            </div>
+            <div id="pasteGroup" class="admin-only hidden">
+                <button id="pasteBtn" class="btn btn-primary font-bold" onclick="Actions.executePaste()">粘贴</button>
+                <button id="cancelPasteBtn" class="btn" onclick="Actions.clearClipboard()">取消</button>
+            </div>
+            <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
+            <button class="btn admin-only" onclick="UI.showModal('mkdirModal')">新建</button>
+            <div class="hidden sm:flex items-center gap-2">
+                <button id="sortBtn" class="btn" onclick="Actions.toggleSortMode()">名称</button>
+                <button id="viewBtn" class="btn" onclick="Actions.toggleViewMode()">列表</button>
+                <button class="btn" onclick="Actions.openFilters()">筛选</button>
+                <button class="btn admin-only" onclick="Actions.openTrash()">回收站</button>
+            </div>
+            <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
         </div>
     </div>
 
-    <!-- 解锁密码模态框 -->
-    <div id="unlockModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[420] hidden items-center justify-center p-4 text-slate-900">
-        <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h1 class="text-lg font-bold mb-2 text-center">需要访问密码</h1>
-            <p id="unlockPathLabel" class="text-xs text-slate-500 text-center mb-4 break-all"></p>
-            <form onsubmit="Actions.submitUnlock(); return false;">
-                <input type="password" id="unlockPasswordInput" placeholder="请输入密码" autocomplete="new-password"
-                       class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-3 outline-none focus:border-primary text-sm text-slate-900">
-            </form>
-            <p id="unlockError" class="text-red-500 text-center text-xs h-4 mb-3"></p>
-            <div class="flex gap-2">
-                <button class="btn flex-1" onclick="UI.closeModal('unlockModal')">取消</button>
-                <button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitUnlock()">解锁</button>
-            </div>
+    <!-- explorer -->
+    <div class="explorer-card">
+        <div id="fileList" class="custom-scroll relative"></div>
+    </div>
+
+    <!-- footer -->
+    <footer class="footer">
+        <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank" class="footer-brand">Delimo</a></div>
+        <div class="footer-powered">Powered by Cloudflare Pages</div>
+        <div class="footer-copyright">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
+    </footer>
+</main>
+
+<!-- 登录模态框 -->
+<div id="loginModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
+    <div class="bg-surface border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
+        <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button>
+        <form onsubmit="Actions.doLogin(); return false;">
+            <h1 class="text-xl font-bold mb-6 text-center">登录管理后台</h1>
+            <input type="text" id="adminUser" placeholder="用户名" autocomplete="username"
+                   class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-slate-900">
+            <input type="password" id="adminPass" placeholder="密码" autocomplete="current-password"
+                   class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-slate-900">
+            <button type="submit" class="btn btn-primary w-full h-11 rounded-lg font-bold">登录</button>
+        </form>
+        <p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p>
+    </div>
+</div>
+
+<!-- 解锁密码模态框 -->
+<div id="unlockModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[420] hidden items-center justify-center p-4 text-slate-900">
+    <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+        <h1 class="text-lg font-bold mb-2 text-center">需要访问密码</h1>
+        <p id="unlockPathLabel" class="text-xs text-slate-500 text-center mb-4 break-all"></p>
+        <form onsubmit="Actions.submitUnlock(); return false;">
+            <input type="password" id="unlockPasswordInput" placeholder="请输入密码" autocomplete="new-password"
+                   class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-3 outline-none focus:border-primary text-sm text-slate-900">
+        </form>
+        <p id="unlockError" class="text-red-500 text-center text-xs h-4 mb-3"></p>
+        <div class="flex gap-2">
+            <button class="btn flex-1" onclick="UI.closeModal('unlockModal')">取消</button>
+            <button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitUnlock()">解锁</button>
         </div>
     </div>
+</div>
 
-    <!-- 新建文件夹模态框 -->
-    <div id="mkdirModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
-        <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h1 class="text-lg font-bold mb-4 text-center">新建文件夹</h1>
-            <form onsubmit="Actions.submitMkdir(); return false;">
-                <input type="text" id="folderNameInput" placeholder="请输入名称"
-                       class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-900">
-            </form>
-            <div class="flex gap-2">
-                <button class="btn flex-1" onclick="UI.closeModal('mkdirModal')">取消</button>
-                <button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitMkdir()">创建</button>
-            </div>
+<!-- 新建文件夹模态框 -->
+<div id="mkdirModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
+    <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+        <h1 class="text-lg font-bold mb-4 text-center">新建文件夹</h1>
+        <form onsubmit="Actions.submitMkdir(); return false;">
+            <input type="text" id="folderNameInput" placeholder="请输入名称"
+                   class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-900">
+        </form>
+        <div class="flex gap-2">
+            <button class="btn flex-1" onclick="UI.closeModal('mkdirModal')">取消</button>
+            <button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitMkdir()">创建</button>
         </div>
     </div>
+</div>
 
-    <!-- 其余移动端和上传管理器保持原样 -->
-    <div id="mobileActionBackdrop" class="mobile-action-backdrop" onclick="UI.closeMobileActions()"></div>
-    <div id="mobileActionSheet" class="mobile-action-sheet">
-        <button class="mobile-action-btn admin-only" onclick="document.getElementById('fileInput').click();UI.closeMobileActions()">上传</button>
-        <button class="mobile-action-btn admin-only" onclick="UI.showModal('mkdirModal');UI.closeMobileActions()">新建</button>
-        <button id="mobileSortBtn" class="mobile-action-btn" onclick="Actions.toggleSortMode()">名称</button>
-        <button id="mobileViewBtn" class="mobile-action-btn" onclick="Actions.toggleViewMode()">列表</button>
-        <button class="mobile-action-btn" onclick="Actions.openFilters();UI.closeMobileActions()">筛选</button>
-        <button class="mobile-action-btn admin-only" onclick="Actions.openTrash();UI.closeMobileActions()">回收站</button>
+<!-- 预览模态框 -->
+<div id="previewModal" class="fixed inset-0 hidden items-center justify-center bg-black/35 backdrop-blur-sm z-[500] p-4 text-slate-900">
+    <div class="w-full max-w-6xl h-[85vh] bg-surface border border-border rounded-2xl overflow-hidden flex flex-col shadow-2xl" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between p-4 border-b border-border bg-background text-slate-900">
+            <h3 id="previewTitle" class="font-bold truncate text-sm">预览</h3>
+            <div class="flex items-center gap-3">
+                <button id="editBtn" class="btn hidden" onclick="Actions.toggleEditMode()">编辑</button>
+                <button id="saveBtn" class="btn btn-primary hidden" onclick="Actions.saveTextContent()">保存</button>
+                <button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100">&times;</button>
+            </div>
+        </div>
+        <div id="previewContent" class="flex-1 overflow-hidden bg-white"></div>
     </div>
+</div>
 
-    <div class="mobile-bottom-bar">
-        <button class="mobile-bottom-btn" onclick="UI.toggleMobileActions()">操作</button>
-        <button class="mobile-bottom-btn" onclick="Actions.toggleViewMode()" id="mobileQuickViewBtn">列表</button>
-        <button class="mobile-bottom-btn" onclick="Actions.openFilters()">筛选</button>
-    </div>
-
-    <script type="module" src="/js/app.js"></script>
+<script type="module" src="/js/app.js"></script>
 </body>
 </html>
