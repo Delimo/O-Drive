@@ -1,7 +1,6 @@
 {
   "name": "o-drive",
   "version": "2.1.0",
-  "type": "module",
   "dependencies": {
     "tailwindcss": "^3.4.3"
   },
