@@ -52,6 +52,9 @@ document.addEventListener('click', event => {
     case 'trash-page': return Actions.trashPage(Number(args[0] || 0));
     case 'restore-trash': return Actions.restoreTrash(args[0]);
     case 'purge-trash': return Actions.purgeTrash(args[0]);
+    case 'clear-trash': return Actions.clearTrash();
+    case 'cleanup-trash': return Actions.cleanupTrash();
+    case 'save-trash-retention': return Actions.saveTrashRetention();
     case 'copy-path': return Actions.copyPath(args[0]);
     case 'navigate': return Actions.navigateTo(args[0]);
     case 'open-preview': return Actions.openPreview(args[0], args[1], Boolean(args[2]));

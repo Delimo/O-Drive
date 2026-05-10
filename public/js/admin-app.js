@@ -44,4 +44,4 @@ const yearDisp = document.getElementById('year-display');
 if (yearDisp) yearDisp.textContent = currentYear > startYear ? `${startYear} - ${currentYear}` : startYear;
 
 await api.getRole();
-AdminActions.loadLogs();
+AdminActions.loadStats();

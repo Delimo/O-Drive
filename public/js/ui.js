@@ -1,4 +1,4 @@
-import { state } from './state.js';
+﻿import { state } from './state.js';
 import { api } from './api.js';
 import { escapeHtml, Utils } from './utils.js';
 import { getOrderedEntries } from './file-view-model.js';

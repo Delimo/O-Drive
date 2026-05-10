@@ -1,6 +1,6 @@
 import { jsonResponse } from './lib/common.js';
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
-import { handleAdminLogs, handleHiddenSettings } from './lib/admin.js';
+import { handleAdminLogs, handleHiddenSettings, handleAdminStats } from './lib/admin.js';
 import {
   loadProtectedPaths,
   handleProtectedSettings,
@@ -21,6 +21,9 @@ import {
   handleTrashList,
   handleTrashRestore,
   handleTrashDelete,
+  handleTrashClear,
+  handleTrashCleanup,
+  handleTrashRetention,
   handleSearch,
   handleListFiles,
   handleDownloadOrPreview,
@@ -36,6 +39,9 @@ const csrfProtectedRoutes = [
   ['/api/batch-delete', ['POST']],
   ['/api/trash/restore', ['POST']],
   ['/api/trash/delete', ['DELETE']],
+  ['/api/trash/clear', ['DELETE']],
+  ['/api/trash/cleanup', ['POST']],
+  ['/api/admin/settings/trash-retention', ['PUT']],
   ['/api/mkdir', ['POST']],
   ['/api/upload-multipart/create', ['POST']],
   ['/api/upload-multipart/part', ['PUT']],
@@ -81,14 +87,18 @@ export async function onRequest(context) {
 
     if (isAdmin(auth)) {
       if (path === '/api/admin/logs') return await handleAdminLogs(env, url);
+      if (path === '/api/admin/stats') return await handleAdminStats(env);
       if (path === '/api/admin/settings/hidden') return await handleHiddenSettings(env, request, method, url, hiddenPaths);
       if (path === '/api/admin/settings/protected') return await handleProtectedSettings(env, request, method, url);
+      if (path === '/api/admin/settings/trash-retention') return await handleTrashRetention(env, request, method);
       if (path === '/api/paste' && method === 'POST') return await handlePaste(env, request);
       if (path.startsWith('/api/files/') && method === 'PUT') return await handleRename(env, request, r2Key);
       if (path === '/api/batch-delete') return await handleBatchDelete(env, request);
       if (path === '/api/trash' && method === 'GET') return await handleTrashList(env, url);
       if (path === '/api/trash/restore' && method === 'POST') return await handleTrashRestore(env, request);
       if (path === '/api/trash/delete' && method === 'DELETE') return await handleTrashDelete(env, request);
+      if (path === '/api/trash/clear' && method === 'DELETE') return await handleTrashClear(env, request);
+      if (path === '/api/trash/cleanup' && method === 'POST') return await handleTrashCleanup(env, request);
       if (path.startsWith('/api/mkdir') && method === 'POST') return await handleMkdir(env, request, r2Key);
       if (path.startsWith('/api/files') && method === 'POST') return await handleUpload(env, request, r2Key);
       if (path === '/api/upload-multipart/create' && method === 'POST') return await handleMultipartCreate(env, request);

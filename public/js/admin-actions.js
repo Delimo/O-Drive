@@ -4,30 +4,40 @@ import { escapeHtml } from './utils.js';
 
 export const AdminActions = {
   switchTab(id) {
-    document.getElementById('logs-tab').classList.toggle('hidden', id !== 'logs');
-    document.getElementById('privacy-tab').classList.toggle('hidden', id !== 'privacy');
-    document.getElementById('protected-tab').classList.toggle('hidden', id !== 'protected');
-    const btnLogs = document.getElementById('btn-logs');
-    const btnPriv = document.getElementById('btn-privacy');
-    const btnProtected = document.getElementById('btn-protected');
+    ['overview', 'logs', 'privacy', 'protected'].forEach(tab => {
+      document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', id !== tab);
+      document.getElementById(`btn-${tab}`)?.classList.toggle('is-active', id === tab);
+    });
     adminState.activeTab = id;
 
-    if (id === 'logs') {
-      btnLogs.className = 'admin-tab-btn is-active';
-      btnPriv.className = 'admin-tab-btn';
-      btnProtected.className = 'admin-tab-btn';
-      this.loadLogs();
-    } else if (id === 'privacy') {
-      btnPriv.className = 'admin-tab-btn is-active';
-      btnLogs.className = 'admin-tab-btn';
-      btnProtected.className = 'admin-tab-btn';
-      this.loadHidden();
-    } else {
-      btnProtected.className = 'admin-tab-btn is-active';
-      btnLogs.className = 'admin-tab-btn';
-      btnPriv.className = 'admin-tab-btn';
-      this.loadProtected();
-    }
+    if (id === 'overview') return this.loadStats();
+    if (id === 'logs') return this.loadLogs();
+    if (id === 'privacy') return this.loadHidden();
+    return this.loadProtected();
+  },
+
+  async loadStats() {
+    const { res, data } = await api.adminStats();
+    if (res.status !== 200) return window.location.href = '/';
+    document.getElementById('statFileCount').textContent = String(data.files?.count || 0);
+    document.getElementById('statTotalSize').textContent = data.files?.totalSizeFormatted || '0 B';
+    document.getElementById('statTrash').textContent = `${data.trash?.count || 0} 项 · ${data.trash?.sizeFormatted || '0 B'}`;
+    document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
+
+    const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', other: '其他' };
+    document.getElementById('statsBreakdown').innerHTML = Object.entries(data.breakdown || {}).map(([kind, item]) => `
+      <div class="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2">
+        <span>${labels[kind] || kind}</span>
+        <strong class="font-mono">${item.count || 0} · ${escapeHtml(item.sizeFormatted || '0 B')}</strong>
+      </div>
+    `).join('');
+
+    document.getElementById('statsLatest').innerHTML = (data.latest || []).map(item => `
+      <div class="rounded-lg border border-border bg-background px-3 py-2">
+        <div class="font-mono break-all text-slate-700">${escapeHtml(item.key)}</div>
+        <div class="mt-1 text-xs text-slate-500">${escapeHtml(item.sizeFormatted || '0 B')} · ${escapeHtml(item.uploaded ? new Date(item.uploaded).toLocaleString('zh-CN', { hour12: false }) : '-')}</div>
+      </div>
+    `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
   },
 
   async loadLogs() {

@@ -12,6 +12,13 @@ const TRASH_TABLE_SQL = `
   )
 `;
 
+const SETTINGS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )
+`;
+
 async function mapWithConcurrency(items, limit, worker) {
   const queue = [...items];
   const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
@@ -43,6 +50,15 @@ async function copyTree(env, sourceKey, targetKey, request, move = false) {
 
 async function ensureTrashTable(env) {
   const stmt = env.DB.prepare(TRASH_TABLE_SQL);
+  if (typeof stmt.bind === 'function') {
+    await stmt.bind().run();
+    return;
+  }
+  await stmt.run();
+}
+
+async function ensureSettingsTable(env) {
+  const stmt = env.DB.prepare(SETTINGS_TABLE_SQL);
   if (typeof stmt.bind === 'function') {
     await stmt.bind().run();
     return;
@@ -88,6 +104,30 @@ async function assertTargetAvailable(env, key) {
     err.status = 409;
     throw err;
   }
+}
+
+async function resolveUploadConflict(env, key, mode = 'error') {
+  const conflictMode = ['error', 'overwrite', 'rename', 'skip'].includes(mode) ? mode : 'error';
+  if (!(await keyExists(env, key))) return { key, skipped: false, conflict: false };
+  if (conflictMode === 'skip') return { key, skipped: true, conflict: true };
+  if (conflictMode === 'overwrite') return { key, skipped: false, conflict: true };
+  if (conflictMode !== 'rename') {
+    const err = new Error('Target already exists');
+    err.status = 409;
+    throw err;
+  }
+
+  const slash = key.lastIndexOf('/');
+  const dir = slash >= 0 ? key.slice(0, slash + 1) : '';
+  const name = slash >= 0 ? key.slice(slash + 1) : key;
+  const dot = name.lastIndexOf('.');
+  const base = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  for (let i = 1; i <= 999; i++) {
+    const candidate = `${dir}${base} (${i})${ext}`;
+    if (!(await keyExists(env, candidate))) return { key: candidate, skipped: false, conflict: true };
+  }
+  throw new Error('Unable to generate unique filename');
 }
 
 async function copyR2Object(env, sourceKey, targetKey) {
@@ -214,11 +254,13 @@ export async function handleUpload(env, request, r2Key) {
   if (!file || typeof file.stream !== 'function') return jsonResponse({ success: false, message: 'Missing file' }, 400);
   const cleanName = normalizeName((file?.name || '').split(/[\/\\]/).pop());
   const key = (r2Key ? normalizeUserKey(r2Key) + '/' : '') + cleanName;
+  const conflict = new URL(request.url).searchParams.get('conflict') || 'error';
   assertUserKey(key);
-  await assertTargetAvailable(env, key);
-  await env.R2_BUCKET.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
-  await addLog(env, request, 'UPLOAD', cleanName);
-  return jsonResponse({ success: true });
+  const resolved = await resolveUploadConflict(env, key, conflict);
+  if (resolved.skipped) return jsonResponse({ success: true, skipped: true, key });
+  await env.R2_BUCKET.put(resolved.key, file.stream(), { httpMetadata: { contentType: file.type } });
+  await addLog(env, request, resolved.conflict ? 'UPLOAD_CONFLICT' : 'UPLOAD', resolved.key);
+  return jsonResponse({ success: true, key: resolved.key, renamed: resolved.key !== key });
 }
 
 function uploadKey(targetDir, name) {
@@ -228,15 +270,16 @@ function uploadKey(targetDir, name) {
 }
 
 export async function handleMultipartCreate(env, request) {
-  const { targetDir, name, type } = await request.json();
+  const { targetDir, name, type, conflict = 'error' } = await request.json();
   const key = uploadKey(targetDir, name);
   assertUserKey(key);
-  await assertTargetAvailable(env, key);
-  const upload = await env.R2_BUCKET.createMultipartUpload(key, {
+  const resolved = await resolveUploadConflict(env, key, conflict);
+  if (resolved.skipped) return jsonResponse({ key, skipped: true });
+  const upload = await env.R2_BUCKET.createMultipartUpload(resolved.key, {
     httpMetadata: { contentType: type || 'application/octet-stream' },
   });
-  await addLog(env, request, 'UPLOAD_START', key);
-  return jsonResponse({ key: upload.key, uploadId: upload.uploadId });
+  await addLog(env, request, resolved.conflict ? 'UPLOAD_CONFLICT_START' : 'UPLOAD_START', resolved.key);
+  return jsonResponse({ key: upload.key, uploadId: upload.uploadId, renamed: resolved.key !== key });
 }
 
 export async function handleMultipartPart(env, request, url) {
@@ -300,6 +343,14 @@ export async function handleTrashList(env, url) {
   });
 }
 
+async function trashRows(env, where = '', params = []) {
+  await ensureTrashTable(env);
+  let stmt = env.DB.prepare(`SELECT * FROM trash ${where} ORDER BY trashed_at DESC`);
+  if (params.length) stmt = stmt.bind(...params);
+  const rows = await stmt.all();
+  return rows.results || [];
+}
+
 async function restoreTrashRecord(env, row, request) {
   const listed = await listR2Objects(env.R2_BUCKET, { prefix: row.trash_key });
   if (await keyExists(env, row.original_key)) {
@@ -346,4 +397,41 @@ export async function handleTrashDelete(env, request) {
   if (!row) return jsonResponse({ success: false, message: 'Trash item not found' }, 404);
   await purgeTrashRecord(env, row, request);
   return jsonResponse({ success: true });
+}
+
+export async function handleTrashClear(env, request) {
+  const rows = await trashRows(env);
+  for (const row of rows) await purgeTrashRecord(env, row, request);
+  await addLog(env, request, 'TRASH_CLEAR', `${rows.length} items`);
+  return jsonResponse({ success: true, deleted: rows.length });
+}
+
+export async function handleTrashCleanup(env, request) {
+  await ensureSettingsTable(env);
+  const setting = await env.DB.prepare("SELECT value FROM settings WHERE key = 'trash_retention_days'").first();
+  const days = Math.max(0, Number(setting?.value || 0));
+  if (!days) return jsonResponse({ success: true, deleted: 0, retentionDays: days });
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const rows = await trashRows(env, 'WHERE trashed_at < ?', [cutoff]);
+  for (const row of rows) await purgeTrashRecord(env, row, request);
+  await addLog(env, request, 'TRASH_CLEANUP', `${rows.length} items older than ${days} days`);
+  return jsonResponse({ success: true, deleted: rows.length, retentionDays: days });
+}
+
+export async function handleTrashRetention(env, request, method) {
+  await ensureSettingsTable(env);
+  if (method === 'GET') {
+    const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'trash_retention_days'").first();
+    return jsonResponse({ days: Number(row?.value || 0) });
+  }
+  if (method === 'PUT') {
+    const body = await request.json();
+    const days = Math.max(0, Math.min(3650, Number(body.days || 0)));
+    await env.DB.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('trash_retention_days', ?)")
+      .bind(String(days))
+      .run();
+    await addLog(env, request, 'TRASH_RETENTION', `${days} days`);
+    return jsonResponse({ success: true, days });
+  }
+  return jsonResponse({ message: 'Method Not Allowed' }, 405);
 }

@@ -11,7 +11,11 @@ import {
   handleTrashList,
   handleTrashRestore,
   handleTrashDelete,
+  handleTrashClear,
+  handleTrashCleanup,
+  handleTrashRetention,
 } from '../functions/api/lib/file-mutations.js';
+import { handleAdminStats } from '../functions/api/lib/admin.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
@@ -28,6 +32,7 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
   const byKey = new Map(objects.map(o => [o.key, { ...o }]));
   const trashRows = [];
   const protectedRows = [];
+  const settingsRows = new Map();
   const logs = [];
   const sizeOf = body => typeof body === 'string' ? body.length : body?.byteLength || 0;
   const listObjects = (prefix = '') => [...byKey.values()]
@@ -154,6 +159,12 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               if (idx >= 0) protectedRows[idx] = row;
               else protectedRows.push(row);
             }
+            if (/INSERT OR REPLACE INTO settings/i.test(sql)) {
+              settingsRows.set('trash_retention_days', statement.bound?.[0]);
+            }
+            if (/INSERT OR IGNORE INTO settings/i.test(sql)) {
+              settingsRows.set(statement.bound?.[0], 'hidden');
+            }
             if (/DELETE FROM trash WHERE id = \?/i.test(sql)) {
               const id = statement.bound?.[0];
               const idx = trashRows.findIndex(row => row.id === id);
@@ -170,6 +181,10 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
             if (/SELECT COUNT\(\*\) as count FROM trash/i.test(sql)) return { count: trashRows.length };
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: logs.length };
+            if (/SELECT value FROM settings WHERE key = 'trash_retention_days'/i.test(sql)) {
+              const value = settingsRows.get('trash_retention_days');
+              return value == null ? null : { value };
+            }
             return null;
           },
           async all() {
@@ -180,6 +195,13 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const size = statement.bound?.[0] ?? 20;
               const offset = statement.bound?.[1] ?? 0;
               return { results: [...trashRows].sort((a, b) => b.trashed_at - a.trashed_at).slice(offset, offset + size) };
+            }
+            if (/SELECT \* FROM trash WHERE trashed_at < \? ORDER BY trashed_at DESC/i.test(sql)) {
+              const cutoff = statement.bound?.[0] ?? 0;
+              return { results: trashRows.filter(row => row.trashed_at < cutoff).sort((a, b) => b.trashed_at - a.trashed_at) };
+            }
+            if (/SELECT \* FROM trash\s+ORDER BY trashed_at DESC/i.test(sql)) {
+              return { results: [...trashRows].sort((a, b) => b.trashed_at - a.trashed_at) };
             }
             if (/SELECT \* FROM logs ORDER BY timestamp DESC/i.test(sql)) {
               return { results: logs.map((log, i) => ({ ...log, timestamp: new Date(Date.now() - i * 1000).toISOString() })) };
@@ -536,4 +558,84 @@ test('file view model orders entries and exposes selectable keys', () => {
 
   assert.deepEqual(getOrderedEntries(fileData, 'size').map(i => i.fullKey), ['a', 'b', 'large.txt', 'small.txt']);
   assert.deepEqual(getSelectableKeys(fileData), ['a', 'b', 'large.txt', 'small.txt']);
+});
+
+test('multipart uploads can resolve name conflicts', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/report.pdf', body: 'old', size: 3, uploaded: new Date('2026-01-01') }],
+  });
+
+  const renamed = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/docs', name: 'report.pdf', type: 'application/pdf', conflict: 'rename' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const renamedData = await renamed.json();
+  assert.equal(renamedData.key, 'docs/report (1).pdf');
+  assert.equal(renamedData.renamed, true);
+
+  const skipped = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/docs', name: 'report.pdf', type: 'application/pdf', conflict: 'skip' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await skipped.json()).skipped, true);
+});
+
+test('admin stats summarize visible stored files', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'photos/a.jpg', body: 'image', size: 5, uploaded: new Date('2026-01-03') },
+      { key: 'docs/readme.md', body: 'text', size: 4, uploaded: new Date('2026-01-02') },
+      { key: '.trash/old/readme.md', body: 'old', size: 3, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const res = await handleAdminStats(env);
+  const data = await res.json();
+  assert.equal(data.files.count, 2);
+  assert.equal(data.files.totalSize, 9);
+  assert.equal(data.breakdown.image.count, 1);
+  assert.equal(data.breakdown.text.count, 1);
+  assert.deepEqual(data.latest.map(item => item.key), ['photos/a.jpg', 'docs/readme.md']);
+});
+
+test('trash can be cleared and cleanup respects retention setting', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'old.txt', body: 'old', size: 3, uploaded: new Date('2026-01-01') },
+      { key: 'new.txt', body: 'new', size: 3, uploaded: new Date('2026-01-02') },
+    ],
+  });
+
+  const realNow = Date.now;
+  Date.now = () => realNow() - 10 * 24 * 60 * 60 * 1000;
+  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['old.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  Date.now = realNow;
+  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['new.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+
+  const listed = await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'));
+  const trashData = await listed.json();
+  assert.equal(trashData.items.length, 2);
+
+  await handleTrashRetention(env, new Request('https://example.com', {
+    method: 'PUT',
+    body: JSON.stringify({ days: 7 }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'PUT');
+  const cleanup = await handleTrashCleanup(env, new Request('https://example.com', { method: 'POST' }));
+  assert.equal((await cleanup.json()).deleted, 1);
+
+  const clear = await handleTrashClear(env, new Request('https://example.com', { method: 'DELETE' }));
+  assert.equal((await clear.json()).deleted, 1);
+  const empty = await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'));
+  assert.equal((await empty.json()).items.length, 0);
 });

@@ -12,6 +12,9 @@ export {
   handleTrashList,
   handleTrashRestore,
   handleTrashDelete,
+  handleTrashClear,
+  handleTrashCleanup,
+  handleTrashRetention,
 } from './file-mutations.js';
 
 export {

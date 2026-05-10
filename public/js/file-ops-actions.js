@@ -223,6 +223,9 @@ export const FileOpsActions = {
 
   async openTrash() {
     await this.loadTrash();
+    const retention = await api.trashRetention();
+    const input = document.getElementById('trashRetentionDays');
+    if (input && retention.res.ok) input.value = String(retention.data?.days || 0);
     UI.showModal('trashModal');
   },
 
@@ -262,6 +265,37 @@ export const FileOpsActions = {
     } else {
       Message.error('删除失败');
     }
+  },
+
+  async clearTrash() {
+    if (!confirm('确定清空回收站吗？此操作不可恢复。')) return;
+    const { res, data } = await api.clearTrash();
+    if (res.ok) {
+      Message.success(`已清空 ${data?.deleted || 0} 项`);
+      await this.loadTrash(1);
+      this.loadFiles();
+    } else {
+      Message.error('清空失败');
+    }
+  },
+
+  async cleanupTrash() {
+    const { res, data } = await api.cleanupTrash();
+    if (res.ok) {
+      Message.success(`已清理 ${data?.deleted || 0} 项`);
+      await this.loadTrash(1);
+      this.loadFiles();
+    } else {
+      Message.error('清理失败');
+    }
+  },
+
+  async saveTrashRetention() {
+    const input = document.getElementById('trashRetentionDays');
+    const days = Math.max(0, Number(input?.value || 0));
+    const { res } = await api.setTrashRetention(days);
+    if (res.ok) Message.success(days ? `已设置保留 ${days} 天` : '已关闭自动清理');
+    else Message.error('保存失败');
   },
 
   startRenameSelected() {
@@ -331,7 +365,19 @@ export const FileOpsActions = {
 
   async uploadFiles(files) {
     if (state.userRole !== 'admin') return;
+    const incoming = [...files];
+    const existing = new Set((state.fileData.files || []).map(file => file.name));
+    const conflicts = incoming.filter(file => existing.has(file.name));
+    let conflictMode = 'error';
+    if (conflicts.length) {
+      const answer = prompt(
+        `检测到 ${conflicts.length} 个同名文件。请输入处理方式：overwrite 覆盖，rename 自动重命名，skip 跳过。`,
+        'rename',
+      );
+      conflictMode = String(answer || 'skip').trim().toLowerCase();
+      if (!['overwrite', 'rename', 'skip'].includes(conflictMode)) conflictMode = 'skip';
+    }
     if (!this.uploadQueue) this.uploadQueue = new UploadQueue({ onComplete: () => this.loadFiles() });
-    this.uploadQueue.add(files, state.currentPath);
+    this.uploadQueue.add(incoming, state.currentPath, { conflictMode });
   },
 };

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -200,6 +200,14 @@
                     <p class="text-xs text-slate-500 mt-1">当前 <span id="trashCount">0</span> 项</p>
                 </div>
                 <div class="flex items-center gap-3">
+                    <label class="hidden sm:flex items-center gap-2 text-xs text-slate-500">
+                        保留
+                        <input id="trashRetentionDays" type="number" min="0" max="3650" class="w-16 h-8 px-2 rounded-lg border border-border bg-background text-slate-900">
+                        天
+                    </label>
+                    <button class="btn h-8 px-3" data-action="save-trash-retention">保存策略</button>
+                    <button class="btn h-8 px-3" data-action="cleanup-trash">清理过期</button>
+                    <button class="btn btn-danger-soft h-8 px-3" data-action="clear-trash">清空</button>
                     <div class="flex items-center gap-2 text-xs">
                         <button class="btn h-8 px-3" data-action="trash-page" data-args='[-1]'>上一页</button>
                         <span class="px-3 py-1 rounded-lg border border-border bg-background">第 <span id="trashPage">1</span> / <span id="trashTotal">1</span> 页</span>
