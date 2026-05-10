@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -12,34 +12,34 @@
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/explorer.css">
 </head>
-<body class="flex flex-col h-screen overflow-hidden bg-background text-slate-200">
+<body class="flex flex-col h-screen overflow-hidden bg-background text-slate-900">
     <main class="container">
         <header class="header-card mt-4">
             <div class="flex items-center gap-3">
                 <span class="text-2xl text-primary font-bold">⚙️</span>
-                <h1 class="font-bold text-white tracking-tight text-lg">管理控制台</h1>
+                <h1 class="font-bold text-slate-900 tracking-tight text-lg">管理控制台</h1>
             </div>
-            <a href="/" class="btn text-white">返回云盘</a>
+            <a href="/" class="btn text-slate-900">返回云盘</a>
         </header>
 
-        <div class="flex gap-2 p-2 bg-surface border border-border rounded-xl w-fit shadow-md mt-4 text-white">
-            <button id="btn-logs" onclick="AdminActions.switchTab('logs')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all bg-primary text-white shadow-lg">操作日志</button>
-            <button id="btn-privacy" onclick="AdminActions.switchTab('privacy')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 hover:text-white">隐藏管理</button>
+        <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-fit shadow-sm mt-4">
+            <button id="btn-logs" onclick="AdminActions.switchTab('logs')" class="admin-tab-btn is-active">操作日志</button>
+            <button id="btn-privacy" onclick="AdminActions.switchTab('privacy')" class="admin-tab-btn">隐藏管理</button>
         </div>
 
         <div class="explorer-card mt-4 mb-4">
             <div id="logs-tab" class="flex-1 flex flex-col overflow-hidden">
                 <div id="fileList" class="overflow-y-auto flex-1 custom-scroll relative">
-                    <table class="w-full text-left border-collapse text-white text-sm">
-                        <thead class="sticky top-0 bg-[#151d2f] text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border z-10">
+                    <table class="w-full text-left border-collapse text-slate-900 text-sm">
+                        <thead class="sticky top-0 bg-background text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border z-10">
                             <tr><th class="px-6 py-4 w-44">时间</th><th class="px-6 py-4 w-28">动作</th><th class="px-6 py-4">详情</th><th class="px-6 py-4 w-40 text-left">IP</th></tr>
                         </thead>
                         <tbody id="logTbody" class="text-xs divide-y divide-border/30"></tbody>
                     </table>
                 </div>
-                <div class="p-4 border-t border-border flex items-center justify-between bg-slate-900/30 text-xs">
-                    <div class="text-slate-500 text-xs text-white">共 <span id="totalPages" class="text-slate-300 font-bold">0</span> 页</div>
-                    <div class="flex gap-2 text-white">
+                <div class="p-4 border-t border-border flex items-center justify-between bg-background text-xs">
+                    <div class="text-slate-500 text-xs">共 <span id="totalPages" class="text-slate-600 font-bold">0</span> 页</div>
+                    <div class="flex gap-2 text-slate-900">
                         <button onclick="AdminActions.changePage(-1)" class="btn">上一页</button>
                         <span class="px-4 py-2 font-bold text-primary font-mono bg-background border border-border rounded-lg">第 <span id="currentPage">1</span> 页</span>
                         <button onclick="AdminActions.changePage(1)" class="btn">下一页</button>
@@ -47,17 +47,17 @@
                 </div>
             </div>
 
-            <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-white">
-                <div class="flex flex-col sm:flex-row gap-3 mb-8 bg-slate-900/50 p-4 rounded-xl border border-border shadow-inner">
-                    <input type="text" id="hideInput" placeholder="输入隐藏路径..." class="flex-1 bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-white transition-all">
-                    <button class="btn btn-primary h-11 px-8 text-white" onclick="AdminActions.addHidden()">添加</button>
+            <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+                <div class="flex flex-col sm:flex-row gap-3 mb-8 bg-surface-soft p-4 rounded-xl border border-border shadow-inner">
+                    <input type="text" id="hideInput" placeholder="输入隐藏路径..." class="flex-1 bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
+                    <button class="btn btn-primary h-11 px-8" onclick="AdminActions.addHidden()">添加</button>
                 </div>
-                <div class="overflow-y-auto flex-1 custom-scroll text-white text-sm">
-                    <table class="w-full text-left text-white">
-                        <thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border text-white">
+                <div class="overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
+                    <table class="w-full text-left text-slate-900">
+                        <thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
                             <tr><th class="px-4 py-3 text-slate-500">已屏蔽路径</th><th class="px-4 py-3 text-right text-slate-500">操作</th></tr>
                         </thead>
-                        <tbody id="hiddenTbody" class="text-sm divide-y divide-border/30 text-slate-300"></tbody>
+                        <tbody id="hiddenTbody" class="text-sm divide-y divide-border/30 text-slate-600"></tbody>
                     </table>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -19,7 +19,7 @@
 
     <main class="container">
         <header class="header-card">
-            <a href="/" class="flex items-center gap-2 text-lg font-bold text-white tracking-tight">
+            <a href="/" class="flex items-center gap-2 text-lg font-bold text-slate-900 tracking-tight">
                 <span class="text-2xl text-primary font-bold">☁</span><span>O-Drive</span>
             </a>
             <div class="flex items-center gap-4">
@@ -31,7 +31,7 @@
             </div>
         </header>
 
-        <div class="toolbar-card text-white">
+        <div class="toolbar-card">
             <div class="tools-left">
                 <div id="breadcrumb" class="text-sm font-medium text-primary"></div>
             </div>
@@ -70,46 +70,46 @@
         </footer>
     </main>
 
-    <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-white">
-        <div class="bg-[#1a1a1a] border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
+    <div id="loginModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
+        <div class="bg-surface border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
             <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button>
             <form onsubmit="event.preventDefault();Actions.doLogin()">
                 <h1 class="text-xl font-bold mb-6 text-center">登录管理后台</h1>
-                <input type="text" id="adminUser" placeholder="用户名" autocomplete="username" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-white">
-                <input type="password" id="adminPass" placeholder="密码" autocomplete="current-password" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-white">
-                <button type="submit" class="w-full h-11 bg-primary text-white rounded-lg font-bold">登录</button>
+                <input type="text" id="adminUser" placeholder="用户名" autocomplete="username" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-slate-900">
+                <input type="password" id="adminPass" placeholder="密码" autocomplete="current-password" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-slate-900">
+                <button type="submit" class="btn btn-primary w-full h-11 rounded-lg font-bold">登录</button>
             </form>
             <p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p>
         </div>
     </div>
 
-    <div id="mkdirModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-white">
+    <div id="mkdirModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
         <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
             <h1 class="text-lg font-bold mb-4 text-center">新建文件夹</h1>
-            <input type="text" id="folderNameInput" placeholder="请输入名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-white">
+            <input type="text" id="folderNameInput" placeholder="请输入名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-900">
             <div class="flex gap-2">
-                <button class="btn flex-1 text-white" onclick="UI.closeModal('mkdirModal')">取消</button>
+                <button class="btn flex-1" onclick="UI.closeModal('mkdirModal')">取消</button>
                 <button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitMkdir()">创建</button>
             </div>
         </div>
     </div>
 
-    <div id="previewModal" class="fixed inset-0 hidden items-center justify-center bg-black/80 backdrop-blur-sm z-[500] p-4 text-white" onclick="UI.closePreview()">
-        <div class="w-full max-w-6xl h-[85vh] bg-[#0f172a] border border-border rounded-2xl overflow-hidden flex flex-col shadow-2xl" onclick="event.stopPropagation()">
-            <div class="flex items-center justify-between p-4 border-b border-border bg-slate-900/50 text-white">
+    <div id="previewModal" class="fixed inset-0 hidden items-center justify-center bg-black/35 backdrop-blur-sm z-[500] p-4 text-slate-900" onclick="UI.closePreview()">
+        <div class="w-full max-w-6xl h-[85vh] bg-surface border border-border rounded-2xl overflow-hidden flex flex-col shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between p-4 border-b border-border bg-background text-slate-900">
                 <h3 id="previewTitle" class="font-bold truncate text-sm">预览</h3>
                 <div class="flex items-center gap-3">
-                    <button id="editBtn" class="btn hidden text-white" onclick="Actions.toggleEditMode()">编辑</button>
-                    <button id="saveBtn" class="btn btn-primary hidden text-white" onclick="Actions.saveTextContent()">保存</button>
+                    <button id="editBtn" class="btn hidden" onclick="Actions.toggleEditMode()">编辑</button>
+                    <button id="saveBtn" class="btn btn-primary hidden" onclick="Actions.saveTextContent()">保存</button>
                     <button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100">&times;</button>
                 </div>
             </div>
-            <div id="previewContent" class="flex-1 overflow-auto bg-[#020617]"></div>
+            <div id="previewContent" class="flex-1 overflow-auto bg-white"></div>
         </div>
     </div>
 
 
-    <div id="filterModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[350] hidden items-center justify-center p-4 text-white">
+    <div id="filterModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[350] hidden items-center justify-center p-4 text-slate-900">
         <div class="w-full max-w-lg bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <h3 class="font-bold">筛选</h3>
@@ -131,12 +131,12 @@
         </div>
     </div>
 
-    <div id="trashModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[360] hidden items-center justify-center p-4 text-white">
+    <div id="trashModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[360] hidden items-center justify-center p-4 text-slate-900">
         <div class="w-full max-w-5xl h-[80vh] bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col">
             <div class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <div>
                     <h3 class="font-bold">回收站</h3>
-                    <p class="text-xs text-slate-400 mt-1">当前 <span id="trashCount">0</span> 项</p>
+                    <p class="text-xs text-slate-500 mt-1">当前 <span id="trashCount">0</span> 项</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 text-xs">
@@ -149,7 +149,7 @@
             </div>
             <div class="flex-1 overflow-auto custom-scroll">
                 <table class="w-full text-left text-sm">
-                    <thead class="sticky top-0 bg-[#151d2f] text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
+                    <thead class="sticky top-0 bg-background text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
                         <tr><th class="px-4 py-3 w-24">类型</th><th class="px-4 py-3">原始路径</th><th class="px-4 py-3 w-44">删除时间</th><th class="px-4 py-3 w-32">大小</th><th class="px-4 py-3 w-44 text-right">操作</th></tr>
                     </thead>
                     <tbody id="trashTbody" class="divide-y divide-border/30"></tbody>
@@ -158,20 +158,20 @@
         </div>
     </div>
 
-    <div id="detailsPanel" class="fixed top-0 right-0 h-full w-full max-w-sm bg-surface border-l border-border shadow-2xl z-[340] transform translate-x-full transition-transform duration-200 text-white">
+    <div id="detailsPanel" class="fixed top-0 right-0 h-full w-full max-w-sm bg-surface border-l border-border shadow-2xl z-[340] transform translate-x-full transition-transform duration-200 text-slate-900">
         <div class="h-full flex flex-col">
             <div class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <div>
                     <h3 id="detailsTitle" class="font-bold truncate">文件详情</h3>
-                    <p id="detailsEmpty" class="text-xs text-slate-400 mt-1">点击“详情”查看项目信息</p>
+                    <p id="detailsEmpty" class="text-xs text-slate-500 mt-1">点击“详情”查看项目信息</p>
                 </div>
                 <button onclick="UI.closeDrawer('detailsPanel')" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
             </div>
             <div id="detailsBody" class="flex-1 overflow-auto p-5 text-sm"></div>
         </div>
     </div>
-    <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden text-white">
-        <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-400">
+    <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden text-slate-900">
+        <div class="bg-surface-soft px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-500">
             <span>上传进度</span>
             <button onclick="UI.closeUploadManager()">&times;</button>
         </div>

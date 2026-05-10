@@ -1,4 +1,4 @@
-import { state } from './state.js';
+﻿import { state } from './state.js';
 import { api } from './api.js';
 import { escapeHtml, Utils } from './utils.js';
 import { getOrderedEntries } from './file-view-model.js';
@@ -65,7 +65,7 @@ export const Message = {
     const container = document.getElementById('toastContainer');
     if (!container) return;
     const div = document.createElement('div');
-    div.className = `toast-anim px-5 py-2.5 rounded-xl text-sm font-bold shadow-2xl flex items-center gap-2 pointer-events-auto ${type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-primary'} text-white my-1`;
+    div.className = `toast-anim px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2 pointer-events-auto ${type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-primary'} text-white my-1`;
     div.innerHTML = `<span>${type === 'success' ? '&#10003;' : '&#9888;&#65039;'}</span> ${escapeHtml(msg)}`;
     container.appendChild(div);
     setTimeout(() => {
@@ -172,11 +172,11 @@ export const UI = {
     if (page) page.textContent = String(state.trash.currentPage || 1);
     if (total) total.textContent = String(state.trash.totalPages || 1);
     tbody.innerHTML = rows.map(item => `
-      <tr class="hover:bg-slate-800/30 transition-colors">
-        <td class="px-4 py-3 font-mono text-slate-300">${escapeHtml(item.kind)}</td>
-        <td class="px-4 py-3 text-white break-all">${escapeHtml(item.original_key)}</td>
+      <tr class="hover:bg-slate-50 transition-colors">
+        <td class="px-4 py-3 font-mono text-slate-600">${escapeHtml(item.kind)}</td>
+        <td class="px-4 py-3 text-slate-900 break-all">${escapeHtml(item.original_key)}</td>
         <td class="px-4 py-3 text-slate-500 font-mono">${escapeHtml(Utils.formatDate(item.trashed_at))}</td>
-        <td class="px-4 py-3 text-slate-400 font-mono">${escapeHtml(item.size ? `${(item.size / 1024).toFixed(1)} KB` : '0 KB')}</td>
+        <td class="px-4 py-3 text-slate-500 font-mono">${escapeHtml(item.size ? `${(item.size / 1024).toFixed(1)} KB` : '0 KB')}</td>
         <td class="px-4 py-3">
           <div class="flex justify-end gap-2">
             <button class="btn btn-primary h-8 px-3 text-xs" onclick="Actions.restoreTrash(${escapeHtml(JSON.stringify(item.id))})">恢复</button>
@@ -196,7 +196,7 @@ export const UI = {
         el.style.display = 'inline-flex';
         if (el.id === 'pasteGroup' && !state.clipboard) el.style.display = 'none';
       });
-      box.innerHTML = `<a href="/admin.html" class="btn text-white font-bold">管理</a><button onclick="Actions.logout()" class="btn ml-2 text-white opacity-60">退出</button>`;
+      box.innerHTML = `<a href="/admin.html" class="btn text-slate-900 font-bold">管理</a><button onclick="Actions.logout()" class="btn ml-2 text-slate-900 opacity-60">退出</button>`;
     } else {
       document.querySelectorAll('.admin-only').forEach(el => {
         el.style.display = 'none';
@@ -214,16 +214,16 @@ export const UI = {
     let html = `<button class="breadcrumb-root" onclick="Actions.navigateTo('/')">全部文件</button>`;
 
     if (parts.length > 2) {
-      html += `<span class="opacity-20 mx-1 text-white">/</span><span class="opacity-40 text-white">...</span>`;
+      html += `<span class="opacity-20 mx-1 text-slate-900">/</span><span class="opacity-40 text-slate-900">...</span>`;
       parts.slice(-2).forEach((part, index) => {
         const path = '/' + parts.slice(0, parts.length - 2 + index + 1).join('/') + '/';
-        html += `<span class="opacity-20 mx-1 text-white">/</span><button class="hover:text-primary text-white truncate max-w-[120px]" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(path))})">${escapeHtml(part)}</button>`;
+        html += `<span class="opacity-20 mx-1 text-slate-900">/</span><button class="hover:text-primary text-slate-900 truncate max-w-[120px]" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(path))})">${escapeHtml(part)}</button>`;
       });
     } else {
       let acc = '';
       parts.forEach(part => {
         acc += '/' + part;
-        html += `<span class="opacity-20 mx-1 text-white">/</span><button class="hover:text-primary text-white" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(acc + '/'))})">${escapeHtml(part)}</button>`;
+        html += `<span class="opacity-20 mx-1 text-slate-900">/</span><button class="hover:text-primary text-slate-900" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(acc + '/'))})">${escapeHtml(part)}</button>`;
       });
     }
 
@@ -241,7 +241,7 @@ export const UI = {
 
     if (state.viewMode === 'list') {
       const header = document.createElement('div');
-      header.className = 'list-header grid-row-layout hidden md:grid text-white';
+      header.className = 'list-header grid-row-layout hidden md:grid text-slate-900';
       header.innerHTML = `<div>名称</div><div class="text-center">大小</div><div class="text-center">修改时间</div><div class="text-center">操作</div>`;
       list.appendChild(header);
     }
@@ -254,10 +254,10 @@ export const UI = {
       const div = document.createElement('div');
       if (state.viewMode === 'grid') {
         div.className = 'grid-item';
-        div.innerHTML = `<div class="file-icon opacity-30 text-slate-500 text-4xl mb-3">📁</div><div class="file-name text-white">..</div><div class="file-size text-slate-500">返回上级</div><div class="file-actions"></div>`;
+        div.innerHTML = `<div class="file-icon opacity-30 text-slate-500 text-4xl mb-3">📁</div><div class="file-name text-slate-900">..</div><div class="file-size text-slate-500">返回上级</div><div class="file-actions"></div>`;
       } else {
-        div.className = 'grid-row-layout h-[52px] hover:bg-slate-800/40 border-b border-white/5 cursor-pointer text-slate-500';
-        div.innerHTML = `<div class="col-name"><span class="opacity-50 text-xl text-white">📁</span><span class="text-sm font-medium text-slate-400">返回上级 (..)</span></div><div></div><div></div><div></div>`;
+        div.className = 'grid-row-layout h-[52px] hover:bg-slate-50 border-b border-border cursor-pointer text-slate-500';
+        div.innerHTML = `<div class="col-name"><span class="opacity-50 text-xl text-slate-900">📁</span><span class="text-sm font-medium text-slate-500">返回上级 (..)</span></div><div></div><div></div><div></div>`;
       }
       div.ondblclick = () => Actions.navigateTo(parent);
       container.appendChild(div);
@@ -290,10 +290,10 @@ export const UI = {
 
       if (state.viewMode === 'grid') {
         el.className = `grid-item ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `${visual}<div class="file-name text-white">${safeName}</div><div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div>`;
+        el.innerHTML = `${visual}<div class="file-name text-slate-900">${safeName}</div><div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div>`;
       } else {
         el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="col-name text-white"><span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-200">${safeName}</span></div><div class="col-size hidden md:block text-slate-400 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-white"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
+        el.innerHTML = `<div class="col-name text-slate-900"><span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span></div><div class="col-size hidden md:block text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
         if (state.userRole === 'admin') {
           const nameEl = el.querySelector('.file-name');
           nameEl.ondblclick = e => {

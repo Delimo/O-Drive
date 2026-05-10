@@ -1,46 +1,79 @@
-/* --- style.css 现代通用审美版 --- */
 :root {
-    /* 核心配色 - 现代中性 Slate 系列 */
-    --primary: #60a5fa;          /* 更加柔和的蓝 */
-    --background: #f8fafc;       /* 浅灰色背景，护眼且干净 */
-    --surface: #ffffff;          /* 白色卡片面 */
-    --border: #e2e8f0;           /* 浅灰色边框 */
-    --text-main: #1e293b;        /* 深灰色文字 */
-    --text-muted: #64748b;       /* 柔和的辅助文字 */
-    --hover: #f1f5f9;            /* 悬停色 */
-}
-
-/* 自动适配深色模式 - 给喜欢暗色的用户保留，但调得更柔和 */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0b1220;   /* 更柔和的深色底 */
-        --surface: #111827;      /* 深色面板 */
-        --border: #243244;       /* 柔和边框 */
-        --text-main: #e5eefb;    /* 亮色文字 */
-        --text-muted: #94a3b8;   /* 灰字 */
-        --hover: #172033;
-    }
+    --primary: #3b82f6;
+    --primary-strong: #2563eb;
+    --background: #f5f7fb;
+    --surface: #ffffff;
+    --surface-soft: #f8fafc;
+    --border: #d9e1ee;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --hover: #eef3f9;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
 }
 
 html, body {
-    height: 100vh; margin: 0; padding: 0; overflow: hidden;
-    background-color: var(--background); color: var(--text-main);
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--background);
+    color: var(--text-main);
     font-family: Inter, system-ui, -apple-system, sans-serif;
-    transition: background-color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
-/* 滚动条美化 */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
 
-/* Markdown 预览优化 */
-.markdown-body { color: var(--text-main); line-height: 1.6; font-size: 15px; }
-.markdown-body h1, .markdown-body h2 { color: var(--text-main); font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; margin: 1.2em 0 0.6em; }
-.markdown-body p { margin-bottom: 1em; }
-.markdown-body code { background: var(--hover); padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+::-webkit-scrollbar-track {
+    background: transparent;
+}
 
-/* Toast 动画 */
-@keyframes toastIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.toast-anim { animation: toastIn 0.3s ease-out; }
+::-webkit-scrollbar-thumb {
+    background: #c7d2e2;
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.markdown-body {
+    color: var(--text-main);
+    line-height: 1.65;
+    font-size: 15px;
+}
+
+.markdown-body h1,
+.markdown-body h2 {
+    color: var(--text-main);
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3em;
+    margin: 1.2em 0 0.6em;
+}
+
+.markdown-body p {
+    margin-bottom: 1em;
+}
+
+.markdown-body code {
+    background: var(--hover);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.9em;
+}
+
+@keyframes toastIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.toast-anim {
+    animation: toastIn 0.3s ease-out;
+}
