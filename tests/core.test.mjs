@@ -7,6 +7,7 @@ import {
   handleMultipartPart,
   handleMultipartComplete,
   handleMultipartAbort,
+  handleRename,
   handleTrashList,
   handleTrashRestore,
   handleTrashDelete,
@@ -55,9 +56,10 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
         const prefix = opts.prefix || '';
         const delimiter = opts.delimiter;
         const cursor = Number(opts.cursor || 0);
+        const limit = Math.min(Number(opts.limit || listPageSize), listPageSize);
         const objectsFromStore = listObjects(prefix);
         if (!delimiter) {
-          const page = objectsFromStore.slice(cursor, cursor + listPageSize);
+          const page = objectsFromStore.slice(cursor, cursor + limit);
           const nextCursor = cursor + page.length;
           return {
             delimitedPrefixes: [],
@@ -242,6 +244,26 @@ test('search reads paginated R2 listings', async () => {
   const data = await res.json();
 
   assert.deepEqual(data.files.map(file => file.fullKey), ['docs/first.txt', 'docs/second.txt']);
+});
+
+test('search returns cursor for loading more results', async () => {
+  const env = makeEnv({
+    listPageSize: 1,
+    objects: [
+      { key: 'docs/first.txt', size: 5, uploaded: new Date('2026-01-01') },
+      { key: 'docs/second.txt', size: 6, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const first = await handleSearch(env, new Request('https://example.com/api/search?q=.txt&scope=/docs&limit=1'), new URL('https://example.com/api/search?q=.txt&scope=/docs&limit=1'), [], { role: 'guest' }, []);
+  const firstData = await first.json();
+  assert.deepEqual(firstData.files.map(file => file.fullKey), ['docs/first.txt']);
+  assert.equal(firstData.nextCursor, '1');
+
+  const second = await handleSearch(env, new Request('https://example.com/api/search?q=.txt&scope=/docs&limit=1&cursor=1'), new URL('https://example.com/api/search?q=.txt&scope=/docs&limit=1&cursor=1'), [], { role: 'guest' }, []);
+  const secondData = await second.json();
+  assert.deepEqual(secondData.files.map(file => file.fullKey), ['docs/second.txt']);
+  assert.equal(secondData.nextCursor, '');
 });
 
 test('preview response streams existing object, supports range, and 404s missing object', async () => {
@@ -437,6 +459,43 @@ test('batch delete moves files into trash and restore returns them', async () =>
     headers: { 'Content-Type': 'application/json' },
   }));
   assert.equal(trashDelete.status, 404);
+});
+
+test('batch delete reports partial failures', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const res = await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/readme.txt', 'docs/missing.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(data.success, false);
+  assert.equal(data.completed, 1);
+  assert.equal(data.failed.length, 1);
+});
+
+test('rename refuses to overwrite existing targets', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'docs/b.txt', body: 'b', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  await assert.rejects(
+    () => handleRename(env, new Request('https://example.com', {
+      method: 'PUT',
+      body: JSON.stringify({ newName: 'b.txt' }),
+      headers: { 'Content-Type': 'application/json' },
+    }), 'docs/a.txt'),
+    /Target already exists/,
+  );
 });
 
 test('trash items can be purged permanently', async () => {

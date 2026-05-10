@@ -15,11 +15,23 @@ function mapEntry(o) {
 export async function handleSearch(env, request, url, hiddenPaths, auth, protectedPaths = []) {
   const q = (url.searchParams.get('q') || '').toLowerCase();
   const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
-  const listed = await listR2Objects(env.R2_BUCKET, { prefix: scope });
-  const matches = await markProtection(listed.objects
-    .map(mapEntry)
-    .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths))), request, env, auth, protectedPaths);
-  return jsonResponse({ files: matches });
+  const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || '50')));
+  let cursor = url.searchParams.get('cursor') || undefined;
+  const matches = [];
+  let nextCursor = '';
+
+  do {
+    const listed = await env.R2_BUCKET.list({ prefix: scope, cursor, limit: Math.max(1, limit - matches.length) });
+    const pageMatches = (listed.objects || [])
+      .map(mapEntry)
+      .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
+    matches.push(...pageMatches);
+    cursor = listed.truncated ? listed.cursor : undefined;
+    nextCursor = cursor || '';
+  } while (cursor && matches.length < limit);
+
+  const visibleMatches = await markProtection(matches.slice(0, limit), request, env, auth, protectedPaths);
+  return jsonResponse({ files: visibleMatches, nextCursor });
 }
 
 export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths = []) {

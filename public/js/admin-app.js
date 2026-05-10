@@ -4,6 +4,40 @@ import { api } from './api.js';
 
 window.AdminActions = AdminActions;
 
+function readArgs(el) {
+  const raw = el.dataset.args || '[]';
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return [];
+  }
+}
+
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-admin-action]');
+  if (!target) return;
+  const action = target.dataset.adminAction;
+  const args = readArgs(target);
+  switch (action) {
+    case 'switch-tab': return AdminActions.switchTab(args[0]);
+    case 'change-page': return AdminActions.changePage(Number(args[0] || 0));
+    case 'add-hidden': return AdminActions.addHidden();
+    case 'remove-hidden': return AdminActions.removeHidden(args[0]);
+    case 'add-protected': return AdminActions.addProtected();
+    case 'remove-protected': return AdminActions.removeProtected(args[0]);
+  }
+});
+
+document.addEventListener('submit', event => {
+  const form = event.target.closest('form[data-submit-action]');
+  if (!form) return;
+  event.preventDefault();
+  switch (form.dataset.submitAction) {
+    case 'add-hidden': return AdminActions.addHidden();
+    case 'add-protected': return AdminActions.addProtected();
+  }
+});
+
 const startYear = 2026;
 const currentYear = new Date().getFullYear();
 const yearDisp = document.getElementById('year-display');

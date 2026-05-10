@@ -65,12 +65,11 @@ export const Message = {
     const container = document.getElementById('toastContainer');
     if (!container) return;
     const div = document.createElement('div');
-    div.className = `toast-anim px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2 pointer-events-auto ${type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-primary'} text-white my-1`;
+    div.className = `toast-anim px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2 pointer-events-auto transition-opacity duration-300 ${type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-primary'} text-white my-1`;
     div.innerHTML = `<span>${type === 'success' ? '&#10003;' : '&#9888;&#65039;'}</span> ${escapeHtml(msg)}`;
     container.appendChild(div);
     setTimeout(() => {
-      div.style.opacity = '0';
-      div.style.transition = '0.3s';
+      div.classList.add('opacity-0');
       setTimeout(() => div.remove(), 300);
     }, 3000);
   },
@@ -85,8 +84,8 @@ export const Message = {
 export const UI = {
   renderAuthButtons() {
     const html = state.userRole === 'admin'
-      ? `<a href="/admin.html" class="btn text-slate-900 font-bold">管理</a><button onclick="Actions.logout()" class="btn ml-2 text-slate-900 opacity-60">退出</button>`
-      : `<button class="btn btn-primary font-bold" onclick="UI.showModal('loginModal')">登录</button>`;
+      ? `<a href="/admin.html" class="btn text-slate-900 font-bold">管理</a><button class="btn ml-2 text-slate-900 opacity-60" data-action="logout">退出</button>`
+      : `<button class="btn btn-primary font-bold" data-action="show-modal" data-args='["loginModal"]'>登录</button>`;
 
     const desktop = document.getElementById('authButtons');
     if (desktop) desktop.innerHTML = html;
@@ -96,12 +95,7 @@ export const UI = {
 
     if (state.userRole === 'admin') {
       document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = 'inline-flex';
-        if (el.id === 'pasteGroup' && !state.clipboard) el.style.display = 'none';
-      });
-    } else {
-      document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = 'none';
+        el.classList.remove('admin-only');
       });
     }
   },
@@ -189,11 +183,11 @@ export const UI = {
     empty.classList.add('hidden');
     body.innerHTML = `
       <div class="details-actions">
-        ${!meta.sizeFormatted ? `<button class="btn btn-primary" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(meta.path))})">打开文件夹</button>` : ''}
-        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" onclick="Actions.openPreview(${escapeHtml(JSON.stringify(meta.path))}, ${escapeHtml(JSON.stringify(meta.name))}, ${meta.protected ? 'true' : 'false'})">预览</button>` : ''}
-        ${meta.sizeFormatted ? `<button class="btn" onclick="Actions.downloadFile(${escapeHtml(JSON.stringify(meta.path))})">下载</button>` : ''}
-        <button class="btn" onclick="Actions.copyPath(${escapeHtml(JSON.stringify(meta.path))})">复制路径</button>
-        <button class="btn" onclick="Actions.copyPath(${escapeHtml(JSON.stringify(meta.fullKey))})">复制原始键</button>
+        ${!meta.sizeFormatted ? `<button class="btn btn-primary" data-action="navigate" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>打开文件夹</button>` : ''}
+        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" data-action="open-preview" data-args='${escapeHtml(JSON.stringify([meta.path, meta.name, meta.protected ? true : false]))}'>预览</button>` : ''}
+        ${meta.sizeFormatted ? `<button class="btn" data-action="download-file" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>下载</button>` : ''}
+        <button class="btn" data-action="copy-path" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>复制路径</button>
+        <button class="btn" data-action="copy-path" data-args='${escapeHtml(JSON.stringify([meta.fullKey]))}'>复制原始键</button>
       </div>
       <div class="space-y-3 text-sm">
         <div class="detail-row"><span>类型</span><strong>${escapeHtml(meta.kind)}</strong></div>
@@ -226,8 +220,8 @@ export const UI = {
         <td class="px-4 py-3 text-slate-500 font-mono">${escapeHtml(item.size ? `${(item.size / 1024).toFixed(1)} KB` : '0 KB')}</td>
         <td class="px-4 py-3">
           <div class="flex justify-end gap-2">
-            <button class="btn btn-primary h-8 px-3 text-xs" onclick="Actions.restoreTrash(${escapeHtml(JSON.stringify(item.id))})">恢复</button>
-            <button class="btn btn-danger-soft h-8 px-3 text-xs" onclick="Actions.purgeTrash(${escapeHtml(JSON.stringify(item.id))})">彻底删除</button>
+            <button class="btn btn-primary h-8 px-3 text-xs" data-action="restore-trash" data-args='${escapeHtml(JSON.stringify([item.id]))}'>恢复</button>
+            <button class="btn btn-danger-soft h-8 px-3 text-xs" data-action="purge-trash" data-args='${escapeHtml(JSON.stringify([item.id]))}'>彻底删除</button>
           </div>
         </td>
       </tr>
@@ -241,19 +235,19 @@ export const UI = {
   renderBreadcrumb() {
     if (state.isSearching) return;
     const parts = state.currentPath.split('/').filter(Boolean);
-    let html = `<button class="breadcrumb-root" onclick="Actions.navigateTo('/')">全部文件</button>`;
+    let html = `<button class="breadcrumb-root" data-action="navigate" data-args='["/"]'>全部文件</button>`;
 
     if (parts.length > 2) {
       html += `<span class="opacity-20 mx-1 text-slate-900">/</span><span class="opacity-40 text-slate-900">...</span>`;
       parts.slice(-2).forEach((part, index) => {
         const path = '/' + parts.slice(0, parts.length - 2 + index + 1).join('/') + '/';
-        html += `<span class="opacity-20 mx-1 text-slate-900">/</span><button class="hover:text-primary text-slate-900 truncate max-w-[120px]" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(path))})">${escapeHtml(part)}</button>`;
+        html += `<span class="opacity-20 mx-1 text-slate-900">/</span><button class="hover:text-primary text-slate-900 truncate max-w-[120px]" data-action="navigate" data-args='${escapeHtml(JSON.stringify([path]))}'>${escapeHtml(part)}</button>`;
       });
     } else {
       let acc = '';
       parts.forEach(part => {
         acc += '/' + part;
-        html += `<span class="opacity-20 mx-1 text-slate-900">/</span><button class="hover:text-primary text-slate-900" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(acc + '/'))})">${escapeHtml(part)}</button>`;
+        html += `<span class="opacity-20 mx-1 text-slate-900">/</span><button class="hover:text-primary text-slate-900" data-action="navigate" data-args='${escapeHtml(JSON.stringify([acc + '/']))}'>${escapeHtml(part)}</button>`;
       });
     }
 
@@ -310,8 +304,8 @@ export const UI = {
       const el = document.createElement('div');
       el.dataset.key = item.fullKey;
       const previewArgs = escapeHtml(JSON.stringify([item.path, item.name, Boolean(item.protected)]));
-      const downloadArg = escapeHtml(JSON.stringify(item.path));
-      const detailArg = escapeHtml(JSON.stringify({
+      const downloadArg = escapeHtml(JSON.stringify([item.path]));
+      const detailArg = escapeHtml(JSON.stringify([{
         name: item.name,
         path: item.path,
         fullKey: item.fullKey,
@@ -319,28 +313,37 @@ export const UI = {
         rawSize: item.rawSize,
         time: item.time,
         protected: Boolean(item.protected),
-      }));
+      }]));
       const safeName = escapeHtml(item.name);
       const protectedBadge = item.protected ? '<span class="protected-badge">受保护</span>' : '';
       const safeSize = escapeHtml(isFolder ? '文件夹' : item.sizeFormatted);
       const safeIcon = escapeHtml(isFolder ? '📁' : Utils.getFileIcon(item.name));
       const thumbUrl = !isFolder && Utils.isImageFile(item.name) ? escapeHtml(api.thumbnailUrl(item.path)) : '';
       const selectControl = state.userRole === 'admin'
-        ? `<button class="file-select-btn ${isSelected ? 'is-selected' : ''}" aria-label="${isSelected ? '取消选择' : '选择'} ${safeName}" onclick="event.stopPropagation();Actions.toggleSelect(${escapeHtml(JSON.stringify(item.fullKey))}, this.closest('[data-key]'), event)">${isSelected ? '✓' : ''}</button>`
+        ? `<button class="file-select-btn ${isSelected ? 'is-selected' : ''}" aria-label="${isSelected ? '取消选择' : '选择'} ${safeName}" data-action="toggle-select" data-args='${escapeHtml(JSON.stringify([item.fullKey]))}'>${isSelected ? '✓' : ''}</button>`
         : '';
       const visual = thumbUrl
-        ? `<div class="file-thumb-wrap"><img class="file-thumb" src="${thumbUrl}" alt="" loading="lazy" decoding="async" onerror="this.closest('.file-thumb-wrap').outerHTML='<div class=&quot;file-icon select-none&quot;>${safeIcon}</div>'"></div>`
+        ? `<div class="file-thumb-wrap"><img class="file-thumb" src="${thumbUrl}" alt="" loading="lazy" decoding="async"></div>`
         : `<div class="file-icon select-none">${safeIcon}</div>`;
 
       if (state.viewMode === 'grid') {
         el.className = `grid-item ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `${selectControl}${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div>`;
+        el.innerHTML = `${selectControl}${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div>`;
       } else {
         el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="col-name text-slate-900">${selectControl}<span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
+        el.innerHTML = `<div class="col-name text-slate-900">${selectControl}<span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div></div>`;
       }
 
-      el.onclick = () => {
+      const thumb = el.querySelector('.file-thumb');
+      if (thumb) {
+        thumb.addEventListener('error', () => {
+          const wrap = thumb.closest('.file-thumb-wrap');
+          if (wrap) wrap.outerHTML = `<div class="file-icon select-none">${safeIcon}</div>`;
+        });
+      }
+
+      el.addEventListener('click', event => {
+        if (event.target.closest('[data-action]')) return;
         if (isFolder) {
           if (item.protected && state.userRole !== 'admin') {
             Actions.handlePasswordRequired({ path: item.path }, () => Actions.navigateTo(item.path));
@@ -350,11 +353,17 @@ export const UI = {
           return;
         }
         if (Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name, Boolean(item.protected));
-      };
+      });
       container.appendChild(el);
     });
 
     list.appendChild(container);
+    if (state.isSearching && state.search?.nextCursor) {
+      const more = document.createElement('div');
+      more.className = 'flex justify-center py-4';
+      more.innerHTML = `<button class="btn btn-primary" data-action="load-more-search" ${state.search.loadingMore ? 'disabled' : ''}>${state.search.loadingMore ? '加载中...' : '加载更多'}</button>`;
+      list.appendChild(more);
+    }
   },
 
   updateBatchUI() {
@@ -370,18 +379,18 @@ export const UI = {
     if (!bt || !pg) return;
 
     const hasSelection = state.userRole === 'admin' && state.selectedPaths.length > 0;
-    bt.style.display = hasSelection ? 'flex' : 'none';
+    bt.classList.toggle('is-visible', hasSelection);
     if (clr) clr.classList.toggle('hidden', !hasSelection);
     if (count) count.textContent = String(state.selectedPaths.length || 0);
-    if (mobileBatch) mobileBatch.style.display = hasSelection ? 'grid' : 'none';
-    if (mobileRename) mobileRename.style.display = state.selectedPaths.length === 1 ? 'inline-flex' : 'none';
+    if (mobileBatch) mobileBatch.classList.toggle('is-visible', hasSelection);
+    if (mobileRename) mobileRename.classList.toggle('is-visible', state.selectedPaths.length === 1);
     const hasClipboard = state.userRole === 'admin' && state.clipboard;
     pg.classList.toggle('hidden', !hasClipboard);
-    pg.style.display = hasClipboard ? 'flex' : 'none';
+    pg.classList.toggle('is-visible', hasClipboard);
     if (ren) ren.classList.toggle('hidden', state.selectedPaths.length !== 1);
     const pb = document.getElementById('pasteBtn');
     if (state.clipboard && pb) pb.textContent = `粘贴 (${state.clipboard.paths.length})`;
-    if (mobileClipboard) mobileClipboard.style.display = hasClipboard ? 'grid' : 'none';
+    if (mobileClipboard) mobileClipboard.classList.toggle('is-visible', hasClipboard);
     if (mobilePaste && state.clipboard) mobilePaste.textContent = `粘贴 (${state.clipboard.paths.length})`;
   },
 

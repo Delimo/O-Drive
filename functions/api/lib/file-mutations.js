@@ -58,6 +58,38 @@ function assertUserKey(key) {
   if (isReservedKey(key)) throw new Error('Reserved system path');
 }
 
+function normalizeDir(path) {
+  const clean = String(path || '').trim().replace(/^\/+|\/+$/g, '');
+  return clean ? clean.split('/').map(normalizeName).join('/') : '';
+}
+
+function normalizeUserKey(key) {
+  const clean = String(key || '').trim().replace(/^\/+|\/+$/g, '');
+  if (!clean) throw new Error('Invalid path');
+  return clean.split('/').map(normalizeName).join('/');
+}
+
+function assertPathList(paths) {
+  if (!Array.isArray(paths) || paths.length === 0 || paths.length > 100) {
+    throw new Error('Invalid paths');
+  }
+  return paths.map(normalizeUserKey);
+}
+
+async function keyExists(env, key) {
+  if (await env.R2_BUCKET.head(key)) return true;
+  const listed = await env.R2_BUCKET.list({ prefix: key + '/', limit: 1 });
+  return Boolean((listed.objects || []).length || (listed.delimitedPrefixes || []).length);
+}
+
+async function assertTargetAvailable(env, key) {
+  if (await keyExists(env, key)) {
+    const err = new Error('Target already exists');
+    err.status = 409;
+    throw err;
+  }
+}
+
 async function copyR2Object(env, sourceKey, targetKey) {
   const obj = await env.R2_BUCKET.get(sourceKey);
   if (!obj) return false;
@@ -104,29 +136,43 @@ async function softDeleteTree(env, sourceKey, request) {
 
 export async function handlePaste(env, request) {
   const { action, paths, targetDir } = await request.json();
-  let destDir = targetDir.replace(/^\/|\/$/g, '');
+  if (!['copy', 'move'].includes(action)) return jsonResponse({ success: false, message: 'Invalid paste action' }, 400);
+  const normalizedPaths = assertPathList(paths);
+  let destDir = normalizeDir(targetDir);
   if (destDir !== '') destDir += '/';
+  const failed = [];
+  let completed = 0;
 
-  for (const srcKey of paths) {
-    const sourceName = normalizeName(srcKey.split('/').pop());
-    const destKey = destDir + sourceName;
-    assertUserKey(srcKey);
-    assertUserKey(destKey);
-    if (srcKey === destKey) continue;
-    await copyTree(env, srcKey, destKey, request, action === 'move');
+  for (const srcKey of normalizedPaths) {
+    try {
+      const sourceName = normalizeName(srcKey.split('/').pop());
+      const destKey = destDir + sourceName;
+      assertUserKey(srcKey);
+      assertUserKey(destKey);
+      if (srcKey === destKey) continue;
+      if (!(await keyExists(env, srcKey))) throw new Error('File or folder not found');
+      await assertTargetAvailable(env, destKey);
+      await copyTree(env, srcKey, destKey, request, action === 'move');
+      completed++;
+    } catch (e) {
+      failed.push({ path: srcKey, message: e.message || 'Failed' });
+    }
   }
 
   await addLog(env, request, action.toUpperCase(), `Batch paste to ${targetDir}`);
-  return jsonResponse({ success: true });
+  return jsonResponse({ success: failed.length === 0, completed, failed }, failed.length && !completed ? 409 : 200);
 }
 
 export async function handleRename(env, request, r2Key) {
   const { newName } = await request.json();
   const cleanName = normalizeName(newName);
+  r2Key = normalizeUserKey(r2Key);
   const parentDir = r2Key.includes('/') ? r2Key.substring(0, r2Key.lastIndexOf('/') + 1) : '';
   const newKey = parentDir + cleanName;
   assertUserKey(r2Key);
   assertUserKey(newKey);
+  if (r2Key === newKey) return jsonResponse({ success: true });
+  if (r2Key !== newKey) await assertTargetAvailable(env, newKey);
   await copyTree(env, r2Key, newKey, request, true);
   await addLog(env, request, 'RENAME', `${r2Key} -> ${cleanName}`);
   return jsonResponse({ success: true });
@@ -134,19 +180,30 @@ export async function handleRename(env, request, r2Key) {
 
 export async function handleBatchDelete(env, request) {
   const { paths } = await request.json();
-  for (const p of paths) {
-    assertUserKey(p);
-    await softDeleteTree(env, p, request);
+  const normalizedPaths = assertPathList(paths);
+  const failed = [];
+  let completed = 0;
+  for (const p of normalizedPaths) {
+    try {
+      assertUserKey(p);
+      await softDeleteTree(env, p, request);
+      completed++;
+    } catch (e) {
+      failed.push({ path: p, message: e.message || 'Failed' });
+    }
   }
-  await addLog(env, request, 'DELETE', `Move to trash ${paths.length} items`);
-  return jsonResponse({ success: true });
+  await addLog(env, request, 'DELETE', `Move to trash ${completed}/${normalizedPaths.length} items`);
+  return jsonResponse({ success: failed.length === 0, completed, failed }, failed.length && !completed ? 400 : 200);
 }
 
 export async function handleMkdir(env, request, r2Key) {
   const { folderName } = await request.json();
   const cleanName = normalizeName(folderName);
-  const key = (r2Key ? r2Key + '/' : '') + cleanName + '/.folder';
+  const dir = r2Key ? normalizeUserKey(r2Key) + '/' : '';
+  const folderKey = dir + cleanName;
+  const key = folderKey + '/.folder';
   assertUserKey(key);
+  await assertTargetAvailable(env, folderKey);
   await env.R2_BUCKET.put(key, new Uint8Array(0));
   await addLog(env, request, 'MKDIR', cleanName);
   return jsonResponse({ success: true });
@@ -154,16 +211,18 @@ export async function handleMkdir(env, request, r2Key) {
 
 export async function handleUpload(env, request, r2Key) {
   const file = (await request.formData()).get('file');
+  if (!file || typeof file.stream !== 'function') return jsonResponse({ success: false, message: 'Missing file' }, 400);
   const cleanName = normalizeName((file?.name || '').split(/[\/\\]/).pop());
-  const key = (r2Key ? r2Key + '/' : '') + cleanName;
+  const key = (r2Key ? normalizeUserKey(r2Key) + '/' : '') + cleanName;
   assertUserKey(key);
+  await assertTargetAvailable(env, key);
   await env.R2_BUCKET.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
   await addLog(env, request, 'UPLOAD', cleanName);
   return jsonResponse({ success: true });
 }
 
 function uploadKey(targetDir, name) {
-  let destDir = String(targetDir || '').replace(/^\/+|\/+$/g, '');
+  let destDir = normalizeDir(targetDir);
   if (destDir) destDir += '/';
   return destDir + normalizeName(String(name || '').split(/[\/\\]/).pop());
 }
@@ -172,6 +231,7 @@ export async function handleMultipartCreate(env, request) {
   const { targetDir, name, type } = await request.json();
   const key = uploadKey(targetDir, name);
   assertUserKey(key);
+  await assertTargetAvailable(env, key);
   const upload = await env.R2_BUCKET.createMultipartUpload(key, {
     httpMetadata: { contentType: type || 'application/octet-stream' },
   });
@@ -216,8 +276,11 @@ export async function handleMultipartAbort(env, request) {
 }
 
 export async function handleSaveText(env, request, r2Key) {
+  r2Key = normalizeUserKey(r2Key);
   assertUserKey(r2Key);
-  await env.R2_BUCKET.put(r2Key, (await request.json()).content, { httpMetadata: { contentType: 'text/plain' } });
+  const body = await request.json();
+  if (typeof body.content !== 'string') return jsonResponse({ success: false, message: 'Invalid content' }, 400);
+  await env.R2_BUCKET.put(r2Key, body.content, { httpMetadata: { contentType: 'text/plain' } });
   await addLog(env, request, 'SAVE_TEXT', r2Key);
   return jsonResponse({ success: true });
 }
@@ -239,6 +302,11 @@ export async function handleTrashList(env, url) {
 
 async function restoreTrashRecord(env, row, request) {
   const listed = await listR2Objects(env.R2_BUCKET, { prefix: row.trash_key });
+  if (await keyExists(env, row.original_key)) {
+    const err = new Error('Target already exists');
+    err.status = 409;
+    throw err;
+  }
   await mapWithConcurrency(listed.objects || [], 6, async item => {
     const suffix = item.key.slice(row.trash_key.length);
     const target = row.original_key + suffix;

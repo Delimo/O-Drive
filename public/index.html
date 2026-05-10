@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="/main.css">
     <link rel="stylesheet" href="/explorer.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>.admin-only { display: none; }</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
     <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center"></div>
@@ -23,9 +22,9 @@
             <div class="mobile-search-card">
                 <div class="search-bar mobile-search-bar">
                     <span class="search-icon">🔍</span>
-                    <input type="search" id="mobileSearchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')Actions.handleSearch()">
+                    <input type="search" id="mobileSearchInput" placeholder="搜索文件..." data-enter-action="search">
                 </div>
-                <button class="btn btn-primary mobile-search-btn" onclick="Actions.handleSearch()">搜索</button>
+                <button class="btn btn-primary mobile-search-btn" data-action="search">搜索</button>
             </div>
             <div class="mobile-breadcrumb-card">
                 <div id="mobileBreadcrumb" class="mobile-breadcrumb"></div>
@@ -40,7 +39,7 @@
             <div class="flex items-center gap-4">
                 <div class="search-bar hidden md:block">
                     <span class="search-icon">🔍</span>
-                    <input type="search" id="searchInput" placeholder="搜索文件..." onkeypress="if(event.key==='Enter')Actions.handleSearch()">
+                    <input type="search" id="searchInput" placeholder="搜索文件..." data-enter-action="search">
                 </div>
                 <div id="authButtons"></div>
             </div>
@@ -52,25 +51,25 @@
             </div>
             <div class="tools-right">
                 <div id="batchTools" class="admin-only">
-                    <button class="btn" onclick="Actions.toggleSelectAll()" id="selectAllBtn">全选</button>
-                    <button class="btn" onclick="Actions.setClipboard('move')">移动</button>
-                    <button class="btn" onclick="Actions.setClipboard('copy')">复制</button>
-                    <button class="btn hidden" id="singleRenameBtn" onclick="Actions.startRenameSelected()">重命名</button>
-                    <button class="btn btn-danger-soft font-bold" onclick="Actions.batchDelete()">删除</button>
+                    <button class="btn" id="selectAllBtn" data-action="select-all">全选</button>
+                    <button class="btn" data-action="set-clipboard" data-args='["move"]'>移动</button>
+                    <button class="btn" data-action="set-clipboard" data-args='["copy"]'>复制</button>
+                    <button class="btn hidden" id="singleRenameBtn" data-action="start-rename">重命名</button>
+                    <button class="btn btn-danger-soft font-bold" data-action="batch-delete">删除</button>
                 </div>
                 <div id="pasteGroup" class="admin-only hidden">
-                    <button id="pasteBtn" class="btn btn-primary font-bold" onclick="Actions.executePaste()">粘贴</button>
-                    <button id="cancelPasteBtn" class="btn" onclick="Actions.clearClipboard()">取消</button>
+                    <button id="pasteBtn" class="btn btn-primary font-bold" data-action="execute-paste">粘贴</button>
+                    <button id="cancelPasteBtn" class="btn" data-action="clear-clipboard">取消</button>
                 </div>
-                <button class="btn admin-only" onclick="document.getElementById('fileInput').click()">上传</button>
-                <button class="btn admin-only" onclick="UI.showModal('mkdirModal')">新建</button>
+                <button class="btn admin-only" data-action="open-file-input">上传</button>
+                <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]'>新建</button>
                 <div class="hidden sm:flex items-center gap-2">
-                    <button id="sortBtn" class="btn" onclick="Actions.toggleSortMode()">名称</button>
-                    <button id="viewBtn" class="btn" onclick="Actions.toggleViewMode()">列表</button>
-                    <button class="btn" onclick="Actions.openFilters()">筛选</button>
-                    <button class="btn admin-only" onclick="Actions.openTrash()">回收站</button>
+                    <button id="sortBtn" class="btn" data-action="toggle-sort">名称</button>
+                    <button id="viewBtn" class="btn" data-action="toggle-view">列表</button>
+                    <button class="btn" data-action="open-filters">筛选</button>
+                    <button class="btn admin-only" data-action="open-trash">回收站</button>
                 </div>
-                <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
+                <input type="file" id="fileInput" hidden multiple>
             </div>
         </div>
         </div>
@@ -88,41 +87,41 @@
         </div>
     </main>
 
-    <div id="mobileActionBackdrop" class="mobile-action-backdrop" onclick="UI.closeMobileActions()"></div>
+    <div id="mobileActionBackdrop" class="mobile-action-backdrop" data-action="close-mobile-actions"></div>
     <div id="mobileActionSheet" class="mobile-action-sheet">
         <div class="mobile-action-group">
-            <button class="mobile-action-btn admin-only" onclick="document.getElementById('fileInput').click();UI.closeMobileActions()">上传</button>
-            <button class="mobile-action-btn admin-only" onclick="UI.showModal('mkdirModal');UI.closeMobileActions()">新建</button>
+            <button class="mobile-action-btn admin-only" data-action="open-file-input">上传</button>
+            <button class="mobile-action-btn admin-only" data-action="show-modal" data-args='["mkdirModal"]'>新建</button>
         </div>
         <div class="mobile-action-group" id="mobileBatchGroup">
-            <button class="mobile-action-btn" id="mobileMoveBtn" onclick="Actions.setClipboard('move');UI.closeMobileActions()">移动</button>
-            <button class="mobile-action-btn" id="mobileCopyBtn" onclick="Actions.setClipboard('copy');UI.closeMobileActions()">复制</button>
-            <button class="mobile-action-btn" id="mobileRenameBtn" onclick="Actions.startRenameSelected();UI.closeMobileActions()">重命名</button>
-            <button class="mobile-action-btn btn-danger-soft" id="mobileDeleteBtn" onclick="Actions.batchDelete();UI.closeMobileActions()">删除</button>
+            <button class="mobile-action-btn" id="mobileMoveBtn" data-action="set-clipboard" data-args='["move"]'>移动</button>
+            <button class="mobile-action-btn" id="mobileCopyBtn" data-action="set-clipboard" data-args='["copy"]'>复制</button>
+            <button class="mobile-action-btn" id="mobileRenameBtn" data-action="start-rename">重命名</button>
+            <button class="mobile-action-btn btn-danger-soft" id="mobileDeleteBtn" data-action="batch-delete">删除</button>
         </div>
         <div class="mobile-action-group" id="mobileClipboardGroup">
-            <button class="mobile-action-btn btn-primary" id="mobilePasteBtn" onclick="Actions.executePaste();UI.closeMobileActions()">粘贴</button>
-            <button class="mobile-action-btn" id="mobileCancelPasteBtn" onclick="Actions.clearClipboard();UI.closeMobileActions()">取消</button>
+            <button class="mobile-action-btn btn-primary" id="mobilePasteBtn" data-action="execute-paste">粘贴</button>
+            <button class="mobile-action-btn" id="mobileCancelPasteBtn" data-action="clear-clipboard">取消</button>
         </div>
         <div class="mobile-action-group">
-            <button id="mobileSortBtn" class="mobile-action-btn" onclick="Actions.toggleSortMode()">名称</button>
-            <button id="mobileViewBtn" class="mobile-action-btn" onclick="Actions.toggleViewMode()">列表</button>
-            <button class="mobile-action-btn" onclick="Actions.openFilters();UI.closeMobileActions()">筛选</button>
+            <button id="mobileSortBtn" class="mobile-action-btn" data-action="toggle-sort">名称</button>
+            <button id="mobileViewBtn" class="mobile-action-btn" data-action="toggle-view">列表</button>
+            <button class="mobile-action-btn" data-action="open-filters">筛选</button>
         </div>
         <div class="mobile-action-group">
-            <button class="mobile-action-btn admin-only" onclick="Actions.openTrash();UI.closeMobileActions()">回收站</button>
+            <button class="mobile-action-btn admin-only" data-action="open-trash">回收站</button>
         </div>
     </div>
     <div class="mobile-bottom-bar">
-        <button class="mobile-bottom-btn" onclick="UI.toggleMobileActions()">操作</button>
-        <button class="mobile-bottom-btn" onclick="Actions.toggleViewMode()" id="mobileQuickViewBtn">列表</button>
-        <button class="mobile-bottom-btn" onclick="Actions.openFilters()">筛选</button>
+        <button class="mobile-bottom-btn" data-action="toggle-mobile-actions">操作</button>
+        <button class="mobile-bottom-btn" id="mobileQuickViewBtn" data-action="toggle-view">列表</button>
+        <button class="mobile-bottom-btn" data-action="open-filters">筛选</button>
     </div>
 
     <div id="loginModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
         <div class="bg-surface border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
-            <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button>
-            <form onsubmit="event.preventDefault();Actions.doLogin()">
+            <button class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100" data-action="close-modal" data-args='["loginModal"]'>&times;</button>
+            <form data-submit-action="login">
                 <h1 class="text-xl font-bold mb-6 text-center">登录管理后台</h1>
                 <input type="text" id="adminUser" placeholder="用户名" autocomplete="username" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-slate-900">
                 <input type="password" id="adminPass" placeholder="密码" autocomplete="current-password" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-slate-900">
@@ -135,10 +134,10 @@
     <div id="mkdirModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
         <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
             <h1 class="text-lg font-bold mb-4 text-center">新建文件夹</h1>
-            <input type="text" id="folderNameInput" placeholder="请输入名称" onkeypress="if(event.key==='Enter')Actions.submitMkdir()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-900">
+            <input type="text" id="folderNameInput" placeholder="请输入名称" data-enter-action="mkdir" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-900">
             <div class="flex gap-2">
-                <button class="btn flex-1" onclick="UI.closeModal('mkdirModal')">取消</button>
-                <button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitMkdir()">创建</button>
+                <button class="btn flex-1" data-action="close-modal" data-args='["mkdirModal"]'>取消</button>
+                <button class="btn btn-primary flex-1 font-bold" data-action="submit-mkdir">创建</button>
             </div>
         </div>
     </div>
@@ -147,23 +146,23 @@
         <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
             <h1 class="text-lg font-bold mb-2 text-center">需要访问密码</h1>
             <p id="unlockPathLabel" class="text-xs text-slate-500 text-center mb-4 break-all"></p>
-            <input type="password" id="unlockPasswordInput" placeholder="请输入密码" onkeypress="if(event.key==='Enter')Actions.submitUnlock()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-3 outline-none focus:border-primary text-sm text-slate-900">
+            <input type="password" id="unlockPasswordInput" placeholder="请输入密码" data-enter-action="unlock" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-3 outline-none focus:border-primary text-sm text-slate-900">
             <p id="unlockError" class="text-red-500 text-center text-xs h-4 mb-3"></p>
             <div class="flex gap-2">
-                <button class="btn flex-1" onclick="UI.closeModal('unlockModal')">取消</button>
-                <button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitUnlock()">解锁</button>
+                <button class="btn flex-1" data-action="close-modal" data-args='["unlockModal"]'>取消</button>
+                <button class="btn btn-primary flex-1 font-bold" data-action="submit-unlock">解锁</button>
             </div>
         </div>
     </div>
 
-    <div id="previewModal" class="fixed inset-0 hidden items-center justify-center bg-black/35 backdrop-blur-sm z-[500] p-4 text-slate-900" onclick="UI.closePreview()">
-        <div class="w-full max-w-6xl h-[85vh] bg-surface border border-border rounded-2xl overflow-hidden flex flex-col shadow-2xl" onclick="event.stopPropagation()">
+    <div id="previewModal" class="fixed inset-0 hidden items-center justify-center bg-black/35 backdrop-blur-sm z-[500] p-4 text-slate-900" data-action="close-preview">
+        <div class="w-full max-w-6xl h-[85vh] bg-surface border border-border rounded-2xl overflow-hidden flex flex-col shadow-2xl">
             <div class="flex items-center justify-between p-4 border-b border-border bg-background text-slate-900">
                 <h3 id="previewTitle" class="font-bold truncate text-sm">预览</h3>
                 <div class="flex items-center gap-3">
-                    <button id="editBtn" class="btn hidden" onclick="Actions.toggleEditMode()">编辑</button>
-                    <button id="saveBtn" class="btn btn-primary hidden" onclick="Actions.saveTextContent()">保存</button>
-                    <button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100">&times;</button>
+                    <button id="editBtn" class="btn hidden" data-action="toggle-edit">编辑</button>
+                    <button id="saveBtn" class="btn btn-primary hidden" data-action="save-text">保存</button>
+                    <button class="text-2xl leading-none opacity-40 hover:opacity-100" data-action="close-preview">&times;</button>
                 </div>
             </div>
             <div id="previewContent" class="flex-1 overflow-hidden bg-white"></div>
@@ -175,7 +174,7 @@
         <div class="w-full max-w-lg bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <h3 class="font-bold">筛选</h3>
-                <button onclick="UI.closeModal('filterModal')" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+                <button class="text-2xl opacity-40 hover:opacity-100" data-action="close-modal" data-args='["filterModal"]'>&times;</button>
             </div>
             <div class="p-5 space-y-4">
                 <div class="filter-grid">
@@ -186,8 +185,8 @@
                     <label class="filter-field"><span>结束日期</span><input id="filterBefore" type="date" class="filter-input"></label>
                 </div>
                 <div class="flex justify-end gap-2">
-                    <button class="btn" onclick="Actions.resetFilters()">重置</button>
-                    <button class="btn btn-primary" onclick="Actions.applyFilters()">应用</button>
+                    <button class="btn" data-action="reset-filters">重置</button>
+                    <button class="btn btn-primary" data-action="apply-filters">应用</button>
                 </div>
             </div>
         </div>
@@ -202,11 +201,11 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 text-xs">
-                        <button class="btn h-8 px-3" onclick="Actions.trashPage(-1)">上一页</button>
+                        <button class="btn h-8 px-3" data-action="trash-page" data-args='[-1]'>上一页</button>
                         <span class="px-3 py-1 rounded-lg border border-border bg-background">第 <span id="trashPage">1</span> / <span id="trashTotal">1</span> 页</span>
-                        <button class="btn h-8 px-3" onclick="Actions.trashPage(1)">下一页</button>
+                        <button class="btn h-8 px-3" data-action="trash-page" data-args='[1]'>下一页</button>
                     </div>
-                    <button onclick="UI.closeModal('trashModal')" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+                    <button class="text-2xl opacity-40 hover:opacity-100" data-action="close-modal" data-args='["trashModal"]'>&times;</button>
                 </div>
             </div>
             <div class="flex-1 overflow-auto custom-scroll">
@@ -227,12 +226,12 @@
                     <h3 id="detailsTitle" class="font-bold truncate">文件详情</h3>
                     <p id="detailsEmpty" class="text-xs text-slate-500 mt-1">点击“详情”查看项目信息</p>
                 </div>
-                <button onclick="UI.closeDrawer('detailsPanel')" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+                <button class="text-2xl opacity-40 hover:opacity-100" data-action="close-details">&times;</button>
             </div>
             <div id="detailsBody" class="flex-1 overflow-auto p-5 text-sm"></div>
         </div>
     </div>
-    <div id="detailsBackdrop" class="fixed inset-0 z-[339] hidden bg-transparent" onclick="UI.closeDrawer('detailsPanel')"></div>
+    <div id="detailsBackdrop" class="fixed inset-0 z-[339] hidden bg-transparent" data-action="close-details"></div>
     <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden text-slate-900">
         <div class="bg-surface-soft px-4 py-3 flex items-center justify-between gap-3 text-xs font-bold text-slate-500">
             <div class="flex items-center gap-2 min-w-0">
@@ -240,8 +239,8 @@
                 <span id="uploadSummary" class="font-semibold text-slate-400 truncate">0/0 已完成</span>
             </div>
             <div class="flex items-center gap-2">
-                <button id="uploadRetryFailed" class="upload-control hidden" onclick="Actions.uploadQueue?.retryFailed()">重试失败</button>
-                <button onclick="UI.closeUploadManager()">&times;</button>
+                <button id="uploadRetryFailed" class="upload-control hidden" data-action="retry-failed-upload">重试失败</button>
+                <button data-action="close-upload-manager">&times;</button>
             </div>
         </div>
         <div id="uploadList" class="max-h-80 overflow-y-auto"></div>

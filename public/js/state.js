@@ -12,6 +12,12 @@ export const state = {
   clipboard: null,
   activeUploads: 0,
   visibleKeys: [],
+  search: {
+    query: '',
+    scope: '/',
+    nextCursor: '',
+    loadingMore: false,
+  },
   currentPreviewText: '',
   filters: {
     kind: 'all',

@@ -202,6 +202,11 @@ html, body {
     margin-right: 4px;
 }
 
+#batchTools.is-visible,
+#pasteGroup.is-visible {
+    display: flex;
+}
+
 .search-bar {
     position: relative;
     width: 180px;
@@ -1249,10 +1254,19 @@ html, body {
         grid-template-columns: 1fr;
     }
 
-    #mobileBatchGroup,
-    #mobileClipboardGroup {
-        display: none;
-    }
+#mobileBatchGroup,
+#mobileClipboardGroup {
+    display: none;
+}
+
+#mobileBatchGroup.is-visible,
+#mobileClipboardGroup.is-visible {
+    display: grid;
+}
+
+#mobileRenameBtn.is-visible {
+    display: inline-flex;
+}
 }
 
 @media (max-width: 640px) {

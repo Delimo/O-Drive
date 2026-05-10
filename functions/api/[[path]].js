@@ -105,6 +105,6 @@ export async function onRequest(context) {
 
     return jsonResponse({ message: 'Not Found' }, 404);
   } catch (err) {
-    return jsonResponse({ success: false, message: err.message }, 500);
+    return jsonResponse({ success: false, message: err.message }, err.status || 500);
   }
 }

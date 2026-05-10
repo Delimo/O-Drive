@@ -28,8 +28,10 @@ export const api = {
   listFiles(path) {
     return requestJson(apiFileUrl('/api/files', path));
   },
-  searchFiles(q, scope) {
-    return requestJson(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(scope)}`);
+  searchFiles(q, scope, cursor = '') {
+    const params = new URLSearchParams({ q, scope, limit: '50' });
+    if (cursor) params.set('cursor', cursor);
+    return requestJson(`/api/search?${params.toString()}`);
   },
   batchDelete(paths) {
     return requestJson('/api/batch-delete', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ paths }) });

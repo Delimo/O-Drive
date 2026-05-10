@@ -81,3 +81,7 @@ html, body {
 .toast-anim {
     animation: toastIn 0.3s ease-out;
 }
+
+.admin-only {
+    display: none;
+}

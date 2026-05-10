@@ -18,9 +18,9 @@
         </header>
 
         <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-fit shadow-sm mt-4">
-            <button id="btn-logs" onclick="AdminActions.switchTab('logs')" class="admin-tab-btn is-active">操作日志</button>
-            <button id="btn-privacy" onclick="AdminActions.switchTab('privacy')" class="admin-tab-btn">隐藏管理</button>
-            <button id="btn-protected" onclick="AdminActions.switchTab('protected')" class="admin-tab-btn">访问密码</button>
+            <button id="btn-logs" data-admin-action="switch-tab" data-args='["logs"]' class="admin-tab-btn is-active">操作日志</button>
+            <button id="btn-privacy" data-admin-action="switch-tab" data-args='["privacy"]' class="admin-tab-btn">隐藏管理</button>
+            <button id="btn-protected" data-admin-action="switch-tab" data-args='["protected"]' class="admin-tab-btn">访问密码</button>
         </div>
 
         <div class="explorer-card mt-4 mb-4">
@@ -36,9 +36,9 @@
                 <div class="p-4 border-t border-border flex items-center justify-between bg-background text-xs">
                     <div class="text-slate-500 text-xs">共 <span id="totalPages" class="text-slate-600 font-bold">0</span> 页</div>
                     <div class="flex gap-2 text-slate-900">
-                        <button onclick="AdminActions.changePage(-1)" class="btn">上一页</button>
+                        <button data-admin-action="change-page" data-args='[-1]' class="btn">上一页</button>
                         <span class="px-4 py-2 font-bold text-primary font-mono bg-background border border-border rounded-lg">第 <span id="currentPage">1</span> 页</span>
-                        <button onclick="AdminActions.changePage(1)" class="btn">下一页</button>
+                        <button data-admin-action="change-page" data-args='[1]' class="btn">下一页</button>
                     </div>
                 </div>
             </div>
@@ -46,7 +46,7 @@
             <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
                 <div class="flex flex-col sm:flex-row gap-3 mb-8 bg-surface-soft p-4 rounded-xl border border-border shadow-inner">
                     <input type="text" id="hideInput" placeholder="输入隐藏路径..." class="flex-1 bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
-                    <button class="btn btn-primary h-11 px-8" onclick="AdminActions.addHidden()">添加</button>
+                    <button class="btn btn-primary h-11 px-8" data-admin-action="add-hidden">添加</button>
                 </div>
                 <div class="overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
                     <table class="w-full text-left text-slate-900">
@@ -64,7 +64,7 @@
                     <input type="password" id="protectedPasswordInput" placeholder="访问密码，至少 4 位" class="bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
                     <input type="text" id="protectedNoteInput" placeholder="备注，可选" class="bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
                     <label class="inline-flex items-center gap-2 text-sm text-slate-600"><input id="protectedShowNameInput" type="checkbox" checked> 允许游客看到名称</label>
-                    <button class="btn btn-primary h-11 px-8" onclick="AdminActions.addProtected()">添加/更新</button>
+                    <button class="btn btn-primary h-11 px-8" data-admin-action="add-protected">添加/更新</button>
                 </div>
                 <div class="overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
                     <table class="w-full text-left text-slate-900">

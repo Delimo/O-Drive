@@ -12,9 +12,10 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function createUploadItem(file) {
+function createUploadItem(file, taskId) {
   const item = document.createElement('div');
   item.className = 'upload-item p-4 border-b border-border bg-white';
+  item.dataset.taskId = taskId;
   item.innerHTML = `
     <div class="flex items-center justify-between gap-3 text-[12px] mb-2 text-slate-500">
       <span class="font-semibold text-slate-900 truncate">${escapeHtml(file.name)}</span>
@@ -26,9 +27,9 @@ function createUploadItem(file) {
     <div class="mt-3 flex items-center justify-between gap-2">
       <span class="status text-[11px] text-slate-500">等待中</span>
       <div class="flex gap-2">
-        <button class="pause-btn upload-control">暂停</button>
-        <button class="retry-btn upload-control hidden">重试</button>
-        <button class="cancel-btn upload-control danger">取消</button>
+        <button class="pause-btn upload-control" data-upload-action="pause">暂停</button>
+        <button class="retry-btn upload-control hidden" data-upload-action="retry">重试</button>
+        <button class="cancel-btn upload-control danger" data-upload-action="cancel">取消</button>
       </div>
     </div>
   `;
@@ -152,8 +153,10 @@ export class UploadQueue {
     this.queue = [];
     this.active = 0;
     this.tasks = [];
+    this.tasksById = new Map();
     this.onComplete = onComplete;
     this.closeTimer = null;
+    this.boundListEvents = false;
   }
 
   get summary() {
@@ -170,6 +173,31 @@ export class UploadQueue {
       else if (summary.cancelled) label.textContent += ` · ${summary.cancelled} 已取消`;
     }
     if (retryBtn) retryBtn.classList.toggle('hidden', summary.failed === 0);
+  }
+
+  bindListEvents(list) {
+    if (this.boundListEvents || !list) return;
+    this.boundListEvents = true;
+    list.addEventListener('click', event => {
+      const button = event.target.closest('[data-upload-action]');
+      if (!button) return;
+      const taskEl = button.closest('[data-task-id]');
+      const task = taskEl ? this.tasksById.get(taskEl.dataset.taskId) : null;
+      if (!task) return;
+      const action = button.dataset.uploadAction;
+      if (action === 'pause') {
+        task.paused = !task.paused;
+        button.textContent = task.paused ? '继续' : '暂停';
+        return;
+      }
+      if (action === 'cancel') {
+        abortTask(task);
+        return;
+      }
+      if (action === 'retry') {
+        this.retryTask(task);
+      }
+    });
   }
 
   scheduleAutoClose() {
@@ -222,14 +250,17 @@ export class UploadQueue {
     const manager = document.getElementById('uploadManager');
     const list = document.getElementById('uploadList');
     if (!manager || !list) return;
+    this.bindListEvents(list);
     manager.classList.remove('hidden');
     manager.classList.add('flex');
 
     [...files].forEach(file => {
+      const taskId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       const task = {
+        id: taskId,
         file,
         targetDir,
-        item: createUploadItem(file),
+        item: createUploadItem(file, taskId),
         paused: false,
         cancelled: false,
         state: 'queued',
@@ -239,11 +270,7 @@ export class UploadQueue {
         uploadId: null,
         parts: [],
       };
-      task.item.querySelector('.pause-btn').onclick = () => {
-        task.paused = !task.paused;
-        task.item.querySelector('.pause-btn').textContent = task.paused ? '继续' : '暂停';
-      };
-      task.item.querySelector('.cancel-btn').onclick = () => abortTask(task);
+      this.tasksById.set(taskId, task);
       list.prepend(task.item);
       this.tasks.push(task);
       this.queue.push(task);
@@ -263,14 +290,8 @@ export class UploadQueue {
     task.parts = [];
     task.state = 'queued';
     task.item.className = 'upload-item p-4 border-b border-border bg-white';
-    task.item.innerHTML = createUploadItem(task.file).innerHTML;
+    task.item.innerHTML = createUploadItem(task.file, task.id).innerHTML;
     task.item.querySelector('.status').textContent = '重试中';
-    task.item.querySelector('.pause-btn').onclick = () => {
-      task.paused = !task.paused;
-      task.item.querySelector('.pause-btn').textContent = task.paused ? '继续' : '暂停';
-    };
-    task.item.querySelector('.cancel-btn').onclick = () => abortTask(task);
-    task.item.querySelector('.retry-btn').onclick = () => this.retryTask(task);
     this.queue.push(task);
     this.renderSummary();
     this.pump();
