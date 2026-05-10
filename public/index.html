@@ -104,6 +104,19 @@
         </div>
     </div>
 
+    <div id="unlockModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[420] hidden items-center justify-center p-4 text-slate-900">
+        <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+            <h1 class="text-lg font-bold mb-2 text-center">需要访问密码</h1>
+            <p id="unlockPathLabel" class="text-xs text-slate-500 text-center mb-4 break-all"></p>
+            <input type="password" id="unlockPasswordInput" placeholder="请输入密码" onkeypress="if(event.key==='Enter')Actions.submitUnlock()" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-3 outline-none focus:border-primary text-sm text-slate-900">
+            <p id="unlockError" class="text-red-500 text-center text-xs h-4 mb-3"></p>
+            <div class="flex gap-2">
+                <button class="btn flex-1" onclick="UI.closeModal('unlockModal')">取消</button>
+                <button class="btn btn-primary flex-1 font-bold" onclick="Actions.submitUnlock()">解锁</button>
+            </div>
+        </div>
+    </div>
+
     <div id="previewModal" class="fixed inset-0 hidden items-center justify-center bg-black/35 backdrop-blur-sm z-[500] p-4 text-slate-900" onclick="UI.closePreview()">
         <div class="w-full max-w-6xl h-[85vh] bg-surface border border-border rounded-2xl overflow-hidden flex flex-col shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between p-4 border-b border-border bg-background text-slate-900">

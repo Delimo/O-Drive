@@ -6,18 +6,27 @@ export const AdminActions = {
   switchTab(id) {
     document.getElementById('logs-tab').classList.toggle('hidden', id !== 'logs');
     document.getElementById('privacy-tab').classList.toggle('hidden', id !== 'privacy');
+    document.getElementById('protected-tab').classList.toggle('hidden', id !== 'protected');
     const btnLogs = document.getElementById('btn-logs');
     const btnPriv = document.getElementById('btn-privacy');
+    const btnProtected = document.getElementById('btn-protected');
     adminState.activeTab = id;
 
     if (id === 'logs') {
       btnLogs.className = 'admin-tab-btn is-active';
       btnPriv.className = 'admin-tab-btn';
+      btnProtected.className = 'admin-tab-btn';
       this.loadLogs();
-    } else {
+    } else if (id === 'privacy') {
       btnPriv.className = 'admin-tab-btn is-active';
       btnLogs.className = 'admin-tab-btn';
+      btnProtected.className = 'admin-tab-btn';
       this.loadHidden();
+    } else {
+      btnProtected.className = 'admin-tab-btn is-active';
+      btnLogs.className = 'admin-tab-btn';
+      btnPriv.className = 'admin-tab-btn';
+      this.loadProtected();
     }
   },
 
@@ -62,6 +71,36 @@ export const AdminActions = {
     if (confirm('取消隐藏这条路径？')) {
       await api.removeHiddenPath(p);
       this.loadHidden();
+    }
+  },
+
+  async loadProtected() {
+    const { data } = await api.protectedPaths();
+    document.getElementById('protectedTbody').innerHTML = (data?.list || []).map(i => {
+      const path = escapeHtml(i.path);
+      const note = escapeHtml(i.note || '');
+      return `<tr class="hover:bg-slate-50 transition-colors"><td class="px-4 py-4 font-mono text-primary">${path}</td><td class="px-4 py-4">${i.show_name ? '显示' : '隐藏'}</td><td class="px-4 py-4 text-slate-500">${note}</td><td class="px-4 py-4 text-right"><button class="px-3 py-1 bg-rose-50 text-rose-600 border border-rose-200 rounded-full hover:bg-rose-500 hover:text-white text-xs transition-all font-bold" onclick="AdminActions.removeProtected(${escapeHtml(JSON.stringify(i.path))})">删除</button></td></tr>`;
+    }).join('');
+  },
+
+  async addProtected() {
+    const path = document.getElementById('protectedPathInput').value.trim();
+    const password = document.getElementById('protectedPasswordInput').value;
+    const note = document.getElementById('protectedNoteInput').value.trim();
+    const showName = document.getElementById('protectedShowNameInput').checked;
+    if (!path || !password) return;
+    await api.addProtectedPath({ path, password, note, showName });
+    document.getElementById('protectedPathInput').value = '';
+    document.getElementById('protectedPasswordInput').value = '';
+    document.getElementById('protectedNoteInput').value = '';
+    document.getElementById('protectedShowNameInput').checked = true;
+    this.loadProtected();
+  },
+
+  async removeProtected(p) {
+    if (confirm('删除这条访问密码规则？')) {
+      await api.removeProtectedPath(p);
+      this.loadProtected();
     }
   },
 };

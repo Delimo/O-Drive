@@ -386,6 +386,25 @@ html, body {
     transform: translateY(-1px);
 }
 
+.protected-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(37, 99, 235, 0.16);
+    background: #eff6ff;
+    color: var(--primary-strong);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.grid-item .protected-badge {
+    margin-bottom: 8px;
+}
+
 .footer {
     padding: 24px 0 32px;
     text-align: center;
@@ -475,6 +494,11 @@ html, body {
     border-color: var(--primary) !important;
     color: #fff !important;
     box-shadow: 0 10px 20px rgba(59, 130, 246, 0.18);
+}
+
+.admin-protected-form {
+    grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 0.9fr) minmax(160px, 1fr) auto auto;
+    align-items: center;
 }
 
 .btn-danger {
@@ -872,6 +896,10 @@ html, body {
 
     .grid-item {
         height: 200px;
+    }
+
+    .admin-protected-form {
+        grid-template-columns: 1fr;
     }
 }
 

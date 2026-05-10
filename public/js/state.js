@@ -6,6 +6,7 @@ export const state = {
   currentPreviewPath: '',
   viewMode: localStorage.getItem('viewMode') || 'list',
   sortBy: localStorage.getItem('sortBy') || 'name',
+  pendingUnlock: null,
   fileData: { folders: [], files: [] },
   selectedPaths: [],
   clipboard: null,

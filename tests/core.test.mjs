@@ -14,12 +14,19 @@ import {
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
+import {
+  handleProtectedSettings,
+  handleProtectedUnlock,
+  loadProtectedPaths,
+  checkProtectedAccess,
+} from '../functions/api/lib/protected-paths.js';
 import { encodeR2Path, apiFileUrl } from '../public/js/file-paths.js';
 import { getOrderedEntries, getSelectableKeys } from '../public/js/file-view-model.js';
 
 function makeEnv({ objects = [], prefixes = [] } = {}) {
   const byKey = new Map(objects.map(o => [o.key, { ...o }]));
   const trashRows = [];
+  const protectedRows = [];
   const logs = [];
   const sizeOf = body => typeof body === 'string' ? body.length : body?.byteLength || 0;
   const listObjects = (prefix = '') => [...byKey.values()]
@@ -127,10 +134,28 @@ function makeEnv({ objects = [], prefixes = [] } = {}) {
                 trashed_at: statement.bound?.[6],
               });
             }
+            if (/INSERT INTO path_passwords/i.test(sql)) {
+              const row = {
+                path: statement.bound?.[0],
+                salt: statement.bound?.[1],
+                password_hash: statement.bound?.[2],
+                note: statement.bound?.[3],
+                show_name: statement.bound?.[4],
+                created_at: statement.bound?.[5],
+              };
+              const idx = protectedRows.findIndex(item => item.path === row.path);
+              if (idx >= 0) protectedRows[idx] = row;
+              else protectedRows.push(row);
+            }
             if (/DELETE FROM trash WHERE id = \?/i.test(sql)) {
               const id = statement.bound?.[0];
               const idx = trashRows.findIndex(row => row.id === id);
               if (idx >= 0) trashRows.splice(idx, 1);
+            }
+            if (/DELETE FROM path_passwords WHERE path = \?/i.test(sql)) {
+              const path = statement.bound?.[0];
+              const idx = protectedRows.findIndex(row => row.path === path);
+              if (idx >= 0) protectedRows.splice(idx, 1);
             }
             return {};
           },
@@ -141,6 +166,9 @@ function makeEnv({ objects = [], prefixes = [] } = {}) {
             return null;
           },
           async all() {
+            if (/SELECT path, salt, password_hash, note, show_name, created_at FROM path_passwords/i.test(sql)) {
+              return { results: [...protectedRows].sort((a, b) => a.path.localeCompare(b.path)) };
+            }
             if (/SELECT \* FROM trash ORDER BY trashed_at DESC/i.test(sql)) {
               const size = statement.bound?.[0] ?? 20;
               const offset = statement.bound?.[1] ?? 0;
@@ -167,7 +195,7 @@ test('list files filters empty root folders and hidden paths for guests', async 
     ],
   });
 
-  const res = await handleListFiles(env, ['secret'], { role: 'guest' }, '');
+  const res = await handleListFiles(env, new Request('https://example.com/api/files'), ['secret'], { role: 'guest' }, '');
   const data = await res.json();
 
   assert.deepEqual(data.folders.map(f => f.fullKey), ['public']);
@@ -185,12 +213,12 @@ test('reserved storage prefixes are hidden from normal file listings', async () 
     ],
   });
 
-  const guestRes = await handleListFiles(env, [], { role: 'guest' }, '');
+  const guestRes = await handleListFiles(env, new Request('https://example.com/api/files'), [], { role: 'guest' }, '');
   const guestData = await guestRes.json();
   assert.deepEqual(guestData.folders.map(f => f.fullKey), ['public']);
   assert.deepEqual(guestData.files.map(f => f.fullKey), []);
 
-  const adminRes = await handleListFiles(env, [], { role: 'admin' }, '');
+  const adminRes = await handleListFiles(env, new Request('https://example.com/api/files'), [], { role: 'admin' }, '');
   const adminData = await adminRes.json();
   assert.deepEqual(adminData.folders.map(f => f.fullKey), ['public']);
 });
@@ -255,6 +283,46 @@ test('admin login issues csrf token and write requests must echo it', async () =
     method: 'POST',
     headers: { Cookie: cookie, 'X-CSRF-Token': 'bad' },
   }), auth), false);
+});
+
+test('protected paths require password and unlock with signed cookie', async () => {
+  const env = makeEnv({
+    prefixes: ['public/', 'private/'],
+    objects: [
+      { key: 'private/secret.txt', body: 'secret', size: 6, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  env.ADMIN_PASSWORD = 'pass';
+
+  const create = await handleProtectedSettings(env, new Request('https://example.com/api/admin/settings/protected', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '1234', note: 'test', showName: true }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'POST', new URL('https://example.com/api/admin/settings/protected'));
+  assert.equal((await create.json()).success, true);
+
+  const rules = await loadProtectedPaths(env);
+  const root = await handleListFiles(env, new Request('https://example.com/api/files'), [], { role: 'guest' }, '', rules);
+  const rootData = await root.json();
+  assert.equal(rootData.folders.find(f => f.fullKey === 'private')?.protected, true);
+
+  const blocked = await handleListFiles(env, new Request('https://example.com/api/files/private'), [], { role: 'guest' }, 'private', rules);
+  assert.equal(blocked.status, 403);
+  assert.equal((await blocked.json()).code, 'password_required');
+
+  const unlock = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '1234' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), { role: 'guest' }, rules);
+  assert.equal((await unlock.json()).success, true);
+  const cookie = unlock.headers.get('Set-Cookie');
+  assert.ok(cookie?.includes('path_access='));
+
+  const access = await checkProtectedAccess(new Request('https://example.com/api/files/private', {
+    headers: { Cookie: cookie },
+  }), env, { role: 'guest' }, rules, 'private/secret.txt');
+  assert.equal(access.ok, true);
 });
 
 test('frontend file path helpers encode each path segment', () => {

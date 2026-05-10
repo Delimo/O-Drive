@@ -79,6 +79,34 @@ function buildTextPreviewShell(text) {
 }
 
 export const Actions = {
+  async handlePasswordRequired(data, retry) {
+    state.pendingUnlock = { path: data?.path || state.currentPath, retry };
+    const label = document.getElementById('unlockPathLabel');
+    const input = document.getElementById('unlockPasswordInput');
+    const error = document.getElementById('unlockError');
+    if (label) label.textContent = `路径：/${state.pendingUnlock.path}`;
+    if (input) input.value = '';
+    if (error) error.textContent = '';
+    UI.showModal('unlockModal');
+    setTimeout(() => input?.focus(), 30);
+  },
+
+  async submitUnlock() {
+    const pending = state.pendingUnlock;
+    const input = document.getElementById('unlockPasswordInput');
+    const error = document.getElementById('unlockError');
+    if (!pending || !input) return;
+    const password = input.value;
+    const { res, data } = await api.unlockPath(pending.path, password);
+    if (!res.ok) {
+      if (error) error.textContent = data?.message || '密码错误';
+      return;
+    }
+    UI.closeModal('unlockModal');
+    state.pendingUnlock = null;
+    await pending.retry?.();
+  },
+
   async init() {
     const { res, data } = await api.getRole();
     state.userRole = res.status === 200 ? data.role : 'guest';
@@ -99,7 +127,10 @@ export const Actions = {
     UI.updateBatchUI();
 
     const { res, data } = await api.listFiles(state.currentPath);
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (data?.code === 'password_required') return this.handlePasswordRequired(data, () => this.loadFiles());
+      return;
+    }
     state.fileData = data;
     UI.updateFileList();
     UI.renderBreadcrumb();
@@ -183,7 +214,10 @@ export const Actions = {
     state.isSearching = true;
 
     const { res, data } = await api.searchFiles(q, state.currentPath);
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (data?.code === 'password_required') return this.handlePasswordRequired(data, () => this.handleSearch());
+      return;
+    }
     state.fileData = { folders: [], files: data?.files || [] };
     UI.updateFileList();
     document.getElementById('breadcrumb').innerHTML = `<span class="text-white font-bold tracking-wide">搜索结果: ${escapeHtml(q)}</span>`;
@@ -331,10 +365,11 @@ export const Actions = {
     Message.success('已创建');
   },
 
-  async openPreview(path, name) {
+  async openPreview(path, name, protectedItem = false) {
     if (Array.isArray(path)) {
-      [path, name] = path;
+      [path, name, protectedItem = false] = path;
     } else if (path && typeof path === 'object') {
+      protectedItem = Boolean(path.protected ?? protectedItem);
       name = path.name || path.fullName || name;
       path = path.path || path.fullKey || path.key || '';
     }
@@ -344,6 +379,9 @@ export const Actions = {
     if (!path || !name) {
       Message.error('无法预览');
       return;
+    }
+    if (protectedItem && state.userRole !== 'admin') {
+      return this.handlePasswordRequired({ path }, () => this.openPreview(path, name, false));
     }
     state.currentPreviewPath = path;
     state.currentPreviewText = '';
@@ -378,6 +416,10 @@ export const Actions = {
         content.innerHTML = `<iframe src="${escapeHtml(url)}" class="preview-frame" title="${escapeHtml(name)}"></iframe>`;
       } else if (textExts.includes(ext)) {
         const res = await api.preview(path);
+        if (res.status === 403) {
+          const data = await res.json().catch(() => null);
+          if (data?.code === 'password_required') return this.handlePasswordRequired(data, () => this.openPreview(path, name, false));
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
         state.currentPreviewText = text;
@@ -436,7 +478,11 @@ export const Actions = {
     UI.closeMobileActions();
   },
 
-  downloadFile(p) {
+  downloadFile(p, force = false) {
+    const item = [...(state.fileData.folders || []), ...(state.fileData.files || [])].find(i => i.path === p || i.fullKey === p);
+    if (!force && item?.protected && state.userRole !== 'admin') {
+      return this.handlePasswordRequired({ path: item.fullKey || p }, () => this.downloadFile(p, true));
+    }
     window.open(api.download(p), '_blank', 'noopener');
   },
 

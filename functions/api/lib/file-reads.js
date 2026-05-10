@@ -1,4 +1,5 @@
 import { jsonResponse, formatBytes, isHiddenKey, isReservedKey } from './common.js';
+import { checkProtectedAccess, markProtection } from './protected-paths.js';
 
 function mapEntry(o) {
   return {
@@ -11,30 +12,34 @@ function mapEntry(o) {
   };
 }
 
-export async function handleSearch(env, request, url, hiddenPaths, auth) {
+export async function handleSearch(env, request, url, hiddenPaths, auth, protectedPaths = []) {
   const q = (url.searchParams.get('q') || '').toLowerCase();
   const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
   const listed = await env.R2_BUCKET.list({ prefix: scope });
-  const matches = listed.objects
+  const matches = await markProtection(listed.objects
     .map(mapEntry)
-    .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
+    .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths))), request, env, auth, protectedPaths);
   return jsonResponse({ files: matches });
 }
 
-export async function handleListFiles(env, hiddenPaths, auth, r2Key) {
+export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths = []) {
+  const access = await checkProtectedAccess(request, env, auth, protectedPaths, r2Key);
+  if (!access.ok) {
+    return jsonResponse({ success: false, code: 'password_required', path: access.rule.path, message: 'Password required' }, 403);
+  }
   const prefix = r2Key ? r2Key + '/' : '';
   const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
-  const folders = (listed.delimitedPrefixes || [])
+  const folders = await markProtection((listed.delimitedPrefixes || [])
     .map(p => {
       const fullKey = p.slice(0, -1);
       return { name: fullKey.split('/').slice(-1)[0], path: '/' + fullKey, fullKey };
     })
     .filter(f => f.fullKey && f.name && f.name !== '.folder')
     .filter(f => !isReservedKey(f.fullKey))
-    .filter(f => auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths));
-  const files = (listed.objects || [])
+    .filter(f => auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)), request, env, auth, protectedPaths);
+  const files = await markProtection((listed.objects || [])
     .map(mapEntry)
-    .filter(f => f.name !== '' && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
+    .filter(f => f.name !== '' && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths))), request, env, auth, protectedPaths);
   return jsonResponse({ folders, files });
 }
 

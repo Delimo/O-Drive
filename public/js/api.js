@@ -43,6 +43,9 @@ export const api = {
   deleteTrash(id) {
     return requestJson('/api/trash/delete', { method: 'DELETE', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ id }) });
   },
+  unlockPath(path, password) {
+    return requestJson('/api/access/unlock', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ path, password }) });
+  },
   paste(payload) {
     return requestJson('/api/paste', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
   },
@@ -82,6 +85,13 @@ export const api = {
   },
   removeHiddenPath(path) {
     return requestJson(`/api/admin/settings/hidden?path=${encodeURIComponent(path)}`, { method: 'DELETE', headers: csrfHeaders() });
+  },
+  protectedPaths() { return requestJson('/api/admin/settings/protected'); },
+  addProtectedPath(payload) {
+    return requestJson('/api/admin/settings/protected', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
+  },
+  removeProtectedPath(path) {
+    return requestJson(`/api/admin/settings/protected?path=${encodeURIComponent(path)}`, { method: 'DELETE', headers: csrfHeaders() });
   },
   csrfHeaders,
 };

@@ -167,7 +167,7 @@ export const UI = {
     body.innerHTML = `
       <div class="details-actions">
         ${!meta.sizeFormatted ? `<button class="btn btn-primary" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(meta.path))})">打开文件夹</button>` : ''}
-        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" onclick="Actions.openPreview(${escapeHtml(JSON.stringify(meta.path))}, ${escapeHtml(JSON.stringify(meta.name))})">预览</button>` : ''}
+        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" onclick="Actions.openPreview(${escapeHtml(JSON.stringify(meta.path))}, ${escapeHtml(JSON.stringify(meta.name))}, ${meta.protected ? 'true' : 'false'})">预览</button>` : ''}
         ${meta.sizeFormatted ? `<button class="btn" onclick="Actions.downloadFile(${escapeHtml(JSON.stringify(meta.path))})">下载</button>` : ''}
         <button class="btn" onclick="Actions.copyPath(${escapeHtml(JSON.stringify(meta.path))})">复制路径</button>
         <button class="btn" onclick="Actions.copyPath(${escapeHtml(JSON.stringify(meta.fullKey))})">复制原始键</button>
@@ -179,6 +179,7 @@ export const UI = {
         <div class="detail-row"><span>大小</span><strong>${escapeHtml(meta.sizeFormatted || '文件夹')}</strong></div>
         <div class="detail-row"><span>时间</span><strong>${escapeHtml(Utils.formatDate(meta.time))}</strong></div>
         <div class="detail-row"><span>可预览</span><strong>${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? '是' : '否'}</strong></div>
+        <div class="detail-row"><span>访问密码</span><strong>${meta.protected ? '需要' : '不需要'}</strong></div>
       </div>
     `;
     this.openDrawer('detailsPanel');
@@ -299,7 +300,7 @@ export const UI = {
       const isSelected = state.selectedPaths.includes(item.fullKey);
       const el = document.createElement('div');
       el.dataset.key = item.fullKey;
-      const previewArgs = escapeHtml(JSON.stringify([item.path, item.name]));
+      const previewArgs = escapeHtml(JSON.stringify([item.path, item.name, Boolean(item.protected)]));
       const downloadArg = escapeHtml(JSON.stringify(item.path));
       const detailArg = escapeHtml(JSON.stringify({
         name: item.name,
@@ -308,8 +309,10 @@ export const UI = {
         sizeFormatted: item.sizeFormatted,
         rawSize: item.rawSize,
         time: item.time,
+        protected: Boolean(item.protected),
       }));
       const safeName = escapeHtml(item.name);
+      const protectedBadge = item.protected ? '<span class="protected-badge">受保护</span>' : '';
       const safeSize = escapeHtml(isFolder ? '文件夹' : item.sizeFormatted);
       const safeIcon = escapeHtml(isFolder ? '📁' : Utils.getFileIcon(item.name));
       const thumbUrl = !isFolder && Utils.isImageFile(item.name) ? escapeHtml(api.thumbnailUrl(item.path)) : '';
@@ -319,10 +322,10 @@ export const UI = {
 
       if (state.viewMode === 'grid') {
         el.className = `grid-item ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `${visual}<div class="file-name text-slate-900">${safeName}</div><div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div>`;
+        el.innerHTML = `${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div>`;
       } else {
         el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="col-name text-slate-900"><span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span></div><div class="col-size hidden md:block text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
+        el.innerHTML = `<div class="col-name text-slate-900"><span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size hidden md:block text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
         if (state.userRole === 'admin') {
           const nameEl = el.querySelector('.file-name');
           nameEl.ondblclick = e => {
@@ -337,7 +340,7 @@ export const UI = {
       };
       el.ondblclick = () => {
         if (isFolder) Actions.navigateTo(item.path);
-        else if (Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name);
+        else if (Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name, Boolean(item.protected));
       };
       container.appendChild(el);
     });

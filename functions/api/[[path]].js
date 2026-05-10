@@ -2,6 +2,12 @@ import { jsonResponse } from './lib/common.js';
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
 import { handleAdminLogs, handleHiddenSettings } from './lib/admin.js';
 import {
+  loadProtectedPaths,
+  handleProtectedSettings,
+  handleProtectedUnlock,
+  checkProtectedAccess,
+} from './lib/protected-paths.js';
+import {
   handlePaste,
   handleRename,
   handleBatchDelete,
@@ -24,6 +30,7 @@ import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin
 
 const csrfProtectedRoutes = [
   ['/api/admin/settings/hidden', ['POST', 'DELETE']],
+  ['/api/admin/settings/protected', ['POST', 'DELETE']],
   ['/api/paste', ['POST']],
   ['/api/files', ['POST', 'PUT']],
   ['/api/batch-delete', ['POST']],
@@ -56,6 +63,7 @@ export async function onRequest(context) {
     if (path === '/api/auth/role') return jsonResponse({ role: auth.role, csrf: auth.role === 'admin' ? auth.csrf : undefined });
 
     const hiddenPaths = await loadHiddenPaths(env);
+    const protectedPaths = await loadProtectedPaths(env);
     const r2Key = getR2KeyFromPath(path);
 
     if (!canReadKey(auth, r2Key, hiddenPaths)) return jsonResponse({ success: false, message: 'Forbidden' }, 403);
@@ -65,10 +73,16 @@ export async function onRequest(context) {
     if (isAdmin(auth) && r2Key && needsCsrf(path, method) && !canWriteUserKey(r2Key)) {
       return jsonResponse({ success: false, message: 'Reserved system path' }, 403);
     }
+    if (path === '/api/access/unlock' && method === 'POST') return await handleProtectedUnlock(env, request, auth, protectedPaths);
+    if (r2Key && (path.startsWith('/api/thumbnail/') || path.startsWith('/api/download/') || path.startsWith('/api/preview/'))) {
+      const access = await checkProtectedAccess(request, env, auth, protectedPaths, r2Key);
+      if (!access.ok) return jsonResponse({ success: false, code: 'password_required', path: access.rule.path, message: 'Password required' }, 403);
+    }
 
     if (isAdmin(auth)) {
       if (path === '/api/admin/logs') return await handleAdminLogs(env, url);
       if (path === '/api/admin/settings/hidden') return await handleHiddenSettings(env, request, method, url, hiddenPaths);
+      if (path === '/api/admin/settings/protected') return await handleProtectedSettings(env, request, method, url);
       if (path === '/api/paste' && method === 'POST') return await handlePaste(env, request);
       if (path.startsWith('/api/files/') && method === 'PUT') return await handleRename(env, request, r2Key);
       if (path === '/api/batch-delete') return await handleBatchDelete(env, request);
@@ -84,8 +98,8 @@ export async function onRequest(context) {
       if (path.startsWith('/api/save-text/') && method === 'POST') return await handleSaveText(env, request, r2Key);
     }
 
-    if (path === '/api/search') return await handleSearch(env, request, url, hiddenPaths, auth);
-    if (path.startsWith('/api/files') && method === 'GET') return await handleListFiles(env, hiddenPaths, auth, r2Key);
+    if (path === '/api/search') return await handleSearch(env, request, url, hiddenPaths, auth, protectedPaths);
+    if (path.startsWith('/api/files') && method === 'GET') return await handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths);
     if (path.startsWith('/api/thumbnail/')) return await handleThumbnail(env, request, r2Key, context);
     if (path.startsWith('/api/download/') || path.startsWith('/api/preview/')) return await handleDownloadOrPreview(env, request, path, r2Key);
 
