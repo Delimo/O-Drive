@@ -22,6 +22,7 @@
 - Build command: `npm run build`
 - Build output directory: `public`
 - Functions directory: `functions`
+- Tailwind 在部署时编译，不需要在这台机器上额外安装依赖
 
 ### 2. 绑定
 
@@ -41,6 +42,8 @@
 - 上传队列支持并发、暂停、继续和取消
 
 ## 本地构建
+
+如果你要自己预览源码，再执行：
 
 ```bash
 npm install

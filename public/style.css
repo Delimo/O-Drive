@@ -12,6 +12,10 @@
     --danger-soft: #fef2f2;
 }
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 html, body {
     height: 100vh;
     margin: 0;
