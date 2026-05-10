@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -104,7 +104,7 @@
                     <button onclick="UI.closePreview()" class="text-2xl leading-none opacity-40 hover:opacity-100">&times;</button>
                 </div>
             </div>
-            <div id="previewContent" class="flex-1 overflow-auto bg-white"></div>
+            <div id="previewContent" class="flex-1 overflow-hidden bg-white"></div>
         </div>
     </div>
 
@@ -170,6 +170,7 @@
             <div id="detailsBody" class="flex-1 overflow-auto p-5 text-sm"></div>
         </div>
     </div>
+    <div id="detailsBackdrop" class="fixed inset-0 z-[339] hidden bg-transparent" onclick="UI.closeDrawer('detailsPanel')"></div>
     <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden text-slate-900">
         <div class="bg-surface-soft px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-500">
             <span>上传进度</span>

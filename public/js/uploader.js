@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { UI } from './ui.js';
 import { escapeHtml } from './utils.js';
 
 const PART_SIZE = 8 * 1024 * 1024;
@@ -12,13 +13,13 @@ function sleep(ms) {
 
 function createUploadItem(file) {
   const item = document.createElement('div');
-  item.className = 'upload-item p-4 border-b border-border bg-slate-900/20';
+  item.className = 'upload-item p-4 border-b border-border bg-white';
   item.innerHTML = `
-    <div class="flex items-center justify-between gap-3 text-[11px] mb-2 text-slate-300">
-      <span class="font-bold text-white truncate">${escapeHtml(file.name)}</span>
+    <div class="flex items-center justify-between gap-3 text-[12px] mb-2 text-slate-500">
+      <span class="font-semibold text-slate-900 truncate">${escapeHtml(file.name)}</span>
       <span class="pct text-primary font-mono flex-shrink-0">0%</span>
     </div>
-    <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
       <div class="progress-fill h-full bg-primary w-0 transition-all duration-300"></div>
     </div>
     <div class="mt-3 flex items-center justify-between gap-2">
@@ -42,15 +43,18 @@ function updateProgress(task, loaded, total, status) {
 async function uploadSmall(task) {
   const xhr = new XMLHttpRequest();
   task.xhr = xhr;
-  xhr.open('POST', '/api/files/' + task.targetDir.replace(/^\/|\/$/g, ''), true);
+  const target = task.targetDir.replace(/^\/|\/$/g, '');
+  xhr.open('POST', `/api/files/${target}`, true);
   xhr.upload.onprogress = e => {
     if (e.lengthComputable) updateProgress(task, e.loaded, e.total, '上传中');
   };
+
   const done = new Promise((resolve, reject) => {
     xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
     xhr.onerror = () => reject(new Error('网络错误'));
     xhr.onabort = () => reject(new Error('已取消'));
   });
+
   const fd = new FormData();
   fd.append('file', task.file);
   xhr.send(fd);
@@ -122,7 +126,9 @@ async function abortTask(task) {
   task.cancelled = true;
   task.xhr?.abort();
   if (task.key && task.uploadId) {
-    try { await api.multipartAbort({ key: task.key, uploadId: task.uploadId }); } catch (_) {}
+    try {
+      await api.multipartAbort({ key: task.key, uploadId: task.uploadId });
+    } catch (_) {}
   }
 }
 
@@ -130,6 +136,8 @@ export class UploadQueue {
   constructor({ onComplete } = {}) {
     this.queue = [];
     this.active = 0;
+    this.total = 0;
+    this.finished = 0;
     this.onComplete = onComplete;
   }
 
@@ -155,6 +163,7 @@ export class UploadQueue {
       this.queue.push(task);
     });
 
+    this.total += files.length;
     this.pump();
   }
 
@@ -164,7 +173,14 @@ export class UploadQueue {
       this.active++;
       this.run(task).finally(() => {
         this.active--;
+        this.finished++;
         this.pump();
+        if (this.active === 0 && this.queue.length === 0 && this.finished >= this.total) {
+          this.total = 0;
+          this.finished = 0;
+          this.onComplete?.();
+          UI.closeUploadManager();
+        }
       });
     }
   }
@@ -178,7 +194,6 @@ export class UploadQueue {
       task.item.querySelector('.progress-fill').className = 'progress-fill h-full bg-emerald-500 w-full';
       task.item.querySelector('.pause-btn')?.remove();
       task.item.querySelector('.cancel-btn')?.remove();
-      this.onComplete?.();
     } catch (e) {
       task.item.querySelector('.status').textContent = e.message || '上传失败';
       task.item.querySelector('.pct').textContent = task.cancelled ? '取消' : '失败';

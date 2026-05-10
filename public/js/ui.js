@@ -115,6 +115,10 @@ export const UI = {
     if (!el) return;
     el.classList.remove('translate-x-full');
     el.classList.add('translate-x-0');
+    if (id === 'detailsPanel') {
+      const backdrop = document.getElementById('detailsBackdrop');
+      if (backdrop) backdrop.classList.remove('hidden');
+    }
   },
 
   closeDrawer(id) {
@@ -122,6 +126,10 @@ export const UI = {
     if (!el) return;
     el.classList.add('translate-x-full');
     el.classList.remove('translate-x-0');
+    if (id === 'detailsPanel') {
+      const backdrop = document.getElementById('detailsBackdrop');
+      if (backdrop) backdrop.classList.add('hidden');
+    }
   },
 
   renderDetailsPanel(item) {

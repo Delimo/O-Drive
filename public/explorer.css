@@ -399,13 +399,13 @@ html, body {
 }
 
 .footer-brand {
-    color: var(--primary-strong);
+    color: rgba(15, 23, 42, 0.72);
     font-weight: 600;
     text-decoration: none;
 }
 
 .footer-brand:hover {
-    color: var(--primary);
+    color: var(--text-main);
 }
 
 .footer-powered,
@@ -522,6 +522,132 @@ html, body {
 .upload-control.danger:hover {
     background: #ffe8e8;
     border-color: rgba(185, 28, 28, 0.32);
+}
+
+#uploadManager {
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+}
+
+#uploadManager > div:first-child {
+    background: var(--surface-soft);
+    border-bottom: 1px solid var(--border);
+}
+
+#uploadList .upload-item:last-child {
+    border-bottom: 0;
+}
+
+#uploadList .upload-item .status {
+    letter-spacing: 0.01em;
+}
+
+#uploadList .upload-item .progress-fill {
+    border-radius: 999px;
+}
+
+.preview-media-shell {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: #fff;
+    overflow: hidden;
+}
+
+.preview-media {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.preview-audio-shell {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    box-sizing: border-box;
+    background: #fff;
+    overflow: hidden;
+}
+
+.preview-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    background: #fff;
+}
+
+.preview-text-shell {
+    width: 100%;
+    height: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    box-sizing: border-box;
+    background: #fff;
+    color: var(--text-main);
+    overflow: auto;
+}
+
+.preview-text {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.8;
+    font-size: 15px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    color: var(--text-main);
+    background: #fff;
+}
+
+.preview-text-shell.markdown-body {
+    line-height: 1.8;
+    font-size: 15px;
+    color: var(--text-main);
+    overflow: auto;
+    max-width: 100%;
+}
+
+.preview-text-shell.markdown-body,
+.preview-text-shell.markdown-body * {
+    color: var(--text-main);
+}
+
+.preview-text-shell.markdown-body code {
+    background: var(--hover);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.9em;
+}
+
+.preview-edit-area {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    padding: 32px 40px;
+    box-sizing: border-box;
+    border: 0;
+    outline: none;
+    resize: none;
+    background: #fff;
+    color: var(--text-main);
+    line-height: 1.8;
+    font-size: 15px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    overflow: auto;
 }
 
 .filter-grid {
