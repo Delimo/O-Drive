@@ -289,7 +289,7 @@ export const UI = {
         div.className = 'grid-row-layout h-[52px] hover:bg-slate-50 border-b border-border cursor-pointer text-slate-500';
         div.innerHTML = `<div class="col-name"><span class="opacity-50 text-xl text-slate-900">📁</span><span class="text-sm font-medium text-slate-500">返回上级 (..)</span></div><div></div><div></div><div></div>`;
       }
-      div.ondblclick = () => Actions.navigateTo(parent);
+      div.onclick = () => Actions.navigateTo(parent);
       container.appendChild(div);
     }
 
@@ -316,31 +316,27 @@ export const UI = {
       const safeSize = escapeHtml(isFolder ? '文件夹' : item.sizeFormatted);
       const safeIcon = escapeHtml(isFolder ? '📁' : Utils.getFileIcon(item.name));
       const thumbUrl = !isFolder && Utils.isImageFile(item.name) ? escapeHtml(api.thumbnailUrl(item.path)) : '';
+      const selectControl = state.userRole === 'admin'
+        ? `<button class="file-select-btn ${isSelected ? 'is-selected' : ''}" aria-label="${isSelected ? '取消选择' : '选择'} ${safeName}" onclick="event.stopPropagation();Actions.toggleSelect(${escapeHtml(JSON.stringify(item.fullKey))}, this.closest('[data-key]'), event)">${isSelected ? '✓' : ''}</button>`
+        : '';
       const visual = thumbUrl
         ? `<div class="file-thumb-wrap"><img class="file-thumb" src="${thumbUrl}" alt="" loading="lazy" decoding="async" onerror="this.closest('.file-thumb-wrap').outerHTML='<div class=&quot;file-icon select-none&quot;>${safeIcon}</div>'"></div>`
         : `<div class="file-icon select-none">${safeIcon}</div>`;
 
       if (state.viewMode === 'grid') {
         el.className = `grid-item ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div>`;
+        el.innerHTML = `${selectControl}${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div>`;
       } else {
         el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="col-name text-slate-900"><span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size hidden md:block text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
-        if (state.userRole === 'admin') {
-          const nameEl = el.querySelector('.file-name');
-          nameEl.ondblclick = e => {
-            e.stopPropagation();
-            Actions.startInlineRename(item, nameEl);
-          };
-        }
+        el.innerHTML = `<div class="col-name text-slate-900">${selectControl}<span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size hidden md:block text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
       }
 
-      el.onclick = e => {
-        if (state.userRole === 'admin') Actions.toggleSelect(item.fullKey, el, e);
-      };
-      el.ondblclick = () => {
-        if (isFolder) Actions.navigateTo(item.path);
-        else if (Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name, Boolean(item.protected));
+      el.onclick = () => {
+        if (isFolder) {
+          Actions.navigateTo(item.path);
+          return;
+        }
+        if (Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name, Boolean(item.protected));
       };
       container.appendChild(el);
     });

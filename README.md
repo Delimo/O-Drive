@@ -22,9 +22,10 @@
 - Build command: `npm run build`
 - Build output directory: `public`
 - Functions directory: `functions`
-- Tailwind 在部署时编译，不需要在这台机器上额外安装依赖
 
-### 2. 绑定
+Tailwind 在构建时编译，不需要在本地额外安装构建工具。
+
+### 2. 绑定资源
 
 - `DB`：Cloudflare D1
 - `R2_BUCKET`：Cloudflare R2
@@ -42,8 +43,6 @@
 - 上传队列支持并发、暂停、继续和取消
 
 ## 本地构建
-
-如果你要自己预览源码，再执行：
 
 ```bash
 npm install

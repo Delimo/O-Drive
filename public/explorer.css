@@ -230,6 +230,12 @@ html, body {
     min-width: 0;
 }
 
+.col-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .col-size, .col-time {
     text-align: center;
 }
@@ -278,6 +284,51 @@ html, body {
     border-color: rgba(59, 130, 246, 0.6);
     background: rgba(59, 130, 246, 0.08);
     box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45), 0 10px 22px rgba(59, 130, 246, 0.08);
+}
+
+.file-select-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.file-select-btn:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+    transform: scale(1.04);
+}
+
+.file-select-btn.is-selected {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.grid-item > .file-select-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.grid-item:hover > .file-select-btn,
+.grid-item.selected > .file-select-btn {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .grid-item .file-icon {
@@ -917,6 +968,16 @@ html, body {
     .grid-item {
         height: 180px;
         padding: 12px 10px;
+    }
+
+    .file-select-btn {
+        width: 30px;
+        height: 30px;
+    }
+
+    .grid-item > .file-select-btn {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     .grid-item .file-thumb-wrap {
