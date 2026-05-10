@@ -11,7 +11,19 @@
     <main class="container">
         <header class="header-card mt-4">
             <div class="flex items-center gap-3">
-                <span class="text-2xl text-primary font-bold">⚙️</span>
+                <span class="brand-mark brand-mark-header" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3.5"></circle>
+                        <path d="M12 5.5v1.2"></path>
+                        <path d="M12 17.3v1.2"></path>
+                        <path d="M5.5 12h1.2"></path>
+                        <path d="M17.3 12h1.2"></path>
+                        <path d="M7.2 7.2l.8.8"></path>
+                        <path d="M16 16l.8.8"></path>
+                        <path d="M16 7.2l-.8.8"></path>
+                        <path d="M7.2 16l.8-.8"></path>
+                    </svg>
+                </span>
                 <h1 class="font-bold text-slate-900 tracking-tight text-lg">管理控制台</h1>
             </div>
             <a href="/" class="btn text-slate-900">返回云盘</a>
@@ -25,21 +37,35 @@
         </div>
 
         <div class="explorer-card mt-4 mb-4">
-            <div id="overview-tab" class="flex-1 flex flex-col overflow-auto p-6 text-slate-900">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-surface-soft border border-border rounded-xl p-4"><div class="text-xs text-slate-500">文件数</div><div id="statFileCount" class="text-2xl font-bold mt-2">0</div></div>
-                    <div class="bg-surface-soft border border-border rounded-xl p-4"><div class="text-xs text-slate-500">占用空间</div><div id="statTotalSize" class="text-2xl font-bold mt-2">0 B</div></div>
-                    <div class="bg-surface-soft border border-border rounded-xl p-4"><div class="text-xs text-slate-500">回收站</div><div id="statTrash" class="text-2xl font-bold mt-2">0 项</div></div>
-                    <div class="bg-surface-soft border border-border rounded-xl p-4"><div class="text-xs text-slate-500">日志数</div><div id="statLogs" class="text-2xl font-bold mt-2">0</div></div>
+            <div id="overview-tab" class="flex-1 flex flex-col overflow-hidden p-6 text-slate-900">
+                <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+                    <div class="bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="text-xs text-slate-500">文件数</div><div id="statFileCount" class="text-3xl font-bold leading-none">0</div>
+                    </div>
+                    <div class="bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="text-xs text-slate-500">占用空间</div><div id="statTotalSize" class="text-3xl font-bold leading-none">0 B</div>
+                    </div>
+                    <div class="bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="text-xs text-slate-500">回收站</div><div id="statTrash" class="text-3xl font-bold leading-none">0 项</div>
+                    </div>
+                    <div class="bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="text-xs text-slate-500">日志数</div><div id="statLogs" class="text-3xl font-bold leading-none">0</div>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <section>
-                        <h2 class="font-bold mb-3">类型分布</h2>
-                        <div id="statsBreakdown" class="space-y-2 text-sm"></div>
+                <div class="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-5 flex-1 min-h-0">
+                    <section class="bg-surface-soft border border-border rounded-2xl p-5 min-h-0 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold">类型分布</h2>
+                            <span class="text-xs text-slate-500">按文件数量和体积汇总</span>
+                        </div>
+                        <div id="statsBreakdown" class="grid gap-2 flex-1 min-h-0"></div>
                     </section>
-                    <section>
-                        <h2 class="font-bold mb-3">最近新增</h2>
-                        <div id="statsLatest" class="space-y-2 text-sm"></div>
+                    <section class="bg-surface-soft border border-border rounded-2xl p-5 min-h-0 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold">最近新增</h2>
+                            <span class="text-xs text-slate-500">仅显示最新 4 项</span>
+                        </div>
+                        <div id="statsLatest" class="grid gap-3 flex-1 min-h-0"></div>
                     </section>
                 </div>
             </div>

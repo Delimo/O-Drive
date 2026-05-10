@@ -7,6 +7,7 @@ function fileKind(key) {
   if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(ext)) return 'audio';
   if (['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'].includes(ext)) return 'text';
   if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'archive';
+  if (['exe', 'msi', 'app', 'deb', 'dmg'].includes(ext)) return 'exe';
   return 'other';
 }
 
@@ -17,6 +18,7 @@ function emptyBreakdown() {
     audio: { count: 0, size: 0 },
     text: { count: 0, size: 0 },
     archive: { count: 0, size: 0 },
+    exe: { count: 0, size: 0 },
     other: { count: 0, size: 0 },
   };
 }

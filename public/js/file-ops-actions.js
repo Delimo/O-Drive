@@ -55,6 +55,7 @@ function describeItem(item) {
     text: '文本',
     pdf: 'PDF',
     archive: '压缩包',
+    exe: '程序',
   }[Utils.getFileKind(item.name)] || '文件';
   return { ...item, kind };
 }

@@ -46,14 +46,15 @@ function matchesFilters(item) {
 }
 
 function describeItem(item) {
-  const kind = !item.sizeFormatted ? '文件夹' : {
-    image: '图片',
-    video: '视频',
-    audio: '音频',
-    text: '文本',
-    pdf: 'PDF',
-    archive: '压缩包',
-  }[Utils.getFileKind(item.name)] || '文件';
+    const kind = !item.sizeFormatted ? '文件夹' : {
+      image: '图片',
+      video: '视频',
+      audio: '音频',
+      text: '文本',
+      pdf: 'PDF',
+      archive: '压缩包',
+      exe: '程序',
+    }[Utils.getFileKind(item.name)] || '文件';
   return {
     ...item,
     kind,
@@ -285,10 +286,10 @@ export const UI = {
       const div = document.createElement('div');
       if (state.viewMode === 'grid') {
         div.className = 'grid-item';
-        div.innerHTML = `<div class="file-icon opacity-30 text-slate-500 text-4xl mb-3">📁</div><div class="file-name text-slate-900">..</div><div class="file-size text-slate-500">返回上级</div><div class="file-actions"></div>`;
+        div.innerHTML = `<div class="file-icon opacity-40 text-slate-500 mb-3">${Utils.getParentIcon()}</div><div class="file-name text-slate-900">..</div><div class="file-size text-slate-500">返回上级</div><div class="file-actions"></div>`;
       } else {
         div.className = 'grid-row-layout file-item-row parent-row h-[52px] hover:bg-slate-50 border-b border-border cursor-pointer text-slate-500';
-        div.innerHTML = `<div class="col-name text-slate-900"><span class="text-xl flex-shrink-0 select-none opacity-50">📁</span><span class="text-sm font-medium text-slate-500 whitespace-nowrap">返回上级 (..)</span></div><div class="col-size text-slate-500 font-mono text-center">-</div><div class="col-time text-slate-500 font-mono text-center">-</div><div class="col-acts"></div>`;
+        div.innerHTML = `<div class="col-name text-slate-900"><span class="file-row-icon opacity-50 flex-shrink-0 select-none">${Utils.getParentIcon()}</span><span class="text-sm font-medium text-slate-500 whitespace-nowrap">返回上级 (..)</span></div><div class="col-size text-slate-500 font-mono text-center">-</div><div class="col-time text-slate-500 font-mono text-center">-</div><div class="col-acts"></div>`;
       }
       div.onclick = () => Actions.navigateTo(parent);
       container.appendChild(div);
@@ -315,7 +316,7 @@ export const UI = {
       const safeName = escapeHtml(item.name);
       const protectedBadge = item.protected ? '<span class="protected-badge">受保护</span>' : '';
       const safeSize = escapeHtml(isFolder ? '文件夹' : item.sizeFormatted);
-      const safeIcon = escapeHtml(isFolder ? '📁' : Utils.getFileIcon(item.name));
+      const safeIcon = isFolder ? Utils.getFolderIcon() : Utils.getFileIcon(item.name);
       const thumbUrl = !isFolder && Utils.isImageFile(item.name) ? escapeHtml(api.thumbnailUrl(item.path)) : '';
       const selectControl = state.userRole === 'admin'
         ? `<button class="file-select-btn ${isSelected ? 'is-selected' : ''}" aria-label="${isSelected ? '取消选择' : '选择'} ${safeName}" data-action="toggle-select" data-args='${escapeHtml(JSON.stringify([item.fullKey]))}'>${isSelected ? '✓' : ''}</button>`

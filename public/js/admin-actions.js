@@ -21,21 +21,34 @@ export const AdminActions = {
     if (res.status !== 200) return window.location.href = '/';
     document.getElementById('statFileCount').textContent = String(data.files?.count || 0);
     document.getElementById('statTotalSize').textContent = data.files?.totalSizeFormatted || '0 B';
-    document.getElementById('statTrash').textContent = `${data.trash?.count || 0} 项 · ${data.trash?.sizeFormatted || '0 B'}`;
+    document.getElementById('statTrash').innerHTML = `${data.trash?.count || 0} <span class="text-sm font-semibold text-slate-500">项</span><div class="text-sm font-semibold text-slate-500 mt-2">${escapeHtml(data.trash?.sizeFormatted || '0 B')}</div>`;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
 
-    const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', other: '其他' };
-    document.getElementById('statsBreakdown').innerHTML = Object.entries(data.breakdown || {}).map(([kind, item]) => `
-      <div class="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2">
-        <span>${labels[kind] || kind}</span>
-        <strong class="font-mono">${item.count || 0} · ${escapeHtml(item.sizeFormatted || '0 B')}</strong>
-      </div>
-    `).join('');
+    const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
+    const breakdown = Object.entries(data.breakdown || {});
+    const totalCount = breakdown.reduce((sum, [, item]) => sum + Number(item.count || 0), 0) || 1;
+    document.getElementById('statsBreakdown').innerHTML = breakdown.map(([kind, item]) => {
+      const pct = Math.max(2, Math.round(((item.count || 0) / totalCount) * 100));
+      return `
+        <div class="rounded-xl border border-border bg-background px-4 py-3">
+          <div class="flex items-center justify-between gap-3">
+            <span class="font-medium">${labels[kind] || kind}</span>
+            <strong class="font-mono text-sm">${item.count || 0} · ${escapeHtml(item.sizeFormatted || '0 B')}</strong>
+          </div>
+          <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div class="h-full rounded-full bg-primary" style="width: ${pct}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
 
-    document.getElementById('statsLatest').innerHTML = (data.latest || []).map(item => `
-      <div class="rounded-lg border border-border bg-background px-3 py-2">
-        <div class="font-mono break-all text-slate-700">${escapeHtml(item.key)}</div>
-        <div class="mt-1 text-xs text-slate-500">${escapeHtml(item.sizeFormatted || '0 B')} · ${escapeHtml(item.uploaded ? new Date(item.uploaded).toLocaleString('zh-CN', { hour12: false }) : '-')}</div>
+    document.getElementById('statsLatest').innerHTML = (data.latest || []).slice(0, 4).map(item => `
+      <div class="rounded-xl border border-border bg-background px-4 py-3">
+        <div class="font-mono break-all text-slate-700 leading-6" style="max-height: 3.2rem; overflow: hidden;">${escapeHtml(item.key)}</div>
+        <div class="mt-1 text-xs text-slate-500 flex items-center justify-between gap-3">
+          <span>${escapeHtml(item.sizeFormatted || '0 B')}</span>
+          <span>${escapeHtml(item.uploaded ? new Date(item.uploaded).toLocaleString('zh-CN', { hour12: false }) : '-')}</span>
+        </div>
       </div>
     `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
   },
