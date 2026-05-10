@@ -19,6 +19,7 @@ function readArgs(el) {
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
   if (!target) return;
+  if (target.id === 'previewModal' && event.target !== target) return;
   const action = target.dataset.action;
   const args = readArgs(target);
   switch (action) {
@@ -103,10 +104,6 @@ document.addEventListener('keydown', event => {
 
 document.getElementById('fileInput')?.addEventListener('change', event => {
   Actions.uploadFiles(event.target.files);
-});
-
-document.getElementById('previewModal')?.querySelector(':scope > div')?.addEventListener('click', event => {
-  event.stopPropagation();
 });
 
 Actions.init();
