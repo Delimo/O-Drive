@@ -71,6 +71,55 @@ export async function handleUpload(env, request, r2Key) {
   return jsonResponse({ success: true });
 }
 
+function uploadKey(targetDir, name) {
+  let destDir = String(targetDir || '').replace(/^\/+|\/+$/g, '');
+  if (destDir) destDir += '/';
+  return destDir + normalizeName(String(name || '').split(/[\/\\]/).pop());
+}
+
+export async function handleMultipartCreate(env, request) {
+  const { targetDir, name, type } = await request.json();
+  const key = uploadKey(targetDir, name);
+  const upload = await env.R2_BUCKET.createMultipartUpload(key, {
+    httpMetadata: { contentType: type || 'application/octet-stream' },
+  });
+  await addLog(env, request, 'UPLOAD_START', key);
+  return jsonResponse({ key: upload.key, uploadId: upload.uploadId });
+}
+
+export async function handleMultipartPart(env, request, url) {
+  const key = url.searchParams.get('key');
+  const uploadId = url.searchParams.get('uploadId');
+  const partNumber = Number(url.searchParams.get('partNumber'));
+  if (!key || !uploadId || !Number.isInteger(partNumber) || partNumber < 1) {
+    return jsonResponse({ success: false, message: 'Invalid multipart part request' }, 400);
+  }
+  if (!request.body) return jsonResponse({ success: false, message: 'Missing request body' }, 400);
+  const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+  const part = await upload.uploadPart(partNumber, request.body);
+  return jsonResponse(part);
+}
+
+export async function handleMultipartComplete(env, request) {
+  const { key, uploadId, parts } = await request.json();
+  if (!key || !uploadId || !Array.isArray(parts) || parts.length === 0) {
+    return jsonResponse({ success: false, message: 'Invalid multipart complete request' }, 400);
+  }
+  const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+  const object = await upload.complete(parts.sort((a, b) => a.partNumber - b.partNumber));
+  await addLog(env, request, 'UPLOAD', key);
+  return jsonResponse({ success: true, key: object.key, etag: object.httpEtag });
+}
+
+export async function handleMultipartAbort(env, request) {
+  const { key, uploadId } = await request.json();
+  if (!key || !uploadId) return jsonResponse({ success: false, message: 'Invalid multipart abort request' }, 400);
+  const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+  await upload.abort();
+  await addLog(env, request, 'UPLOAD_ABORT', key);
+  return jsonResponse({ success: true });
+}
+
 export async function handleSaveText(env, request, r2Key) {
   await env.R2_BUCKET.put(r2Key, (await request.json()).content, { httpMetadata: { contentType: 'text/plain' } });
   await addLog(env, request, 'SAVE_TEXT', r2Key);

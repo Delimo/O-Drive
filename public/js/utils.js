@@ -23,6 +23,8 @@ export const sanitizeHtml = (html) => {
   return template.innerHTML;
 };
 
+const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
 export const Utils = {
   getParentPath(p) {
     const parts = p.split('/').filter(Boolean);
@@ -32,16 +34,39 @@ export const Utils = {
   formatDate(ts) {
     return ts ? new Date(ts).toLocaleString('zh-CN', { hour12: false }) : '-';
   },
+  getExtension(name) {
+    return String(name || '').split('.').pop().toLowerCase();
+  },
+  isImageFile(name) {
+    return imageExts.includes(this.getExtension(name));
+  },
   getFileIcon(name) {
-    const ext = name.split('.').pop().toLowerCase();
+    const ext = this.getExtension(name);
     const map = {
-      jpg: '📷', jpeg: '📷', png: '📷', webp: '📷', gif: '📷',
-      mp4: '🎞️', webm: '🎞️', mp3: '🎵', wav: '🎵',
-      pdf: '📄', zip: '🗜️', rar: '🗜️', '7z': '🗜️',
+      jpg: '📷',
+      jpeg: '📷',
+      png: '📷',
+      webp: '📷',
+      gif: '📷',
+      mp4: '🎬',
+      webm: '🎬',
+      mp3: '🎵',
+      wav: '🎵',
+      ogg: '🎵',
+      flac: '🎵',
+      pdf: '📄',
+      zip: '🗜️',
+      rar: '🗜️',
+      '7z': '🗜️',
     };
     return map[ext] || '📄';
   },
   isPreviewable(name) {
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm', 'mp3', 'wav', 'txt', 'pdf', 'md', 'js', 'css', 'html', 'json', 'py', 'sh', 'sql', 'php', 'yml', 'yaml'].includes(name.split('.').pop().toLowerCase());
+    return [
+      'jpg', 'jpeg', 'png', 'gif', 'webp',
+      'mp4', 'webm',
+      'mp3', 'wav', 'ogg', 'flac',
+      'txt', 'pdf', 'md', 'js', 'css', 'html', 'json', 'py', 'sh', 'sql', 'php', 'yml', 'yaml', 'xml', 'csv', 'log',
+    ].includes(this.getExtension(name));
   },
 };

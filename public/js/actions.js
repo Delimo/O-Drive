@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { UI, Message } from './ui.js';
 import { sanitizeHtml, escapeHtml } from './utils.js';
 import { getSelectableKeys } from './file-view-model.js';
+import { UploadQueue } from './uploader.js';
 
 const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 const videoExts = ['mp4', 'webm'];
@@ -256,41 +257,7 @@ export const Actions = {
 
   async uploadFiles(files) {
     if (state.userRole !== 'admin') return;
-    const manager = document.getElementById('uploadManager');
-    const list = document.getElementById('uploadList');
-    manager.classList.replace('hidden', 'flex');
-
-    for (const f of files) {
-      state.activeUploads++;
-      const item = document.createElement('div');
-      item.className = 'p-4 border-b border-border bg-slate-900/20';
-      item.innerHTML = `<div class="flex justify-between text-[11px] mb-2 truncate text-slate-300"><span class="font-bold text-white">${escapeHtml(f.name)}</span><span class="pct text-primary font-mono">0%</span></div><div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div class="progress-fill h-full bg-primary w-0 transition-all duration-300"></div></div>`;
-      list.prepend(item);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/files/' + state.currentPath.replace(/^\/|\/$/g, ''), true);
-      xhr.upload.onprogress = e => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
-          item.querySelector('.progress-fill').style.width = `${pct}%`;
-          item.querySelector('.pct').textContent = `${pct}%`;
-        }
-      };
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          item.querySelector('.pct').textContent = '完成';
-          item.querySelector('.progress-fill').className = 'h-full bg-emerald-500 w-full';
-          this.loadFiles();
-        } else {
-          item.querySelector('.pct').textContent = '失败';
-        }
-        state.activeUploads--;
-        if (state.activeUploads === 0) setTimeout(() => manager.classList.replace('flex', 'hidden'), 3000);
-      };
-
-      const fd = new FormData();
-      fd.append('file', f);
-      xhr.send(fd);
-    }
+    if (!this.uploadQueue) this.uploadQueue = new UploadQueue({ onComplete: () => this.loadFiles() });
+    this.uploadQueue.add(files, state.currentPath);
   },
 };

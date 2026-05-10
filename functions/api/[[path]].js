@@ -7,10 +7,15 @@ import {
   handleBatchDelete,
   handleMkdir,
   handleUpload,
+  handleMultipartCreate,
+  handleMultipartPart,
+  handleMultipartComplete,
+  handleMultipartAbort,
   handleSaveText,
   handleSearch,
   handleListFiles,
   handleDownloadOrPreview,
+  handleThumbnail,
 } from './lib/files.js';
 import { loadHiddenPaths, getR2KeyFromPath, canReadKey, isAdmin } from './lib/request-context.js';
 
@@ -41,11 +46,16 @@ export async function onRequest(context) {
       if (path === '/api/batch-delete') return await handleBatchDelete(env, request);
       if (path.startsWith('/api/mkdir') && method === 'POST') return await handleMkdir(env, request, r2Key);
       if (path.startsWith('/api/files') && method === 'POST') return await handleUpload(env, request, r2Key);
+      if (path === '/api/upload-multipart/create' && method === 'POST') return await handleMultipartCreate(env, request);
+      if (path === '/api/upload-multipart/part' && method === 'PUT') return await handleMultipartPart(env, request, url);
+      if (path === '/api/upload-multipart/complete' && method === 'POST') return await handleMultipartComplete(env, request);
+      if (path === '/api/upload-multipart/abort' && method === 'POST') return await handleMultipartAbort(env, request);
       if (path.startsWith('/api/save-text/') && method === 'POST') return await handleSaveText(env, request, r2Key);
     }
 
     if (path === '/api/search') return await handleSearch(env, request, url, hiddenPaths, auth);
     if (path.startsWith('/api/files') && method === 'GET') return await handleListFiles(env, hiddenPaths, auth, r2Key);
+    if (path.startsWith('/api/thumbnail/')) return await handleThumbnail(env, request, r2Key, context);
     if (path.startsWith('/api/download/') || path.startsWith('/api/preview/')) return await handleDownloadOrPreview(env, request, path, r2Key);
 
     return jsonResponse({ message: 'Not Found' }, 404);

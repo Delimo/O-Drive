@@ -4,6 +4,10 @@ export {
   handleBatchDelete,
   handleMkdir,
   handleUpload,
+  handleMultipartCreate,
+  handleMultipartPart,
+  handleMultipartComplete,
+  handleMultipartAbort,
   handleSaveText,
 } from './file-mutations.js';
 
@@ -12,3 +16,7 @@ export {
   handleListFiles,
   handleDownloadOrPreview,
 } from './file-reads.js';
+
+export {
+  handleThumbnail,
+} from './thumbnails.js';

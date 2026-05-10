@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { handleListFiles, handleDownloadOrPreview } from '../functions/api/lib/file-reads.js';
+import {
+  handleMultipartCreate,
+  handleMultipartPart,
+  handleMultipartComplete,
+  handleMultipartAbort,
+} from '../functions/api/lib/file-mutations.js';
+import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
 import { encodeR2Path, apiFileUrl } from '../public/js/file-paths.js';
 import { getOrderedEntries, getSelectableKeys } from '../public/js/file-view-model.js';
@@ -35,6 +42,34 @@ function makeEnv({ objects = [], prefixes = [] } = {}) {
         return {
           body: obj.body || 'content',
           httpMetadata: obj.httpMetadata || { contentType: 'text/plain' },
+        };
+      },
+      async createMultipartUpload(key) {
+        return {
+          key,
+          uploadId: 'upload-1',
+        };
+      },
+      resumeMultipartUpload(key, uploadId) {
+        return {
+          key,
+          uploadId,
+          async uploadPart(partNumber) {
+            return { partNumber, etag: `etag-${partNumber}` };
+          },
+          async complete(parts) {
+            return { key, httpEtag: `complete-${parts.length}` };
+          },
+          async abort() {},
+        };
+      },
+    },
+    DB: {
+      prepare() {
+        return {
+          bind() {
+            return { run: async () => ({}) };
+          },
         };
       },
     },
@@ -88,6 +123,47 @@ test('request context extracts encoded R2 keys and guards hidden paths', () => {
 test('frontend file path helpers encode each path segment', () => {
   assert.equal(encodeR2Path('/中文/赤壁赋.txt'), '%E4%B8%AD%E6%96%87/%E8%B5%A4%E5%A3%81%E8%B5%8B.txt');
   assert.equal(apiFileUrl('/api/preview', '/中文/赤壁赋.txt'), '/api/preview/%E4%B8%AD%E6%96%87/%E8%B5%A4%E5%A3%81%E8%B5%8B.txt');
+});
+
+test('thumbnail endpoint only accepts image files', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
+  });
+
+  const res = await handleThumbnail(env, new Request('https://example.com/api/thumbnail/docs/readme.txt'), 'docs/readme.txt', {});
+  assert.equal(res.status, 415);
+});
+
+test('multipart upload lifecycle returns upload id, parts, complete and abort', async () => {
+  const env = makeEnv();
+  const create = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/', name: 'large.bin', type: 'application/octet-stream' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const created = await create.json();
+  assert.equal(created.key, 'large.bin');
+  assert.equal(created.uploadId, 'upload-1');
+
+  const part = await handleMultipartPart(env, new Request('https://example.com/api/upload-multipart/part?key=large.bin&uploadId=upload-1&partNumber=1', {
+    method: 'PUT',
+    body: 'chunk',
+  }), new URL('https://example.com/api/upload-multipart/part?key=large.bin&uploadId=upload-1&partNumber=1'));
+  assert.deepEqual(await part.json(), { partNumber: 1, etag: 'etag-1' });
+
+  const complete = await handleMultipartComplete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'large.bin', uploadId: 'upload-1', parts: [{ partNumber: 1, etag: 'etag-1' }] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await complete.json()).success, true);
+
+  const abort = await handleMultipartAbort(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'large.bin', uploadId: 'upload-1' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await abort.json()).success, true);
 });
 
 test('file view model orders entries and exposes selectable keys', () => {

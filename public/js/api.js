@@ -27,6 +27,21 @@ export const api = {
   paste(payload) {
     return requestJson('/api/paste', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
   },
+  multipartCreate(payload) {
+    return requestJson('/api/upload-multipart/create', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+  },
+  multipartPart({ key, uploadId, partNumber, chunk }) {
+    return requestJson(`/api/upload-multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
+      method: 'PUT',
+      body: chunk,
+    });
+  },
+  multipartComplete(payload) {
+    return requestJson('/api/upload-multipart/complete', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+  },
+  multipartAbort(payload) {
+    return requestJson('/api/upload-multipart/abort', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+  },
   renameFile(fullKey, newName) {
     return requestJson(apiFileUrl('/api/files', fullKey), { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ newName }) });
   },
@@ -38,6 +53,7 @@ export const api = {
   },
   preview(path) { return fetch(apiFileUrl('/api/preview', path)); },
   previewUrl(path) { return apiFileUrl('/api/preview', path); },
+  thumbnailUrl(path) { return apiFileUrl('/api/thumbnail', path); },
   download(path) { return apiFileUrl('/api/download', path); },
   adminLogs(page, size) { return requestJson(`/api/admin/logs?page=${page}&size=${size}`); },
   hiddenPaths() { return requestJson('/api/admin/settings/hidden'); },
