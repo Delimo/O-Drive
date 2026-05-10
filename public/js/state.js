@@ -11,6 +11,7 @@ export const state = {
   clipboard: null,
   activeUploads: 0,
   visibleKeys: [],
+  currentPreviewText: '',
   filters: {
     kind: 'all',
     minSize: '',

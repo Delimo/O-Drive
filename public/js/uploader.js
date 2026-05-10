@@ -6,6 +6,7 @@ const PART_SIZE = 8 * 1024 * 1024;
 const MULTIPART_THRESHOLD = 16 * 1024 * 1024;
 const FILE_CONCURRENCY = 2;
 const PART_RETRIES = 3;
+const CANCEL_MESSAGE = '已取消';
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -26,6 +27,7 @@ function createUploadItem(file) {
       <span class="status text-[11px] text-slate-500">等待中</span>
       <div class="flex gap-2">
         <button class="pause-btn upload-control">暂停</button>
+        <button class="retry-btn upload-control hidden">重试</button>
         <button class="cancel-btn upload-control danger">取消</button>
       </div>
     </div>
@@ -52,7 +54,7 @@ async function uploadSmall(task) {
   const done = new Promise((resolve, reject) => {
     xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
     xhr.onerror = () => reject(new Error('网络错误'));
-    xhr.onabort = () => reject(new Error('已取消'));
+    xhr.onabort = () => reject(new Error(CANCEL_MESSAGE));
   });
 
   const fd = new FormData();
@@ -66,7 +68,7 @@ async function waitIfPaused(task) {
     task.item.querySelector('.status').textContent = '已暂停';
     await sleep(300);
   }
-  if (task.cancelled) throw new Error('已取消');
+  if (task.cancelled) throw new Error(CANCEL_MESSAGE);
 }
 
 async function uploadPartWithRetry(task, partNumber, chunk) {
@@ -132,19 +134,94 @@ async function abortTask(task) {
   }
 }
 
+function collectSummary(tasks) {
+  return {
+    total: tasks.length,
+    success: tasks.filter(t => t.state === 'success').length,
+    failed: tasks.filter(t => t.state === 'failed').length,
+    cancelled: tasks.filter(t => t.state === 'cancelled').length,
+    running: tasks.filter(t => t.state === 'running').length,
+    queued: tasks.filter(t => t.state === 'queued').length,
+  };
+}
+
 export class UploadQueue {
   constructor({ onComplete } = {}) {
     this.queue = [];
     this.active = 0;
-    this.total = 0;
-    this.finished = 0;
+    this.tasks = [];
     this.onComplete = onComplete;
+    this.closeTimer = null;
+  }
+
+  get summary() {
+    return collectSummary(this.tasks);
+  }
+
+  renderSummary() {
+    const summary = this.summary;
+    const label = document.getElementById('uploadSummary');
+    const retryBtn = document.getElementById('uploadRetryFailed');
+    if (label) {
+      label.textContent = `${summary.success}/${summary.total} 已完成`;
+      if (summary.failed) label.textContent += ` · ${summary.failed} 失败`;
+      else if (summary.cancelled) label.textContent += ` · ${summary.cancelled} 已取消`;
+    }
+    if (retryBtn) retryBtn.classList.toggle('hidden', summary.failed === 0);
+  }
+
+  scheduleAutoClose() {
+    const { total, success, failed, cancelled } = this.summary;
+    const settled = success + failed + cancelled;
+    clearTimeout(this.closeTimer);
+    if (total > 0 && settled === total && failed === 0) {
+      this.closeTimer = setTimeout(() => UI.closeUploadManager(), 900);
+    }
+  }
+
+  markSuccess(task) {
+    task.state = 'success';
+    updateProgress(task, task.file.size, task.file.size, '完成');
+    task.item.querySelector('.progress-fill').className = 'progress-fill h-full bg-emerald-500 w-full';
+    task.item.querySelector('.pause-btn')?.remove();
+    task.item.querySelector('.cancel-btn')?.remove();
+    task.item.querySelector('.retry-btn')?.remove();
+    task.item.classList.add('is-success');
+  }
+
+  markFailed(task, message) {
+    task.state = 'failed';
+    task.error = message;
+    task.item.classList.add('is-error');
+    task.item.querySelector('.status').textContent = message || '上传失败';
+    task.item.querySelector('.pct').textContent = '失败';
+    task.item.querySelector('.progress-fill').className = 'progress-fill h-full bg-red-500';
+    task.item.querySelector('.pause-btn')?.remove();
+    task.item.querySelector('.cancel-btn')?.remove();
+    const retryBtn = task.item.querySelector('.retry-btn');
+    if (retryBtn) {
+      retryBtn.classList.remove('hidden');
+      retryBtn.onclick = () => this.retryTask(task);
+    }
+  }
+
+  markCancelled(task) {
+    task.state = 'cancelled';
+    task.item.classList.add('is-cancelled');
+    task.item.querySelector('.status').textContent = CANCEL_MESSAGE;
+    task.item.querySelector('.pct').textContent = '取消';
+    task.item.querySelector('.progress-fill').className = 'progress-fill h-full bg-slate-300';
+    task.item.querySelector('.pause-btn')?.remove();
+    task.item.querySelector('.cancel-btn')?.remove();
+    task.item.querySelector('.retry-btn')?.remove();
   }
 
   add(files, targetDir) {
     const manager = document.getElementById('uploadManager');
     const list = document.getElementById('uploadList');
-    manager.classList.replace('hidden', 'flex');
+    if (!manager || !list) return;
+    manager.classList.remove('hidden');
+    manager.classList.add('flex');
 
     [...files].forEach(file => {
       const task = {
@@ -153,6 +230,12 @@ export class UploadQueue {
         item: createUploadItem(file),
         paused: false,
         cancelled: false,
+        state: 'queued',
+        error: '',
+        xhr: null,
+        key: null,
+        uploadId: null,
+        parts: [],
       };
       task.item.querySelector('.pause-btn').onclick = () => {
         task.paused = !task.paused;
@@ -160,29 +243,57 @@ export class UploadQueue {
       };
       task.item.querySelector('.cancel-btn').onclick = () => abortTask(task);
       list.prepend(task.item);
+      this.tasks.push(task);
       this.queue.push(task);
     });
 
-    this.total += files.length;
+    this.renderSummary();
     this.pump();
+  }
+
+  retryTask(task) {
+    if (!task || task.state !== 'failed') return;
+    task.paused = false;
+    task.cancelled = false;
+    task.error = '';
+    task.key = null;
+    task.uploadId = null;
+    task.parts = [];
+    task.state = 'queued';
+    task.item.className = 'upload-item p-4 border-b border-border bg-white';
+    task.item.innerHTML = createUploadItem(task.file).innerHTML;
+    task.item.querySelector('.status').textContent = '重试中';
+    task.item.querySelector('.pause-btn').onclick = () => {
+      task.paused = !task.paused;
+      task.item.querySelector('.pause-btn').textContent = task.paused ? '继续' : '暂停';
+    };
+    task.item.querySelector('.cancel-btn').onclick = () => abortTask(task);
+    task.item.querySelector('.retry-btn').onclick = () => this.retryTask(task);
+    this.queue.push(task);
+    this.renderSummary();
+    this.pump();
+  }
+
+  retryFailed() {
+    this.tasks.filter(task => task.state === 'failed').forEach(task => this.retryTask(task));
   }
 
   pump() {
     while (this.active < FILE_CONCURRENCY && this.queue.length) {
       const task = this.queue.shift();
+      if (!task || task.state !== 'queued') continue;
       this.active++;
+      task.state = 'running';
+      this.renderSummary();
       this.run(task).finally(() => {
         this.active--;
-        this.finished++;
+        this.renderSummary();
+        this.scheduleAutoClose();
         this.pump();
-        if (this.active === 0 && this.queue.length === 0 && this.finished >= this.total) {
-          this.total = 0;
-          this.finished = 0;
-          this.onComplete?.();
-          UI.closeUploadManager();
-        }
       });
     }
+    this.renderSummary();
+    this.scheduleAutoClose();
   }
 
   async run(task) {
@@ -190,14 +301,10 @@ export class UploadQueue {
       task.item.querySelector('.status').textContent = '准备上传';
       if (task.file.size >= MULTIPART_THRESHOLD) await uploadMultipart(task);
       else await uploadSmall(task);
-      updateProgress(task, task.file.size, task.file.size, '完成');
-      task.item.querySelector('.progress-fill').className = 'progress-fill h-full bg-emerald-500 w-full';
-      task.item.querySelector('.pause-btn')?.remove();
-      task.item.querySelector('.cancel-btn')?.remove();
+      this.markSuccess(task);
     } catch (e) {
-      task.item.querySelector('.status').textContent = e.message || '上传失败';
-      task.item.querySelector('.pct').textContent = task.cancelled ? '取消' : '失败';
-      task.item.querySelector('.progress-fill').className = 'progress-fill h-full bg-red-500';
+      if (task.cancelled || e.message === CANCEL_MESSAGE) this.markCancelled(task);
+      else this.markFailed(task, e.message || '上传失败');
     }
   }
 }

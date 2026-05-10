@@ -102,6 +102,7 @@ export const UI = {
   closePreview() {
     const content = document.getElementById('previewContent');
     if (content) content.innerHTML = '';
+    state.currentPreviewText = '';
     this.closeModal('previewModal');
   },
 
@@ -151,6 +152,13 @@ export const UI = {
     title.textContent = meta.name;
     empty.classList.add('hidden');
     body.innerHTML = `
+      <div class="details-actions">
+        ${!meta.sizeFormatted ? `<button class="btn btn-primary" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(meta.path))})">打开文件夹</button>` : ''}
+        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" onclick="Actions.openPreview(${escapeHtml(JSON.stringify(meta.path))}, ${escapeHtml(JSON.stringify(meta.name))})">预览</button>` : ''}
+        ${meta.sizeFormatted ? `<button class="btn" onclick="Actions.downloadFile(${escapeHtml(JSON.stringify(meta.path))})">下载</button>` : ''}
+        <button class="btn" onclick="Actions.copyPath(${escapeHtml(JSON.stringify(meta.path))})">复制路径</button>
+        <button class="btn" onclick="Actions.copyPath(${escapeHtml(JSON.stringify(meta.fullKey))})">复制原始键</button>
+      </div>
       <div class="space-y-3 text-sm">
         <div class="detail-row"><span>类型</span><strong>${escapeHtml(meta.kind)}</strong></div>
         <div class="detail-row"><span>路径</span><strong class="break-all">${escapeHtml(meta.path)}</strong></div>
@@ -158,12 +166,6 @@ export const UI = {
         <div class="detail-row"><span>大小</span><strong>${escapeHtml(meta.sizeFormatted || '文件夹')}</strong></div>
         <div class="detail-row"><span>时间</span><strong>${escapeHtml(Utils.formatDate(meta.time))}</strong></div>
         <div class="detail-row"><span>可预览</span><strong>${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? '是' : '否'}</strong></div>
-      </div>
-      <div class="mt-5 flex flex-wrap gap-2">
-        ${!meta.sizeFormatted ? `<button class="btn btn-primary" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(meta.path))})">打开文件夹</button>` : ''}
-        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" onclick="Actions.openPreview(${escapeHtml(JSON.stringify(meta.path))}, ${escapeHtml(JSON.stringify(meta.name))})">预览</button>` : ''}
-        ${meta.sizeFormatted ? `<button class="btn" onclick="Actions.downloadFile(${escapeHtml(JSON.stringify(meta.path))})">下载</button>` : ''}
-        <button class="btn" onclick="Actions.copyPath(${escapeHtml(JSON.stringify(meta.path))})">复制路径</button>
       </div>
     `;
     this.openDrawer('detailsPanel');

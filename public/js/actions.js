@@ -10,6 +10,74 @@ const videoExts = ['mp4', 'webm'];
 const audioExts = ['mp3', 'wav', 'ogg', 'flac'];
 const textExts = ['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'];
 
+function escapeRegExp(text) {
+  return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildTextPreviewShell(text) {
+  const source = String(text || '').replace(/\r\n/g, '\n');
+  const lines = source.split('\n');
+  const shell = document.createElement('div');
+  shell.className = 'preview-text-shell preview-text-viewer';
+  shell.dataset.rawText = source;
+  shell.innerHTML = `
+    <div class="preview-text-toolbar">
+      <label class="preview-text-search-wrap">
+        <span>搜索</span>
+        <input type="search" class="preview-text-search" placeholder="在文本中查找">
+      </label>
+      <div class="preview-text-toolbar-actions">
+        <button type="button" class="btn preview-text-toggle">换行</button>
+        <button type="button" class="btn preview-text-copy">复制</button>
+      </div>
+    </div>
+    <div class="preview-text-body"></div>
+  `;
+
+  const body = shell.querySelector('.preview-text-body');
+  const search = shell.querySelector('.preview-text-search');
+  const toggle = shell.querySelector('.preview-text-toggle');
+  const copy = shell.querySelector('.preview-text-copy');
+  let wrap = true;
+
+  const render = () => {
+    const query = search.value.trim();
+    const matcher = query ? new RegExp(escapeRegExp(query), 'gi') : null;
+    body.classList.toggle('is-nowrap', !wrap);
+    body.innerHTML = lines.map((line, index) => {
+      let safe = escapeHtml(line);
+      if (matcher) {
+        safe = safe.replace(matcher, match => `<mark class="preview-hit">${escapeHtml(match)}</mark>`);
+      }
+      if (!safe) safe = '&nbsp;';
+      return `
+        <div class="preview-line">
+          <span class="preview-line-no">${index + 1}</span>
+          <span class="preview-line-text">${safe}</span>
+        </div>
+      `;
+    }).join('');
+  };
+
+  search.addEventListener('input', render);
+  toggle.addEventListener('click', () => {
+    wrap = !wrap;
+    toggle.textContent = wrap ? '换行' : '不换行';
+    render();
+  });
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(source);
+      Message.success('已复制文本内容');
+    } catch (_) {
+      Message.error('复制失败');
+    }
+  });
+
+  render();
+  return shell;
+}
+
 export const Actions = {
   async init() {
     const { res, data } = await api.getRole();
@@ -278,6 +346,7 @@ export const Actions = {
       return;
     }
     state.currentPreviewPath = path;
+    state.currentPreviewText = '';
     state.isEditing = false;
     const content = document.getElementById('previewContent');
     const title = document.getElementById('previewTitle');
@@ -311,9 +380,13 @@ export const Actions = {
         const res = await api.preview(path);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
+        state.currentPreviewText = text;
         if (state.userRole === 'admin') editBtn.classList.remove('hidden');
         if (ext === 'md') content.innerHTML = `<div class="preview-text-shell markdown-body">${sanitizeHtml(marked.parse(text))}</div>`;
-        else content.innerHTML = `<pre id="textContent" class="preview-text-shell preview-text">${escapeHtml(text)}</pre>`;
+        else {
+          content.innerHTML = '';
+          content.appendChild(buildTextPreviewShell(text));
+        }
       } else {
         content.innerHTML = '<div class="p-12 text-slate-400 text-center">该文件类型暂不支持在线预览</div>';
       }
@@ -325,11 +398,12 @@ export const Actions = {
 
   toggleEditMode() {
     const pre = document.getElementById('textContent') || document.querySelector('.markdown-body');
-    if (!pre) return;
+    const rawText = state.currentPreviewText || pre?.innerText || pre?.textContent || '';
+    if (!pre && !rawText) return;
     const textarea = document.createElement('textarea');
     textarea.className = 'preview-edit-area';
     textarea.id = 'editArea';
-    textarea.value = pre.innerText || pre.textContent;
+    textarea.value = rawText;
     document.getElementById('previewContent').innerHTML = '';
     document.getElementById('previewContent').appendChild(textarea);
     document.getElementById('editBtn').classList.add('hidden');

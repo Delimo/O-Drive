@@ -167,9 +167,15 @@
     </div>
     <div id="detailsBackdrop" class="fixed inset-0 z-[339] hidden bg-transparent" onclick="UI.closeDrawer('detailsPanel')"></div>
     <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden text-slate-900">
-        <div class="bg-surface-soft px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-500">
-            <span>上传进度</span>
-            <button onclick="UI.closeUploadManager()">&times;</button>
+        <div class="bg-surface-soft px-4 py-3 flex items-center justify-between gap-3 text-xs font-bold text-slate-500">
+            <div class="flex items-center gap-2 min-w-0">
+                <span>上传进度</span>
+                <span id="uploadSummary" class="font-semibold text-slate-400 truncate">0/0 已完成</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="uploadRetryFailed" class="upload-control hidden" onclick="Actions.uploadQueue?.retryFailed()">重试失败</button>
+                <button onclick="UI.closeUploadManager()">&times;</button>
+            </div>
         </div>
         <div id="uploadList" class="max-h-80 overflow-y-auto"></div>
     </div>
