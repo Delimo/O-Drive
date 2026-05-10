@@ -393,8 +393,13 @@ export const Actions = {
     const url = api.previewUrl(path);
     const ext = name.split('.').pop().toLowerCase();
 
+    const canEdit = state.userRole === 'admin';
     editBtn.classList.add('hidden');
     saveBtn.classList.add('hidden');
+    editBtn.hidden = true;
+    saveBtn.hidden = true;
+    editBtn.disabled = !canEdit;
+    saveBtn.disabled = !canEdit;
     title.textContent = '加载中...';
     content.className = 'flex-1 overflow-hidden bg-white';
     content.innerHTML = '<div class="p-12 text-slate-400 text-center">正在加载预览...</div>';
@@ -423,7 +428,10 @@ export const Actions = {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
         state.currentPreviewText = text;
-        if (state.userRole === 'admin') editBtn.classList.remove('hidden');
+        if (canEdit) {
+          editBtn.classList.remove('hidden');
+          editBtn.hidden = false;
+        }
         if (ext === 'md') content.innerHTML = `<div class="preview-text-shell markdown-body">${sanitizeHtml(marked.parse(text))}</div>`;
         else {
           content.innerHTML = '';
@@ -439,6 +447,7 @@ export const Actions = {
   },
 
   toggleEditMode() {
+    if (state.userRole !== 'admin') return;
     const pre = document.getElementById('textContent') || document.querySelector('.markdown-body');
     const rawText = state.currentPreviewText || pre?.innerText || pre?.textContent || '';
     if (!pre && !rawText) return;
@@ -448,11 +457,16 @@ export const Actions = {
     textarea.value = rawText;
     document.getElementById('previewContent').innerHTML = '';
     document.getElementById('previewContent').appendChild(textarea);
-    document.getElementById('editBtn').classList.add('hidden');
-    document.getElementById('saveBtn').classList.remove('hidden');
+    const editBtn = document.getElementById('editBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    editBtn.classList.add('hidden');
+    editBtn.hidden = true;
+    saveBtn.classList.remove('hidden');
+    saveBtn.hidden = false;
   },
 
   async saveTextContent() {
+    if (state.userRole !== 'admin') return;
     const { res } = await api.saveText(state.currentPreviewPath, document.getElementById('editArea').value);
     if (res.ok) {
       Message.success('已保存');
