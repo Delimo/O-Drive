@@ -12,7 +12,7 @@ import {
   handleListFiles,
   handleDownloadOrPreview,
 } from './lib/files.js';
-import { isHiddenKey } from './lib/common.js';
+import { loadHiddenPaths, getR2KeyFromPath, canReadKey, isAdmin } from './lib/request-context.js';
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -28,22 +28,12 @@ export async function onRequest(context) {
     if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
     if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
 
-    let hiddenPaths = [];
-    try {
-      const res = await env.DB.prepare('SELECT key FROM settings').all();
-      hiddenPaths = res.results.map(r => r.key);
-    } catch (e) {}
+    const hiddenPaths = await loadHiddenPaths(env);
+    const r2Key = getR2KeyFromPath(path);
 
-    let r2Key = '';
-    if (path.startsWith('/api/files/')) r2Key = decodeURIComponent(path.slice(11));
-    else if (path.startsWith('/api/download/')) r2Key = decodeURIComponent(path.slice(14));
-    else if (path.startsWith('/api/preview/')) r2Key = decodeURIComponent(path.slice(13));
-    else if (path.startsWith('/api/mkdir/')) r2Key = decodeURIComponent(path.slice(11));
-    else if (path.startsWith('/api/save-text/')) r2Key = decodeURIComponent(path.slice(15));
+    if (!canReadKey(auth, r2Key, hiddenPaths)) return jsonResponse({ success: false, message: 'Forbidden' }, 403);
 
-    if (isHiddenKey(r2Key, hiddenPaths) && auth.role !== 'admin') return jsonResponse({ success: false, message: 'Forbidden' }, 403);
-
-    if (auth.role === 'admin') {
+    if (isAdmin(auth)) {
       if (path === '/api/admin/logs') return await handleAdminLogs(env, url);
       if (path === '/api/admin/settings/hidden') return await handleHiddenSettings(env, request, method, url, hiddenPaths);
       if (path === '/api/paste' && method === 'POST') return await handlePaste(env, request);

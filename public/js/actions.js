@@ -2,15 +2,12 @@ import { state } from './state.js';
 import { api } from './api.js';
 import { UI, Message } from './ui.js';
 import { sanitizeHtml, escapeHtml } from './utils.js';
+import { getSelectableKeys } from './file-view-model.js';
 
 const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 const videoExts = ['mp4', 'webm'];
 const audioExts = ['mp3', 'wav', 'ogg', 'flac'];
 const textExts = ['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'];
-
-function previewUrl(path) {
-  return `/api/preview/${path.replace(/^\//, '').split('/').map(encodeURIComponent).join('/')}`;
-}
 
 export const Actions = {
   async init() {
@@ -62,9 +59,7 @@ export const Actions = {
   },
 
   toggleSelectAll() {
-    const allKeys = [...state.fileData.folders, ...state.fileData.files]
-      .filter(i => i.name !== '' && i.name !== '.folder')
-      .map(i => i.fullKey);
+    const allKeys = getSelectableKeys(state.fileData);
     state.selectedPaths = state.selectedPaths.length === allKeys.length ? [] : allKeys;
     UI.updateFileList();
     UI.updateBatchUI();
@@ -179,7 +174,7 @@ export const Actions = {
     const title = document.getElementById('previewTitle');
     const editBtn = document.getElementById('editBtn');
     const saveBtn = document.getElementById('saveBtn');
-    const url = previewUrl(path);
+    const url = api.previewUrl(path);
     const ext = name.split('.').pop().toLowerCase();
 
     editBtn.classList.add('hidden');
@@ -203,7 +198,7 @@ export const Actions = {
       } else if (ext === 'pdf') {
         content.innerHTML = `<iframe src="${escapeHtml(url)}" class="w-full h-full border-none"></iframe>`;
       } else if (textExts.includes(ext)) {
-        const res = await fetch(url);
+        const res = await api.preview(path);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
         if (state.userRole === 'admin') editBtn.classList.remove('hidden');

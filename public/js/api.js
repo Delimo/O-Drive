@@ -1,3 +1,5 @@
+import { apiFileUrl } from './file-paths.js';
+
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
 async function requestJson(url, options = {}) {
@@ -14,7 +16,7 @@ export const api = {
   },
   logout() { return requestJson('/api/logout'); },
   listFiles(path) {
-    return requestJson(path === '/' ? '/api/files' : `/api/files${path.replace(/\/$/, '')}`);
+    return requestJson(apiFileUrl('/api/files', path));
   },
   searchFiles(q, scope) {
     return requestJson(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(scope)}`);
@@ -26,16 +28,17 @@ export const api = {
     return requestJson('/api/paste', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
   },
   renameFile(fullKey, newName) {
-    return requestJson(`/api/files/${encodeURIComponent(fullKey)}`, { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ newName }) });
+    return requestJson(apiFileUrl('/api/files', fullKey), { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ newName }) });
   },
   mkdir(path, folderName) {
-    return requestJson(`/api/mkdir${path.replace(/\/$/, '')}`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ folderName }) });
+    return requestJson(apiFileUrl('/api/mkdir', path), { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ folderName }) });
   },
   saveText(path, content) {
-    return requestJson(`/api/save-text/${path.replace(/^\//, '')}`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ content }) });
+    return requestJson(apiFileUrl('/api/save-text', path), { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ content }) });
   },
-  preview(path) { return fetch(`/api/preview${path}`); },
-  download(path) { return `/api/download${path}`; },
+  preview(path) { return fetch(apiFileUrl('/api/preview', path)); },
+  previewUrl(path) { return apiFileUrl('/api/preview', path); },
+  download(path) { return apiFileUrl('/api/download', path); },
   adminLogs(page, size) { return requestJson(`/api/admin/logs?page=${page}&size=${size}`); },
   hiddenPaths() { return requestJson('/api/admin/settings/hidden'); },
   addHiddenPath(targetPath) {

@@ -33,6 +33,35 @@ npm run build
 - `ADMIN_PASSWORD`
 - `ALLOW_GUEST`：可选，不填或设为 `true` 时允许游客模式
 
+## 目录结构
+
+- `public/index.html`：前台页面骨架
+- `public/admin.html`：后台页面骨架
+- `public/js/api.js`：前端 API 入口
+- `public/js/file-paths.js`：文件路径和 API URL 编码规则
+- `public/js/file-view-model.js`：文件列表排序、选择等纯数据逻辑
+- `public/js/ui.js`：前台 DOM 渲染
+- `public/js/actions.js`：前台用户动作
+- `functions/api/[[path]].js`：Cloudflare Pages Functions 路由入口
+- `functions/api/lib/request-context.js`：请求路径、隐藏路径和权限边界
+- `functions/api/lib/file-reads.js`：文件列表、搜索、预览、下载
+- `functions/api/lib/file-mutations.js`：上传、删除、移动、复制、重命名、保存文本
+- `tests/`：最小回归测试
+
+## 维护约定
+
+- 大的结构、功能、部署变更写入 `CHANGELOG.md`
+- 小的样式微调、按钮对齐、文案修正不单独写入更新日志
+- 文件路径拼接统一走 `public/js/file-paths.js`
+- 文件列表排序和可选项计算统一走 `public/js/file-view-model.js`
+- 后端权限和隐藏路径判断统一走 `functions/api/lib/request-context.js`
+
+## 检查
+
+```bash
+npm test
+```
+
 ## 运行方式
 
 部署到 Pages 后，直接访问站点根路径即可。

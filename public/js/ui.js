@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { escapeHtml, Utils } from './utils.js';
+import { getOrderedEntries } from './file-view-model.js';
 
 export const Message = {
   show(msg, type = 'info') {
@@ -127,10 +128,7 @@ export const UI = {
       container.appendChild(div);
     }
 
-    const folders = [...(state.fileData.folders || [])].filter(f => f.name && f.name.trim() !== '').sort((a, b) => a.name.localeCompare(b.name));
-    const files = [...(state.fileData.files || [])].filter(f => f.name && f.name.trim() !== '').sort((a, b) => state.sortBy === 'time' ? (b.time - a.time) : state.sortBy === 'size' ? (b.rawSize - a.rawSize) : a.name.localeCompare(b.name));
-
-    [...folders, ...files].forEach(item => {
+    getOrderedEntries(state.fileData, state.sortBy).forEach(item => {
       const isFolder = !item.sizeFormatted;
       const isSelected = state.selectedPaths.includes(item.fullKey);
       const el = document.createElement('div');
