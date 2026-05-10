@@ -173,6 +173,25 @@ test('list files filters empty root folders and hidden paths for guests', async 
   assert.deepEqual(data.files.map(f => f.fullKey), ['readme.txt']);
 });
 
+test('trash storage prefix is hidden from normal file listings', async () => {
+  const env = makeEnv({
+    prefixes: ['public/', '.trash/'],
+    objects: [
+      { key: 'public/readme.txt', size: 5, uploaded: new Date('2026-01-01') },
+      { key: '.trash/trash-1/secret.txt', size: 6, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const guestRes = await handleListFiles(env, [], { role: 'guest' }, '');
+  const guestData = await guestRes.json();
+  assert.deepEqual(guestData.folders.map(f => f.fullKey), ['public']);
+  assert.deepEqual(guestData.files.map(f => f.fullKey), []);
+
+  const adminRes = await handleListFiles(env, [], { role: 'admin' }, '');
+  const adminData = await adminRes.json();
+  assert.deepEqual(adminData.folders.map(f => f.fullKey), ['public']);
+});
+
 test('preview response streams existing object, supports range, and 404s missing object', async () => {
   const env = makeEnv({
     objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
@@ -199,6 +218,8 @@ test('request context extracts encoded R2 keys and guards hidden paths', () => {
   assert.equal(getR2KeyFromPath('/api/preview/%E8%B5%A4%E5%A3%81%E8%B5%8B.txt'), '赤壁赋.txt');
   assert.equal(canReadKey({ role: 'guest' }, 'secret/a.txt', ['secret']), false);
   assert.equal(canReadKey({ role: 'admin' }, 'secret/a.txt', ['secret']), true);
+  assert.equal(canReadKey({ role: 'guest' }, '.trash/id/readme.txt', []), false);
+  assert.equal(canReadKey({ role: 'admin' }, '.trash/id/readme.txt', []), true);
 });
 
 test('frontend file path helpers encode each path segment', () => {

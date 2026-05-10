@@ -44,6 +44,10 @@ export function isHiddenKey(key, hiddenPaths) {
   return hiddenPaths.some(hp => key === hp || key.startsWith(hp + '/'));
 }
 
+export function isTrashKey(key) {
+  return key === '.trash' || key.startsWith('.trash/');
+}
+
 export async function addLog(env, request, action, details) {
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
   try { await env.DB.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, details, ip).run(); } catch (e) {}

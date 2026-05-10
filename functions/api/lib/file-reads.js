@@ -1,4 +1,4 @@
-import { jsonResponse, formatBytes, isHiddenKey } from './common.js';
+import { jsonResponse, formatBytes, isHiddenKey, isTrashKey } from './common.js';
 
 function mapEntry(o) {
   return {
@@ -17,7 +17,7 @@ export async function handleSearch(env, request, url, hiddenPaths, auth) {
   const listed = await env.R2_BUCKET.list({ prefix: scope });
   const matches = listed.objects
     .map(mapEntry)
-    .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
+    .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isTrashKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
   return jsonResponse({ files: matches });
 }
 
@@ -30,10 +30,11 @@ export async function handleListFiles(env, hiddenPaths, auth, r2Key) {
       return { name: fullKey.split('/').slice(-1)[0], path: '/' + fullKey, fullKey };
     })
     .filter(f => f.fullKey && f.name && f.name !== '.folder')
+    .filter(f => !isTrashKey(f.fullKey))
     .filter(f => auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths));
   const files = (listed.objects || [])
     .map(mapEntry)
-    .filter(f => f.name !== '' && f.name !== '.folder' && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
+    .filter(f => f.name !== '' && f.name !== '.folder' && !isTrashKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
   return jsonResponse({ folders, files });
 }
 
