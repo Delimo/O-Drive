@@ -1,4 +1,4 @@
-﻿import { state } from './state.js';
+import { state } from './state.js';
 import { api } from './api.js';
 import { escapeHtml, Utils } from './utils.js';
 import { getOrderedEntries } from './file-view-model.js';
@@ -93,11 +93,9 @@ export const UI = {
     const mobile = document.getElementById('authButtonsMobile');
     if (mobile) mobile.innerHTML = html;
 
-    if (state.userRole === 'admin') {
-      document.querySelectorAll('.admin-only').forEach(el => {
-        el.classList.remove('admin-only');
-      });
-    }
+    document.querySelectorAll('.admin-only').forEach(el => {
+      el.hidden = state.userRole !== 'admin';
+    });
   },
 
   showModal(id) {
@@ -380,17 +378,26 @@ export const UI = {
 
     const hasSelection = state.userRole === 'admin' && state.selectedPaths.length > 0;
     bt.classList.toggle('is-visible', hasSelection);
+    bt.hidden = !hasSelection;
     if (clr) clr.classList.toggle('hidden', !hasSelection);
     if (count) count.textContent = String(state.selectedPaths.length || 0);
     if (mobileBatch) mobileBatch.classList.toggle('is-visible', hasSelection);
-    if (mobileRename) mobileRename.classList.toggle('is-visible', state.selectedPaths.length === 1);
+    if (mobileBatch) mobileBatch.hidden = !hasSelection;
+    if (mobileRename) {
+      mobileRename.classList.toggle('is-visible', state.selectedPaths.length === 1);
+      mobileRename.hidden = state.selectedPaths.length !== 1 || state.userRole !== 'admin';
+    }
     const hasClipboard = state.userRole === 'admin' && state.clipboard;
     pg.classList.toggle('hidden', !hasClipboard);
     pg.classList.toggle('is-visible', hasClipboard);
+    pg.hidden = !hasClipboard;
     if (ren) ren.classList.toggle('hidden', state.selectedPaths.length !== 1);
     const pb = document.getElementById('pasteBtn');
     if (state.clipboard && pb) pb.textContent = `粘贴 (${state.clipboard.paths.length})`;
-    if (mobileClipboard) mobileClipboard.classList.toggle('is-visible', hasClipboard);
+    if (mobileClipboard) {
+      mobileClipboard.classList.toggle('is-visible', hasClipboard);
+      mobileClipboard.hidden = !hasClipboard;
+    }
     if (mobilePaste && state.clipboard) mobilePaste.textContent = `粘贴 (${state.clipboard.paths.length})`;
   },
 
