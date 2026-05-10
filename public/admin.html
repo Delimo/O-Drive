@@ -6,8 +6,9 @@
     <title>控制面板 - O-Drive</title>
     <link rel="stylesheet" href="/main.css">
     <link rel="stylesheet" href="/explorer.css">
+    <link rel="stylesheet" href="/admin.css">
 </head>
-<body class="flex flex-col h-screen overflow-hidden bg-background text-slate-900">
+<body class="admin-page flex flex-col bg-background text-slate-900">
     <main class="container">
         <header class="header-card mt-4">
             <div class="flex items-center gap-3">
@@ -17,7 +18,7 @@
             <a href="/" class="btn text-slate-900">返回云盘</a>
         </header>
 
-        <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-fit shadow-sm mt-4">
+        <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-full md:w-fit shadow-sm mt-4">
             <button id="btn-overview" data-admin-action="switch-tab" data-args='["overview"]' class="admin-tab-btn is-active">概览</button>
             <button id="btn-logs" data-admin-action="switch-tab" data-args='["logs"]' class="admin-tab-btn">操作日志</button>
             <button id="btn-privacy" data-admin-action="switch-tab" data-args='["privacy"]' class="admin-tab-btn">隐藏管理</button>
@@ -25,35 +26,35 @@
         </div>
 
         <div class="explorer-card mt-4 mb-4">
-            <div id="overview-tab" class="flex-1 flex flex-col overflow-hidden p-6 text-slate-900">
-                <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
-                    <div class="bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
-                        <div class="text-xs text-slate-500">文件数</div><div id="statFileCount" class="text-3xl font-bold leading-none">0</div>
+            <div id="overview-tab" class="overview-tab flex-1 flex flex-col p-6 text-slate-900">
+                <div class="overview-stats-grid grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+                    <div class="stat-card bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="stat-label text-xs text-slate-500">文件数</div><div id="statFileCount" class="stat-value text-3xl font-bold leading-none">0</div>
                     </div>
-                    <div class="bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
-                        <div class="text-xs text-slate-500">占用空间</div><div id="statTotalSize" class="text-3xl font-bold leading-none">0 B</div>
+                    <div class="stat-card bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="stat-label text-xs text-slate-500">占用空间</div><div id="statTotalSize" class="stat-value text-3xl font-bold leading-none">0 B</div>
                     </div>
-                    <div class="bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
-                        <div class="text-xs text-slate-500">回收站</div><div id="statTrash" class="text-3xl font-bold leading-none">0 项</div>
+                    <div class="stat-card bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="stat-label text-xs text-slate-500">回收站</div><div id="statTrash" class="stat-trash text-3xl font-bold leading-none">0 项</div>
                     </div>
-                    <div class="bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
-                        <div class="text-xs text-slate-500">日志数</div><div id="statLogs" class="text-3xl font-bold leading-none">0</div>
+                    <div class="stat-card bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="stat-label text-xs text-slate-500">日志数</div><div id="statLogs" class="stat-value text-3xl font-bold leading-none">0</div>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-5 flex-1 min-h-0">
-                    <section class="bg-surface-soft border border-border rounded-2xl p-5 min-h-0 flex flex-col">
+                <div class="overview-panels-grid grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-5 flex-1 min-h-0">
+                    <section class="bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="font-bold">类型分布</h2>
                             <span class="text-xs text-slate-500">按文件数量和体积汇总</span>
                         </div>
-                        <div id="statsBreakdown" class="grid gap-2 flex-1 min-h-0"></div>
+                        <div id="statsBreakdown" class="breakdown-grid grid gap-2"></div>
                     </section>
-                    <section class="bg-surface-soft border border-border rounded-2xl p-5 min-h-0 flex flex-col">
+                    <section class="bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="font-bold">最近新增</h2>
                             <span class="text-xs text-slate-500">仅显示最新 4 项</span>
                         </div>
-                        <div id="statsLatest" class="grid gap-3 flex-1 min-h-0"></div>
+                        <div id="statsLatest" class="latest-grid grid gap-3"></div>
                     </section>
                 </div>
             </div>

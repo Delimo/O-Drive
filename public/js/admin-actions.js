@@ -21,7 +21,10 @@ export const AdminActions = {
     if (res.status !== 200) return window.location.href = '/';
     document.getElementById('statFileCount').textContent = String(data.files?.count || 0);
     document.getElementById('statTotalSize').textContent = data.files?.totalSizeFormatted || '0 B';
-    document.getElementById('statTrash').innerHTML = `${data.trash?.count || 0} <span class="text-sm font-semibold text-slate-500">项</span><div class="text-sm font-semibold text-slate-500 mt-2">${escapeHtml(data.trash?.sizeFormatted || '0 B')}</div>`;
+    document.getElementById('statTrash').innerHTML = `
+      <span class="stat-trash-count">${data.trash?.count || 0} <span class="text-sm font-semibold text-slate-500">项</span></span>
+      <span class="stat-trash-size text-sm font-semibold text-slate-500">${escapeHtml(data.trash?.sizeFormatted || '0 B')}</span>
+    `;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
 
     const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };

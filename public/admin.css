@@ -1,14 +1,167 @@
-.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-.tabs { display: flex; gap: 8px; margin-bottom: 15px; }
-.tab-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px 16px; font-weight: 600; border-radius: 6px; }
-.tab-btn.active { color: #fff; background: var(--surface-light); }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-.admin-card { background: #161e2e; border: 1px solid var(--border-color); border-radius: var(--radius); min-height: 500px; padding: 20px; }
-.log-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.log-table th { text-align: left; padding: 12px; color: var(--text-muted); font-size: 12px; border-bottom: 1px solid var(--border-color); }
-.log-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
-.details-cell { word-break: break-all; color: var(--text-muted); font-size: 12px; font-family: monospace; }
-.privacy-tools { display: flex; gap: 12px; margin-bottom: 24px; background: var(--surface); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
-.privacy-input { flex: 1; background: var(--background); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; padding: 0 15px; outline: none; height: 36px; }
-.tips { background: rgba(129, 140, 248, 0.1); border-left: 3px solid var(--primary); padding: 16px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+body.admin-page {
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.admin-page .container {
+  flex: none;
+  min-height: auto;
+  padding-bottom: 24px;
+}
+
+.admin-page .explorer-card {
+  overflow: visible;
+  flex: none;
+  min-height: 0;
+}
+
+.admin-page .tab-shell {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.admin-page .tab-shell::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-page .overview-tab {
+  overflow: visible;
+  min-height: 0;
+}
+
+.admin-page .overview-stats-grid {
+  align-items: stretch;
+}
+
+.admin-page .stat-card {
+  min-width: 0;
+}
+
+.admin-page .stat-value {
+  word-break: break-word;
+}
+
+.admin-page .stat-trash {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-page .stat-trash-count,
+.admin-page .stat-trash-size {
+  display: block;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.admin-page .overview-panels-grid {
+  align-items: stretch;
+}
+
+.admin-page .breakdown-grid,
+.admin-page .latest-grid {
+  min-height: 0;
+}
+
+.admin-page .breakdown-grid > div,
+.admin-page .latest-grid > div {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .admin-page .overview-panels-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-page .container {
+    padding: 12px 12px 0;
+  }
+
+  .admin-page .header-card {
+    padding: 12px 14px;
+  }
+
+  .admin-page .tab-shell {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .admin-page .admin-tab-btn {
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    font-size: 13px;
+  }
+
+  .admin-page .overview-tab {
+    padding: 14px;
+  }
+
+  .admin-page .overview-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .admin-page .stat-card {
+    min-height: 92px;
+    padding: 14px;
+  }
+
+  .admin-page .stat-value {
+    font-size: 24px;
+  }
+
+  .admin-page .overview-panels-grid {
+    gap: 12px;
+  }
+
+  .admin-page .overview-panels-grid > section {
+    padding: 14px;
+  }
+
+  .admin-page .overview-panels-grid > section > div:first-child {
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .admin-page .overview-panels-grid h2 {
+    font-size: 15px;
+  }
+
+  .admin-page .overview-panels-grid .text-xs {
+    font-size: 11px;
+  }
+
+  .admin-page .breakdown-grid,
+  .admin-page .latest-grid {
+    gap: 10px;
+  }
+
+  .admin-page .stat-trash {
+    font-size: 24px;
+  }
+
+  .admin-page .latest-grid > div:nth-child(n+4) {
+    display: none;
+  }
+}
+
+@media (max-width: 540px) {
+  .admin-page .overview-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .stat-card {
+    min-height: 84px;
+  }
+
+  .admin-page .stat-value {
+    font-size: 22px;
+  }
+}
