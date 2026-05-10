@@ -12,6 +12,9 @@ import {
   handleMultipartComplete,
   handleMultipartAbort,
   handleSaveText,
+  handleTrashList,
+  handleTrashRestore,
+  handleTrashDelete,
   handleSearch,
   handleListFiles,
   handleDownloadOrPreview,
@@ -44,6 +47,9 @@ export async function onRequest(context) {
       if (path === '/api/paste' && method === 'POST') return await handlePaste(env, request);
       if (path.startsWith('/api/files/') && method === 'PUT') return await handleRename(env, request, r2Key);
       if (path === '/api/batch-delete') return await handleBatchDelete(env, request);
+      if (path === '/api/trash' && method === 'GET') return await handleTrashList(env, url);
+      if (path === '/api/trash/restore' && method === 'POST') return await handleTrashRestore(env, request);
+      if (path === '/api/trash/delete' && method === 'DELETE') return await handleTrashDelete(env, request);
       if (path.startsWith('/api/mkdir') && method === 'POST') return await handleMkdir(env, request, r2Key);
       if (path.startsWith('/api/files') && method === 'POST') return await handleUpload(env, request, r2Key);
       if (path === '/api/upload-multipart/create' && method === 'POST') return await handleMultipartCreate(env, request);

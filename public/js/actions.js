@@ -26,6 +26,8 @@ export const Actions = {
   async loadFiles() {
     if (state.isSearching) return;
     state.selectedPaths = [];
+    state.detailsItem = null;
+    UI.renderDetailsPanel(null);
     UI.updateBatchUI();
 
     const { res, data } = await api.listFiles(state.currentPath);
@@ -60,7 +62,7 @@ export const Actions = {
   },
 
   toggleSelectAll() {
-    const allKeys = getSelectableKeys(state.fileData);
+    const allKeys = state.visibleKeys || getSelectableKeys(state.fileData);
     state.selectedPaths = state.selectedPaths.length === allKeys.length ? [] : allKeys;
     UI.updateFileList();
     UI.updateBatchUI();
@@ -124,6 +126,99 @@ export const Actions = {
     const input = document.getElementById('searchInput');
     if (input) input.value = '';
     this.loadFiles();
+  },
+
+
+  clearSelection() {
+    state.selectedPaths = [];
+    UI.updateBatchUI();
+    UI.updateFileList();
+  },
+
+  openDetails(item) {
+    if (!item) return;
+    const data = typeof item === 'string'
+      ? [...state.fileData.folders, ...state.fileData.files].find(i => i.fullKey === item)
+      : item;
+    if (!data) return;
+    state.detailsItem = data;
+    UI.renderDetailsPanel(data);
+  },
+
+  copyPath(path) {
+    if (!path) return;
+    navigator.clipboard?.writeText(path).then(() => Message.success('已复制路径')).catch(() => Message.error('复制失败'));
+  },
+
+  openFilters() {
+    const f = state.filters || {};
+    document.getElementById('filterKind').value = f.kind || 'all';
+    document.getElementById('filterMinSize').value = f.minSize || '';
+    document.getElementById('filterMaxSize').value = f.maxSize || '';
+    document.getElementById('filterAfter').value = f.modifiedAfter || '';
+    document.getElementById('filterBefore').value = f.modifiedBefore || '';
+    UI.showModal('filterModal');
+  },
+
+  applyFilters() {
+    state.filters = {
+      kind: document.getElementById('filterKind').value,
+      minSize: document.getElementById('filterMinSize').value.trim(),
+      maxSize: document.getElementById('filterMaxSize').value.trim(),
+      modifiedAfter: document.getElementById('filterAfter').value,
+      modifiedBefore: document.getElementById('filterBefore').value,
+    };
+    UI.closeModal('filterModal');
+    UI.updateFileList();
+  },
+
+  resetFilters() {
+    state.filters = { kind: 'all', minSize: '', maxSize: '', modifiedAfter: '', modifiedBefore: '' };
+    UI.closeModal('filterModal');
+    UI.updateFileList();
+  },
+
+  async openTrash() {
+    await this.loadTrash();
+    UI.showModal('trashModal');
+  },
+
+  async loadTrash(page = state.trash.currentPage || 1) {
+    const { res, data } = await api.trashList(page, 20);
+    if (!res.ok) return;
+    state.trash.items = data.items || [];
+    state.trash.currentPage = data.currentPage || page;
+    state.trash.totalPages = data.totalPages || 1;
+    UI.renderTrashList();
+  },
+
+  async trashPage(delta) {
+    const next = Math.min(Math.max(1, (state.trash.currentPage || 1) + delta), state.trash.totalPages || 1);
+    if (next === state.trash.currentPage) return;
+    await this.loadTrash(next);
+  },
+
+  async restoreTrash(id) {
+    const { res } = await api.restoreTrash(id);
+    if (res.ok) {
+      Message.success('已恢复');
+      await this.loadTrash();
+      this.loadFiles();
+    } else {
+      Message.error('恢复失败');
+    }
+  },
+
+  async purgeTrash(id) {
+    if (!confirm('确定彻底删除这条回收站记录吗？')) return;
+    const { res } = await api.deleteTrash(id);
+    if (res.ok) {
+      Message.success('已删除');
+      await this.loadTrash();
+      this.loadFiles();
+    } else {
+      Message.error('删除失败');
+    }
   },
 
   startRenameSelected() {

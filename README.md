@@ -9,6 +9,9 @@
 - 文件预览与下载
 - 图片缩略图
 - 上传、新建、重命名、删除、移动、复制
+- 回收站恢复与彻底删除
+- 搜索筛选与文件详情面板
+- 批量选择与批量操作
 - 管理员专属上传，支持大文件分片、并发队列、暂停与取消
 - 隐藏路径管理
 
@@ -49,16 +52,3 @@ npm run build
 ```bash
 npm test
 ```
-
-## 目录
-
-- `/index.html`：前台页面
-- `/admin.html`：后台页面
-- `/public`：静态资源
-- `/functions`：Cloudflare Pages Functions
-
-## 说明
-
-- 下载与预览支持 `Range`
-- 图片列表使用缩略图，并通过 Cloudflare 缓存加速
-- 网站输出目录是 `public`

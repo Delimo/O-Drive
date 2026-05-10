@@ -52,6 +52,8 @@
                 <div class="hidden sm:flex items-center gap-2">
                     <button id="sortBtn" class="btn" onclick="Actions.toggleSortMode()">名称</button>
                     <button id="viewBtn" class="btn" onclick="Actions.toggleViewMode()">列表</button>
+                    <button class="btn" onclick="Actions.openFilters()">筛选</button>
+                    <button class="btn admin-only" onclick="Actions.openTrash()">回收站</button>
                 </div>
                 <input type="file" id="fileInput" hidden multiple onchange="Actions.uploadFiles(this.files)">
             </div>
@@ -104,6 +106,68 @@
         </div>
     </div>
 
+
+    <div id="filterModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[350] hidden items-center justify-center p-4 text-white">
+        <div class="w-full max-w-lg bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-border flex items-center justify-between">
+                <h3 class="font-bold">筛选</h3>
+                <button onclick="UI.closeModal('filterModal')" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="filter-grid">
+                    <label class="filter-field"><span>类型</span><select id="filterKind" class="filter-input"><option value="all">全部</option><option value="folder">文件夹</option><option value="file">文件</option><option value="image">图片</option><option value="video">视频</option><option value="audio">音频</option><option value="text">文本</option><option value="pdf">PDF</option><option value="archive">压缩包</option></select></label>
+                    <label class="filter-field"><span>最小大小(KB)</span><input id="filterMinSize" type="number" min="0" class="filter-input"></label>
+                    <label class="filter-field"><span>最大大小(KB)</span><input id="filterMaxSize" type="number" min="0" class="filter-input"></label>
+                    <label class="filter-field"><span>起始日期</span><input id="filterAfter" type="date" class="filter-input"></label>
+                    <label class="filter-field"><span>结束日期</span><input id="filterBefore" type="date" class="filter-input"></label>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button class="btn" onclick="Actions.resetFilters()">重置</button>
+                    <button class="btn btn-primary" onclick="Actions.applyFilters()">应用</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="trashModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[360] hidden items-center justify-center p-4 text-white">
+        <div class="w-full max-w-5xl h-[80vh] bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-border flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold">回收站</h3>
+                    <p class="text-xs text-slate-400 mt-1">当前 <span id="trashCount">0</span> 项</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 text-xs">
+                        <button class="btn h-8 px-3" onclick="Actions.trashPage(-1)">上一页</button>
+                        <span class="px-3 py-1 rounded-lg border border-border bg-background">第 <span id="trashPage">1</span> / <span id="trashTotal">1</span> 页</span>
+                        <button class="btn h-8 px-3" onclick="Actions.trashPage(1)">下一页</button>
+                    </div>
+                    <button onclick="UI.closeModal('trashModal')" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-auto custom-scroll">
+                <table class="w-full text-left text-sm">
+                    <thead class="sticky top-0 bg-[#151d2f] text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
+                        <tr><th class="px-4 py-3 w-24">类型</th><th class="px-4 py-3">原始路径</th><th class="px-4 py-3 w-44">删除时间</th><th class="px-4 py-3 w-32">大小</th><th class="px-4 py-3 w-44 text-right">操作</th></tr>
+                    </thead>
+                    <tbody id="trashTbody" class="divide-y divide-border/30"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailsPanel" class="fixed top-0 right-0 h-full w-full max-w-sm bg-surface border-l border-border shadow-2xl z-[340] transform translate-x-full transition-transform duration-200 text-white">
+        <div class="h-full flex flex-col">
+            <div class="px-5 py-4 border-b border-border flex items-center justify-between">
+                <div>
+                    <h3 id="detailsTitle" class="font-bold truncate">文件详情</h3>
+                    <p id="detailsEmpty" class="text-xs text-slate-400 mt-1">点击“详情”查看项目信息</p>
+                </div>
+                <button onclick="UI.closeDrawer('detailsPanel')" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+            </div>
+            <div id="detailsBody" class="flex-1 overflow-auto p-5 text-sm"></div>
+        </div>
+    </div>
     <div id="uploadManager" class="fixed bottom-6 right-6 w-80 bg-surface border border-border rounded-2xl shadow-2xl z-[300] hidden flex-col overflow-hidden text-white">
         <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-xs font-bold text-slate-400">
             <span>上传进度</span>

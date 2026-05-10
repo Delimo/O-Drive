@@ -24,6 +24,10 @@ export const sanitizeHtml = (html) => {
 };
 
 const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+const videoExts = ['mp4', 'webm'];
+const audioExts = ['mp3', 'wav', 'ogg', 'flac'];
+const textExts = ['txt', 'md', 'js', 'css', 'html', 'json', 'py', 'sh', 'sql', 'php', 'yml', 'yaml', 'xml', 'csv', 'log'];
+const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz'];
 
 export const Utils = {
   getParentPath(p) {
@@ -39,6 +43,16 @@ export const Utils = {
   },
   isImageFile(name) {
     return imageExts.includes(this.getExtension(name));
+  },
+  getFileKind(name) {
+    const ext = this.getExtension(name);
+    if (imageExts.includes(ext)) return 'image';
+    if (videoExts.includes(ext)) return 'video';
+    if (audioExts.includes(ext)) return 'audio';
+    if (ext === 'pdf') return 'pdf';
+    if (textExts.includes(ext)) return 'text';
+    if (archiveExts.includes(ext)) return 'archive';
+    return 'file';
   },
   getFileIcon(name) {
     const ext = this.getExtension(name);
@@ -62,11 +76,6 @@ export const Utils = {
     return map[ext] || '📄';
   },
   isPreviewable(name) {
-    return [
-      'jpg', 'jpeg', 'png', 'gif', 'webp',
-      'mp4', 'webm',
-      'mp3', 'wav', 'ogg', 'flac',
-      'txt', 'pdf', 'md', 'js', 'css', 'html', 'json', 'py', 'sh', 'sql', 'php', 'yml', 'yaml', 'xml', 'csv', 'log',
-    ].includes(this.getExtension(name));
+    return ['image', 'video', 'audio', 'pdf', 'text'].includes(this.getFileKind(name));
   },
 };

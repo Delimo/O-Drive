@@ -7,6 +7,9 @@ import {
   handleMultipartPart,
   handleMultipartComplete,
   handleMultipartAbort,
+  handleTrashList,
+  handleTrashRestore,
+  handleTrashDelete,
 } from '../functions/api/lib/file-mutations.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
@@ -14,7 +17,17 @@ import { encodeR2Path, apiFileUrl } from '../public/js/file-paths.js';
 import { getOrderedEntries, getSelectableKeys } from '../public/js/file-view-model.js';
 
 function makeEnv({ objects = [], prefixes = [] } = {}) {
-  const byKey = new Map(objects.map(o => [o.key, o]));
+  const byKey = new Map(objects.map(o => [o.key, { ...o }]));
+  const trashRows = [];
+  const logs = [];
+  const sizeOf = body => typeof body === 'string' ? body.length : body?.byteLength || 0;
+  const listObjects = (prefix = '') => [...byKey.values()]
+    .filter(obj => obj.key.startsWith(prefix))
+    .map(obj => ({
+      key: obj.key,
+      size: obj.size ?? sizeOf(obj.body),
+      uploaded: obj.uploaded || new Date('2026-01-01'),
+    }));
   return {
     R2_BUCKET: {
       async head(key) {
@@ -30,10 +43,30 @@ function makeEnv({ objects = [], prefixes = [] } = {}) {
           },
         };
       },
-      async list() {
+      async list(opts = {}) {
+        const prefix = opts.prefix || '';
+        const delimiter = opts.delimiter;
+        const objectsFromStore = listObjects(prefix);
+        if (!delimiter) {
+          return {
+            delimitedPrefixes: [],
+            objects: objectsFromStore,
+          };
+        }
+        const folderSet = new Set(
+          prefixes
+            .filter(p => p.startsWith(prefix))
+            .map(p => p)
+        );
+        for (const key of byKey.keys()) {
+          if (!key.startsWith(prefix)) continue;
+          const rest = key.slice(prefix.length);
+          const idx = rest.indexOf('/');
+          if (idx > 0) folderSet.add(prefix + rest.slice(0, idx + 1));
+        }
         return {
-          delimitedPrefixes: prefixes,
-          objects,
+          delimitedPrefixes: [...folderSet],
+          objects: objectsFromStore.filter(obj => !obj.key.slice(prefix.length).includes('/')),
         };
       },
       async get(key) {
@@ -42,7 +75,14 @@ function makeEnv({ objects = [], prefixes = [] } = {}) {
         return {
           body: obj.body || 'content',
           httpMetadata: obj.httpMetadata || { contentType: 'text/plain' },
+          size: obj.size ?? sizeOf(obj.body),
         };
+      },
+      async put(key, body, options = {}) {
+        byKey.set(key, { key, body, httpMetadata: options.httpMetadata || {}, size: sizeOf(body) });
+      },
+      async delete(key) {
+        byKey.delete(key);
       },
       async createMultipartUpload(key) {
         return {
@@ -65,12 +105,53 @@ function makeEnv({ objects = [], prefixes = [] } = {}) {
       },
     },
     DB: {
-      prepare() {
-        return {
-          bind() {
-            return { run: async () => ({}) };
+      prepare(sql) {
+        const statement = {
+          bind(...params) {
+            statement.bound = params;
+            return statement;
+          },
+          async run() {
+            if (/INSERT INTO logs/i.test(sql)) {
+              logs.push({ action: statement.bound?.[0], details: statement.bound?.[1], ip: statement.bound?.[2] });
+            }
+            if (/INSERT INTO trash/i.test(sql)) {
+              trashRows.push({
+                id: statement.bound?.[0],
+                original_key: statement.bound?.[1],
+                trash_key: statement.bound?.[2],
+                name: statement.bound?.[3],
+                kind: statement.bound?.[4],
+                size: statement.bound?.[5],
+                trashed_at: statement.bound?.[6],
+              });
+            }
+            if (/DELETE FROM trash WHERE id = \?/i.test(sql)) {
+              const id = statement.bound?.[0];
+              const idx = trashRows.findIndex(row => row.id === id);
+              if (idx >= 0) trashRows.splice(idx, 1);
+            }
+            return {};
+          },
+          async first() {
+            if (/SELECT COUNT\(\*\) as count FROM trash/i.test(sql)) return { count: trashRows.length };
+            if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
+            if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: logs.length };
+            return null;
+          },
+          async all() {
+            if (/SELECT \* FROM trash ORDER BY trashed_at DESC/i.test(sql)) {
+              const size = statement.bound?.[0] ?? 20;
+              const offset = statement.bound?.[1] ?? 0;
+              return { results: [...trashRows].sort((a, b) => b.trashed_at - a.trashed_at).slice(offset, offset + size) };
+            }
+            if (/SELECT \* FROM logs ORDER BY timestamp DESC/i.test(sql)) {
+              return { results: logs.map((log, i) => ({ ...log, timestamp: new Date(Date.now() - i * 1000).toISOString() })) };
+            }
+            return { results: [] };
           },
         };
+        return statement;
       },
     },
   };
@@ -164,6 +245,68 @@ test('multipart upload lifecycle returns upload id, parts, complete and abort', 
     headers: { 'Content-Type': 'application/json' },
   }));
   assert.equal((await abort.json()).success, true);
+});
+
+test('batch delete moves files into trash and restore returns them', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const batchDelete = await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/readme.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await batchDelete.json()).success, true);
+
+  const trashList = await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'));
+  const trashData = await trashList.json();
+  assert.equal(trashData.items.length, 1);
+
+  const id = trashData.items[0].id;
+  const restore = await handleTrashRestore(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ id }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await restore.json()).success, true);
+  assert.ok(await env.R2_BUCKET.get('docs/readme.txt'));
+
+  const trashDelete = await handleTrashDelete(env, new Request('https://example.com', {
+    method: 'DELETE',
+    body: JSON.stringify({ id }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(trashDelete.status, 404);
+});
+
+test('trash items can be purged permanently', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/temp.txt', body: 'bye', size: 3, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/temp.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+
+  const trashList = await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'));
+  const trashData = await trashList.json();
+  const id = trashData.items[0].id;
+
+  const purge = await handleTrashDelete(env, new Request('https://example.com', {
+    method: 'DELETE',
+    body: JSON.stringify({ id }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await purge.json()).success, true);
+  assert.equal((await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).status, 200);
+  assert.equal(await env.R2_BUCKET.get('docs/temp.txt'), null);
 });
 
 test('file view model orders entries and exposes selectable keys', () => {

@@ -1,5 +1,17 @@
 import { jsonResponse, normalizeName, addLog } from './common.js';
 
+const TRASH_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS trash (
+    id TEXT PRIMARY KEY,
+    original_key TEXT NOT NULL,
+    trash_key TEXT NOT NULL,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    trashed_at INTEGER NOT NULL
+  )
+`;
+
 async function copyTree(env, sourceKey, targetKey, request, move = false) {
   const obj = await env.R2_BUCKET.get(sourceKey);
   if (obj) {
@@ -16,6 +28,63 @@ async function copyTree(env, sourceKey, targetKey, request, move = false) {
       if (move) await env.R2_BUCKET.delete(item.key);
     }
   }
+}
+
+async function ensureTrashTable(env) {
+  const stmt = env.DB.prepare(TRASH_TABLE_SQL);
+  if (typeof stmt.bind === 'function') {
+    await stmt.bind().run();
+    return;
+  }
+  await stmt.run();
+}
+
+function createTrashId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+async function copyR2Object(env, sourceKey, targetKey) {
+  const obj = await env.R2_BUCKET.get(sourceKey);
+  if (!obj) return false;
+  await env.R2_BUCKET.put(targetKey, obj.body, { httpMetadata: obj.httpMetadata });
+  return true;
+}
+
+async function softDeleteTree(env, sourceKey, request) {
+  const exact = await env.R2_BUCKET.get(sourceKey);
+  const listed = await env.R2_BUCKET.list({ prefix: sourceKey + '/' });
+  const entries = [];
+
+  if (exact) entries.push({ key: sourceKey, size: exact.size || 0 });
+  for (const item of listed.objects || []) entries.push({ key: item.key, size: item.size || 0 });
+  if (entries.length === 0) {
+    throw new Error('File or folder not found');
+  }
+
+  const trashId = createTrashId();
+  const trashKey = `.trash/${trashId}/${sourceKey}`;
+
+  for (const entry of entries) {
+    const source = entry.key;
+    const target = `.trash/${trashId}/${entry.key}`;
+    const copied = await copyR2Object(env, source, target);
+    if (copied) await env.R2_BUCKET.delete(source);
+  }
+
+  if (!exact && entries.length === 1 && entries[0].key === `${sourceKey}/.folder`) {
+    await env.R2_BUCKET.put(`${trashKey}/.folder`, new Uint8Array(0));
+  }
+
+  const kind = exact && listed.objects.length === 0 ? 'file' : 'folder';
+  const size = exact?.size || 0;
+
+  await ensureTrashTable(env);
+  await env.DB.prepare('INSERT INTO trash (id, original_key, trash_key, name, kind, size, trashed_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(trashId, sourceKey, trashKey, sourceKey.split('/').pop() || sourceKey, kind, size, Date.now())
+    .run();
+
+  await addLog(env, request, 'TRASH', sourceKey);
+  return { id: trashId, originalKey: sourceKey, trashKey, kind };
 }
 
 export async function handlePaste(env, request) {
@@ -47,11 +116,9 @@ export async function handleRename(env, request, r2Key) {
 export async function handleBatchDelete(env, request) {
   const { paths } = await request.json();
   for (const p of paths) {
-    const listed = await env.R2_BUCKET.list({ prefix: p + '/' });
-    for (const o of listed.objects) await env.R2_BUCKET.delete(o.key);
-    await env.R2_BUCKET.delete(p);
+    await softDeleteTree(env, p, request);
   }
-  await addLog(env, request, 'DELETE', `Batch delete ${paths.length} items`);
+  await addLog(env, request, 'DELETE', `Move to trash ${paths.length} items`);
   return jsonResponse({ success: true });
 }
 
@@ -123,5 +190,63 @@ export async function handleMultipartAbort(env, request) {
 export async function handleSaveText(env, request, r2Key) {
   await env.R2_BUCKET.put(r2Key, (await request.json()).content, { httpMetadata: { contentType: 'text/plain' } });
   await addLog(env, request, 'SAVE_TEXT', r2Key);
+  return jsonResponse({ success: true });
+}
+
+export async function handleTrashList(env, url) {
+  await ensureTrashTable(env);
+  const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
+  const size = Math.max(1, Math.min(100, Number(url.searchParams.get('size') || '20')));
+  const totalRes = await env.DB.prepare('SELECT COUNT(*) as count FROM trash').first();
+  const rows = await env.DB.prepare('SELECT * FROM trash ORDER BY trashed_at DESC LIMIT ? OFFSET ?')
+    .bind(size, (page - 1) * size)
+    .all();
+  return jsonResponse({
+    items: rows.results || [],
+    totalPages: Math.max(1, Math.ceil((totalRes?.count || 0) / size)),
+    currentPage: page,
+  });
+}
+
+async function restoreTrashRecord(env, row, request) {
+  const listed = await env.R2_BUCKET.list({ prefix: row.trash_key });
+  for (const item of listed.objects || []) {
+    const suffix = item.key.slice(row.trash_key.length);
+    const target = row.original_key + suffix;
+    const obj = await env.R2_BUCKET.get(item.key);
+    if (obj) {
+      await env.R2_BUCKET.put(target, obj.body, { httpMetadata: obj.httpMetadata });
+      await env.R2_BUCKET.delete(item.key);
+    }
+  }
+
+  await env.DB.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
+  await addLog(env, request, 'RESTORE', row.original_key);
+}
+
+async function purgeTrashRecord(env, row, request) {
+  const listed = await env.R2_BUCKET.list({ prefix: row.trash_key });
+  for (const item of listed.objects || []) await env.R2_BUCKET.delete(item.key);
+  await env.DB.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
+  await addLog(env, request, 'PURGE', row.original_key);
+}
+
+export async function handleTrashRestore(env, request) {
+  const { id } = await request.json();
+  if (!id) return jsonResponse({ success: false, message: 'Invalid trash record' }, 400);
+  await ensureTrashTable(env);
+  const row = await env.DB.prepare('SELECT * FROM trash WHERE id = ?').bind(id).first();
+  if (!row) return jsonResponse({ success: false, message: 'Trash item not found' }, 404);
+  await restoreTrashRecord(env, row, request);
+  return jsonResponse({ success: true });
+}
+
+export async function handleTrashDelete(env, request) {
+  const { id } = await request.json();
+  if (!id) return jsonResponse({ success: false, message: 'Invalid trash record' }, 400);
+  await ensureTrashTable(env);
+  const row = await env.DB.prepare('SELECT * FROM trash WHERE id = ?').bind(id).first();
+  if (!row) return jsonResponse({ success: false, message: 'Trash item not found' }, 404);
+  await purgeTrashRecord(env, row, request);
   return jsonResponse({ success: true });
 }

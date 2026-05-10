@@ -9,6 +9,9 @@ export {
   handleMultipartComplete,
   handleMultipartAbort,
   handleSaveText,
+  handleTrashList,
+  handleTrashRestore,
+  handleTrashDelete,
 } from './file-mutations.js';
 
 export {

@@ -10,6 +10,20 @@ export const state = {
   selectedPaths: [],
   clipboard: null,
   activeUploads: 0,
+  visibleKeys: [],
+  filters: {
+    kind: 'all',
+    minSize: '',
+    maxSize: '',
+    modifiedAfter: '',
+    modifiedBefore: '',
+  },
+  detailsItem: null,
+  trash: {
+    items: [],
+    currentPage: 1,
+    totalPages: 1,
+  },
   sortModes: ['name', 'time', 'size'],
   sortNames: { name: '名称', time: '时间', size: '大小' },
 };

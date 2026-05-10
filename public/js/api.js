@@ -24,6 +24,15 @@ export const api = {
   batchDelete(paths) {
     return requestJson('/api/batch-delete', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ paths }) });
   },
+  trashList(page = 1, size = 20) {
+    return requestJson(`/api/trash?page=${page}&size=${size}`);
+  },
+  restoreTrash(id) {
+    return requestJson('/api/trash/restore', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ id }) });
+  },
+  deleteTrash(id) {
+    return requestJson('/api/trash/delete', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ id }) });
+  },
   paste(payload) {
     return requestJson('/api/paste', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
   },
