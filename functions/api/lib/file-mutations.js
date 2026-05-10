@@ -1,4 +1,4 @@
-import { jsonResponse, normalizeName, addLog } from './common.js';
+import { jsonResponse, normalizeName, addLog, isReservedKey } from './common.js';
 
 const TRASH_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS trash (
@@ -41,6 +41,10 @@ async function ensureTrashTable(env) {
 
 function createTrashId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function assertUserKey(key) {
+  if (isReservedKey(key)) throw new Error('Reserved system path');
 }
 
 async function copyR2Object(env, sourceKey, targetKey) {
@@ -95,6 +99,8 @@ export async function handlePaste(env, request) {
   for (const srcKey of paths) {
     const sourceName = normalizeName(srcKey.split('/').pop());
     const destKey = destDir + sourceName;
+    assertUserKey(srcKey);
+    assertUserKey(destKey);
     if (srcKey === destKey) continue;
     await copyTree(env, srcKey, destKey, request, action === 'move');
   }
@@ -108,6 +114,8 @@ export async function handleRename(env, request, r2Key) {
   const cleanName = normalizeName(newName);
   const parentDir = r2Key.includes('/') ? r2Key.substring(0, r2Key.lastIndexOf('/') + 1) : '';
   const newKey = parentDir + cleanName;
+  assertUserKey(r2Key);
+  assertUserKey(newKey);
   await copyTree(env, r2Key, newKey, request, true);
   await addLog(env, request, 'RENAME', `${r2Key} -> ${cleanName}`);
   return jsonResponse({ success: true });
@@ -116,6 +124,7 @@ export async function handleRename(env, request, r2Key) {
 export async function handleBatchDelete(env, request) {
   const { paths } = await request.json();
   for (const p of paths) {
+    assertUserKey(p);
     await softDeleteTree(env, p, request);
   }
   await addLog(env, request, 'DELETE', `Move to trash ${paths.length} items`);
@@ -125,7 +134,9 @@ export async function handleBatchDelete(env, request) {
 export async function handleMkdir(env, request, r2Key) {
   const { folderName } = await request.json();
   const cleanName = normalizeName(folderName);
-  await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + cleanName + '/.folder', new Uint8Array(0));
+  const key = (r2Key ? r2Key + '/' : '') + cleanName + '/.folder';
+  assertUserKey(key);
+  await env.R2_BUCKET.put(key, new Uint8Array(0));
   await addLog(env, request, 'MKDIR', cleanName);
   return jsonResponse({ success: true });
 }
@@ -133,7 +144,9 @@ export async function handleMkdir(env, request, r2Key) {
 export async function handleUpload(env, request, r2Key) {
   const file = (await request.formData()).get('file');
   const cleanName = normalizeName((file?.name || '').split(/[\/\\]/).pop());
-  await env.R2_BUCKET.put((r2Key ? r2Key + '/' : '') + cleanName, file.stream(), { httpMetadata: { contentType: file.type } });
+  const key = (r2Key ? r2Key + '/' : '') + cleanName;
+  assertUserKey(key);
+  await env.R2_BUCKET.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
   await addLog(env, request, 'UPLOAD', cleanName);
   return jsonResponse({ success: true });
 }
@@ -147,6 +160,7 @@ function uploadKey(targetDir, name) {
 export async function handleMultipartCreate(env, request) {
   const { targetDir, name, type } = await request.json();
   const key = uploadKey(targetDir, name);
+  assertUserKey(key);
   const upload = await env.R2_BUCKET.createMultipartUpload(key, {
     httpMetadata: { contentType: type || 'application/octet-stream' },
   });
@@ -161,6 +175,7 @@ export async function handleMultipartPart(env, request, url) {
   if (!key || !uploadId || !Number.isInteger(partNumber) || partNumber < 1) {
     return jsonResponse({ success: false, message: 'Invalid multipart part request' }, 400);
   }
+  assertUserKey(key);
   if (!request.body) return jsonResponse({ success: false, message: 'Missing request body' }, 400);
   const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
   const part = await upload.uploadPart(partNumber, request.body);
@@ -172,6 +187,7 @@ export async function handleMultipartComplete(env, request) {
   if (!key || !uploadId || !Array.isArray(parts) || parts.length === 0) {
     return jsonResponse({ success: false, message: 'Invalid multipart complete request' }, 400);
   }
+  assertUserKey(key);
   const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
   const object = await upload.complete(parts.sort((a, b) => a.partNumber - b.partNumber));
   await addLog(env, request, 'UPLOAD', key);
@@ -181,6 +197,7 @@ export async function handleMultipartComplete(env, request) {
 export async function handleMultipartAbort(env, request) {
   const { key, uploadId } = await request.json();
   if (!key || !uploadId) return jsonResponse({ success: false, message: 'Invalid multipart abort request' }, 400);
+  assertUserKey(key);
   const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
   await upload.abort();
   await addLog(env, request, 'UPLOAD_ABORT', key);
@@ -188,6 +205,7 @@ export async function handleMultipartAbort(env, request) {
 }
 
 export async function handleSaveText(env, request, r2Key) {
+  assertUserKey(r2Key);
   await env.R2_BUCKET.put(r2Key, (await request.json()).content, { httpMetadata: { contentType: 'text/plain' } });
   await addLog(env, request, 'SAVE_TEXT', r2Key);
   return jsonResponse({ success: true });

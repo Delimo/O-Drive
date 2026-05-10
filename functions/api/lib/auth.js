@@ -1,5 +1,17 @@
 import { jsonResponse, base64UrlToUint8Array, decodeBase64UrlJson, encodeBase64Url } from './common.js';
 
+function createCsrfToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return encodeBase64Url(String.fromCharCode(...bytes));
+}
+
+export function verifyCsrf(request, auth) {
+  if (auth?.role !== 'admin') return false;
+  const token = request.headers.get('X-CSRF-Token') || '';
+  return Boolean(auth.csrf && token && token === auth.csrf);
+}
+
 export async function verifyAuth(request, env) {
   const cookie = request.headers.get('Cookie') || '';
   const token = cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
@@ -23,7 +35,7 @@ export async function verifyAuth(request, env) {
     );
     if (!valid) return isGuestMode ? { role: 'guest' } : null;
     const claims = decodeBase64UrlJson(payload);
-    return claims?.role === 'admin' ? claims : (isGuestMode ? { role: 'guest' } : null);
+    return claims?.role === 'admin' && claims.csrf ? claims : (isGuestMode ? { role: 'guest' } : null);
   } catch (e) {
     return isGuestMode ? { role: 'guest' } : null;
   }
@@ -42,12 +54,13 @@ export async function handleLogin(request, env) {
 
   if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
     try { await env.DB.prepare('DELETE FROM login_attempts WHERE ip = ?').bind(ip).run(); } catch (e) {}
+    const csrf = createCsrfToken();
     const header = encodeBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-    const payload = encodeBase64Url(JSON.stringify({ role: 'admin' }));
+    const payload = encodeBase64Url(JSON.stringify({ role: 'admin', csrf }));
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.ADMIN_PASSWORD), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${header}.${payload}`));
     const signature = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-    return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=${header}.${payload}.${signature}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
+    return jsonResponse({ success: true, csrf }, 200, { 'Set-Cookie': `token=${header}.${payload}.${signature}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
   }
 
   try {

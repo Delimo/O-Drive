@@ -47,6 +47,8 @@ async function uploadSmall(task) {
   task.xhr = xhr;
   const target = task.targetDir.replace(/^\/|\/$/g, '');
   xhr.open('POST', `/api/files/${target}`, true);
+  const csrf = api.csrfHeaders();
+  Object.entries(csrf).forEach(([key, value]) => xhr.setRequestHeader(key, value));
   xhr.upload.onprogress = e => {
     if (e.lengthComputable) updateProgress(task, e.loaded, e.total, '上传中');
   };

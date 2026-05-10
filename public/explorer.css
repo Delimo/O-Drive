@@ -805,6 +805,12 @@ html, body {
     margin-bottom: 16px;
 }
 
+.mobile-bottom-bar,
+.mobile-action-sheet,
+.mobile-action-backdrop {
+    display: none;
+}
+
 @media (max-width: 640px) {
     .container {
         padding: 12px 14px 0;
@@ -943,5 +949,90 @@ html, body {
     .preview-text-toolbar-actions {
         width: 100%;
         justify-content: flex-end;
+    }
+
+    .container {
+        padding-bottom: 72px;
+    }
+
+    .footer {
+        display: none;
+    }
+
+    .toolbar-card .tools-right > .btn,
+    .toolbar-card .tools-right > .hidden.sm\:flex {
+        display: none !important;
+    }
+
+    .mobile-bottom-bar {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        z-index: 260;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.14);
+        backdrop-filter: blur(14px);
+    }
+
+    .mobile-bottom-btn,
+    .mobile-action-btn {
+        height: 42px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-main);
+        font-size: 13px;
+        font-weight: 800;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .mobile-bottom-btn:first-child {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+    }
+
+    .mobile-action-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 370;
+        background: rgba(15, 23, 42, 0.18);
+    }
+
+    .mobile-action-backdrop.is-open {
+        display: block;
+    }
+
+    .mobile-action-sheet {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: 76px;
+        z-index: 380;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16);
+        transform: translateY(16px);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 0.18s ease, opacity 0.18s ease;
+    }
+
+    .mobile-action-sheet.is-open {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
     }
 }

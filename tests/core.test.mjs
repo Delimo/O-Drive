@@ -13,6 +13,7 @@ import {
 } from '../functions/api/lib/file-mutations.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
+import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
 import { encodeR2Path, apiFileUrl } from '../public/js/file-paths.js';
 import { getOrderedEntries, getSelectableKeys } from '../public/js/file-view-model.js';
 
@@ -173,12 +174,14 @@ test('list files filters empty root folders and hidden paths for guests', async 
   assert.deepEqual(data.files.map(f => f.fullKey), ['readme.txt']);
 });
 
-test('trash storage prefix is hidden from normal file listings', async () => {
+test('reserved storage prefixes are hidden from normal file listings', async () => {
   const env = makeEnv({
-    prefixes: ['public/', '.trash/'],
+    prefixes: ['public/', '.trash/', '.thumbs/', '.meta/'],
     objects: [
       { key: 'public/readme.txt', size: 5, uploaded: new Date('2026-01-01') },
       { key: '.trash/trash-1/secret.txt', size: 6, uploaded: new Date('2026-01-01') },
+      { key: '.thumbs/public/readme.png', size: 6, uploaded: new Date('2026-01-01') },
+      { key: '.meta/index.json', size: 6, uploaded: new Date('2026-01-01') },
     ],
   });
 
@@ -220,6 +223,38 @@ test('request context extracts encoded R2 keys and guards hidden paths', () => {
   assert.equal(canReadKey({ role: 'admin' }, 'secret/a.txt', ['secret']), true);
   assert.equal(canReadKey({ role: 'guest' }, '.trash/id/readme.txt', []), false);
   assert.equal(canReadKey({ role: 'admin' }, '.trash/id/readme.txt', []), true);
+  assert.equal(canReadKey({ role: 'guest' }, '.thumbs/readme.png', []), false);
+});
+
+test('admin login issues csrf token and write requests must echo it', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+
+  const login = await handleLogin(new Request('https://example.com/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'admin', password: 'pass' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), env);
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+  assert.equal(loginData.success, true);
+  assert.ok(loginData.csrf);
+  assert.ok(cookie?.includes('token='));
+
+  const auth = await verifyAuth(new Request('https://example.com/api/auth/role', {
+    headers: { Cookie: cookie },
+  }), env);
+  assert.equal(auth.role, 'admin');
+  assert.equal(auth.csrf, loginData.csrf);
+  assert.equal(verifyCsrf(new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
+  }), auth), true);
+  assert.equal(verifyCsrf(new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    headers: { Cookie: cookie, 'X-CSRF-Token': 'bad' },
+  }), auth), false);
 });
 
 test('frontend file path helpers encode each path segment', () => {
@@ -266,6 +301,18 @@ test('multipart upload lifecycle returns upload id, parts, complete and abort', 
     headers: { 'Content-Type': 'application/json' },
   }));
   assert.equal((await abort.json()).success, true);
+});
+
+test('user writes cannot target reserved system prefixes', async () => {
+  const env = makeEnv();
+  await assert.rejects(
+    () => handleMultipartCreate(env, new Request('https://example.com', {
+      method: 'POST',
+      body: JSON.stringify({ targetDir: '/', name: '.trash', type: 'application/octet-stream' }),
+      headers: { 'Content-Type': 'application/json' },
+    })),
+    /Reserved system path/,
+  );
 });
 
 test('batch delete moves files into trash and restore returns them', async () => {

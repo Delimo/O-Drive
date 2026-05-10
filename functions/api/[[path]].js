@@ -1,5 +1,5 @@
 import { jsonResponse } from './lib/common.js';
-import { verifyAuth, handleLogin, handleLogout } from './lib/auth.js';
+import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
 import { handleAdminLogs, handleHiddenSettings } from './lib/admin.js';
 import {
   handlePaste,
@@ -20,7 +20,26 @@ import {
   handleDownloadOrPreview,
   handleThumbnail,
 } from './lib/files.js';
-import { loadHiddenPaths, getR2KeyFromPath, canReadKey, isAdmin } from './lib/request-context.js';
+import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin } from './lib/request-context.js';
+
+const csrfProtectedRoutes = [
+  ['/api/admin/settings/hidden', ['POST', 'DELETE']],
+  ['/api/paste', ['POST']],
+  ['/api/files', ['POST', 'PUT']],
+  ['/api/batch-delete', ['POST']],
+  ['/api/trash/restore', ['POST']],
+  ['/api/trash/delete', ['DELETE']],
+  ['/api/mkdir', ['POST']],
+  ['/api/upload-multipart/create', ['POST']],
+  ['/api/upload-multipart/part', ['PUT']],
+  ['/api/upload-multipart/complete', ['POST']],
+  ['/api/upload-multipart/abort', ['POST']],
+  ['/api/save-text/', ['POST']],
+];
+
+function needsCsrf(path, method) {
+  return csrfProtectedRoutes.some(([prefix, methods]) => path.startsWith(prefix) && methods.includes(method));
+}
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -34,12 +53,18 @@ export async function onRequest(context) {
 
     const auth = await verifyAuth(request, env);
     if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
-    if (path === '/api/auth/role') return jsonResponse({ role: auth.role });
+    if (path === '/api/auth/role') return jsonResponse({ role: auth.role, csrf: auth.role === 'admin' ? auth.csrf : undefined });
 
     const hiddenPaths = await loadHiddenPaths(env);
     const r2Key = getR2KeyFromPath(path);
 
     if (!canReadKey(auth, r2Key, hiddenPaths)) return jsonResponse({ success: false, message: 'Forbidden' }, 403);
+    if (isAdmin(auth) && needsCsrf(path, method) && !verifyCsrf(request, auth)) {
+      return jsonResponse({ success: false, message: 'Invalid CSRF token' }, 403);
+    }
+    if (isAdmin(auth) && r2Key && needsCsrf(path, method) && !canWriteUserKey(r2Key)) {
+      return jsonResponse({ success: false, message: 'Reserved system path' }, 403);
+    }
 
     if (isAdmin(auth)) {
       if (path === '/api/admin/logs') return await handleAdminLogs(env, url);

@@ -425,6 +425,7 @@ export const Actions = {
     state.viewMode = state.viewMode === 'grid' ? 'list' : 'grid';
     localStorage.setItem('viewMode', state.viewMode);
     UI.updateFileList();
+    UI.closeMobileActions();
   },
 
   toggleSortMode() {
@@ -432,6 +433,7 @@ export const Actions = {
     state.sortBy = state.sortModes[(idx + 1) % state.sortModes.length];
     localStorage.setItem('sortBy', state.sortBy);
     UI.updateFileList();
+    UI.closeMobileActions();
   },
 
   downloadFile(p) {

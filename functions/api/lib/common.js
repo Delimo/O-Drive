@@ -44,8 +44,16 @@ export function isHiddenKey(key, hiddenPaths) {
   return hiddenPaths.some(hp => key === hp || key.startsWith(hp + '/'));
 }
 
+export const RESERVED_PREFIXES = ['.trash', '.thumbs', '.meta', '.system'];
+
+export function isReservedKey(key) {
+  const clean = String(key || '').replace(/^\/+|\/+$/g, '');
+  return RESERVED_PREFIXES.some(prefix => clean === prefix || clean.startsWith(prefix + '/'));
+}
+
 export function isTrashKey(key) {
-  return key === '.trash' || key.startsWith('.trash/');
+  const clean = String(key || '').replace(/^\/+|\/+$/g, '');
+  return clean === '.trash' || clean.startsWith('.trash/');
 }
 
 export async function addLog(env, request, action, details) {

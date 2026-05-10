@@ -111,6 +111,19 @@ export const UI = {
     if (el) el.classList.add('hidden');
   },
 
+  toggleMobileActions() {
+    const sheet = document.getElementById('mobileActionSheet');
+    const backdrop = document.getElementById('mobileActionBackdrop');
+    const open = sheet?.classList.contains('is-open');
+    sheet?.classList.toggle('is-open', !open);
+    backdrop?.classList.toggle('is-open', !open);
+  },
+
+  closeMobileActions() {
+    document.getElementById('mobileActionSheet')?.classList.remove('is-open');
+    document.getElementById('mobileActionBackdrop')?.classList.remove('is-open');
+  },
+
   openDrawer(id) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -245,8 +258,14 @@ export const UI = {
     if (!list) return;
     const viewBtn = document.getElementById('viewBtn');
     const sortBtn = document.getElementById('sortBtn');
+    const mobileViewBtn = document.getElementById('mobileViewBtn');
+    const mobileQuickViewBtn = document.getElementById('mobileQuickViewBtn');
+    const mobileSortBtn = document.getElementById('mobileSortBtn');
     if (viewBtn) viewBtn.textContent = state.viewMode === 'grid' ? '网格' : '列表';
     if (sortBtn) sortBtn.textContent = state.sortNames[state.sortBy] || '名称';
+    if (mobileViewBtn) mobileViewBtn.textContent = state.viewMode === 'grid' ? '网格' : '列表';
+    if (mobileQuickViewBtn) mobileQuickViewBtn.textContent = state.viewMode === 'grid' ? '网格' : '列表';
+    if (mobileSortBtn) mobileSortBtn.textContent = state.sortNames[state.sortBy] || '名称';
     list.innerHTML = '';
 
     if (state.viewMode === 'list') {

@@ -1,11 +1,21 @@
 import { apiFileUrl } from './file-paths.js';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
+let csrfToken = '';
+
+function rememberCsrf(data) {
+  if (data?.csrf) csrfToken = data.csrf;
+}
+
+function csrfHeaders(headers = {}) {
+  return csrfToken ? { ...headers, 'X-CSRF-Token': csrfToken } : headers;
+}
 
 async function requestJson(url, options = {}) {
   const res = await fetch(url, options);
   let data = null;
   try { data = await res.json(); } catch (_) {}
+  rememberCsrf(data);
   return { res, data };
 }
 
@@ -22,43 +32,44 @@ export const api = {
     return requestJson(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(scope)}`);
   },
   batchDelete(paths) {
-    return requestJson('/api/batch-delete', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ paths }) });
+    return requestJson('/api/batch-delete', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ paths }) });
   },
   trashList(page = 1, size = 20) {
     return requestJson(`/api/trash?page=${page}&size=${size}`);
   },
   restoreTrash(id) {
-    return requestJson('/api/trash/restore', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ id }) });
+    return requestJson('/api/trash/restore', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ id }) });
   },
   deleteTrash(id) {
-    return requestJson('/api/trash/delete', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ id }) });
+    return requestJson('/api/trash/delete', { method: 'DELETE', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ id }) });
   },
   paste(payload) {
-    return requestJson('/api/paste', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+    return requestJson('/api/paste', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
   },
   multipartCreate(payload) {
-    return requestJson('/api/upload-multipart/create', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+    return requestJson('/api/upload-multipart/create', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
   },
   multipartPart({ key, uploadId, partNumber, chunk }) {
     return requestJson(`/api/upload-multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
       method: 'PUT',
+      headers: csrfHeaders(),
       body: chunk,
     });
   },
   multipartComplete(payload) {
-    return requestJson('/api/upload-multipart/complete', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+    return requestJson('/api/upload-multipart/complete', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
   },
   multipartAbort(payload) {
-    return requestJson('/api/upload-multipart/abort', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+    return requestJson('/api/upload-multipart/abort', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
   },
   renameFile(fullKey, newName) {
-    return requestJson(apiFileUrl('/api/files', fullKey), { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ newName }) });
+    return requestJson(apiFileUrl('/api/files', fullKey), { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ newName }) });
   },
   mkdir(path, folderName) {
-    return requestJson(apiFileUrl('/api/mkdir', path), { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ folderName }) });
+    return requestJson(apiFileUrl('/api/mkdir', path), { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ folderName }) });
   },
   saveText(path, content) {
-    return requestJson(apiFileUrl('/api/save-text', path), { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ content }) });
+    return requestJson(apiFileUrl('/api/save-text', path), { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ content }) });
   },
   preview(path) { return fetch(apiFileUrl('/api/preview', path)); },
   previewUrl(path) { return apiFileUrl('/api/preview', path); },
@@ -67,9 +78,10 @@ export const api = {
   adminLogs(page, size) { return requestJson(`/api/admin/logs?page=${page}&size=${size}`); },
   hiddenPaths() { return requestJson('/api/admin/settings/hidden'); },
   addHiddenPath(targetPath) {
-    return requestJson('/api/admin/settings/hidden', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ targetPath }) });
+    return requestJson('/api/admin/settings/hidden', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ targetPath }) });
   },
   removeHiddenPath(path) {
-    return requestJson(`/api/admin/settings/hidden?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
+    return requestJson(`/api/admin/settings/hidden?path=${encodeURIComponent(path)}`, { method: 'DELETE', headers: csrfHeaders() });
   },
+  csrfHeaders,
 };

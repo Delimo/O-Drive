@@ -65,6 +65,21 @@
         </footer>
     </main>
 
+    <div id="mobileActionBackdrop" class="mobile-action-backdrop" onclick="UI.closeMobileActions()"></div>
+    <div id="mobileActionSheet" class="mobile-action-sheet">
+        <button class="mobile-action-btn admin-only" onclick="document.getElementById('fileInput').click();UI.closeMobileActions()">上传</button>
+        <button class="mobile-action-btn admin-only" onclick="UI.showModal('mkdirModal');UI.closeMobileActions()">新建</button>
+        <button id="mobileSortBtn" class="mobile-action-btn" onclick="Actions.toggleSortMode()">名称</button>
+        <button id="mobileViewBtn" class="mobile-action-btn" onclick="Actions.toggleViewMode()">列表</button>
+        <button class="mobile-action-btn" onclick="Actions.openFilters();UI.closeMobileActions()">筛选</button>
+        <button class="mobile-action-btn admin-only" onclick="Actions.openTrash();UI.closeMobileActions()">回收站</button>
+    </div>
+    <div class="mobile-bottom-bar">
+        <button class="mobile-bottom-btn" onclick="UI.toggleMobileActions()">操作</button>
+        <button class="mobile-bottom-btn" onclick="Actions.toggleViewMode()" id="mobileQuickViewBtn">列表</button>
+        <button class="mobile-bottom-btn" onclick="Actions.openFilters()">筛选</button>
+    </div>
+
     <div id="loginModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
         <div class="bg-surface border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
             <button onclick="UI.closeModal('loginModal')" class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100">&times;</button>

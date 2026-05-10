@@ -1,4 +1,4 @@
-import { isHiddenKey, isTrashKey } from './common.js';
+import { isHiddenKey, isReservedKey } from './common.js';
 
 const keyPrefixes = [
   ['/api/files/', 11],
@@ -24,8 +24,12 @@ export function getR2KeyFromPath(path) {
 }
 
 export function canReadKey(auth, key, hiddenPaths) {
-  if (key && isTrashKey(key)) return auth.role === 'admin';
+  if (key && isReservedKey(key)) return auth.role === 'admin';
   return auth.role === 'admin' || !isHiddenKey(key, hiddenPaths);
+}
+
+export function canWriteUserKey(key) {
+  return !isReservedKey(key);
 }
 
 export function isAdmin(auth) {
