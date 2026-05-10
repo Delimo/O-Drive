@@ -83,6 +83,29 @@ export const Message = {
 };
 
 export const UI = {
+  renderAuthButtons() {
+    const html = state.userRole === 'admin'
+      ? `<a href="/admin.html" class="btn text-slate-900 font-bold">管理</a><button onclick="Actions.logout()" class="btn ml-2 text-slate-900 opacity-60">退出</button>`
+      : `<button class="btn btn-primary font-bold" onclick="UI.showModal('loginModal')">登录</button>`;
+
+    const desktop = document.getElementById('authButtons');
+    if (desktop) desktop.innerHTML = html;
+
+    const mobile = document.getElementById('authButtonsMobile');
+    if (mobile) mobile.innerHTML = html;
+
+    if (state.userRole === 'admin') {
+      document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = 'inline-flex';
+        if (el.id === 'pasteGroup' && !state.clipboard) el.style.display = 'none';
+      });
+    } else {
+      document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
+  },
+
   showModal(id) {
     const el = document.getElementById(id);
     if (el) {
@@ -212,28 +235,11 @@ export const UI = {
   },
 
   updateAuth() {
-    const box = document.getElementById('authButtons');
-    if (!box) return;
-
-    if (state.userRole === 'admin') {
-      document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = 'inline-flex';
-        if (el.id === 'pasteGroup' && !state.clipboard) el.style.display = 'none';
-      });
-      box.innerHTML = `<a href="/admin.html" class="btn text-slate-900 font-bold">管理</a><button onclick="Actions.logout()" class="btn ml-2 text-slate-900 opacity-60">退出</button>`;
-    } else {
-      document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = 'none';
-      });
-      box.innerHTML = `<button class="btn btn-primary font-bold" onclick="UI.showModal('loginModal')">登录</button>`;
-    }
+    this.renderAuthButtons();
   },
 
   renderBreadcrumb() {
     if (state.isSearching) return;
-    const box = document.getElementById('breadcrumb');
-    if (!box) return;
-
     const parts = state.currentPath.split('/').filter(Boolean);
     let html = `<button class="breadcrumb-root" onclick="Actions.navigateTo('/')">全部文件</button>`;
 
@@ -251,7 +257,10 @@ export const UI = {
       });
     }
 
-    box.innerHTML = html;
+    const desktop = document.getElementById('breadcrumb');
+    if (desktop) desktop.innerHTML = html;
+    const mobile = document.getElementById('mobileBreadcrumb');
+    if (mobile) mobile.innerHTML = html;
   },
 
   updateFileList() {
@@ -286,8 +295,8 @@ export const UI = {
         div.className = 'grid-item';
         div.innerHTML = `<div class="file-icon opacity-30 text-slate-500 text-4xl mb-3">📁</div><div class="file-name text-slate-900">..</div><div class="file-size text-slate-500">返回上级</div><div class="file-actions"></div>`;
       } else {
-        div.className = 'grid-row-layout h-[52px] hover:bg-slate-50 border-b border-border cursor-pointer text-slate-500';
-        div.innerHTML = `<div class="col-name"><span class="opacity-50 text-xl text-slate-900">📁</span><span class="text-sm font-medium text-slate-500">返回上级 (..)</span></div><div></div><div></div><div></div>`;
+        div.className = 'grid-row-layout file-item-row parent-row h-[52px] hover:bg-slate-50 border-b border-border cursor-pointer text-slate-500';
+        div.innerHTML = `<div class="col-name text-slate-900"><span class="text-xl flex-shrink-0 select-none opacity-50">📁</span><span class="text-sm font-medium text-slate-500 whitespace-nowrap">返回上级 (..)</span></div><div class="col-size text-slate-500 font-mono text-center">-</div><div class="col-time text-slate-500 font-mono text-center">-</div><div class="col-acts"></div>`;
       }
       div.onclick = () => Actions.navigateTo(parent);
       container.appendChild(div);

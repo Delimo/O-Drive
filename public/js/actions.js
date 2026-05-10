@@ -209,7 +209,10 @@ export const Actions = {
   },
 
   async handleSearch() {
-    const q = document.getElementById('searchInput').value.trim();
+    const desktopInput = document.getElementById('searchInput');
+    const mobileInput = document.getElementById('mobileSearchInput');
+    const activeInput = mobileInput && mobileInput.offsetParent ? mobileInput : desktopInput;
+    const q = activeInput?.value.trim() || '';
     if (!q) return this.clearSearch();
     state.isSearching = true;
 
@@ -225,8 +228,10 @@ export const Actions = {
 
   clearSearch() {
     state.isSearching = false;
-    const input = document.getElementById('searchInput');
-    if (input) input.value = '';
+    const desktopInput = document.getElementById('searchInput');
+    if (desktopInput) desktopInput.value = '';
+    const mobileInput = document.getElementById('mobileSearchInput');
+    if (mobileInput) mobileInput.value = '';
     this.loadFiles();
   },
 

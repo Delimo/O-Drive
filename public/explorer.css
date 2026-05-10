@@ -15,6 +15,81 @@ html, body {
     display: none !important;
 }
 
+.desktop-shell {
+    display: block;
+}
+
+.mobile-shell {
+    display: none;
+}
+
+.mobile-header-card,
+.mobile-search-card,
+.mobile-breadcrumb-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px rgba(15, 23, 42, 0.04);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.mobile-header-card {
+    min-height: 64px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mobile-auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.mobile-search-card {
+    margin-top: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mobile-search-bar {
+    flex: 1;
+    width: auto;
+}
+
+.mobile-search-bar input {
+    width: 100%;
+}
+
+.mobile-search-btn {
+    flex-shrink: 0;
+}
+
+.mobile-breadcrumb-card {
+    margin-top: 12px;
+    padding: 12px 16px;
+}
+
+.mobile-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+
+.mobile-breadcrumb::-webkit-scrollbar {
+    display: none;
+}
+
 .container {
     max-width: 1120px;
     width: 100%;
@@ -1004,6 +1079,15 @@ html, body {
         display: none !important;
     }
 
+    .parent-row .col-name {
+        min-width: 0;
+    }
+
+    .parent-row .col-name span:last-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .file-select-btn {
         width: 30px;
         height: 30px;
@@ -1049,20 +1133,16 @@ html, body {
 }
 
 @media (max-width: 640px) {
-    .header-card > .flex:last-child {
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .search-bar {
+    .desktop-shell {
         display: none;
     }
 
-    #batchTools button,
-    #pasteGroup button,
-    .tools-right > .btn {
-        flex: 1 1 calc(50% - 6px);
+    .mobile-shell {
+        display: block;
+    }
+
+    .mobile-search-btn {
+        min-width: 68px;
     }
 
     .details-actions .btn {
@@ -1080,11 +1160,6 @@ html, body {
 
     .footer {
         display: none;
-    }
-
-    .toolbar-card .tools-right > .btn,
-    .toolbar-card .tools-right > .hidden.sm\:flex {
-        display: none !important;
     }
 
     .mobile-bottom-bar {
