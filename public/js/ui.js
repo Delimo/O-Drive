@@ -271,7 +271,7 @@ export const UI = {
 
     if (state.viewMode === 'list') {
       const header = document.createElement('div');
-      header.className = 'list-header grid-row-layout hidden md:grid text-slate-900';
+      header.className = 'list-header grid-row-layout text-slate-900';
       header.innerHTML = `<div>名称</div><div class="text-center">大小</div><div class="text-center">修改时间</div><div class="text-center">操作</div>`;
       list.appendChild(header);
     }
@@ -328,7 +328,7 @@ export const UI = {
         el.innerHTML = `${selectControl}${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div>`;
       } else {
         el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="col-name text-slate-900">${selectControl}<span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size hidden md:block text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time hidden md:block text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
+        el.innerHTML = `<div class="col-name text-slate-900">${selectControl}<span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" onclick="event.stopPropagation();Actions.openPreview(${previewArgs})">预览</button><button class="file-action-btn" onclick="event.stopPropagation();Actions.downloadFile(${downloadArg})">下载</button>` : ''}<button class="file-action-btn" onclick="event.stopPropagation();Actions.openDetails(${detailArg})">详情</button></div></div>`;
       }
 
       el.onclick = () => {
