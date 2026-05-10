@@ -153,7 +153,7 @@ export const UI = {
       </div>
       <div class="mt-5 flex flex-wrap gap-2">
         ${!meta.sizeFormatted ? `<button class="btn btn-primary" onclick="Actions.navigateTo(${escapeHtml(JSON.stringify(meta.path))})">打开文件夹</button>` : ''}
-        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" onclick="Actions.openPreview(${escapeHtml(JSON.stringify([meta.path, meta.name]))})">预览</button>` : ''}
+        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" onclick="Actions.openPreview(${escapeHtml(JSON.stringify(meta.path))}, ${escapeHtml(JSON.stringify(meta.name))})">预览</button>` : ''}
         ${meta.sizeFormatted ? `<button class="btn" onclick="Actions.downloadFile(${escapeHtml(JSON.stringify(meta.path))})">下载</button>` : ''}
         <button class="btn" onclick="Actions.copyPath(${escapeHtml(JSON.stringify(meta.path))})">复制路径</button>
       </div>

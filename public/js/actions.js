@@ -264,6 +264,19 @@ export const Actions = {
   },
 
   async openPreview(path, name) {
+    if (Array.isArray(path)) {
+      [path, name] = path;
+    } else if (path && typeof path === 'object') {
+      name = path.name || path.fullName || name;
+      path = path.path || path.fullKey || path.key || '';
+    }
+    if (!name && typeof path === 'string') {
+      name = path.split('/').pop() || '';
+    }
+    if (!path || !name) {
+      Message.error('无法预览');
+      return;
+    }
     state.currentPreviewPath = path;
     state.isEditing = false;
     const content = document.getElementById('previewContent');
