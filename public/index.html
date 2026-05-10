@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -50,24 +50,24 @@
                 <div id="breadcrumb" class="text-sm font-medium text-primary"></div>
             </div>
             <div class="tools-right">
-                <div id="batchTools" class="admin-only">
+                <div id="batchTools" class="admin-only" hidden>
                     <button class="btn" id="selectAllBtn" data-action="select-all">全选</button>
                     <button class="btn" data-action="set-clipboard" data-args='["move"]'>移动</button>
                     <button class="btn" data-action="set-clipboard" data-args='["copy"]'>复制</button>
                     <button class="btn hidden" id="singleRenameBtn" data-action="start-rename">重命名</button>
                     <button class="btn btn-danger-soft font-bold" data-action="batch-delete">删除</button>
                 </div>
-                <div id="pasteGroup" class="admin-only hidden">
+                <div id="pasteGroup" class="admin-only hidden" hidden>
                     <button id="pasteBtn" class="btn btn-primary font-bold" data-action="execute-paste">粘贴</button>
                     <button id="cancelPasteBtn" class="btn" data-action="clear-clipboard">取消</button>
                 </div>
-                <button class="btn admin-only" data-action="open-file-input">上传</button>
-                <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]'>新建</button>
+                <button class="btn admin-only" data-action="open-file-input" hidden>上传</button>
+                <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
                 <div class="hidden sm:flex items-center gap-2">
                     <button id="sortBtn" class="btn" data-action="toggle-sort">名称</button>
                     <button id="viewBtn" class="btn" data-action="toggle-view">列表</button>
                     <button class="btn" data-action="open-filters">筛选</button>
-                    <button class="btn admin-only" data-action="open-trash">回收站</button>
+                    <button class="btn admin-only" data-action="open-trash" hidden>回收站</button>
                 </div>
                 <input type="file" id="fileInput" hidden multiple>
             </div>
@@ -90,8 +90,8 @@
     <div id="mobileActionBackdrop" class="mobile-action-backdrop" data-action="close-mobile-actions"></div>
     <div id="mobileActionSheet" class="mobile-action-sheet">
         <div class="mobile-action-group">
-            <button class="mobile-action-btn admin-only" data-action="open-file-input">上传</button>
-            <button class="mobile-action-btn admin-only" data-action="show-modal" data-args='["mkdirModal"]'>新建</button>
+            <button class="mobile-action-btn admin-only" data-action="open-file-input" hidden>上传</button>
+            <button class="mobile-action-btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
         </div>
         <div class="mobile-action-group" id="mobileBatchGroup">
             <button class="mobile-action-btn" id="mobileMoveBtn" data-action="set-clipboard" data-args='["move"]'>移动</button>
@@ -109,7 +109,7 @@
             <button class="mobile-action-btn" data-action="open-filters">筛选</button>
         </div>
         <div class="mobile-action-group">
-            <button class="mobile-action-btn admin-only" data-action="open-trash">回收站</button>
+            <button class="mobile-action-btn admin-only" data-action="open-trash" hidden>回收站</button>
         </div>
     </div>
     <div class="mobile-bottom-bar">
