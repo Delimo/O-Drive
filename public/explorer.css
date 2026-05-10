@@ -1181,6 +1181,11 @@ html, body {
 
     .mobile-bottom-btn,
     .mobile-action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 0;
         height: 42px;
         border-radius: 12px;
         border: 1px solid var(--border);
@@ -1215,8 +1220,8 @@ html, body {
         bottom: 76px;
         z-index: 380;
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
+        grid-template-columns: 1fr;
+        gap: 10px;
         padding: 12px;
         border: 1px solid var(--border);
         border-radius: 18px;
@@ -1233,12 +1238,21 @@ html, body {
         opacity: 1;
         pointer-events: auto;
     }
+
+    .mobile-action-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .mobile-action-group:last-child {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 640px) {
     .mobile-action-sheet {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 6px;
+        gap: 8px;
         padding: 8px;
         bottom: 76px;
     }
@@ -1247,5 +1261,9 @@ html, body {
         height: 38px;
         min-width: 0;
         font-size: 12px;
+    }
+
+    .mobile-action-group {
+        gap: 6px;
     }
 }
