@@ -94,6 +94,16 @@
             <button class="mobile-action-btn admin-only" onclick="document.getElementById('fileInput').click();UI.closeMobileActions()">上传</button>
             <button class="mobile-action-btn admin-only" onclick="UI.showModal('mkdirModal');UI.closeMobileActions()">新建</button>
         </div>
+        <div class="mobile-action-group" id="mobileBatchGroup">
+            <button class="mobile-action-btn" id="mobileMoveBtn" onclick="Actions.setClipboard('move');UI.closeMobileActions()">移动</button>
+            <button class="mobile-action-btn" id="mobileCopyBtn" onclick="Actions.setClipboard('copy');UI.closeMobileActions()">复制</button>
+            <button class="mobile-action-btn" id="mobileRenameBtn" onclick="Actions.startRenameSelected();UI.closeMobileActions()">重命名</button>
+            <button class="mobile-action-btn btn-danger-soft" id="mobileDeleteBtn" onclick="Actions.batchDelete();UI.closeMobileActions()">删除</button>
+        </div>
+        <div class="mobile-action-group" id="mobileClipboardGroup">
+            <button class="mobile-action-btn btn-primary" id="mobilePasteBtn" onclick="Actions.executePaste();UI.closeMobileActions()">粘贴</button>
+            <button class="mobile-action-btn" id="mobileCancelPasteBtn" onclick="Actions.clearClipboard();UI.closeMobileActions()">取消</button>
+        </div>
         <div class="mobile-action-group">
             <button id="mobileSortBtn" class="mobile-action-btn" onclick="Actions.toggleSortMode()">名称</button>
             <button id="mobileViewBtn" class="mobile-action-btn" onclick="Actions.toggleViewMode()">列表</button>

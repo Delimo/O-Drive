@@ -342,6 +342,10 @@ export const UI = {
 
       el.onclick = () => {
         if (isFolder) {
+          if (item.protected && state.userRole !== 'admin') {
+            Actions.handlePasswordRequired({ path: item.path }, () => Actions.navigateTo(item.path));
+            return;
+          }
           Actions.navigateTo(item.path);
           return;
         }
@@ -359,17 +363,25 @@ export const UI = {
     const ren = document.getElementById('singleRenameBtn');
     const clr = document.getElementById('clearSelectionBtn');
     const count = document.getElementById('selectedCount');
+    const mobileBatch = document.getElementById('mobileBatchGroup');
+    const mobileClipboard = document.getElementById('mobileClipboardGroup');
+    const mobileRename = document.getElementById('mobileRenameBtn');
+    const mobilePaste = document.getElementById('mobilePasteBtn');
     if (!bt || !pg) return;
 
     const hasSelection = state.userRole === 'admin' && state.selectedPaths.length > 0;
     bt.style.display = hasSelection ? 'flex' : 'none';
     if (clr) clr.classList.toggle('hidden', !hasSelection);
     if (count) count.textContent = String(state.selectedPaths.length || 0);
+    if (mobileBatch) mobileBatch.style.display = hasSelection ? 'grid' : 'none';
+    if (mobileRename) mobileRename.style.display = state.selectedPaths.length === 1 ? 'inline-flex' : 'none';
     const hasClipboard = state.userRole === 'admin' && state.clipboard;
     pg.classList.toggle('hidden', !hasClipboard);
     pg.style.display = hasClipboard ? 'flex' : 'none';
     if (ren) ren.classList.toggle('hidden', state.selectedPaths.length !== 1);
     const pb = document.getElementById('pasteBtn');
     if (state.clipboard && pb) pb.textContent = `粘贴 (${state.clipboard.paths.length})`;
+    if (mobileClipboard) mobileClipboard.style.display = hasClipboard ? 'grid' : 'none';
+    if (mobilePaste && state.clipboard) mobilePaste.textContent = `粘贴 (${state.clipboard.paths.length})`;
   },
 };
