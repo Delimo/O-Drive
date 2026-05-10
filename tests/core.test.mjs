@@ -10,6 +10,19 @@ function makeEnv({ objects = [], prefixes = [] } = {}) {
   const byKey = new Map(objects.map(o => [o.key, o]));
   return {
     R2_BUCKET: {
+      async head(key) {
+        const obj = byKey.get(key);
+        if (!obj) return null;
+        return {
+          key,
+          size: obj.size ?? (typeof obj.body === 'string' ? obj.body.length : 0),
+          uploaded: obj.uploaded || new Date('2026-01-01'),
+          httpMetadata: obj.httpMetadata || { contentType: 'text/plain' },
+          writeHttpMetadata(headers) {
+            if (obj.httpMetadata?.contentType) headers.set('Content-Type', obj.httpMetadata.contentType);
+          },
+        };
+      },
       async list() {
         return {
           delimitedPrefixes: prefixes,
@@ -44,16 +57,25 @@ test('list files filters empty root folders and hidden paths for guests', async 
   assert.deepEqual(data.files.map(f => f.fullKey), ['readme.txt']);
 });
 
-test('preview response streams existing object and 404s missing object', async () => {
+test('preview response streams existing object, supports range, and 404s missing object', async () => {
   const env = makeEnv({
     objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
   });
 
-  const ok = await handleDownloadOrPreview(env, '/api/preview/docs/readme.txt', 'docs/readme.txt');
+  const ok = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/docs/readme.txt'), '/api/preview/docs/readme.txt', 'docs/readme.txt');
   assert.equal(ok.status, 200);
   assert.equal(ok.headers.get('Content-Disposition'), 'inline');
 
-  const missing = await handleDownloadOrPreview(env, '/api/preview/missing.txt', 'missing.txt');
+  const ranged = await handleDownloadOrPreview(
+    env,
+    new Request('https://example.com/api/download/docs/readme.txt', { headers: { Range: 'bytes=1-3' } }),
+    '/api/download/docs/readme.txt',
+    'docs/readme.txt',
+  );
+  assert.equal(ranged.status, 206);
+  assert.equal(ranged.headers.get('Content-Range'), 'bytes 1-3/5');
+
+  const missing = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/missing.txt'), '/api/preview/missing.txt', 'missing.txt');
   assert.equal(missing.status, 404);
 });
 

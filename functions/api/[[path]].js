@@ -46,7 +46,7 @@ export async function onRequest(context) {
 
     if (path === '/api/search') return await handleSearch(env, request, url, hiddenPaths, auth);
     if (path.startsWith('/api/files') && method === 'GET') return await handleListFiles(env, hiddenPaths, auth, r2Key);
-    if (path.startsWith('/api/download/') || path.startsWith('/api/preview/')) return await handleDownloadOrPreview(env, path, r2Key);
+    if (path.startsWith('/api/download/') || path.startsWith('/api/preview/')) return await handleDownloadOrPreview(env, request, path, r2Key);
 
     return jsonResponse({ message: 'Not Found' }, 404);
   } catch (err) {
