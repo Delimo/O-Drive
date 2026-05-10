@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -24,17 +24,11 @@
         </div>
 
         <div class="explorer-card mt-4 mb-4">
-            <!-- 操作日志 Tab -->
             <div id="logs-tab" class="flex-1 flex flex-col overflow-hidden">
                 <div id="fileList" class="overflow-y-auto flex-1 custom-scroll relative">
                     <table class="w-full text-left border-collapse text-slate-900 text-sm">
                         <thead class="sticky top-0 bg-background text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border z-10">
-                            <tr>
-                                <th class="px-6 py-4 w-44">时间</th>
-                                <th class="px-6 py-4 w-28">动作</th>
-                                <th class="px-6 py-4">详情</th>
-                                <th class="px-6 py-4 w-40 text-left">IP</th>
-                            </tr>
+                            <tr><th class="px-6 py-4 w-44">时间</th><th class="px-6 py-4 w-28">动作</th><th class="px-6 py-4">详情</th><th class="px-6 py-4 w-40 text-left">IP</th></tr>
                         </thead>
                         <tbody id="logTbody" class="text-xs divide-y divide-border/30"></tbody>
                     </table>
@@ -49,45 +43,33 @@
                 </div>
             </div>
 
-            <!-- 隐藏管理 Tab -->
             <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
-                <form onsubmit="AdminActions.addHidden(); return false;" class="flex flex-col sm:flex-row gap-3 mb-8 bg-surface-soft p-4 rounded-xl border border-border shadow-inner">
-                    <input type="text" id="hideInput" placeholder="输入隐藏路径..." autocomplete="off" class="flex-1 bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
-                    <button type="submit" class="btn btn-primary h-11 px-8">添加</button>
-                </form>
+                <div class="flex flex-col sm:flex-row gap-3 mb-8 bg-surface-soft p-4 rounded-xl border border-border shadow-inner">
+                    <input type="text" id="hideInput" placeholder="输入隐藏路径..." class="flex-1 bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
+                    <button class="btn btn-primary h-11 px-8" onclick="AdminActions.addHidden()">添加</button>
+                </div>
                 <div class="overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
                     <table class="w-full text-left text-slate-900">
                         <thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr>
-                                <th class="px-4 py-3 text-slate-500">已屏蔽路径</th>
-                                <th class="px-4 py-3 text-right text-slate-500">操作</th>
-                            </tr>
+                            <tr><th class="px-4 py-3 text-slate-500">已屏蔽路径</th><th class="px-4 py-3 text-right text-slate-500">操作</th></tr>
                         </thead>
                         <tbody id="hiddenTbody" class="text-sm divide-y divide-border/30 text-slate-600"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- 访问密码 Tab -->
             <div id="protected-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
-                <form onsubmit="AdminActions.addProtected(); return false;" class="grid gap-3 mb-8 bg-surface-soft p-4 rounded-xl border border-border shadow-inner admin-protected-form">
-                    <input type="text" id="protectedPathInput" placeholder="输入保护路径，如 /客户资料/" autocomplete="off" class="bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
-                    <input type="password" id="protectedPasswordInput" placeholder="访问密码，至少 4 位" autocomplete="new-password" class="bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
-                    <input type="text" id="protectedNoteInput" placeholder="备注，可选" autocomplete="off" class="bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
-                    <label class="inline-flex items-center gap-2 text-sm text-slate-600">
-                        <input id="protectedShowNameInput" type="checkbox" checked> 允许游客看到名称
-                    </label>
-                    <button type="submit" class="btn btn-primary h-11 px-8">添加/更新</button>
-                </form>
+                <div class="grid gap-3 mb-8 bg-surface-soft p-4 rounded-xl border border-border shadow-inner admin-protected-form">
+                    <input type="text" id="protectedPathInput" placeholder="输入保护路径，如 /客户资料/" class="bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
+                    <input type="password" id="protectedPasswordInput" placeholder="访问密码，至少 4 位" class="bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
+                    <input type="text" id="protectedNoteInput" placeholder="备注，可选" class="bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
+                    <label class="inline-flex items-center gap-2 text-sm text-slate-600"><input id="protectedShowNameInput" type="checkbox" checked> 允许游客看到名称</label>
+                    <button class="btn btn-primary h-11 px-8" onclick="AdminActions.addProtected()">添加/更新</button>
+                </div>
                 <div class="overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
                     <table class="w-full text-left text-slate-900">
                         <thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr>
-                                <th class="px-4 py-3 text-slate-500">路径</th>
-                                <th class="px-4 py-3 text-slate-500">显示名称</th>
-                                <th class="px-4 py-3 text-slate-500">备注</th>
-                                <th class="px-4 py-3 text-right text-slate-500">操作</th>
-                            </tr>
+                            <tr><th class="px-4 py-3 text-slate-500">路径</th><th class="px-4 py-3 text-slate-500">显示名称</th><th class="px-4 py-3 text-slate-500">备注</th><th class="px-4 py-3 text-right text-slate-500">操作</th></tr>
                         </thead>
                         <tbody id="protectedTbody" class="text-sm divide-y divide-border/30 text-slate-600"></tbody>
                     </table>
