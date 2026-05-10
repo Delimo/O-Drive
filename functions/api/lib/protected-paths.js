@@ -108,7 +108,11 @@ export function findProtection(rules, key) {
 export async function isUnlocked(request, env, rule) {
   if (!rule) return true;
   const access = await readAccessCookie(request, env);
-  return access.paths.some(path => rule.path === path || rule.path.startsWith(`${path}/`));
+  return hasPathAccess(access, rule);
+}
+
+function hasPathAccess(access, rule) {
+  return (access.paths || []).some(path => rule.path === path || rule.path.startsWith(`${path}/`));
 }
 
 export async function loadProtectedPaths(env) {
@@ -140,6 +144,7 @@ export async function markProtection(entries, request, env, auth, rules) {
   if (auth.role === 'admin') {
     return entries.map(entry => ({ ...entry, protected: Boolean(findProtection(rules, entry.fullKey)) }));
   }
+  const access = await readAccessCookie(request, env);
   const out = [];
   for (const entry of entries) {
     const rule = findProtection(rules, entry.fullKey);
@@ -147,7 +152,7 @@ export async function markProtection(entries, request, env, auth, rules) {
       out.push(entry);
       continue;
     }
-    const unlocked = await isUnlocked(request, env, rule);
+    const unlocked = hasPathAccess(access, rule);
     if (unlocked || rule.show_name) out.push({ ...entry, protected: !unlocked });
   }
   return out;

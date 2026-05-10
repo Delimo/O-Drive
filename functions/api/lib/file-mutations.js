@@ -1,4 +1,4 @@
-import { jsonResponse, normalizeName, addLog, isReservedKey } from './common.js';
+import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects } from './common.js';
 
 const TRASH_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS trash (
@@ -12,6 +12,17 @@ const TRASH_TABLE_SQL = `
   )
 `;
 
+async function mapWithConcurrency(items, limit, worker) {
+  const queue = [...items];
+  const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    while (queue.length) {
+      const item = queue.shift();
+      await worker(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
 async function copyTree(env, sourceKey, targetKey, request, move = false) {
   const obj = await env.R2_BUCKET.get(sourceKey);
   if (obj) {
@@ -19,15 +30,15 @@ async function copyTree(env, sourceKey, targetKey, request, move = false) {
     if (move) await env.R2_BUCKET.delete(sourceKey);
   }
 
-  const listed = await env.R2_BUCKET.list({ prefix: sourceKey + '/' });
-  for (const item of listed.objects) {
+  const listed = await listR2Objects(env.R2_BUCKET, { prefix: sourceKey + '/' });
+  await mapWithConcurrency(listed.objects, 6, async item => {
     const nextKey = targetKey + item.key.slice(sourceKey.length);
     const subObj = await env.R2_BUCKET.get(item.key);
     if (subObj) {
       await env.R2_BUCKET.put(nextKey, subObj.body, { httpMetadata: subObj.httpMetadata });
       if (move) await env.R2_BUCKET.delete(item.key);
     }
-  }
+  });
 }
 
 async function ensureTrashTable(env) {
@@ -56,7 +67,7 @@ async function copyR2Object(env, sourceKey, targetKey) {
 
 async function softDeleteTree(env, sourceKey, request) {
   const exact = await env.R2_BUCKET.get(sourceKey);
-  const listed = await env.R2_BUCKET.list({ prefix: sourceKey + '/' });
+  const listed = await listR2Objects(env.R2_BUCKET, { prefix: sourceKey + '/' });
   const entries = [];
 
   if (exact) entries.push({ key: sourceKey, size: exact.size || 0 });
@@ -68,12 +79,12 @@ async function softDeleteTree(env, sourceKey, request) {
   const trashId = createTrashId();
   const trashKey = `.trash/${trashId}/${sourceKey}`;
 
-  for (const entry of entries) {
+  await mapWithConcurrency(entries, 6, async entry => {
     const source = entry.key;
     const target = `.trash/${trashId}/${entry.key}`;
     const copied = await copyR2Object(env, source, target);
     if (copied) await env.R2_BUCKET.delete(source);
-  }
+  });
 
   if (!exact && entries.length === 1 && entries[0].key === `${sourceKey}/.folder`) {
     await env.R2_BUCKET.put(`${trashKey}/.folder`, new Uint8Array(0));
@@ -227,8 +238,8 @@ export async function handleTrashList(env, url) {
 }
 
 async function restoreTrashRecord(env, row, request) {
-  const listed = await env.R2_BUCKET.list({ prefix: row.trash_key });
-  for (const item of listed.objects || []) {
+  const listed = await listR2Objects(env.R2_BUCKET, { prefix: row.trash_key });
+  await mapWithConcurrency(listed.objects || [], 6, async item => {
     const suffix = item.key.slice(row.trash_key.length);
     const target = row.original_key + suffix;
     const obj = await env.R2_BUCKET.get(item.key);
@@ -236,15 +247,15 @@ async function restoreTrashRecord(env, row, request) {
       await env.R2_BUCKET.put(target, obj.body, { httpMetadata: obj.httpMetadata });
       await env.R2_BUCKET.delete(item.key);
     }
-  }
+  });
 
   await env.DB.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
   await addLog(env, request, 'RESTORE', row.original_key);
 }
 
 async function purgeTrashRecord(env, row, request) {
-  const listed = await env.R2_BUCKET.list({ prefix: row.trash_key });
-  for (const item of listed.objects || []) await env.R2_BUCKET.delete(item.key);
+  const listed = await listR2Objects(env.R2_BUCKET, { prefix: row.trash_key });
+  await mapWithConcurrency(listed.objects || [], 8, item => env.R2_BUCKET.delete(item.key));
   await env.DB.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
   await addLog(env, request, 'PURGE', row.original_key);
 }

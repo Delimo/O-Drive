@@ -56,7 +56,7 @@ export async function onRequest(context) {
 
   try {
     if (path === '/api/login' && method === 'POST') return await handleLogin(request, env);
-    if (path === '/api/logout') return handleLogout();
+    if (path === '/api/logout') return handleLogout(request);
 
     const auth = await verifyAuth(request, env);
     if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);

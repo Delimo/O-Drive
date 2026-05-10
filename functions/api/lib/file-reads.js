@@ -1,4 +1,4 @@
-import { jsonResponse, formatBytes, isHiddenKey, isReservedKey } from './common.js';
+import { jsonResponse, formatBytes, isHiddenKey, isReservedKey, listR2Objects } from './common.js';
 import { checkProtectedAccess, markProtection } from './protected-paths.js';
 
 function mapEntry(o) {
@@ -15,7 +15,7 @@ function mapEntry(o) {
 export async function handleSearch(env, request, url, hiddenPaths, auth, protectedPaths = []) {
   const q = (url.searchParams.get('q') || '').toLowerCase();
   const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
-  const listed = await env.R2_BUCKET.list({ prefix: scope });
+  const listed = await listR2Objects(env.R2_BUCKET, { prefix: scope });
   const matches = await markProtection(listed.objects
     .map(mapEntry)
     .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths))), request, env, auth, protectedPaths);
@@ -28,7 +28,7 @@ export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, pr
     return jsonResponse({ success: false, code: 'password_required', path: access.rule.path, message: 'Password required' }, 403);
   }
   const prefix = r2Key ? r2Key + '/' : '';
-  const listed = await env.R2_BUCKET.list({ prefix, delimiter: '/' });
+  const listed = await listR2Objects(env.R2_BUCKET, { prefix, delimiter: '/' });
   const folders = await markProtection((listed.delimitedPrefixes || [])
     .map(p => {
       const fullKey = p.slice(0, -1);

@@ -155,9 +155,10 @@ export const Actions = {
 
   toggleSelect(key, el, e) {
     e.stopPropagation();
-    state.selectedPaths = state.selectedPaths.includes(key) ? state.selectedPaths.filter(p => p !== key) : [...state.selectedPaths, key];
+    const selected = !state.selectedPaths.includes(key);
+    state.selectedPaths = selected ? [...state.selectedPaths, key] : state.selectedPaths.filter(p => p !== key);
+    UI.setItemSelected(key, selected);
     UI.updateBatchUI();
-    UI.updateFileList();
   },
 
   toggleSelectAll() {

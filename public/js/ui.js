@@ -384,4 +384,17 @@ export const UI = {
     if (mobileClipboard) mobileClipboard.style.display = hasClipboard ? 'grid' : 'none';
     if (mobilePaste && state.clipboard) mobilePaste.textContent = `粘贴 (${state.clipboard.paths.length})`;
   },
+
+  setItemSelected(key, selected) {
+    const el = document.querySelector(`[data-key="${CSS.escape(key)}"]`);
+    if (!el) return;
+    el.classList.toggle('selected', selected);
+    const btn = el.querySelector('.file-select-btn');
+    if (btn) {
+      btn.classList.toggle('is-selected', selected);
+      btn.textContent = selected ? '✓' : '';
+      const name = el.querySelector('.file-name')?.textContent || key;
+      btn.setAttribute('aria-label', `${selected ? '取消选择' : '选择'} ${name}`);
+    }
+  },
 };

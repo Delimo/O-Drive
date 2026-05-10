@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { handleListFiles, handleDownloadOrPreview } from '../functions/api/lib/file-reads.js';
+import { handleListFiles, handleDownloadOrPreview, handleSearch } from '../functions/api/lib/file-reads.js';
 import {
   handleMultipartCreate,
   handleMultipartPart,
@@ -23,7 +23,7 @@ import {
 import { encodeR2Path, apiFileUrl } from '../public/js/file-paths.js';
 import { getOrderedEntries, getSelectableKeys } from '../public/js/file-view-model.js';
 
-function makeEnv({ objects = [], prefixes = [] } = {}) {
+function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) {
   const byKey = new Map(objects.map(o => [o.key, { ...o }]));
   const trashRows = [];
   const protectedRows = [];
@@ -54,11 +54,16 @@ function makeEnv({ objects = [], prefixes = [] } = {}) {
       async list(opts = {}) {
         const prefix = opts.prefix || '';
         const delimiter = opts.delimiter;
+        const cursor = Number(opts.cursor || 0);
         const objectsFromStore = listObjects(prefix);
         if (!delimiter) {
+          const page = objectsFromStore.slice(cursor, cursor + listPageSize);
+          const nextCursor = cursor + page.length;
           return {
             delimitedPrefixes: [],
-            objects: objectsFromStore,
+            objects: page,
+            truncated: nextCursor < objectsFromStore.length,
+            cursor: String(nextCursor),
           };
         }
         const folderSet = new Set(
@@ -221,6 +226,22 @@ test('reserved storage prefixes are hidden from normal file listings', async () 
   const adminRes = await handleListFiles(env, new Request('https://example.com/api/files'), [], { role: 'admin' }, '');
   const adminData = await adminRes.json();
   assert.deepEqual(adminData.folders.map(f => f.fullKey), ['public']);
+});
+
+test('search reads paginated R2 listings', async () => {
+  const env = makeEnv({
+    listPageSize: 1,
+    objects: [
+      { key: 'docs/first.txt', size: 5, uploaded: new Date('2026-01-01') },
+      { key: 'docs/second.txt', size: 6, uploaded: new Date('2026-01-01') },
+      { key: 'docs/third.md', size: 7, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const res = await handleSearch(env, new Request('https://example.com/api/search?q=.txt&scope=/docs'), new URL('https://example.com/api/search?q=.txt&scope=/docs'), [], { role: 'guest' }, []);
+  const data = await res.json();
+
+  assert.deepEqual(data.files.map(file => file.fullKey), ['docs/first.txt', 'docs/second.txt']);
 });
 
 test('preview response streams existing object, supports range, and 404s missing object', async () => {

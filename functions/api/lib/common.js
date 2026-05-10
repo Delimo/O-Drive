@@ -60,3 +60,24 @@ export async function addLog(env, request, action, details) {
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
   try { await env.DB.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, details, ip).run(); } catch (e) {}
 }
+
+export async function listR2Objects(bucket, options = {}, { maxObjects = 10000 } = {}) {
+  const objects = [];
+  const delimitedPrefixes = [];
+  let cursor = options.cursor;
+
+  do {
+    const listed = await bucket.list({ ...options, cursor });
+    objects.push(...(listed.objects || []));
+    delimitedPrefixes.push(...(listed.delimitedPrefixes || []));
+    cursor = listed.truncated ? listed.cursor : undefined;
+    if (objects.length >= maxObjects) break;
+  } while (cursor);
+
+  return {
+    objects: objects.slice(0, maxObjects),
+    delimitedPrefixes,
+    truncated: Boolean(cursor),
+    cursor,
+  };
+}

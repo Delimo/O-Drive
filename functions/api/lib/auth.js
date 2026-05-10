@@ -6,6 +6,13 @@ function createCsrfToken() {
   return encodeBase64Url(String.fromCharCode(...bytes));
 }
 
+const SESSION_TTL_SECONDS = 24 * 60 * 60;
+
+function cookieAttributes(request, maxAge = SESSION_TTL_SECONDS) {
+  const secure = request && new URL(request.url).protocol === 'https:' ? '; Secure' : '';
+  return `Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
+}
+
 export function verifyCsrf(request, auth) {
   if (auth?.role !== 'admin') return false;
   const token = request.headers.get('X-CSRF-Token') || '';
@@ -35,6 +42,7 @@ export async function verifyAuth(request, env) {
     );
     if (!valid) return isGuestMode ? { role: 'guest' } : null;
     const claims = decodeBase64UrlJson(payload);
+    if (!claims?.exp || Date.now() >= Number(claims.exp) * 1000) return isGuestMode ? { role: 'guest' } : null;
     return claims?.role === 'admin' && claims.csrf ? claims : (isGuestMode ? { role: 'guest' } : null);
   } catch (e) {
     return isGuestMode ? { role: 'guest' } : null;
@@ -55,12 +63,13 @@ export async function handleLogin(request, env) {
   if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
     try { await env.DB.prepare('DELETE FROM login_attempts WHERE ip = ?').bind(ip).run(); } catch (e) {}
     const csrf = createCsrfToken();
+    const now = Math.floor(Date.now() / 1000);
     const header = encodeBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-    const payload = encodeBase64Url(JSON.stringify({ role: 'admin', csrf }));
+    const payload = encodeBase64Url(JSON.stringify({ role: 'admin', csrf, iat: now, exp: now + SESSION_TTL_SECONDS }));
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.ADMIN_PASSWORD), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${header}.${payload}`));
     const signature = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-    return jsonResponse({ success: true, csrf }, 200, { 'Set-Cookie': `token=${header}.${payload}.${signature}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400` });
+    return jsonResponse({ success: true, csrf }, 200, { 'Set-Cookie': `token=${header}.${payload}.${signature}; ${cookieAttributes(request)}` });
   }
 
   try {
@@ -71,6 +80,6 @@ export async function handleLogin(request, env) {
   return jsonResponse({ success: false }, 401);
 }
 
-export function handleLogout() {
-  return jsonResponse({ success: true }, 200, { 'Set-Cookie': 'token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0' });
+export function handleLogout(request) {
+  return jsonResponse({ success: true }, 200, { 'Set-Cookie': `token=; ${cookieAttributes(request, 0)}` });
 }
