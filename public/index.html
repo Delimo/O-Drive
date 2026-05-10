@@ -91,7 +91,7 @@
             <h1 class="text-lg font-bold mb-2 text-center">需要访问密码</h1>
             <p id="unlockPathLabel" class="text-xs text-slate-500 text-center mb-4 break-all"></p>
             <form onsubmit="Actions.submitUnlock(); return false;">
-                <input type="password" id="unlockPasswordInput" placeholder="请输入密码"
+                <input type="password" id="unlockPasswordInput" placeholder="请输入密码" autocomplete="new-password"
                        class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-3 outline-none focus:border-primary text-sm text-slate-900">
             </form>
             <p id="unlockError" class="text-red-500 text-center text-xs h-4 mb-3"></p>
@@ -117,6 +117,7 @@
         </div>
     </div>
 
+    <!-- 其余移动端和上传管理器保持原样 -->
     <div id="mobileActionBackdrop" class="mobile-action-backdrop" onclick="UI.closeMobileActions()"></div>
     <div id="mobileActionSheet" class="mobile-action-sheet">
         <button class="mobile-action-btn admin-only" onclick="document.getElementById('fileInput').click();UI.closeMobileActions()">上传</button>
