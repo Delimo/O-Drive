@@ -1,5 +1,6 @@
 import { jsonResponse, formatBytes, isHiddenKey, isReservedKey, listR2Objects } from './common.js';
 import { checkProtectedAccess, markProtection } from './protected-paths.js';
+import { searchFileIndex } from './file-index.js';
 
 function mapEntry(o) {
   return {
@@ -18,6 +19,11 @@ export async function handleSearch(env, request, url, hiddenPaths, auth, protect
   const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || '50')));
   const scanLimit = Math.max(limit, Math.min(1000, Number(url.searchParams.get('scanLimit') || '1000')));
   let cursor = url.searchParams.get('cursor') || undefined;
+  const indexed = await searchFileIndex(env, { q, scope, limit, cursor }, hiddenPaths, auth);
+  if (indexed) {
+    const files = await markProtection(indexed.files, request, env, auth, protectedPaths);
+    return jsonResponse({ ...indexed, files });
+  }
   const matches = [];
   let nextCursor = '';
   let scanned = 0;

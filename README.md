@@ -32,46 +32,6 @@ Cloudflare Pages 配置：
 - Build output directory: `public`
 - Functions directory: `functions`
 
-### 方式一：Cloudflare 控制台
-
-1. 进入 Cloudflare Dashboard。
-2. 打开 Workers & Pages -> D1 SQL Database。
-3. 点击 Create database。
-4. 输入数据库名称，例如 `o-drive-db`。
-5. 创建完成后，进入 Pages 项目。
-6. 打开 Settings -> Functions -> D1 database bindings。
-7. 添加绑定：
-   - Variable name: `DB`
-   - D1 database: 选择刚创建的数据库
-8. 重新部署 Pages 项目。
-
-第一次访问 API、登录、上传、删除或打开管理台时，项目会自动初始化这些表：
-
-- `settings`
-- `logs`
-- `login_attempts`
-- `trash`
-- `path_passwords`
-
-其中部分表会在对应功能首次使用时创建，例如回收站和访问密码。
-
-### 方式二：Wrangler 命令行
-
-如果你使用 Wrangler，也可以用命令创建数据库：
-
-```bash
-npx wrangler d1 create o-drive-db
-```
-
-创建后把输出中的数据库绑定到 Cloudflare Pages。Pages 项目中最终仍然需要有这个绑定：
-
-```text
-Variable name: DB
-Binding type: D1 database
-```
-
-本项目不要求你手动执行 SQL 初始化脚本；如果页面返回 500，通常是 `DB` 未绑定、变量名不是 `DB`，或绑定没有部署到当前环境。
-
 ## 绑定资源
 
 在 Pages 项目的 Settings -> Functions -> Bindings 中添加：
@@ -80,6 +40,8 @@ Binding type: D1 database
 | --- | --- | --- |
 | D1 database | `DB` | 保存日志、设置、回收站、登录限制 |
 | R2 bucket | `R2_BUCKET` | 保存实际文件内容 |
+
+D1 表结构会在功能首次使用时自动创建，不需要在 D1 控制台手动执行 SQL。
 
 ## 环境变量
 

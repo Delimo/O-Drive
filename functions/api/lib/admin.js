@@ -1,14 +1,8 @@
 import { jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
+import { getIndexedStats, indexedFileCount, indexedFileKind, syncFileIndexFromR2 } from './file-index.js';
 
 function fileKind(key) {
-  const ext = String(key || '').split('.').pop().toLowerCase();
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif'].includes(ext)) return 'image';
-  if (['mp4', 'webm', 'mov', 'mkv'].includes(ext)) return 'video';
-  if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(ext)) return 'audio';
-  if (['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'].includes(ext)) return 'text';
-  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'archive';
-  if (['exe', 'msi', 'app', 'deb', 'dmg'].includes(ext)) return 'exe';
-  return 'other';
+  return indexedFileKind(key);
 }
 
 function emptyBreakdown() {
@@ -32,7 +26,12 @@ export async function handleAdminLogs(env, url) {
 }
 
 export async function handleAdminStats(env) {
+  if (await indexedFileCount(env)) {
+    const indexed = await getIndexedStats(env);
+    if (indexed) return jsonResponse({ ...indexed, ...(await adminDbStats(env)) });
+  }
   const listed = await listR2Objects(env.R2_BUCKET, {}, { maxObjects: 20000 });
+  await syncFileIndexFromR2(env, { maxObjects: 20000 });
   const objects = (listed.objects || []).filter(obj => !isReservedKey(obj.key) && !obj.key.endsWith('/.folder'));
   const breakdown = emptyBreakdown();
   let totalSize = 0;
@@ -60,19 +59,6 @@ export async function handleAdminStats(env) {
       uploaded: obj.uploaded?.getTime?.() || 0,
     }));
 
-  let trash = { count: 0, size: 0, sizeFormatted: '0 B' };
-  let logs = { count: 0 };
-  try {
-    const trashCount = await env.DB.prepare('SELECT COUNT(*) as count FROM trash').first();
-    const trashRows = await env.DB.prepare('SELECT * FROM trash ORDER BY trashed_at DESC').all();
-    const size = (trashRows.results || []).reduce((sum, row) => sum + Number(row.size || 0), 0);
-    trash = { count: Number(trashCount?.count || 0), size, sizeFormatted: formatBytes(size) };
-  } catch (_) {}
-  try {
-    const logCount = await env.DB.prepare('SELECT COUNT(*) as count FROM logs').first();
-    logs = { count: Number(logCount?.count || 0) };
-  } catch (_) {}
-
   return jsonResponse({
     files: {
       count: objects.length,
@@ -86,9 +72,24 @@ export async function handleAdminStats(env) {
       { ...value, sizeFormatted: formatBytes(value.size) },
     ])),
     latest,
-    trash,
-    logs,
+    ...(await adminDbStats(env)),
   });
+}
+
+async function adminDbStats(env) {
+  let trash = { count: 0, size: 0, sizeFormatted: '0 B' };
+  let logs = { count: 0 };
+  try {
+    const trashCount = await env.DB.prepare('SELECT COUNT(*) as count FROM trash').first();
+    const trashRows = await env.DB.prepare('SELECT * FROM trash ORDER BY trashed_at DESC').all();
+    const size = (trashRows.results || []).reduce((sum, row) => sum + Number(row.size || 0), 0);
+    trash = { count: Number(trashCount?.count || 0), size, sizeFormatted: formatBytes(size) };
+  } catch (_) {}
+  try {
+    const logCount = await env.DB.prepare('SELECT COUNT(*) as count FROM logs').first();
+    logs = { count: Number(logCount?.count || 0) };
+  } catch (_) {}
+  return { trash, logs };
 }
 
 async function checkDb(env) {

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { onRequest } from '../functions/api/[[path]].js';
 import { handleListFiles, handleDownloadOrPreview, handleSearch } from '../functions/api/lib/file-reads.js';
 import {
   handleMultipartCreate,
@@ -20,6 +21,7 @@ import { handleAdminHealth, handleAdminStats } from '../functions/api/lib/admin.
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
+import { indexedFileCount, upsertFileIndex } from '../functions/api/lib/file-index.js';
 import {
   handleProtectedSettings,
   handleProtectedUnlock,
@@ -33,7 +35,9 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
   const byKey = new Map(objects.map(o => [o.key, { ...o }]));
   const trashRows = [];
   const protectedRows = [];
+  const pathAttemptRows = [];
   const settingsRows = new Map();
+  const fileIndexRows = [];
   const logs = [];
   const sizeOf = body => typeof body === 'string' ? body.length : body?.byteLength || 0;
   const listObjects = (prefix = '') => [...byKey.values()]
@@ -160,6 +164,36 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               if (idx >= 0) protectedRows[idx] = row;
               else protectedRows.push(row);
             }
+            if (/INSERT INTO file_index/i.test(sql)) {
+              const row = {
+                path: statement.bound?.[0],
+                name: statement.bound?.[1],
+                parent: statement.bound?.[2],
+                kind: statement.bound?.[3],
+                size: statement.bound?.[4],
+                content_type: statement.bound?.[5],
+                uploaded_at: statement.bound?.[6],
+                updated_at: statement.bound?.[7],
+              };
+              const idx = fileIndexRows.findIndex(item => item.path === row.path);
+              if (idx >= 0) fileIndexRows[idx] = row;
+              else fileIndexRows.push(row);
+            }
+            if (/INSERT INTO path_access_attempts/i.test(sql)) {
+              const row = {
+                path: statement.bound?.[0],
+                ip: statement.bound?.[1],
+                attempts: 1,
+                last_attempt: statement.bound?.[2],
+              };
+              const idx = pathAttemptRows.findIndex(item => item.path === row.path && item.ip === row.ip);
+              if (idx >= 0) {
+                pathAttemptRows[idx].attempts += 1;
+                pathAttemptRows[idx].last_attempt = row.last_attempt;
+              } else {
+                pathAttemptRows.push(row);
+              }
+            }
             if (/INSERT OR REPLACE INTO settings/i.test(sql)) {
               settingsRows.set('trash_retention_days', statement.bound?.[0]);
             }
@@ -176,9 +210,31 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const idx = protectedRows.findIndex(row => row.path === path);
               if (idx >= 0) protectedRows.splice(idx, 1);
             }
+            if (/DELETE FROM path_access_attempts WHERE path = \? AND ip = \?/i.test(sql)) {
+              const [path, ip] = statement.bound || [];
+              const idx = pathAttemptRows.findIndex(row => row.path === path && row.ip === ip);
+              if (idx >= 0) pathAttemptRows.splice(idx, 1);
+            }
+            if (/DELETE FROM file_index WHERE path = \?/i.test(sql)) {
+              const path = statement.bound?.[0];
+              const idx = fileIndexRows.findIndex(row => row.path === path);
+              if (idx >= 0) fileIndexRows.splice(idx, 1);
+            }
+            if (/DELETE FROM file_index WHERE path = \? OR path LIKE \?/i.test(sql)) {
+              const path = statement.bound?.[0];
+              const prefix = String(statement.bound?.[1] || '').replace(/%$/, '');
+              for (let i = fileIndexRows.length - 1; i >= 0; i--) {
+                if (fileIndexRows[i].path === path || fileIndexRows[i].path.startsWith(prefix)) fileIndexRows.splice(i, 1);
+              }
+            }
             return {};
           },
           async first() {
+            if (/SELECT COUNT\(\*\) as count FROM file_index/i.test(sql)) return { count: fileIndexRows.length };
+            if (/SELECT attempts, last_attempt FROM path_access_attempts WHERE path = \? AND ip = \?/i.test(sql)) {
+              const [path, ip] = statement.bound || [];
+              return pathAttemptRows.find(row => row.path === path && row.ip === ip) || null;
+            }
             if (/SELECT COUNT\(\*\) as count FROM trash/i.test(sql)) return { count: trashRows.length };
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: logs.length };
@@ -189,6 +245,21 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
             return null;
           },
           async all() {
+            if (/SELECT \* FROM file_index WHERE lower\(name\) LIKE \?/i.test(sql)) {
+              const like = String(statement.bound?.[0] || '').replace(/%/g, '');
+              let rows = fileIndexRows.filter(row => row.name.toLowerCase().includes(like));
+              if (/path = \? OR path LIKE \?/i.test(sql)) {
+                const scope = statement.bound?.[1];
+                const prefix = String(statement.bound?.[2] || '').replace(/%$/, '');
+                rows = rows.filter(row => row.path === scope || row.path.startsWith(prefix));
+              }
+              const limit = statement.bound?.[statement.bound.length - 2] ?? rows.length;
+              const offset = statement.bound?.[statement.bound.length - 1] ?? 0;
+              return { results: rows.sort((a, b) => a.path.localeCompare(b.path)).slice(offset, offset + limit) };
+            }
+            if (/SELECT \* FROM file_index ORDER BY uploaded_at DESC/i.test(sql)) {
+              return { results: [...fileIndexRows].sort((a, b) => b.uploaded_at - a.uploaded_at) };
+            }
             if (/SELECT path, salt, password_hash, note, show_name, created_at FROM path_passwords/i.test(sql)) {
               return { results: [...protectedRows].sort((a, b) => a.path.localeCompare(b.path)) };
             }
@@ -310,6 +381,20 @@ test('search stops at scan limit and returns cursor for continuing sparse matche
   assert.equal(secondData.nextCursor, '');
 });
 
+test('search uses D1 file index when available', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'docs/indexed-alpha.txt', { size: 12, contentType: 'text/plain', uploaded: new Date('2026-01-04') });
+  await upsertFileIndex(env, 'docs/other.md', { size: 8, contentType: 'text/markdown', uploaded: new Date('2026-01-03') });
+
+  assert.equal(await indexedFileCount(env), 2);
+
+  const res = await handleSearch(env, new Request('https://example.com/api/search?q=alpha&scope=/docs'), new URL('https://example.com/api/search?q=alpha&scope=/docs'), [], { role: 'guest' }, []);
+  const data = await res.json();
+
+  assert.deepEqual(data.files.map(file => file.fullKey), ['docs/indexed-alpha.txt']);
+  assert.equal(data.scanLimitReached, false);
+});
+
 test('preview response streams existing object, supports range, and 404s missing object', async () => {
   const env = makeEnv({
     objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
@@ -381,6 +466,55 @@ test('guest access is disabled unless ALLOW_GUEST is true', async () => {
   assert.deepEqual(await verifyAuth(new Request('https://example.com/api/auth/role'), openEnv), { role: 'guest' });
 });
 
+test('route smoke: admin can login, upload, list, and search', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+  assert.equal(loginData.success, true);
+  assert.ok(cookie);
+
+  const form = new FormData();
+  form.append('file', new File(['hello'], 'route-smoke.txt', { type: 'text/plain' }));
+  const upload = await onRequest({
+    env,
+    request: new Request('https://example.com/api/files', {
+      method: 'POST',
+      body: form,
+      headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(upload.status, 200);
+
+  const listed = await onRequest({
+    env,
+    request: new Request('https://example.com/api/files', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const listData = await listed.json();
+  assert.deepEqual(listData.files.map(file => file.fullKey), ['route-smoke.txt']);
+
+  const search = await onRequest({
+    env,
+    request: new Request('https://example.com/api/search?q=route&scope=/', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const searchData = await search.json();
+  assert.deepEqual(searchData.files.map(file => file.fullKey), ['route-smoke.txt']);
+});
+
 test('protected paths require password and unlock with signed cookie', async () => {
   const env = makeEnv({
     prefixes: ['public/', 'private/'],
@@ -392,7 +526,7 @@ test('protected paths require password and unlock with signed cookie', async () 
 
   const create = await handleProtectedSettings(env, new Request('https://example.com/api/admin/settings/protected', {
     method: 'POST',
-    body: JSON.stringify({ path: '/private', password: '1234', note: 'test', showName: true }),
+    body: JSON.stringify({ path: '/private', password: '12345678', note: 'test', showName: true }),
     headers: { 'Content-Type': 'application/json' },
   }), 'POST', new URL('https://example.com/api/admin/settings/protected'));
   assert.equal((await create.json()).success, true);
@@ -408,7 +542,7 @@ test('protected paths require password and unlock with signed cookie', async () 
 
   const unlock = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
     method: 'POST',
-    body: JSON.stringify({ path: '/private', password: '1234' }),
+    body: JSON.stringify({ path: '/private', password: '12345678' }),
     headers: { 'Content-Type': 'application/json' },
   }), { role: 'guest' }, rules);
   assert.equal((await unlock.json()).success, true);
@@ -419,6 +553,78 @@ test('protected paths require password and unlock with signed cookie', async () 
     headers: { Cookie: cookie },
   }), env, { role: 'guest' }, rules, 'private/secret.txt');
   assert.equal(access.ok, true);
+});
+
+test('protected path passwords reject very short secrets and store pbkdf2 hashes', async () => {
+  const env = makeEnv();
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const short = await handleProtectedSettings(env, new Request('https://example.com/api/admin/settings/protected', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '123' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'POST', new URL('https://example.com/api/admin/settings/protected'));
+  assert.equal(short.status, 400);
+
+  const create = await handleProtectedSettings(env, new Request('https://example.com/api/admin/settings/protected', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '12345678' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'POST', new URL('https://example.com/api/admin/settings/protected'));
+  assert.equal(create.status, 200);
+
+  const rows = await loadProtectedPaths(env);
+  assert.match(rows[0].password_hash, /^pbkdf2-sha256\$/);
+});
+
+test('protected path unlock locks after repeated wrong passwords and clears on success', async () => {
+  const env = makeEnv();
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  await handleProtectedSettings(env, new Request('https://example.com/api/admin/settings/protected', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '1234' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'POST', new URL('https://example.com/api/admin/settings/protected'));
+  const rules = await loadProtectedPaths(env);
+
+  for (let i = 0; i < 5; i++) {
+    const wrong = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+      method: 'POST',
+      body: JSON.stringify({ path: '/private', password: 'bad' }),
+      headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.10' },
+    }), { role: 'guest' }, rules);
+    assert.equal(wrong.status, 403);
+  }
+
+  const locked = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '1234' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.10' },
+  }), { role: 'guest' }, rules);
+  assert.equal(locked.status, 429);
+  assert.ok(Number(locked.headers.get('Retry-After')) > 0);
+
+  const otherIp = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '1234' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.11' },
+  }), { role: 'guest' }, rules);
+  assert.equal(otherIp.status, 200);
+
+  const failThenSuccessIp = '203.0.113.12';
+  const oneWrong = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: 'bad' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': failThenSuccessIp },
+  }), { role: 'guest' }, rules);
+  assert.equal(oneWrong.status, 403);
+  const success = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '1234' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': failThenSuccessIp },
+  }), { role: 'guest' }, rules);
+  assert.equal(success.status, 200);
 });
 
 test('frontend file path helpers encode each path segment', () => {
@@ -644,6 +850,21 @@ test('admin stats summarize visible stored files', async () => {
 
   const res = await handleAdminStats(env);
   const data = await res.json();
+  assert.equal(data.files.count, 2);
+  assert.equal(data.files.totalSize, 9);
+  assert.equal(data.breakdown.image.count, 1);
+  assert.equal(data.breakdown.text.count, 1);
+  assert.deepEqual(data.latest.map(item => item.key), ['photos/a.jpg', 'docs/readme.md']);
+});
+
+test('admin stats can summarize from file index', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'photos/a.jpg', { size: 5, contentType: 'image/jpeg', uploaded: new Date('2026-01-03') });
+  await upsertFileIndex(env, 'docs/readme.md', { size: 4, contentType: 'text/markdown', uploaded: new Date('2026-01-02') });
+
+  const res = await handleAdminStats(env);
+  const data = await res.json();
+
   assert.equal(data.files.count, 2);
   assert.equal(data.files.totalSize, 9);
   assert.equal(data.breakdown.image.count, 1);

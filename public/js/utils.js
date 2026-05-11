@@ -1,3 +1,5 @@
+import { getExtension, getFileKind, isImageFile, isPreviewable } from './file-types.js';
+
 export const escapeHtml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;',
@@ -8,12 +10,27 @@ export const escapeHtml = (value) =>
   }[ch]));
 
 export const sanitizeHtml = (html) => {
+  const allowedTags = new Set([
+    'A', 'BLOCKQUOTE', 'BR', 'CODE', 'EM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'HR', 'LI', 'OL', 'P', 'PRE', 'S', 'STRONG', 'TABLE', 'TBODY', 'TD', 'TH',
+    'THEAD', 'TR', 'UL',
+  ]);
+  const allowedAttrs = new Set(['href', 'title']);
   const template = document.createElement('template');
   template.innerHTML = html;
-  template.content.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach(node => node.remove());
   template.content.querySelectorAll('*').forEach(node => {
+    if (!allowedTags.has(node.tagName)) {
+      node.replaceWith(document.createTextNode(node.textContent || ''));
+      return;
+    }
     [...node.attributes].forEach(attr => {
-      if (/^on/i.test(attr.name) || /javascript:/i.test(attr.value)) node.removeAttribute(attr.name);
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim();
+      if (!allowedAttrs.has(name)) {
+        node.removeAttribute(attr.name);
+        return;
+      }
+      if (name === 'href' && !/^(https?:|mailto:|#|\/)/i.test(value)) node.removeAttribute(attr.name);
     });
     if (node.tagName === 'A') {
       node.setAttribute('rel', 'noreferrer noopener');
@@ -22,12 +39,6 @@ export const sanitizeHtml = (html) => {
   });
   return template.innerHTML;
 };
-
-const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-const videoExts = ['mp4', 'webm'];
-const audioExts = ['mp3', 'wav', 'ogg', 'flac'];
-const textExts = ['txt', 'md', 'js', 'css', 'html', 'json', 'py', 'sh', 'sql', 'php', 'yml', 'yaml', 'xml', 'csv', 'log'];
-const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz'];
 
 export const Utils = {
   getParentPath(p) {
@@ -39,21 +50,13 @@ export const Utils = {
     return ts ? new Date(ts).toLocaleString('zh-CN', { hour12: false }) : '-';
   },
   getExtension(name) {
-    return String(name || '').split('.').pop().toLowerCase();
+    return getExtension(name);
   },
   isImageFile(name) {
-    return imageExts.includes(this.getExtension(name));
+    return isImageFile(name);
   },
   getFileKind(name) {
-    const ext = this.getExtension(name);
-    if (imageExts.includes(ext)) return 'image';
-    if (videoExts.includes(ext)) return 'video';
-    if (audioExts.includes(ext)) return 'audio';
-    if (ext === 'pdf') return 'pdf';
-    if (textExts.includes(ext)) return 'text';
-    if (archiveExts.includes(ext)) return 'archive';
-    if (ext === 'exe' || ext === 'msi' || ext === 'app' || ext === 'deb' || ext === 'dmg') return 'exe';
-    return 'file';
+    return getFileKind(name);
   },
   getFileIcon(name) {
     const ext = this.getExtension(name);
@@ -111,6 +114,6 @@ export const Utils = {
     return '⚙️';
   },
   isPreviewable(name) {
-    return ['image', 'video', 'audio', 'pdf', 'text'].includes(this.getFileKind(name));
+    return isPreviewable(name);
   },
 };

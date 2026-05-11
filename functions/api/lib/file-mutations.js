@@ -1,4 +1,5 @@
 import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
+import { deleteFileIndexKey, deleteFileIndexPrefix, upsertFileIndex } from './file-index.js';
 
 const TRASH_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS trash (
@@ -37,7 +38,9 @@ async function copyTree(env, sourceKey, targetKey, request, move = false) {
 
   if (obj) {
     await env.R2_BUCKET.put(targetKey, obj.body, { httpMetadata: obj.httpMetadata });
+    await upsertFileIndex(env, targetKey, obj);
     if (move) await env.R2_BUCKET.delete(sourceKey);
+    if (move) await deleteFileIndexKey(env, sourceKey);
   }
 
   await mapWithConcurrency(listed.objects, 6, async item => {
@@ -45,7 +48,9 @@ async function copyTree(env, sourceKey, targetKey, request, move = false) {
     const subObj = await env.R2_BUCKET.get(item.key);
     if (subObj) {
       await env.R2_BUCKET.put(nextKey, subObj.body, { httpMetadata: subObj.httpMetadata });
+      await upsertFileIndex(env, nextKey, subObj);
       if (move) await env.R2_BUCKET.delete(item.key);
+      if (move) await deleteFileIndexKey(env, item.key);
     }
   });
 }
@@ -166,6 +171,7 @@ async function softDeleteTree(env, sourceKey, request) {
     const target = `.trash/${trashId}/${entry.key}`;
     const copied = await copyR2Object(env, source, target);
     if (copied) await env.R2_BUCKET.delete(source);
+    if (copied) await deleteFileIndexKey(env, source);
   });
 
   if (!exact && entries.length === 1 && entries[0].key === `${sourceKey}/.folder`) {
@@ -304,6 +310,7 @@ export async function handleUpload(env, request, r2Key) {
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped) return jsonResponse({ success: true, skipped: true, key });
   await env.R2_BUCKET.put(resolved.key, file.stream(), { httpMetadata: { contentType: file.type } });
+  await upsertFileIndex(env, resolved.key, { size: file.size, contentType: file.type, uploaded: Date.now() });
   await addLog(env, request, resolved.conflict ? 'UPLOAD_CONFLICT' : 'UPLOAD', resolved.key);
   return jsonResponse({ success: true, key: resolved.key, renamed: resolved.key !== key });
 }
@@ -349,6 +356,8 @@ export async function handleMultipartComplete(env, request) {
   assertUserKey(key);
   const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
   const object = await upload.complete(parts.sort((a, b) => a.partNumber - b.partNumber));
+  const meta = await env.R2_BUCKET.head(key);
+  await upsertFileIndex(env, key, meta || { uploaded: Date.now() });
   await addLog(env, request, 'UPLOAD', key);
   return jsonResponse({ success: true, key: object.key, etag: object.httpEtag });
 }
@@ -369,6 +378,7 @@ export async function handleSaveText(env, request, r2Key) {
   const body = await request.json();
   if (typeof body.content !== 'string') return jsonResponse({ success: false, message: 'Invalid content' }, 400);
   await env.R2_BUCKET.put(r2Key, body.content, { httpMetadata: { contentType: 'text/plain' } });
+  await upsertFileIndex(env, r2Key, { size: body.content.length, contentType: 'text/plain', uploaded: Date.now() });
   await addLog(env, request, 'SAVE_TEXT', r2Key);
   return jsonResponse({ success: true });
 }
@@ -410,11 +420,13 @@ async function restoreTrashRecord(env, row, request) {
     const obj = await env.R2_BUCKET.get(item.key);
     if (obj) {
       await env.R2_BUCKET.put(target, obj.body, { httpMetadata: obj.httpMetadata });
+      await upsertFileIndex(env, target, obj);
       await env.R2_BUCKET.delete(item.key);
     }
   });
 
   await env.DB.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
+  await deleteFileIndexPrefix(env, row.trash_key);
   await addLog(env, request, 'RESTORE', row.original_key);
 }
 

@@ -2,11 +2,8 @@ import { state } from './state.js';
 import { api } from './api.js';
 import { UI, Message } from './ui.js';
 import { sanitizeHtml, escapeHtml } from './utils.js';
-
-const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-const videoExts = ['mp4', 'webm'];
-const audioExts = ['mp3', 'wav', 'ogg', 'flac'];
-const textExts = ['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'];
+import { renderMarkdown } from './markdown-renderer.js';
+import { audioExts, imageExts, textExts, videoExts } from './file-types.js';
 
 function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -172,7 +169,7 @@ export const PreviewActions = {
           editBtn.classList.remove('hidden');
           editBtn.hidden = false;
         }
-        if (ext === 'md') content.innerHTML = `<div class="preview-text-shell markdown-body">${sanitizeHtml(marked.parse(text))}</div>`;
+        if (ext === 'md') content.innerHTML = `<div class="preview-text-shell markdown-body">${sanitizeHtml(renderMarkdown(text))}</div>`;
         else {
           content.innerHTML = '';
           content.appendChild(buildTextPreviewShell(text));

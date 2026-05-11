@@ -2,6 +2,9 @@ import { jsonResponse, normalizeHiddenPath, encodeBase64Url, base64UrlToUint8Arr
 
 const ACCESS_COOKIE = 'path_access';
 const ACCESS_TTL = 12 * 60 * 60 * 1000;
+const PASSWORD_ITERATIONS = 210000;
+const UNLOCK_MAX_ATTEMPTS = 5;
+const UNLOCK_LOCK_MS = 15 * 60 * 1000;
 const TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS path_passwords (
     path TEXT PRIMARY KEY,
@@ -10,6 +13,15 @@ const TABLE_SQL = `
     note TEXT DEFAULT '',
     show_name INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL
+  )
+`;
+const ATTEMPTS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS path_access_attempts (
+    path TEXT NOT NULL,
+    ip TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_attempt INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (path, ip)
   )
 `;
 
@@ -26,6 +38,41 @@ function randomHex(length = 16) {
 async function sha256Hex(value) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return bytesToHex(new Uint8Array(bytes));
+}
+
+async function pbkdf2Hex(password, salt, iterations = PASSWORD_ITERATIONS) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations },
+    key,
+    256
+  );
+  return bytesToHex(new Uint8Array(bits));
+}
+
+async function hashPassword(password, salt) {
+  const iterations = PASSWORD_ITERATIONS;
+  const hash = await pbkdf2Hex(password, salt, iterations);
+  return `pbkdf2-sha256$${iterations}$${hash}`;
+}
+
+async function verifyPassword(password, rule) {
+  const stored = String(rule.password_hash || '');
+  const parts = stored.split('$');
+  if (parts[0] === 'pbkdf2-sha256' && parts.length === 3) {
+    const iterations = Number(parts[1]);
+    if (!Number.isInteger(iterations) || iterations < 10000) return false;
+    const candidate = await pbkdf2Hex(password, rule.salt, iterations);
+    return candidate === parts[2];
+  }
+  const legacy = await sha256Hex(`${rule.salt}:${password}`);
+  return legacy === stored;
 }
 
 async function sign(value, env) {
@@ -61,9 +108,15 @@ async function ensureTable(env) {
   const stmt = env.DB.prepare(TABLE_SQL);
   if (typeof stmt.bind === 'function') {
     await stmt.bind().run();
-    return;
+  } else {
+    await stmt.run();
   }
-  await stmt.run();
+  const attemptsStmt = env.DB.prepare(ATTEMPTS_TABLE_SQL);
+  if (typeof attemptsStmt.bind === 'function') {
+    await attemptsStmt.bind().run();
+  } else {
+    await attemptsStmt.run();
+  }
 }
 
 function normalizeProtectedPath(path) {
@@ -94,6 +147,44 @@ async function makeAccessCookie(paths, env) {
   const payload = encodeBase64Url(JSON.stringify({ paths: unique, exp: Date.now() + ACCESS_TTL }));
   const signature = await sign(payload, env);
   return `${ACCESS_COOKIE}=${payload}.${signature}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(ACCESS_TTL / 1000)}`;
+}
+
+function clientIp(request) {
+  return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+}
+
+async function checkUnlockAttempts(env, request, path) {
+  const ip = clientIp(request);
+  try {
+    const row = await env.DB.prepare('SELECT attempts, last_attempt FROM path_access_attempts WHERE path = ? AND ip = ?')
+      .bind(path, ip)
+      .first();
+    const attempts = Number(row?.attempts || 0);
+    const lastAttempt = Number(row?.last_attempt || 0);
+    if (attempts >= UNLOCK_MAX_ATTEMPTS && Date.now() - lastAttempt < UNLOCK_LOCK_MS) {
+      return {
+        ok: false,
+        retryAfter: Math.ceil((UNLOCK_LOCK_MS - (Date.now() - lastAttempt)) / 1000),
+      };
+    }
+  } catch (_) {}
+  return { ok: true, ip };
+}
+
+async function recordUnlockFailure(env, path, ip) {
+  try {
+    await env.DB.prepare(
+      `INSERT INTO path_access_attempts (path, ip, attempts, last_attempt)
+       VALUES (?, ?, 1, ?)
+       ON CONFLICT(path, ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt`
+    ).bind(path, ip, Date.now()).run();
+  } catch (_) {}
+}
+
+async function clearUnlockFailures(env, path, ip) {
+  try {
+    await env.DB.prepare('DELETE FROM path_access_attempts WHERE path = ? AND ip = ?').bind(path, ip).run();
+  } catch (_) {}
 }
 
 export function findProtection(rules, key) {
@@ -170,7 +261,7 @@ export async function handleProtectedSettings(env, request, method, url) {
     const password = String(body.password || '');
     if (password.length < 4) return jsonResponse({ success: false, message: 'Password too short' }, 400);
     const salt = randomHex();
-    const passwordHash = await sha256Hex(`${salt}:${password}`);
+    const passwordHash = await hashPassword(password, salt);
     const note = String(body.note || '').trim();
     const showName = body.showName === false ? 0 : 1;
     await env.DB.prepare(
@@ -187,14 +278,26 @@ export async function handleProtectedSettings(env, request, method, url) {
 }
 
 export async function handleProtectedUnlock(env, request, auth, rules) {
+  await ensureTable(env);
   const body = await request.json();
   const target = normalizeProtectedPath(body.path);
   const password = String(body.password || '');
   const rule = findProtection(rules, target) || rules.find(item => item.path === target);
   if (!rule) return jsonResponse({ success: false, message: 'No password rule for this path' }, 404);
   if (auth.role === 'admin') return jsonResponse({ success: true });
-  const candidate = await sha256Hex(`${rule.salt}:${password}`);
-  if (candidate !== rule.password_hash) return jsonResponse({ success: false, message: 'Invalid password' }, 403);
+  const attempts = await checkUnlockAttempts(env, request, rule.path);
+  if (!attempts.ok) {
+    return jsonResponse(
+      { success: false, message: 'Too many attempts', retryAfter: attempts.retryAfter },
+      429,
+      { 'Retry-After': String(attempts.retryAfter) }
+    );
+  }
+  if (!(await verifyPassword(password, rule))) {
+    await recordUnlockFailure(env, rule.path, attempts.ip);
+    return jsonResponse({ success: false, message: 'Invalid password' }, 403);
+  }
+  await clearUnlockFailures(env, rule.path, attempts.ip);
   const access = await readAccessCookie(request, env);
   const cookie = await makeAccessCookie([...access.paths, rule.path], env);
   return jsonResponse({ success: true, path: rule.path }, 200, { 'Set-Cookie': cookie });
