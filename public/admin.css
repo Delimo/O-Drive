@@ -12,8 +12,8 @@ body.admin-page {
 
 .admin-page .explorer-card {
   overflow: visible;
-  flex: none;
-  min-height: 0;
+  flex: 1;
+  min-height: min(680px, calc(100vh - 220px));
 }
 
 .admin-page .tab-shell {
@@ -28,7 +28,7 @@ body.admin-page {
 }
 
 .admin-page .overview-tab {
-  overflow: visible;
+  overflow: hidden;
   min-height: 0;
 }
 
@@ -60,11 +60,20 @@ body.admin-page {
 
 .admin-page .overview-panels-grid {
   align-items: stretch;
+  min-height: 0;
+}
+
+.admin-page .overview-panels-grid > section {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .admin-page .breakdown-grid,
 .admin-page .latest-grid {
   min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
 }
 
 .admin-page .breakdown-grid > div,
@@ -79,11 +88,12 @@ body.admin-page {
 
 .admin-page .breakdown-grid > div,
 .admin-page .latest-item {
-  height: 88px;
+  height: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 12px 20px;
+  padding: 10px 20px;
   overflow: hidden;
 }
 
@@ -137,6 +147,7 @@ body.admin-page {
   }
 
   .admin-page .overview-tab {
+    overflow: visible;
     padding: 14px;
   }
 
@@ -179,6 +190,7 @@ body.admin-page {
   .admin-page .breakdown-grid,
   .admin-page .latest-grid {
     gap: 10px;
+    grid-template-rows: none;
   }
 
   .admin-page .stat-trash {
