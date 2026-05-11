@@ -25,6 +25,7 @@ document.addEventListener('click', event => {
     case 'remove-hidden': return AdminActions.removeHidden(args[0]);
     case 'add-protected': return AdminActions.addProtected();
     case 'remove-protected': return AdminActions.removeProtected(args[0]);
+    case 'refresh-health': return AdminActions.loadHealth();
   }
 });
 

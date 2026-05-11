@@ -36,6 +36,9 @@ export const api = {
   batchDelete(paths) {
     return requestJson('/api/batch-delete', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ paths }) });
   },
+  operationEstimate(paths) {
+    return requestJson('/api/operation-estimate', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ paths }) });
+  },
   trashList(page = 1, size = 20) {
     return requestJson(`/api/trash?page=${page}&size=${size}`);
   },
@@ -88,6 +91,7 @@ export const api = {
   download(path) { return apiFileUrl('/api/download', path); },
   adminLogs(page, size) { return requestJson(`/api/admin/logs?page=${page}&size=${size}`); },
   adminStats() { return requestJson('/api/admin/stats'); },
+  adminHealth() { return requestJson('/api/admin/health'); },
   hiddenPaths() { return requestJson('/api/admin/settings/hidden'); },
   addHiddenPath(targetPath) {
     return requestJson('/api/admin/settings/hidden', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ targetPath }) });

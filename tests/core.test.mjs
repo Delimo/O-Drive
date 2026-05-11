@@ -8,6 +8,7 @@ import {
   handleMultipartComplete,
   handleMultipartAbort,
   handleRename,
+  handleOperationEstimate,
   handleTrashList,
   handleTrashRestore,
   handleTrashDelete,
@@ -15,7 +16,7 @@ import {
   handleTrashCleanup,
   handleTrashRetention,
 } from '../functions/api/lib/file-mutations.js';
-import { handleAdminStats } from '../functions/api/lib/admin.js';
+import { handleAdminHealth, handleAdminStats } from '../functions/api/lib/admin.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
@@ -648,6 +649,47 @@ test('admin stats summarize visible stored files', async () => {
   assert.equal(data.breakdown.image.count, 1);
   assert.equal(data.breakdown.text.count, 1);
   assert.deepEqual(data.latest.map(item => item.key), ['photos/a.jpg', 'docs/readme.md']);
+});
+
+test('admin health reports bindings and required env vars', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+
+  const res = await handleAdminHealth(env);
+  const data = await res.json();
+
+  assert.equal(data.ok, true);
+  assert.equal(data.db.ok, true);
+  assert.equal(data.r2.ok, true);
+  assert.equal(data.env.adminUsername, true);
+  assert.equal(data.env.adminPassword, true);
+  assert.equal(data.env.guestEnabled, false);
+});
+
+test('operation estimate counts files inside selected folders', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/.folder', body: '', size: 0, uploaded: new Date('2026-01-01') },
+      { key: 'docs/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'docs/nested/b.txt', body: 'b', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'single.txt', body: 's', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const res = await handleOperationEstimate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs', 'single.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+
+  assert.equal(data.success, true);
+  assert.equal(data.totalObjects, 4);
+  assert.equal(data.items[0].kind, 'folder');
+  assert.equal(data.items[0].objectCount, 3);
+  assert.equal(data.items[1].kind, 'file');
+  assert.equal(data.items[1].objectCount, 1);
 });
 
 test('trash can be cleared and cleanup respects retention setting', async () => {

@@ -27,6 +27,7 @@ export const AdminActions = {
     `;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
     this.renderStorageWarnings(data);
+    await this.loadHealth();
 
     const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
     const breakdown = Object.entries(data.breakdown || {});
@@ -56,6 +57,45 @@ export const AdminActions = {
         </div>
       </div>
     `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
+  },
+
+  healthItem(label, ok, detail = '') {
+    return `
+      <div class="health-item ${ok ? 'is-ok' : 'is-bad'}">
+        <div>
+          <strong>${escapeHtml(label)}</strong>
+          ${detail ? `<span>${escapeHtml(detail)}</span>` : ''}
+        </div>
+        <em>${ok ? '正常' : '需处理'}</em>
+      </div>
+    `;
+  },
+
+  async loadHealth() {
+    const grid = document.getElementById('healthGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div class="text-sm text-slate-500">正在检查...</div>';
+    const { res, data } = await api.adminHealth();
+    if (!res.ok) {
+      grid.innerHTML = '<div class="text-sm text-rose-600 font-bold">环境检查失败，请重新登录或稍后再试。</div>';
+      return;
+    }
+
+    const tableList = Array.isArray(data.db?.tables) && data.db.tables.length
+      ? `已存在表：${data.db.tables.join(', ')}`
+      : '核心表会在功能首次使用时自动创建';
+
+    grid.innerHTML = [
+      this.healthItem('D1 数据库绑定 DB', Boolean(data.db?.ok), data.db?.message || tableList),
+      this.healthItem('R2 存储绑定 R2_BUCKET', Boolean(data.r2?.ok), data.r2?.message || '文件读写使用该 Bucket'),
+      this.healthItem('管理员用户名', Boolean(data.env?.adminUsername), '环境变量 ADMIN_USERNAME'),
+      this.healthItem('管理员密码', Boolean(data.env?.adminPassword), '环境变量 ADMIN_PASSWORD'),
+      this.healthItem(
+        '访客访问',
+        true,
+        data.env?.guestEnabled ? 'ALLOW_GUEST=true，访客可浏览' : '默认关闭；只有 ALLOW_GUEST=true 才开启'
+      ),
+    ].join('');
   },
 
   renderStorageWarnings(data) {

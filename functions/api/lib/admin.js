@@ -91,6 +91,49 @@ export async function handleAdminStats(env) {
   });
 }
 
+async function checkDb(env) {
+  if (!env.DB) return { bound: false, ok: false, message: 'DB binding missing' };
+  try {
+    await env.DB.prepare('SELECT 1').first();
+    let tables = [];
+    try {
+      const res = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name ASC").all();
+      tables = (res.results || []).map(row => row.name).filter(Boolean);
+    } catch (_) {}
+    return { bound: true, ok: true, tables };
+  } catch (e) {
+    return { bound: true, ok: false, message: e.message || 'DB check failed' };
+  }
+}
+
+async function checkR2(env) {
+  if (!env.R2_BUCKET) return { bound: false, ok: false, message: 'R2_BUCKET binding missing' };
+  try {
+    await env.R2_BUCKET.list({ limit: 1 });
+    return { bound: true, ok: true };
+  } catch (e) {
+    return { bound: true, ok: false, message: e.message || 'R2 check failed' };
+  }
+}
+
+export async function handleAdminHealth(env) {
+  const [db, r2] = await Promise.all([checkDb(env), checkR2(env)]);
+  const envStatus = {
+    adminUsername: Boolean(env.ADMIN_USERNAME),
+    adminPassword: Boolean(env.ADMIN_PASSWORD),
+    allowGuestConfigured: Object.prototype.hasOwnProperty.call(env, 'ALLOW_GUEST'),
+    guestEnabled: env.ALLOW_GUEST === 'true',
+  };
+  const ok = db.ok && r2.ok && envStatus.adminUsername && envStatus.adminPassword;
+
+  return jsonResponse({
+    ok,
+    db,
+    r2,
+    env: envStatus,
+  });
+}
+
 export async function handleHiddenSettings(env, request, method, url, hiddenPaths) {
   if (method === 'GET') return jsonResponse({ list: hiddenPaths.map(p => ({ path: p })) });
   if (method === 'POST') {

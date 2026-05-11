@@ -2,6 +2,7 @@ export {
   handlePaste,
   handleRename,
   handleBatchDelete,
+  handleOperationEstimate,
   handleMkdir,
   handleUpload,
   handleMultipartCreate,

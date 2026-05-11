@@ -77,6 +77,64 @@ body.admin-page {
   background: #fff7ed;
 }
 
+.admin-page .health-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-page .health-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-page .health-item div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-page .health-item strong {
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.admin-page .health-item span {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .health-item em {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.admin-page .health-item.is-bad em {
+  color: #b91c1c;
+  background: #fff5f5;
+  border-color: rgba(185, 28, 28, 0.16);
+}
+
 .admin-page .stat-card {
   min-width: 0;
 }
@@ -277,6 +335,10 @@ body.admin-page {
   .admin-page .storage-warning {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .admin-page .health-grid {
+    grid-template-columns: 1fr;
   }
 
   .admin-page .stat-card {

@@ -94,6 +94,13 @@ function assertPathList(paths) {
   return paths.map(normalizeUserKey);
 }
 
+function estimatePathList(paths) {
+  if (!Array.isArray(paths) || paths.length === 0 || paths.length > 100) {
+    throw new Error('Invalid paths');
+  }
+  return paths.map(normalizeUserKey);
+}
+
 async function keyExists(env, key) {
   if (await env.R2_BUCKET.head(key)) return true;
   const listed = await env.R2_BUCKET.list({ prefix: key + '/', limit: 1 });
@@ -237,6 +244,41 @@ export async function handleBatchDelete(env, request) {
   }
   await addLog(env, request, 'DELETE', `Move to trash ${completed}/${normalizedPaths.length} items`);
   return jsonResponse({ success: failed.length === 0, completed, failed }, failed.length && !completed ? 400 : 200);
+}
+
+export async function handleOperationEstimate(env, request) {
+  const { paths } = await request.json();
+  const normalizedPaths = estimatePathList(paths);
+  const items = [];
+  let totalObjects = 0;
+  let truncated = false;
+
+  for (const key of normalizedPaths) {
+    assertUserKey(key);
+    const exact = await env.R2_BUCKET.head(key);
+    const listed = await listR2Objects(env.R2_BUCKET, { prefix: key + '/' }, { maxObjects: 1001 });
+    const childCount = (listed.objects || []).length;
+    const isFolder = childCount > 0;
+    const exists = Boolean(exact || isFolder);
+    const objectCount = (exact ? 1 : 0) + childCount;
+    totalObjects += objectCount;
+    truncated = truncated || Boolean(listed.truncated);
+    items.push({
+      path: key,
+      exists,
+      kind: isFolder ? 'folder' : 'file',
+      objectCount,
+      truncated: Boolean(listed.truncated),
+    });
+  }
+
+  return jsonResponse({
+    success: true,
+    items,
+    totalObjects,
+    truncated,
+    large: truncated || totalObjects > 500,
+  });
 }
 
 export async function handleMkdir(env, request, r2Key) {

@@ -12,7 +12,7 @@
     <main class="container">
         <header class="header-card mt-4">
             <div class="flex items-center gap-3">
-                <span class="brand-mark brand-mark-header" aria-hidden="true"><svg class="brand-icon-svg" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                <span class="brand-mark brand-mark-header" aria-hidden="true">⚙️</span>
                 <h1 class="font-bold text-slate-900 tracking-tight text-lg">管理控制台</h1>
             </div>
             <a href="/" class="btn text-slate-900">返回云盘</a>
@@ -42,6 +42,13 @@
                     </div>
                 </div>
                 <div id="storageWarnings" class="storage-warnings hidden mb-5"></div>
+                <section class="health-panel bg-surface-soft border border-border rounded-2xl p-5 mb-5">
+                    <div class="flex items-center justify-between gap-3 mb-4">
+                        <h2 class="font-bold">环境检查</h2>
+                        <button class="btn h-8 px-3" data-admin-action="refresh-health">刷新</button>
+                    </div>
+                    <div id="healthGrid" class="health-grid"></div>
+                </section>
                 <div class="overview-panels-grid grid grid-cols-1 xl:grid-cols-2 gap-5 flex-1 min-h-0">
                     <section class="bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
                         <div class="flex items-center justify-between mb-4">

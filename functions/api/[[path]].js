@@ -1,6 +1,6 @@
 import { ensureCoreTables, jsonResponse } from './lib/common.js';
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
-import { handleAdminLogs, handleHiddenSettings, handleAdminStats } from './lib/admin.js';
+import { handleAdminHealth, handleAdminLogs, handleHiddenSettings, handleAdminStats } from './lib/admin.js';
 import {
   loadProtectedPaths,
   handleProtectedSettings,
@@ -11,6 +11,7 @@ import {
   handlePaste,
   handleRename,
   handleBatchDelete,
+  handleOperationEstimate,
   handleMkdir,
   handleUpload,
   handleMultipartCreate,
@@ -37,6 +38,7 @@ const csrfProtectedRoutes = [
   ['/api/paste', ['POST']],
   ['/api/files', ['POST', 'PUT']],
   ['/api/batch-delete', ['POST']],
+  ['/api/operation-estimate', ['POST']],
   ['/api/trash/restore', ['POST']],
   ['/api/trash/delete', ['DELETE']],
   ['/api/trash/clear', ['DELETE']],
@@ -90,12 +92,14 @@ export async function onRequest(context) {
     if (isAdmin(auth)) {
       if (path === '/api/admin/logs') return await handleAdminLogs(env, url);
       if (path === '/api/admin/stats') return await handleAdminStats(env);
+      if (path === '/api/admin/health') return await handleAdminHealth(env);
       if (path === '/api/admin/settings/hidden') return await handleHiddenSettings(env, request, method, url, hiddenPaths);
       if (path === '/api/admin/settings/protected') return await handleProtectedSettings(env, request, method, url);
       if (path === '/api/admin/settings/trash-retention') return await handleTrashRetention(env, request, method);
       if (path === '/api/paste' && method === 'POST') return await handlePaste(env, request);
       if (path.startsWith('/api/files/') && method === 'PUT') return await handleRename(env, request, r2Key);
       if (path === '/api/batch-delete') return await handleBatchDelete(env, request);
+      if (path === '/api/operation-estimate' && method === 'POST') return await handleOperationEstimate(env, request);
       if (path === '/api/trash' && method === 'GET') return await handleTrashList(env, url);
       if (path === '/api/trash/restore' && method === 'POST') return await handleTrashRestore(env, request);
       if (path === '/api/trash/delete' && method === 'DELETE') return await handleTrashDelete(env, request);

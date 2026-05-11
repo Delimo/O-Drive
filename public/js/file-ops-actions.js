@@ -20,6 +20,23 @@ function confirmDanger(title, paths = [], extra = '') {
   return confirm(parts.join('\n\n'));
 }
 
+async function operationEstimateText(paths = []) {
+  try {
+    const { res, data } = await api.operationEstimate(paths);
+    if (!res.ok || !data?.success) return '';
+    const folderCount = (data.items || []).filter(item => item.kind === 'folder').length;
+    const missingCount = (data.items || []).filter(item => !item.exists).length;
+    const lines = [`预计涉及 ${data.totalObjects || 0} 个存储对象。`];
+    if (folderCount) lines.push(`其中包含 ${folderCount} 个文件夹或目录树。`);
+    if (missingCount) lines.push(`${missingCount} 项可能已不存在。`);
+    if (data.truncated) lines.push('部分目录超过预估扫描上限，实际数量可能更多。');
+    if (data.large) lines.push('这是较大的操作，建议确认路径无误，必要时分批处理。');
+    return lines.join('\n');
+  } catch (_) {
+    return '';
+  }
+}
+
 function readableError(res, data, fallback = '操作失败') {
   const message = data?.failed?.[0]?.message || data?.message || '';
   if (res?.status === 401) return '登录状态已失效，请重新登录后再试。';
@@ -70,6 +87,12 @@ export const FileOpsActions = {
 
   async executePaste() {
     if (!state.clipboard) return;
+    const estimate = await operationEstimateText(state.clipboard.paths);
+    if (estimate && !confirmDanger(
+      `确认${state.clipboard.action === 'move' ? '移动' : '复制'} ${state.clipboard.paths.length} 项到当前目录？`,
+      state.clipboard.paths,
+      estimate
+    )) return;
     Message.show('正在处理...');
     const { res, data } = await api.paste({ ...state.clipboard, targetDir: state.currentPath });
     if (res.ok && data?.success !== false) {
@@ -86,10 +109,11 @@ export const FileOpsActions = {
   },
 
   async batchDelete() {
+    const estimate = await operationEstimateText(state.selectedPaths);
     if (!confirmDanger(
       `确认将选中的 ${state.selectedPaths.length} 项移入回收站？`,
       state.selectedPaths,
-      '这些项目不会立即彻底删除，可以在回收站恢复。'
+      ['这些项目不会立即彻底删除，可以在回收站恢复。', estimate].filter(Boolean).join('\n')
     )) return;
     const { res, data } = await api.batchDelete(state.selectedPaths);
     if (res.ok && data?.success !== false) {
@@ -309,6 +333,13 @@ export const FileOpsActions = {
     const save = async () => {
       const newName = input.value.trim();
       if (newName && newName !== oldName) {
+        if (!item.sizeFormatted) {
+          const estimate = await operationEstimateText([item.fullKey]);
+          if (estimate && !confirmDanger('确认重命名这个文件夹？', [item.fullKey], estimate)) {
+            this.loadFiles();
+            return;
+          }
+        }
         const { res, data } = await api.renameFile(item.fullKey, newName);
         if (res.ok) Message.success('已完成');
         else Message.error(readableError(res, data, '重命名失败'));
