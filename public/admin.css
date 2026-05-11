@@ -41,6 +41,10 @@ body.admin-page {
   min-height: 0;
 }
 
+.admin-page .health-tab {
+  min-height: 0;
+}
+
 .admin-page .overview-stats-grid {
   align-items: stretch;
 }

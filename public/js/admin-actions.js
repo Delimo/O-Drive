@@ -4,13 +4,14 @@ import { escapeHtml } from './utils.js';
 
 export const AdminActions = {
   switchTab(id) {
-    ['overview', 'logs', 'privacy', 'protected'].forEach(tab => {
+    ['overview', 'health', 'logs', 'privacy', 'protected'].forEach(tab => {
       document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', id !== tab);
       document.getElementById(`btn-${tab}`)?.classList.toggle('is-active', id === tab);
     });
     adminState.activeTab = id;
 
     if (id === 'overview') return this.loadStats();
+    if (id === 'health') return this.loadHealth();
     if (id === 'logs') return this.loadLogs();
     if (id === 'privacy') return this.loadHidden();
     return this.loadProtected();
@@ -27,7 +28,6 @@ export const AdminActions = {
     `;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
     this.renderStorageWarnings(data);
-    await this.loadHealth();
 
     const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
     const breakdown = Object.entries(data.breakdown || {});
