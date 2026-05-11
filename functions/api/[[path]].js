@@ -1,4 +1,4 @@
-import { jsonResponse } from './lib/common.js';
+import { ensureCoreTables, jsonResponse } from './lib/common.js';
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
 import { handleAdminLogs, handleHiddenSettings, handleAdminStats } from './lib/admin.js';
 import {
@@ -61,6 +61,8 @@ export async function onRequest(context) {
   const method = request.method;
 
   try {
+    await ensureCoreTables(env);
+
     if (path === '/api/login' && method === 'POST') return await handleLogin(request, env);
     if (path === '/api/logout') return handleLogout(request);
 
@@ -115,6 +117,8 @@ export async function onRequest(context) {
 
     return jsonResponse({ message: 'Not Found' }, 404);
   } catch (err) {
-    return jsonResponse({ success: false, message: err.message }, err.status || 500);
+    const status = Number(err.status || 500);
+    const message = status >= 500 ? 'Internal Server Error' : err.message;
+    return jsonResponse({ success: false, message }, status);
   }
 }

@@ -288,6 +288,27 @@ test('search returns cursor for loading more results', async () => {
   assert.equal(secondData.nextCursor, '');
 });
 
+test('search stops at scan limit and returns cursor for continuing sparse matches', async () => {
+  const env = makeEnv({
+    listPageSize: 1,
+    objects: [
+      { key: 'docs/first.txt', size: 5, uploaded: new Date('2026-01-01') },
+      { key: 'docs/target.txt', size: 6, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const first = await handleSearch(env, new Request('https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1'), new URL('https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1'), [], { role: 'guest' }, []);
+  const firstData = await first.json();
+  assert.deepEqual(firstData.files, []);
+  assert.equal(firstData.nextCursor, '1');
+  assert.equal(firstData.scanLimitReached, true);
+
+  const second = await handleSearch(env, new Request('https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1&cursor=1'), new URL('https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1&cursor=1'), [], { role: 'guest' }, []);
+  const secondData = await second.json();
+  assert.deepEqual(secondData.files.map(file => file.fullKey), ['docs/target.txt']);
+  assert.equal(secondData.nextCursor, '');
+});
+
 test('preview response streams existing object, supports range, and 404s missing object', async () => {
   const env = makeEnv({
     objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
@@ -500,6 +521,26 @@ test('batch delete reports partial failures', async () => {
   assert.equal(data.success, false);
   assert.equal(data.completed, 1);
   assert.equal(data.failed.length, 1);
+});
+
+test('batch delete reports oversized folders instead of silently truncating', async () => {
+  const objects = Array.from({ length: 10001 }, (_, index) => ({
+    key: `docs/file-${index}.txt`,
+    body: 'x',
+    size: 1,
+    uploaded: new Date('2026-01-01'),
+  }));
+  const env = makeEnv({ objects, listPageSize: 10000 });
+
+  const res = await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+  assert.equal(res.status, 400);
+  assert.equal(data.success, false);
+  assert.match(data.failed[0].message, /too large/);
 });
 
 test('rename refuses to overwrite existing targets', async () => {

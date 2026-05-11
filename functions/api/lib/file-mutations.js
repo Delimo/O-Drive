@@ -1,4 +1,4 @@
-import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects } from './common.js';
+import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
 
 const TRASH_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS trash (
@@ -32,12 +32,14 @@ async function mapWithConcurrency(items, limit, worker) {
 
 async function copyTree(env, sourceKey, targetKey, request, move = false) {
   const obj = await env.R2_BUCKET.get(sourceKey);
+  const listed = await listR2Objects(env.R2_BUCKET, { prefix: sourceKey + '/' });
+  assertCompleteListing(listed, `Path ${sourceKey}`);
+
   if (obj) {
     await env.R2_BUCKET.put(targetKey, obj.body, { httpMetadata: obj.httpMetadata });
     if (move) await env.R2_BUCKET.delete(sourceKey);
   }
 
-  const listed = await listR2Objects(env.R2_BUCKET, { prefix: sourceKey + '/' });
   await mapWithConcurrency(listed.objects, 6, async item => {
     const nextKey = targetKey + item.key.slice(sourceKey.length);
     const subObj = await env.R2_BUCKET.get(item.key);
@@ -140,6 +142,7 @@ async function copyR2Object(env, sourceKey, targetKey) {
 async function softDeleteTree(env, sourceKey, request) {
   const exact = await env.R2_BUCKET.get(sourceKey);
   const listed = await listR2Objects(env.R2_BUCKET, { prefix: sourceKey + '/' });
+  assertCompleteListing(listed, `Path ${sourceKey}`);
   const entries = [];
 
   if (exact) entries.push({ key: sourceKey, size: exact.size || 0 });
@@ -353,6 +356,7 @@ async function trashRows(env, where = '', params = []) {
 
 async function restoreTrashRecord(env, row, request) {
   const listed = await listR2Objects(env.R2_BUCKET, { prefix: row.trash_key });
+  assertCompleteListing(listed, `Trash item ${row.id}`);
   if (await keyExists(env, row.original_key)) {
     const err = new Error('Target already exists');
     err.status = 409;
@@ -374,6 +378,7 @@ async function restoreTrashRecord(env, row, request) {
 
 async function purgeTrashRecord(env, row, request) {
   const listed = await listR2Objects(env.R2_BUCKET, { prefix: row.trash_key });
+  assertCompleteListing(listed, `Trash item ${row.id}`);
   await mapWithConcurrency(listed.objects || [], 8, item => env.R2_BUCKET.delete(item.key));
   await env.DB.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
   await addLog(env, request, 'PURGE', row.original_key);

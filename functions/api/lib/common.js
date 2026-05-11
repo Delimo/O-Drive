@@ -1,6 +1,40 @@
 export const jsonResponse = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
+const CORE_TABLE_SQL = [
+  `CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    details TEXT,
+    ip TEXT,
+    timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS login_attempts (
+    ip TEXT PRIMARY KEY,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_attempt INTEGER NOT NULL DEFAULT 0
+  )`,
+];
+const initializedCoreTables = new WeakSet();
+
+async function runStatement(statement) {
+  if (typeof statement.bind === 'function') return statement.bind().run();
+  return statement.run();
+}
+
+export async function ensureCoreTables(env) {
+  if (!env?.DB) return;
+  if (initializedCoreTables.has(env)) return;
+  for (const sql of CORE_TABLE_SQL) {
+    await runStatement(env.DB.prepare(sql));
+  }
+  initializedCoreTables.add(env);
+}
+
 export function formatBytes(bytes, decimals = 2) {
   if (!+bytes) return '0 B';
   const k = 1024;
@@ -57,8 +91,16 @@ export function isTrashKey(key) {
 }
 
 export async function addLog(env, request, action, details) {
+  await ensureCoreTables(env);
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
   try { await env.DB.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, details, ip).run(); } catch (e) {}
+}
+
+export function assertCompleteListing(listed, details = 'Object listing') {
+  if (!listed?.truncated) return;
+  const err = new Error(`${details} is too large to process in one request`);
+  err.status = 413;
+  throw err;
 }
 
 export async function listR2Objects(bucket, options = {}, { maxObjects = 10000 } = {}) {

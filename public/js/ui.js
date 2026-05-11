@@ -2,64 +2,7 @@
 import { api } from './api.js';
 import { escapeHtml, Utils } from './utils.js';
 import { getOrderedEntries } from './file-view-model.js';
-
-const typeFilters = {
-  all: () => true,
-  folder: item => !item.sizeFormatted,
-  file: item => Boolean(item.sizeFormatted),
-  image: item => Utils.getFileKind(item.name) === 'image',
-  video: item => Utils.getFileKind(item.name) === 'video',
-  audio: item => Utils.getFileKind(item.name) === 'audio',
-  text: item => Utils.getFileKind(item.name) === 'text',
-  pdf: item => Utils.getFileKind(item.name) === 'pdf',
-  archive: item => Utils.getFileKind(item.name) === 'archive',
-};
-
-function parseSizeInput(value) {
-  if (value === '' || value == null) return null;
-  const num = Number(value);
-  return Number.isFinite(num) && num >= 0 ? num * 1024 : null;
-}
-
-function matchesFilters(item) {
-  const f = state.filters || {};
-  const kind = f.kind || 'all';
-  if (typeFilters[kind] && !typeFilters[kind](item)) return false;
-
-  const size = item.rawSize || 0;
-  const minSize = parseSizeInput(f.minSize);
-  const maxSize = parseSizeInput(f.maxSize);
-  if (minSize != null && size < minSize) return false;
-  if (maxSize != null && size > maxSize) return false;
-
-  const time = item.time || 0;
-  if (f.modifiedAfter) {
-    const after = new Date(`${f.modifiedAfter}T00:00:00`).getTime();
-    if (time < after) return false;
-  }
-  if (f.modifiedBefore) {
-    const before = new Date(`${f.modifiedBefore}T23:59:59`).getTime();
-    if (time > before) return false;
-  }
-
-  return true;
-}
-
-function describeItem(item) {
-    const kind = !item.sizeFormatted ? '文件夹' : {
-      image: '图片',
-      video: '视频',
-      audio: '音频',
-      text: '文本',
-      pdf: 'PDF',
-      archive: '压缩包',
-      exe: '程序',
-    }[Utils.getFileKind(item.name)] || '文件';
-  return {
-    ...item,
-    kind,
-  };
-}
+import { describeItem, matchesFilters } from './filters.js';
 
 export const Message = {
   show(msg, type = 'info') {
@@ -295,7 +238,7 @@ export const UI = {
       container.appendChild(div);
     }
 
-    const visibleEntries = getOrderedEntries(state.fileData, state.sortBy).filter(matchesFilters);
+    const visibleEntries = getOrderedEntries(state.fileData, state.sortBy).filter(item => matchesFilters(item, state.filters));
     state.visibleKeys = visibleEntries.map(item => item.fullKey);
     visibleEntries.forEach(item => {
       const isFolder = !item.sizeFormatted;

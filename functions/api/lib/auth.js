@@ -1,4 +1,4 @@
-import { jsonResponse, base64UrlToUint8Array, decodeBase64UrlJson, encodeBase64Url } from './common.js';
+import { jsonResponse, base64UrlToUint8Array, decodeBase64UrlJson, encodeBase64Url, ensureCoreTables } from './common.js';
 
 function createCsrfToken() {
   const bytes = new Uint8Array(24);
@@ -50,6 +50,7 @@ export async function verifyAuth(request, env) {
 }
 
 export async function handleLogin(request, env) {
+  await ensureCoreTables(env);
   const { username, password } = await request.json();
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
   try {
