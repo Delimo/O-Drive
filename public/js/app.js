@@ -18,8 +18,12 @@ function readArgs(el) {
 
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
-  if (!target) return;
+  if (!target) {
+    UI.closeUploadMenu();
+    return;
+  }
   if (target.id === 'previewModal' && event.target !== target) return;
+  if (!target.closest('.upload-menu-wrap')) UI.closeUploadMenu();
   const action = target.dataset.action;
   const args = readArgs(target);
   switch (action) {
@@ -31,8 +35,13 @@ document.addEventListener('click', event => {
     case 'close-upload-manager': return UI.closeUploadManager();
     case 'close-mobile-actions': return UI.closeMobileActions();
     case 'toggle-mobile-actions': return UI.toggleMobileActions();
-    case 'open-file-input': return document.getElementById('fileInput')?.click();
-    case 'open-folder-input': return document.getElementById('folderInput')?.click();
+    case 'toggle-upload-menu': return UI.toggleUploadMenu(target.closest('.upload-menu-wrap'));
+    case 'open-file-input':
+      UI.closeUploadMenu();
+      return document.getElementById('fileInput')?.click();
+    case 'open-folder-input':
+      UI.closeUploadMenu();
+      return document.getElementById('folderInput')?.click();
     case 'toggle-view': return Actions.toggleViewMode();
     case 'toggle-sort': return Actions.toggleSortMode();
     case 'search': return Actions.handleSearch();

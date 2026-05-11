@@ -65,6 +65,21 @@ export const UI = {
     document.getElementById('mobileActionBackdrop')?.classList.remove('is-open');
   },
 
+  toggleUploadMenu(wrap) {
+    if (!wrap) return;
+    const menu = wrap.querySelector('.upload-menu');
+    if (!menu) return;
+    const willOpen = menu.classList.contains('hidden');
+    this.closeUploadMenu();
+    menu.classList.toggle('hidden', !willOpen);
+  },
+
+  closeUploadMenu() {
+    document.querySelectorAll('.upload-menu').forEach(menu => {
+      menu.classList.add('hidden');
+    });
+  },
+
   openDrawer(id) {
     const el = document.getElementById(id);
     if (!el) return;

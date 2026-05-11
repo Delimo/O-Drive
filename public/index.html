@@ -62,8 +62,13 @@
                     <button id="pasteBtn" class="btn btn-primary font-bold" data-action="execute-paste">粘贴</button>
                     <button id="cancelPasteBtn" class="btn" data-action="clear-clipboard">取消</button>
                 </div>
-                <button class="btn admin-only" data-action="open-file-input" hidden>上传</button>
-                <button class="btn admin-only" data-action="open-folder-input" hidden>上传文件夹</button>
+                <div class="upload-menu-wrap admin-only" hidden>
+                    <button class="btn" data-action="toggle-upload-menu">上传</button>
+                    <div class="upload-menu hidden">
+                        <button class="upload-menu-item" data-action="open-file-input">文件</button>
+                        <button class="upload-menu-item" data-action="open-folder-input">文件夹</button>
+                    </div>
+                </div>
                 <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
                 <div class="hidden sm:flex items-center gap-2">
                     <button id="sortBtn" class="btn" data-action="toggle-sort">名称</button>
@@ -99,8 +104,13 @@
     </div>
     <div id="mobileActionSheet" class="mobile-action-sheet">
         <div class="mobile-action-group">
-            <button class="mobile-action-btn admin-only" data-action="open-file-input" hidden>上传</button>
-            <button class="mobile-action-btn admin-only" data-action="open-folder-input" hidden>上传文件夹</button>
+            <div class="upload-menu-wrap admin-only" hidden>
+                <button class="mobile-action-btn" data-action="toggle-upload-menu">上传</button>
+                <div class="upload-menu mobile-upload-menu hidden">
+                    <button class="upload-menu-item" data-action="open-file-input">文件</button>
+                    <button class="upload-menu-item" data-action="open-folder-input">文件夹</button>
+                </div>
+            </div>
             <button class="mobile-action-btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
         </div>
         <div class="mobile-action-group" id="mobileBatchGroup">
