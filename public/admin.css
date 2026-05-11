@@ -72,15 +72,19 @@ body.admin-page {
   min-width: 0;
 }
 
+.admin-page .breakdown-grid,
 .admin-page .latest-grid {
   gap: 8px;
 }
 
+.admin-page .breakdown-grid > div,
 .admin-page .latest-item {
-  min-height: 88px;
+  height: 88px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: 12px 20px;
+  overflow: hidden;
 }
 
 .admin-page .latest-item-name {
