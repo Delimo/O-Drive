@@ -137,7 +137,7 @@ export const AdminActions = {
     const { data } = await api.hiddenPaths();
     document.getElementById('hiddenTbody').innerHTML = (data?.list || []).map(i => {
       const path = escapeHtml(i.path);
-      return `<tr class="hover:bg-slate-50 transition-colors"><td class="px-4 py-4 font-mono text-primary">${path}</td><td class="px-4 py-4 text-right"><button class="px-3 py-1 bg-rose-50 text-rose-600 border border-rose-200 rounded-full hover:bg-rose-500 hover:text-white text-xs transition-all font-bold" data-admin-action="remove-hidden" data-args='${escapeHtml(JSON.stringify([i.path]))}'>取消屏蔽</button></td></tr>`;
+      return `<tr class="hover:bg-slate-50 transition-colors"><td class="px-4 py-4 font-mono text-primary">${path}</td><td class="px-4 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-hidden" data-args='${escapeHtml(JSON.stringify([i.path]))}'>取消屏蔽</button></td></tr>`;
     }).join('');
   },
 
@@ -161,7 +161,7 @@ export const AdminActions = {
     document.getElementById('protectedTbody').innerHTML = (data?.list || []).map(i => {
       const path = escapeHtml(i.path);
       const note = escapeHtml(i.note || '');
-      return `<tr class="hover:bg-slate-50 transition-colors"><td class="px-4 py-4 font-mono text-primary">${path}</td><td class="px-4 py-4">${i.show_name ? '显示' : '隐藏'}</td><td class="px-4 py-4 text-slate-500">${note}</td><td class="px-4 py-4 text-right"><button class="px-3 py-1 bg-rose-50 text-rose-600 border border-rose-200 rounded-full hover:bg-rose-500 hover:text-white text-xs transition-all font-bold" data-admin-action="remove-protected" data-args='${escapeHtml(JSON.stringify([i.path]))}'>删除</button></td></tr>`;
+      return `<tr class="hover:bg-slate-50 transition-colors"><td class="px-4 py-4 font-mono text-primary">${path}</td><td class="px-4 py-4">${i.show_name ? '显示' : '隐藏'}</td><td class="px-4 py-4 text-slate-500">${note}</td><td class="px-4 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-protected" data-args='${escapeHtml(JSON.stringify([i.path]))}'>删除</button></td></tr>`;
     }).join('');
   },
 
