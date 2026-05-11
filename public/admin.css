@@ -72,6 +72,35 @@ body.admin-page {
   min-width: 0;
 }
 
+.admin-page .latest-grid {
+  gap: 8px;
+}
+
+.admin-page .latest-item {
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.admin-page .latest-item-name {
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-page .latest-item-meta {
+  min-width: 0;
+}
+
+.admin-page .latest-item-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .admin-page .admin-log-details {
   overflow-wrap: anywhere;
   word-break: normal;

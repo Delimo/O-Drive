@@ -46,9 +46,9 @@ export const AdminActions = {
     }).join('');
 
     document.getElementById('statsLatest').innerHTML = (data.latest || []).slice(0, 7).map(item => `
-      <div class="rounded-xl border border-border bg-background px-4 py-3">
-        <div class="font-mono break-all text-slate-700 leading-6" style="max-height: 3.2rem; overflow: hidden;">${escapeHtml(item.key)}</div>
-        <div class="mt-1 text-xs text-slate-500 flex items-center justify-between gap-3">
+      <div class="latest-item rounded-xl border border-border bg-background px-4 py-3">
+        <div class="latest-item-name font-mono text-slate-700">${escapeHtml(item.key)}</div>
+        <div class="latest-item-meta mt-1 text-xs text-slate-500 flex items-center justify-between gap-3">
           <span>${escapeHtml(item.sizeFormatted || '0 B')}</span>
           <span>${escapeHtml(item.uploaded ? new Date(item.uploaded).toLocaleString('zh-CN', { hour12: false }) : '-')}</span>
         </div>
