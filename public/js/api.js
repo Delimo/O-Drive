@@ -91,6 +91,9 @@ export const api = {
   download(path) { return apiFileUrl('/api/download', path); },
   adminLogs(page, size) { return requestJson(`/api/admin/logs?page=${page}&size=${size}`); },
   adminStats() { return requestJson('/api/admin/stats'); },
+  rebuildIndex() {
+    return requestJson('/api/admin/index/rebuild', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({}) });
+  },
   adminHealth() { return requestJson('/api/admin/health'); },
   hiddenPaths() { return requestJson('/api/admin/settings/hidden'); },
   addHiddenPath(targetPath) {

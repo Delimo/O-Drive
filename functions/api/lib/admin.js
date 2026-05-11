@@ -1,5 +1,5 @@
 import { jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
-import { getIndexedStats, indexedFileCount, indexedFileKind, syncFileIndexFromR2 } from './file-index.js';
+import { getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
 
 function fileKind(key) {
   return indexedFileKind(key);
@@ -133,6 +133,11 @@ export async function handleAdminHealth(env) {
     r2,
     env: envStatus,
   });
+}
+
+export async function handleAdminRebuildIndex(env) {
+  const result = await rebuildFileIndex(env);
+  return jsonResponse({ success: true, ...result });
 }
 
 export async function handleHiddenSettings(env, request, method, url, hiddenPaths) {

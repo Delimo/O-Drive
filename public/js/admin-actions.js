@@ -59,6 +59,25 @@ export const AdminActions = {
     `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
   },
 
+  async rebuildIndex() {
+    const button = document.getElementById('rebuildIndexBtn');
+    if (button) {
+      button.disabled = true;
+      button.textContent = '重建中...';
+    }
+    const { res, data } = await api.rebuildIndex();
+    if (!res.ok || data?.success === false) {
+      alert(data?.message || '重建索引失败');
+    } else {
+      alert(`索引已重建：同步 ${data.synced || 0} 个文件${data.truncated ? '，仍达到扫描上限' : ''}`);
+      await this.loadStats();
+    }
+    if (button) {
+      button.disabled = false;
+      button.textContent = '重建索引';
+    }
+  },
+
   healthItem(label, ok, detail = '') {
     return `
       <div class="health-item ${ok ? 'is-ok' : 'is-bad'}">

@@ -9,49 +9,106 @@ function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+let unlockCountdownTimer = null;
+
+function formatRetryAfter(seconds) {
+  const total = Math.max(1, Number(seconds || 0));
+  const minutes = Math.floor(total / 60);
+  const rest = total % 60;
+  return minutes ? `${minutes} 分 ${rest} 秒` : `${rest} 秒`;
+}
+
+function showUnlockCountdown(error, retryAfter) {
+  clearInterval(unlockCountdownTimer);
+  let remaining = Math.max(1, Number(retryAfter || 0));
+  const render = () => {
+    if (error) error.textContent = `密码错误次数过多，请 ${formatRetryAfter(remaining)} 后重试`;
+  };
+  render();
+  unlockCountdownTimer = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      clearInterval(unlockCountdownTimer);
+      if (error) error.textContent = '现在可以重新尝试';
+      return;
+    }
+    render();
+  }, 1000);
+}
+
+function appendHighlighted(target, line, query) {
+  if (!query) {
+    target.textContent = line || '\u00a0';
+    return;
+  }
+  const matcher = new RegExp(escapeRegExp(query), 'gi');
+  let lastIndex = 0;
+  let match;
+  while ((match = matcher.exec(line)) !== null) {
+    if (match.index > lastIndex) target.appendChild(document.createTextNode(line.slice(lastIndex, match.index)));
+    const mark = document.createElement('mark');
+    mark.className = 'preview-hit';
+    mark.textContent = match[0];
+    target.appendChild(mark);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < line.length) target.appendChild(document.createTextNode(line.slice(lastIndex)));
+  if (!target.childNodes.length) target.textContent = '\u00a0';
+}
+
 function buildTextPreviewShell(text) {
   const source = String(text || '').replace(/\r\n/g, '\n');
   const lines = source.split('\n');
   const shell = document.createElement('div');
   shell.className = 'preview-text-shell preview-text-viewer';
   shell.dataset.rawText = source;
-  shell.innerHTML = `
-    <div class="preview-text-toolbar">
-      <label class="preview-text-search-wrap">
-        <span>搜索</span>
-        <input type="search" class="preview-text-search" placeholder="在文本中查找">
-      </label>
-      <div class="preview-text-toolbar-actions">
-        <button type="button" class="btn preview-text-toggle">换行</button>
-        <button type="button" class="btn preview-text-copy">复制</button>
-      </div>
-    </div>
-    <div class="preview-text-body"></div>
-  `;
 
-  const body = shell.querySelector('.preview-text-body');
-  const search = shell.querySelector('.preview-text-search');
-  const toggle = shell.querySelector('.preview-text-toggle');
-  const copy = shell.querySelector('.preview-text-copy');
+  const toolbar = document.createElement('div');
+  toolbar.className = 'preview-text-toolbar';
+  const label = document.createElement('label');
+  label.className = 'preview-text-search-wrap';
+  const labelText = document.createElement('span');
+  labelText.textContent = '搜索';
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.className = 'preview-text-search';
+  search.placeholder = '在文本中查找';
+  label.append(labelText, search);
+
+  const actions = document.createElement('div');
+  actions.className = 'preview-text-toolbar-actions';
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'btn preview-text-toggle';
+  toggle.textContent = '换行';
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'btn preview-text-copy';
+  copy.textContent = '复制';
+  actions.append(toggle, copy);
+  toolbar.append(label, actions);
+
+  const body = document.createElement('div');
+  body.className = 'preview-text-body';
+  shell.append(toolbar, body);
   let wrap = true;
 
   const render = () => {
     const query = search.value.trim();
-    const matcher = query ? new RegExp(escapeRegExp(query), 'gi') : null;
     body.classList.toggle('is-nowrap', !wrap);
-    body.innerHTML = lines.map((line, index) => {
-      let safe = escapeHtml(line);
-      if (matcher) {
-        safe = safe.replace(matcher, match => `<mark class="preview-hit">${escapeHtml(match)}</mark>`);
-      }
-      if (!safe) safe = '&nbsp;';
-      return `
-        <div class="preview-line">
-          <span class="preview-line-no">${index + 1}</span>
-          <span class="preview-line-text">${safe}</span>
-        </div>
-      `;
-    }).join('');
+    body.replaceChildren();
+    lines.forEach((line, index) => {
+      const row = document.createElement('div');
+      row.className = 'preview-line';
+      const no = document.createElement('span');
+      no.className = 'preview-line-no';
+      no.textContent = String(index + 1);
+      const textEl = document.createElement('span');
+      textEl.className = 'preview-line-text';
+      appendHighlighted(textEl, line, query);
+      row.append(no, textEl);
+      body.appendChild(row);
+    });
   };
 
   search.addEventListener('input', render);
@@ -81,6 +138,7 @@ export const PreviewActions = {
     const error = document.getElementById('unlockError');
     if (label) label.textContent = `路径：${state.pendingUnlock.path}`;
     if (input) input.value = '';
+    clearInterval(unlockCountdownTimer);
     if (error) error.textContent = '';
     UI.showModal('unlockModal');
     setTimeout(() => input?.focus(), 30);
@@ -91,12 +149,16 @@ export const PreviewActions = {
     const input = document.getElementById('unlockPasswordInput');
     const error = document.getElementById('unlockError');
     if (!pending || !input) return;
-    const password = input.value;
-    const { res, data } = await api.unlockPath(pending.path, password);
+    const { res, data } = await api.unlockPath(pending.path, input.value);
     if (!res.ok) {
+      if (res.status === 429 && data?.retryAfter) {
+        showUnlockCountdown(error, data.retryAfter);
+        return;
+      }
       if (error) error.textContent = data?.message || '密码错误';
       return;
     }
+    clearInterval(unlockCountdownTimer);
     UI.closeModal('unlockModal');
     state.pendingUnlock = null;
     await pending.retry?.();
@@ -110,9 +172,7 @@ export const PreviewActions = {
       name = path.name || path.fullName || name;
       path = path.path || path.fullKey || path.key || '';
     }
-    if (!name && typeof path === 'string') {
-      name = path.split('/').pop() || '';
-    }
+    if (!name && typeof path === 'string') name = path.split('/').pop() || '';
     if (!path || !name) {
       Message.error('无法预览');
       return;
@@ -120,6 +180,7 @@ export const PreviewActions = {
     if (protectedItem && state.userRole !== 'admin') {
       return this.handlePasswordRequired({ path }, () => this.openPreview(path, name, false));
     }
+
     state.currentPreviewPath = path;
     state.currentPreviewText = '';
     state.isEditing = false;

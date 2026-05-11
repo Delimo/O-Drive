@@ -1,5 +1,6 @@
 import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
 import { deleteFileIndexKey, deleteFileIndexPrefix, upsertFileIndex } from './file-index.js';
+import { copyR2Object, copyTree, mapWithConcurrency } from './r2-tree.js';
 
 const TRASH_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS trash (
@@ -19,41 +20,6 @@ const SETTINGS_TABLE_SQL = `
     value TEXT NOT NULL
   )
 `;
-
-async function mapWithConcurrency(items, limit, worker) {
-  const queue = [...items];
-  const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
-    while (queue.length) {
-      const item = queue.shift();
-      await worker(item);
-    }
-  });
-  await Promise.all(workers);
-}
-
-async function copyTree(env, sourceKey, targetKey, request, move = false) {
-  const obj = await env.R2_BUCKET.get(sourceKey);
-  const listed = await listR2Objects(env.R2_BUCKET, { prefix: sourceKey + '/' });
-  assertCompleteListing(listed, `Path ${sourceKey}`);
-
-  if (obj) {
-    await env.R2_BUCKET.put(targetKey, obj.body, { httpMetadata: obj.httpMetadata });
-    await upsertFileIndex(env, targetKey, obj);
-    if (move) await env.R2_BUCKET.delete(sourceKey);
-    if (move) await deleteFileIndexKey(env, sourceKey);
-  }
-
-  await mapWithConcurrency(listed.objects, 6, async item => {
-    const nextKey = targetKey + item.key.slice(sourceKey.length);
-    const subObj = await env.R2_BUCKET.get(item.key);
-    if (subObj) {
-      await env.R2_BUCKET.put(nextKey, subObj.body, { httpMetadata: subObj.httpMetadata });
-      await upsertFileIndex(env, nextKey, subObj);
-      if (move) await env.R2_BUCKET.delete(item.key);
-      if (move) await deleteFileIndexKey(env, item.key);
-    }
-  });
-}
 
 async function ensureTrashTable(env) {
   const stmt = env.DB.prepare(TRASH_TABLE_SQL);
@@ -144,13 +110,6 @@ async function resolveUploadConflict(env, key, mode = 'error') {
   throw new Error('Unable to generate unique filename');
 }
 
-async function copyR2Object(env, sourceKey, targetKey) {
-  const obj = await env.R2_BUCKET.get(sourceKey);
-  if (!obj) return false;
-  await env.R2_BUCKET.put(targetKey, obj.body, { httpMetadata: obj.httpMetadata });
-  return true;
-}
-
 async function softDeleteTree(env, sourceKey, request) {
   const exact = await env.R2_BUCKET.get(sourceKey);
   const listed = await listR2Objects(env.R2_BUCKET, { prefix: sourceKey + '/' });
@@ -208,7 +167,7 @@ export async function handlePaste(env, request) {
       if (srcKey === destKey) continue;
       if (!(await keyExists(env, srcKey))) throw new Error('File or folder not found');
       await assertTargetAvailable(env, destKey);
-      await copyTree(env, srcKey, destKey, request, action === 'move');
+      await copyTree(env, srcKey, destKey, action === 'move');
       completed++;
     } catch (e) {
       failed.push({ path: srcKey, message: e.message || 'Failed' });
@@ -229,7 +188,7 @@ export async function handleRename(env, request, r2Key) {
   assertUserKey(newKey);
   if (r2Key === newKey) return jsonResponse({ success: true });
   if (r2Key !== newKey) await assertTargetAvailable(env, newKey);
-  await copyTree(env, r2Key, newKey, request, true);
+  await copyTree(env, r2Key, newKey, true);
   await addLog(env, request, 'RENAME', `${r2Key} -> ${cleanName}`);
   return jsonResponse({ success: true });
 }

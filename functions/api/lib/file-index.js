@@ -118,6 +118,14 @@ export async function syncFileIndexFromR2(env, { maxObjects = 20000 } = {}) {
   return { synced, truncated: Boolean(listed.truncated) };
 }
 
+export async function rebuildFileIndex(env, { maxObjects = 50000 } = {}) {
+  if (!(await ensureFileIndexTable(env))) return { synced: 0, truncated: false };
+  try {
+    await env.DB.prepare('DELETE FROM file_index').run();
+  } catch (_) {}
+  return syncFileIndexFromR2(env, { maxObjects });
+}
+
 export function mapIndexRow(row) {
   const size = Number(row.size || 0);
   const time = Number(row.uploaded_at || row.updated_at || 0);

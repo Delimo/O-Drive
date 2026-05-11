@@ -227,6 +227,9 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
                 if (fileIndexRows[i].path === path || fileIndexRows[i].path.startsWith(prefix)) fileIndexRows.splice(i, 1);
               }
             }
+            if (/DELETE FROM file_index$/i.test(sql.trim())) {
+              fileIndexRows.length = 0;
+            }
             return {};
           },
           async first() {
@@ -627,6 +630,37 @@ test('protected path unlock locks after repeated wrong passwords and clears on s
   assert.equal(success.status, 200);
 });
 
+test('protected path unlock lockout can be configured with env vars', async () => {
+  const env = makeEnv();
+  env.ADMIN_PASSWORD = 'admin-secret';
+  env.PATH_UNLOCK_MAX_ATTEMPTS = '2';
+  env.PATH_UNLOCK_LOCK_MINUTES = '1';
+
+  await handleProtectedSettings(env, new Request('https://example.com/api/admin/settings/protected', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/vault', password: '1234' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'POST', new URL('https://example.com/api/admin/settings/protected'));
+  const rules = await loadProtectedPaths(env);
+
+  for (let i = 0; i < 2; i++) {
+    const wrong = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+      method: 'POST',
+      body: JSON.stringify({ path: '/vault', password: 'bad' }),
+      headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.20' },
+    }), { role: 'guest' }, rules);
+    assert.equal(wrong.status, 403);
+  }
+
+  const locked = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/vault', password: '1234' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.20' },
+  }), { role: 'guest' }, rules);
+  assert.equal(locked.status, 429);
+  assert.ok(Number(locked.headers.get('Retry-After')) <= 60);
+});
+
 test('frontend file path helpers encode each path segment', () => {
   assert.equal(encodeR2Path('/中文/赤壁赋.txt'), '%E4%B8%AD%E6%96%87/%E8%B5%A4%E5%A3%81%E8%B5%8B.txt');
   assert.equal(apiFileUrl('/api/preview', '/中文/赤壁赋.txt'), '/api/preview/%E4%B8%AD%E6%96%87/%E8%B5%A4%E5%A3%81%E8%B5%8B.txt');
@@ -870,6 +904,43 @@ test('admin stats can summarize from file index', async () => {
   assert.equal(data.breakdown.image.count, 1);
   assert.equal(data.breakdown.text.count, 1);
   assert.deepEqual(data.latest.map(item => item.key), ['photos/a.jpg', 'docs/readme.md']);
+});
+
+test('route smoke: admin can rebuild file index', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-02') },
+      { key: '.trash/old.txt', body: 'x', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const rebuild = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/index/rebuild', {
+      method: 'POST',
+      body: JSON.stringify({}),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  const data = await rebuild.json();
+
+  assert.equal(rebuild.status, 200);
+  assert.equal(data.success, true);
+  assert.equal(data.synced, 1);
+  assert.equal(await indexedFileCount(env), 1);
 });
 
 test('admin health reports bindings and required env vars', async () => {
