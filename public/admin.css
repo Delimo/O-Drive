@@ -7,7 +7,16 @@ body.admin-page {
 .admin-page .container {
   flex: 1;
   min-height: 0;
-  padding: 16px 24px 0;
+  padding: 8px 24px 0;
+}
+
+.admin-page .header-card.mt-4 {
+  margin-top: 8px;
+}
+
+.admin-page .tab-shell.mt-4,
+.admin-page .explorer-card.mt-4 {
+  margin-top: 8px;
 }
 
 .admin-page .explorer-card {
@@ -93,8 +102,33 @@ body.admin-page {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 10px 20px;
+  padding: 8px 20px;
   overflow: hidden;
+}
+
+.admin-page .breakdown-grid > div {
+  gap: 8px;
+}
+
+.admin-page .breakdown-grid > div > div:first-child {
+  min-width: 0;
+}
+
+.admin-page .breakdown-grid > div > div:first-child span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-page .breakdown-grid > div > div:first-child strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.admin-page .breakdown-grid .h-2 {
+  height: 8px;
+  flex-shrink: 0;
 }
 
 .admin-page .latest-item-name {
@@ -102,10 +136,14 @@ body.admin-page {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .admin-page .latest-item-meta {
   min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .admin-page .latest-item-meta span {
@@ -128,7 +166,7 @@ body.admin-page {
 
 @media (max-width: 768px) {
   .admin-page .container {
-    padding: 12px 12px 0;
+    padding: 8px 12px 0;
   }
 
   .admin-page .header-card {
