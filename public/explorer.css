@@ -991,6 +991,7 @@ html, body {
 }
 
 .mobile-bottom-bar,
+.mobile-selection-bar,
 .mobile-action-sheet,
 .mobile-action-backdrop {
     display: none;
@@ -1209,6 +1210,48 @@ html, body {
         backdrop-filter: blur(14px);
     }
 
+    .mobile-selection-bar {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: 76px;
+        z-index: 270;
+        display: none;
+        grid-template-columns: minmax(0, 1fr) auto auto auto;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.14);
+        color: var(--text-main);
+        font-size: 13px;
+        font-weight: 800;
+        backdrop-filter: blur(14px);
+    }
+
+    .mobile-selection-bar.is-visible {
+        display: grid;
+    }
+
+    .mobile-selection-btn {
+        height: 34px;
+        padding: 0 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-main);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .mobile-selection-btn.primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+    }
+
     .mobile-bottom-btn,
     .mobile-action-btn {
         display: inline-flex;
@@ -1247,7 +1290,7 @@ html, body {
         position: fixed;
         left: 10px;
         right: 10px;
-        bottom: 76px;
+        bottom: 128px;
         z-index: 380;
         display: grid;
         grid-template-columns: 1fr;
@@ -1298,7 +1341,7 @@ html, body {
     .mobile-action-sheet {
         gap: 8px;
         padding: 8px;
-        bottom: 76px;
+        bottom: 128px;
     }
 
     .mobile-action-btn {

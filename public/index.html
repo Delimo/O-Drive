@@ -90,6 +90,12 @@
     </main>
 
     <div id="mobileActionBackdrop" class="mobile-action-backdrop" data-action="close-mobile-actions"></div>
+    <div id="mobileSelectionBar" class="mobile-selection-bar">
+        <span>已选 <strong id="mobileSelectedCount">0</strong> 项</span>
+        <button class="mobile-selection-btn" data-action="select-all">全选</button>
+        <button class="mobile-selection-btn" data-action="clear-selection">清除</button>
+        <button class="mobile-selection-btn primary" data-action="toggle-mobile-actions">操作</button>
+    </div>
     <div id="mobileActionSheet" class="mobile-action-sheet">
         <div class="mobile-action-group">
             <button class="mobile-action-btn admin-only" data-action="open-file-input" hidden>上传</button>

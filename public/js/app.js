@@ -36,6 +36,7 @@ document.addEventListener('click', event => {
     case 'toggle-sort': return Actions.toggleSortMode();
     case 'search': return Actions.handleSearch();
     case 'select-all': return Actions.toggleSelectAll();
+    case 'clear-selection': return Actions.clearSelection();
     case 'set-clipboard': return Actions.setClipboard(args[0]);
     case 'start-rename': return Actions.startRenameSelected();
     case 'batch-delete': return Actions.batchDelete();

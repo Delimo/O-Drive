@@ -7,6 +7,34 @@ import { UploadQueue } from './uploader.js';
 import { PreviewActions } from './preview-actions.js';
 import { describeItem } from './filters.js';
 
+function formatPathList(paths = [], limit = 8) {
+  const lines = paths.slice(0, limit).map(path => `- ${path}`);
+  if (paths.length > limit) lines.push(`- 另有 ${paths.length - limit} 项未显示`);
+  return lines.join('\n');
+}
+
+function confirmDanger(title, paths = [], extra = '') {
+  const parts = [title];
+  if (paths.length) parts.push(formatPathList(paths));
+  if (extra) parts.push(extra);
+  return confirm(parts.join('\n\n'));
+}
+
+function readableError(res, data, fallback = '操作失败') {
+  const message = data?.failed?.[0]?.message || data?.message || '';
+  if (res?.status === 401) return '登录状态已失效，请重新登录后再试。';
+  if (res?.status === 403) {
+    if (/csrf/i.test(message)) return '安全校验已过期，请刷新页面后重试。';
+    if (/reserved/i.test(message)) return '系统保留目录不能被修改。';
+    return '没有权限执行这个操作。';
+  }
+  if (res?.status === 409 || /already exists/i.test(message)) return '目标位置已有同名文件或文件夹，请重命名后再试。';
+  if (res?.status === 413 || /too large/i.test(message)) return '项目太大，无法在一次请求中完成，请分批处理。';
+  if (/not found/i.test(message)) return '文件或文件夹不存在，可能已被移动或删除。';
+  if (/invalid/i.test(message)) return '输入内容不合法，请检查名称或路径。';
+  return message || fallback;
+}
+
 export const FileOpsActions = {
   toggleSelect(key, el, e) {
     e.stopPropagation();
@@ -58,16 +86,20 @@ export const FileOpsActions = {
   },
 
   async batchDelete() {
-    if (!confirm(`确认删除选中的 ${state.selectedPaths.length} 项吗？`)) return;
+    if (!confirmDanger(
+      `确认将选中的 ${state.selectedPaths.length} 项移入回收站？`,
+      state.selectedPaths,
+      '这些项目不会立即彻底删除，可以在回收站恢复。'
+    )) return;
     const { res, data } = await api.batchDelete(state.selectedPaths);
     if (res.ok && data?.success !== false) {
-      Message.success('已删除');
+      Message.success('已移入回收站');
       this.loadFiles();
     } else if (res.ok && data?.completed > 0) {
-      Message.error(`已删除 ${data.completed} 项，失败 ${data.failed?.length || 0} 项`);
+      Message.error(`已处理 ${data.completed} 项，失败 ${data.failed?.length || 0} 项：${readableError(res, data)}`);
       this.loadFiles();
     } else {
-      Message.error(data?.failed?.[0]?.message || data?.message || '失败');
+      Message.error(readableError(res, data));
     }
   },
 
@@ -206,26 +238,36 @@ export const FileOpsActions = {
   },
 
   async purgeTrash(id) {
-    if (!confirm('确定彻底删除这条回收站记录吗？')) return;
-    const { res } = await api.deleteTrash(id);
+    const item = (state.trash.items || []).find(row => row.id === id);
+    if (!confirmDanger(
+      '确认彻底删除这条回收站记录？',
+      item?.original_key ? [item.original_key] : [],
+      '彻底删除后无法恢复。'
+    )) return;
+    const { res, data } = await api.deleteTrash(id);
     if (res.ok) {
-      Message.success('已删除');
+      Message.success('已彻底删除');
       await this.loadTrash();
       this.loadFiles();
     } else {
-      Message.error('删除失败');
+      Message.error(readableError(res, data, '删除失败'));
     }
   },
 
   async clearTrash() {
-    if (!confirm('确定清空回收站吗？此操作不可恢复。')) return;
+    const paths = (state.trash.items || []).map(item => item.original_key);
+    if (!confirmDanger(
+      `确认清空回收站当前可见的 ${paths.length} 项？`,
+      paths,
+      '清空后无法恢复。分页之外的记录也会被一并清理。'
+    )) return;
     const { res, data } = await api.clearTrash();
     if (res.ok) {
       Message.success(`已清空 ${data?.deleted || 0} 项`);
       await this.loadTrash(1);
       this.loadFiles();
     } else {
-      Message.error('清空失败');
+      Message.error(readableError(res, data, '清空失败'));
     }
   },
 
@@ -236,7 +278,7 @@ export const FileOpsActions = {
       await this.loadTrash(1);
       this.loadFiles();
     } else {
-      Message.error('清理失败');
+      Message.error(readableError(res, data, '清理失败'));
     }
   },
 
@@ -267,9 +309,9 @@ export const FileOpsActions = {
     const save = async () => {
       const newName = input.value.trim();
       if (newName && newName !== oldName) {
-        const { res } = await api.renameFile(item.fullKey, newName);
+        const { res, data } = await api.renameFile(item.fullKey, newName);
         if (res.ok) Message.success('已完成');
-        else Message.error('失败');
+        else Message.error(readableError(res, data, '重命名失败'));
       }
       this.loadFiles();
     };
@@ -283,7 +325,11 @@ export const FileOpsActions = {
   async submitMkdir() {
     const n = document.getElementById('folderNameInput').value.trim();
     if (!n) return;
-    await api.mkdir(state.currentPath, n);
+    const { res, data } = await api.mkdir(state.currentPath, n);
+    if (!res.ok) {
+      Message.error(readableError(res, data, '创建失败'));
+      return;
+    }
     document.getElementById('folderNameInput').value = '';
     UI.closeModal('mkdirModal');
     this.loadFiles();

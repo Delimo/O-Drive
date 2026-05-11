@@ -1,56 +1,95 @@
 # O-Drive
 
-一个部署在 Cloudflare Pages 上的文件管理项目。
+O-Drive 是一个部署在 Cloudflare Pages 上的轻量文件管理项目，使用 Cloudflare R2 存储文件，使用 D1 保存日志、回收站和访问控制配置。
 
 ## 功能
 
-- 游客浏览
-- 管理员登录
-- 文件预览与下载
-- 图片缩略图
-- 上传、新建、重命名、删除、移动、复制
-- 回收站恢复与彻底删除
-- 搜索筛选与文件详情面板
-- 批量选择与批量操作
-- 管理员专属上传，支持大文件分片、并发队列、暂停与取消
+- 游客浏览文件和文件夹
+- 管理员登录、上传、移动、复制、重命名、删除
+- 小文件普通上传，大文件自动分片上传
+- 图片缩略图、图片/视频/音频/PDF/文本/Markdown 预览
+- 文本文件在线编辑保存
+- 搜索、筛选、排序、详情面板
+- 批量选择和批量操作
+- 回收站恢复、彻底删除、清空、按保留天数清理
 - 隐藏路径管理
+- 路径访问密码管理
+- 管理控制台、操作日志、存储概览和风险提醒
+- 移动端浏览和管理员批量操作
 
-## 部署
+## 部署要求
 
-### 1. Cloudflare Pages
+需要准备：
+
+- Cloudflare Pages 项目
+- Cloudflare R2 Bucket
+- Cloudflare D1 数据库
+- Node.js，用于本地构建 Tailwind CSS
+
+Cloudflare Pages 配置：
 
 - Build command: `npm run build`
 - Build output directory: `public`
 - Functions directory: `functions`
 
-Tailwind 在构建时编译，不需要在本地额外安装构建工具。
+## 绑定资源
 
-### 2. 绑定资源
+在 Pages 项目的 Settings -> Functions -> Bindings 中添加：
 
-- `DB`：Cloudflare D1
-- `R2_BUCKET`：Cloudflare R2
+| 类型 | 变量名 | 说明 |
+| --- | --- | --- |
+| D1 database | `DB` | 保存日志、设置、回收站、登录限制 |
+| R2 bucket | `R2_BUCKET` | 保存实际文件内容 |
 
-### 3. 环境变量
+## 环境变量
 
-- `ADMIN_USERNAME`
-- `ADMIN_PASSWORD`
-- `ALLOW_GUEST`：可选，不填或设为 `true` 时允许游客浏览
+在 Pages 项目的 Settings -> Environment variables 中添加：
 
-### 4. 上传说明
+| 变量名 | 必填 | 说明 |
+| --- | --- | --- |
+| `ADMIN_USERNAME` | 是 | 管理员用户名 |
+| `ADMIN_PASSWORD` | 是 | 管理员密码，也用于签名登录会话 |
+| `ALLOW_GUEST` | 否 | 不填或设为 `true` 时允许游客访问；设为 `false` 时未登录无法访问 |
 
-- 上传仅对管理员开放，文件会进入当前所在目录
-- 小文件使用普通上传，大文件会自动切换为分片上传
-- 上传队列支持并发、暂停、继续和取消
+修改环境变量后需要重新部署。
 
-## 本地构建
+## 本地开发
 
 ```bash
 npm install
 npm run build
+npm test
 ```
+
+本项目的 API 依赖 Cloudflare Pages Functions、R2 和 D1，本地直接打开 `public/index.html` 只能查看静态页面，完整功能需要在 Cloudflare 环境或兼容的本地 Pages 开发环境中运行。
+
+## 首次部署检查
+
+部署后建议按顺序检查：
+
+1. 打开首页，确认游客模式是否符合预期。
+2. 点击登录，使用 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 登录。
+3. 上传一个小文件，确认 R2 写入正常。
+4. 新建文件夹并进入，确认路径操作正常。
+5. 删除测试文件，再到回收站恢复，确认 D1 表初始化正常。
+6. 打开 `/admin.html`，查看概览、日志、隐藏管理和访问密码页面。
+
+如果页面返回 500，优先检查 `DB` 和 `R2_BUCKET` 绑定是否存在。
+如果登录失败，检查环境变量是否部署到了当前 Pages 环境。
+如果管理操作提示安全校验过期，刷新页面后重新登录。
+
+## 管理建议
+
+- 大目录删除、移动、复制前先看确认框中的路径列表，超大目录建议分批处理。
+- 回收站会继续占用 R2 空间，建议在管理台设置保留天数并定期清理。
+- 管理台概览出现扫描上限提醒时，说明文件数量已经较多，后续可以考虑引入文件索引。
+- 隐藏路径只是不向游客展示；需要访问控制时请使用“访问密码”。
+- 不要把 `.trash`、`.thumbs`、`.meta`、`.system` 作为用户目录名，它们是系统保留前缀。
 
 ## 测试
 
 ```bash
 npm test
 ```
+
+测试覆盖列表、搜索、权限、预览、上传、回收站、隐藏路径和访问密码等核心流程。

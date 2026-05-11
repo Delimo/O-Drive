@@ -286,6 +286,12 @@ export const UI = {
 
       el.addEventListener('click', event => {
         if (event.target.closest('[data-action]')) return;
+        if (el.dataset.suppressClick === '1') {
+          delete el.dataset.suppressClick;
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         if (isFolder) {
           if (item.protected && state.userRole !== 'admin') {
             Actions.handlePasswordRequired({ path: item.path }, () => Actions.navigateTo(item.path));
@@ -296,6 +302,28 @@ export const UI = {
         }
         if (Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name, Boolean(item.protected));
       });
+      if (state.userRole === 'admin') {
+        let longPressTimer = null;
+        let longPressFired = false;
+        el.addEventListener('touchstart', event => {
+          if (event.target.closest('[data-action]')) return;
+          longPressFired = false;
+          longPressTimer = setTimeout(() => {
+            longPressFired = true;
+            el.dataset.suppressClick = '1';
+            Actions.toggleSelect(item.fullKey, el, event);
+          }, 450);
+        }, { passive: true });
+        ['touchend', 'touchcancel', 'touchmove'].forEach(type => {
+          el.addEventListener(type, event => {
+            clearTimeout(longPressTimer);
+            if (longPressFired) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          });
+        });
+      }
       container.appendChild(el);
     });
 
@@ -318,6 +346,8 @@ export const UI = {
     const mobileClipboard = document.getElementById('mobileClipboardGroup');
     const mobileRename = document.getElementById('mobileRenameBtn');
     const mobilePaste = document.getElementById('mobilePasteBtn');
+    const mobileSelectionBar = document.getElementById('mobileSelectionBar');
+    const mobileSelectedCount = document.getElementById('mobileSelectedCount');
     if (!bt || !pg) return;
 
     const hasSelection = state.userRole === 'admin' && state.selectedPaths.length > 0;
@@ -327,6 +357,8 @@ export const UI = {
     if (count) count.textContent = String(state.selectedPaths.length || 0);
     if (mobileBatch) mobileBatch.classList.toggle('is-visible', hasSelection);
     if (mobileBatch) mobileBatch.hidden = !hasSelection;
+    if (mobileSelectionBar) mobileSelectionBar.classList.toggle('is-visible', hasSelection);
+    if (mobileSelectedCount) mobileSelectedCount.textContent = String(state.selectedPaths.length || 0);
     if (mobileRename) {
       mobileRename.classList.toggle('is-visible', state.selectedPaths.length === 1);
       mobileRename.hidden = state.selectedPaths.length !== 1 || state.userRole !== 'admin';

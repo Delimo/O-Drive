@@ -26,6 +26,7 @@ export const AdminActions = {
       <span class="stat-trash-size text-sm font-semibold text-slate-500">${escapeHtml(data.trash?.sizeFormatted || '0 B')}</span>
     `;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
+    this.renderStorageWarnings(data);
 
     const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
     const breakdown = Object.entries(data.breakdown || {});
@@ -55,6 +56,53 @@ export const AdminActions = {
         </div>
       </div>
     `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
+  },
+
+  renderStorageWarnings(data) {
+    const box = document.getElementById('storageWarnings');
+    if (!box) return;
+    const warnings = [];
+    const fileCount = Number(data.files?.count || 0);
+    const totalSize = Number(data.files?.totalSize || 0);
+    const trashCount = Number(data.trash?.count || 0);
+    const trashSize = Number(data.trash?.size || 0);
+
+    if (data.files?.truncated) {
+      warnings.push({
+        level: 'warning',
+        title: '文件统计已达到扫描上限',
+        body: '概览最多扫描 20000 个对象，实际文件可能更多。建议分目录管理，或后续引入索引表。'
+      });
+    }
+    if (fileCount >= 15000) {
+      warnings.push({
+        level: 'info',
+        title: '文件数量较多',
+        body: `当前已统计 ${fileCount} 个文件，大目录复制、移动、删除时建议分批操作。`
+      });
+    }
+    if (trashCount >= 100 || trashSize > Math.max(totalSize * 0.2, 1024 * 1024 * 1024)) {
+      warnings.push({
+        level: 'warning',
+        title: '回收站占用偏高',
+        body: `回收站有 ${trashCount} 项，占用 ${data.trash?.sizeFormatted || '0 B'}，可以设置保留天数并清理过期项目。`
+      });
+    }
+    if (totalSize >= 50 * 1024 * 1024 * 1024) {
+      warnings.push({
+        level: 'info',
+        title: '存储体积较大',
+        body: '建议定期检查大文件和回收站，避免长期保留重复上传或临时文件。'
+      });
+    }
+
+    box.classList.toggle('hidden', warnings.length === 0);
+    box.innerHTML = warnings.map(item => `
+      <div class="storage-warning storage-warning-${item.level}">
+        <strong>${escapeHtml(item.title)}</strong>
+        <span>${escapeHtml(item.body)}</span>
+      </div>
+    `).join('');
   },
 
   async loadLogs() {
