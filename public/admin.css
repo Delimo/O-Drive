@@ -72,6 +72,11 @@ body.admin-page {
   min-width: 0;
 }
 
+.admin-page .admin-log-details {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
 @media (max-width: 1024px) {
   .admin-page .overview-panels-grid {
     grid-template-columns: 1fr;
@@ -147,8 +152,80 @@ body.admin-page {
     font-size: 24px;
   }
 
-  .admin-page .latest-grid > div:nth-child(n+4) {
-    display: none;
+  .admin-page #logs-tab {
+    overflow: visible;
+  }
+
+  .admin-page #logs-tab #fileList {
+    overflow-y: visible;
+  }
+
+  .admin-page #logs-tab table,
+  .admin-page #logs-tab thead,
+  .admin-page #logs-tab tbody,
+  .admin-page #logs-tab tr,
+  .admin-page #logs-tab td {
+    display: block;
+  }
+
+  .admin-page #logs-tab table {
+    border-collapse: separate;
+  }
+
+  .admin-page #logs-tab thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .admin-page .admin-log-row {
+    margin: 0 12px 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+  }
+
+  .admin-page .admin-log-row td {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 6px 0;
+    border: 0;
+    line-height: 1.5;
+  }
+
+  .admin-page .admin-log-row td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 11px;
+  }
+
+  .admin-page .admin-log-time,
+  .admin-page .admin-log-action,
+  .admin-page .admin-log-details,
+  .admin-page .admin-log-ip {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-page #logs-tab > .border-t {
+    margin-top: 2px;
+    padding: 12px;
+    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-page #logs-tab > .border-t > .flex {
+    justify-content: space-between;
   }
 }
 

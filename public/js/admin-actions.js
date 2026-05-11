@@ -45,7 +45,7 @@ export const AdminActions = {
       `;
     }).join('');
 
-    document.getElementById('statsLatest').innerHTML = (data.latest || []).slice(0, 4).map(item => `
+    document.getElementById('statsLatest').innerHTML = (data.latest || []).slice(0, 7).map(item => `
       <div class="rounded-xl border border-border bg-background px-4 py-3">
         <div class="font-mono break-all text-slate-700 leading-6" style="max-height: 3.2rem; overflow: hidden;">${escapeHtml(item.key)}</div>
         <div class="mt-1 text-xs text-slate-500 flex items-center justify-between gap-3">
@@ -65,7 +65,14 @@ export const AdminActions = {
     document.getElementById('logTbody').innerHTML = (data.logs || []).map(l => {
       const time = new Date(l.timestamp).toLocaleString('zh-CN', { hour12: false });
       const color = l.action === 'DELETE' ? 'text-red-400' : l.action === 'UPLOAD' ? 'text-emerald-400' : 'text-primary';
-      return `<tr class="hover:bg-slate-50 transition-colors"><td class="px-6 py-4 text-slate-500 font-mono">${escapeHtml(time)}</td><td class="px-6 py-4 font-bold ${color}">${escapeHtml(l.action)}</td><td class="px-6 py-4 text-slate-600 font-mono break-all">${escapeHtml(l.details || '')}</td><td class="px-6 py-4 text-slate-500 font-mono text-sm text-left">${escapeHtml(l.ip || '')}</td></tr>`;
+      return `
+        <tr class="admin-log-row hover:bg-slate-50 transition-colors">
+          <td data-label="时间" class="admin-log-time px-6 py-4 text-slate-500 font-mono">${escapeHtml(time)}</td>
+          <td data-label="动作" class="admin-log-action px-6 py-4 font-bold ${color}">${escapeHtml(l.action)}</td>
+          <td data-label="详情" class="admin-log-details px-6 py-4 text-slate-600 font-mono">${escapeHtml(l.details || '')}</td>
+          <td data-label="IP" class="admin-log-ip px-6 py-4 text-slate-500 font-mono text-sm text-left">${escapeHtml(l.ip || '')}</td>
+        </tr>
+      `;
     }).join('');
   },
 
