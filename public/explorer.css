@@ -1381,7 +1381,7 @@ html, body {
         position: fixed;
         left: 10px;
         right: 10px;
-        bottom: 128px;
+        bottom: 76px;
         z-index: 380;
         display: grid;
         grid-template-columns: 1fr;
@@ -1432,7 +1432,7 @@ html, body {
     .mobile-action-sheet {
         gap: 8px;
         padding: 8px;
-        bottom: 128px;
+        bottom: 76px;
     }
 
     .mobile-action-btn {
