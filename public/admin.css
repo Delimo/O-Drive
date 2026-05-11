@@ -331,13 +331,26 @@ body.admin-page {
 
   .admin-page .tab-shell {
     width: 100%;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-content: stretch;
+    align-items: stretch;
+    gap: 8px;
+    overflow: visible;
+    white-space: normal;
   }
 
   .admin-page .admin-tab-btn {
-    flex: 0 0 auto;
-    padding: 9px 14px;
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 8px;
     font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+    white-space: nowrap;
   }
 
   .admin-page .overview-tab {
