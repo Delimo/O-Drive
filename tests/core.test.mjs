@@ -371,6 +371,15 @@ test('admin login issues csrf token and write requests must echo it', async () =
   }), auth), false);
 });
 
+test('guest access is disabled unless ALLOW_GUEST is true', async () => {
+  const closedEnv = makeEnv();
+  assert.equal(await verifyAuth(new Request('https://example.com/api/auth/role'), closedEnv), null);
+
+  const openEnv = makeEnv();
+  openEnv.ALLOW_GUEST = 'true';
+  assert.deepEqual(await verifyAuth(new Request('https://example.com/api/auth/role'), openEnv), { role: 'guest' });
+});
+
 test('protected paths require password and unlock with signed cookie', async () => {
   const env = makeEnv({
     prefixes: ['public/', 'private/'],

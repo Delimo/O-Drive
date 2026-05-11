@@ -22,7 +22,7 @@ export function verifyCsrf(request, auth) {
 export async function verifyAuth(request, env) {
   const cookie = request.headers.get('Cookie') || '';
   const token = cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-  const isGuestMode = (env.ALLOW_GUEST === 'true' || env.ALLOW_GUEST === undefined);
+  const isGuestMode = env.ALLOW_GUEST === 'true';
   if (!token) return isGuestMode ? { role: 'guest' } : null;
   try {
     const [header, payload, signature] = token.split('.');

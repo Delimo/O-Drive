@@ -32,6 +32,50 @@ Cloudflare Pages 配置：
 - Build output directory: `public`
 - Functions directory: `functions`
 
+## 初始化 D1 数据库
+
+O-Drive 会在运行时自动创建需要的 D1 表。你只需要先创建 D1 数据库，并把它绑定到 Pages Functions。
+
+### 方式一：Cloudflare 控制台
+
+1. 进入 Cloudflare Dashboard。
+2. 打开 Workers & Pages -> D1 SQL Database。
+3. 点击 Create database。
+4. 输入数据库名称，例如 `o-drive-db`。
+5. 创建完成后，进入 Pages 项目。
+6. 打开 Settings -> Functions -> D1 database bindings。
+7. 添加绑定：
+   - Variable name: `DB`
+   - D1 database: 选择刚创建的数据库
+8. 重新部署 Pages 项目。
+
+第一次访问 API、登录、上传、删除或打开管理台时，项目会自动初始化这些表：
+
+- `settings`
+- `logs`
+- `login_attempts`
+- `trash`
+- `path_passwords`
+
+其中部分表会在对应功能首次使用时创建，例如回收站和访问密码。
+
+### 方式二：Wrangler 命令行
+
+如果你使用 Wrangler，也可以用命令创建数据库：
+
+```bash
+npx wrangler d1 create o-drive-db
+```
+
+创建后把输出中的数据库绑定到 Cloudflare Pages。Pages 项目中最终仍然需要有这个绑定：
+
+```text
+Variable name: DB
+Binding type: D1 database
+```
+
+本项目不要求你手动执行 SQL 初始化脚本；如果页面返回 500，通常是 `DB` 未绑定、变量名不是 `DB`，或绑定没有部署到当前环境。
+
 ## 绑定资源
 
 在 Pages 项目的 Settings -> Functions -> Bindings 中添加：
@@ -49,7 +93,7 @@ Cloudflare Pages 配置：
 | --- | --- | --- |
 | `ADMIN_USERNAME` | 是 | 管理员用户名 |
 | `ADMIN_PASSWORD` | 是 | 管理员密码，也用于签名登录会话 |
-| `ALLOW_GUEST` | 否 | 不填或设为 `true` 时允许游客访问；设为 `false` 时未登录无法访问 |
+| `ALLOW_GUEST` | 否 | 只有设为 `true` 时允许游客访问；不填或设为其他值时关闭游客访问 |
 
 修改环境变量后需要重新部署。
 
@@ -67,7 +111,7 @@ npm test
 
 部署后建议按顺序检查：
 
-1. 打开首页，确认游客模式是否符合预期。
+1. 打开首页，确认游客模式是否符合预期。默认未配置 `ALLOW_GUEST` 时需要登录。
 2. 点击登录，使用 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 登录。
 3. 上传一个小文件，确认 R2 写入正常。
 4. 新建文件夹并进入，确认路径操作正常。
