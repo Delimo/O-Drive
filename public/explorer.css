@@ -567,6 +567,9 @@ html, body {
     text-align: center;
     flex-shrink: 0;
     line-height: 1.25;
+    width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
 }
 
 .footer-info {

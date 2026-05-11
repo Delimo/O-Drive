@@ -37,7 +37,7 @@ export const AdminActions = {
         <div class="breakdown-item rounded-xl border border-border bg-background">
           <div class="breakdown-head">
             <span class="breakdown-label">${labels[kind] || kind}</span>
-            <strong class="breakdown-value font-mono">${count} · ${escapeHtml(item.sizeFormatted || '0 B')}</strong>
+            <strong class="breakdown-value font-mono">${escapeHtml(item.sizeFormatted || '0 B')}</strong>
           </div>
           <div class="breakdown-track">
             <div class="breakdown-bar" style="width: ${pct}%"></div>
