@@ -32,10 +32,6 @@ Cloudflare Pages 配置：
 - Build output directory: `public`
 - Functions directory: `functions`
 
-## 初始化 D1 数据库
-
-O-Drive 会在运行时自动创建需要的 D1 表。你只需要先创建 D1 数据库，并把它绑定到 Pages Functions。
-
 ### 方式一：Cloudflare 控制台
 
 1. 进入 Cloudflare Dashboard。
