@@ -15,14 +15,14 @@
         <div class="mobile-shell">
             <header class="mobile-header-card">
                 <a href="/" class="brand-link flex items-center gap-2 text-lg font-bold text-slate-900 tracking-tight">
-                    <span class="brand-mark brand-mark-header" aria-hidden="true">☁️</span>
+                    <span class="brand-mark brand-mark-header" aria-hidden="true"><svg class="brand-icon-svg" viewBox="0 0 24 24"><path d="M17.5 19H8a5 5 0 1 1 1.8-9.67A6.5 6.5 0 0 1 22 12.5 4.5 4.5 0 0 1 17.5 19Z"/></svg></span>
                     <span>O-Drive</span>
                 </a>
                 <div id="authButtonsMobile" class="mobile-auth"></div>
             </header>
             <div class="mobile-search-card">
                 <div class="search-bar mobile-search-bar">
-                    <span class="search-icon">🔍</span>
+                    <span class="search-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
                     <input type="search" id="mobileSearchInput" placeholder="搜索文件..." data-enter-action="search">
                 </div>
                 <button class="btn btn-primary mobile-search-btn" data-action="search">搜索</button>
@@ -35,12 +35,12 @@
         <div class="desktop-shell">
         <header class="header-card">
             <a href="/" class="brand-link flex items-center gap-2 text-lg font-bold text-slate-900 tracking-tight">
-                <span class="brand-mark brand-mark-header" aria-hidden="true">☁️</span>
+                <span class="brand-mark brand-mark-header" aria-hidden="true"><svg class="brand-icon-svg" viewBox="0 0 24 24"><path d="M17.5 19H8a5 5 0 1 1 1.8-9.67A6.5 6.5 0 0 1 22 12.5 4.5 4.5 0 0 1 17.5 19Z"/></svg></span>
                 <span>O-Drive</span>
             </a>
             <div class="flex items-center gap-4">
                 <div class="search-bar hidden md:block">
-                    <span class="search-icon">🔍</span>
+                    <span class="search-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
                     <input type="search" id="searchInput" placeholder="搜索文件..." data-enter-action="search">
                 </div>
                 <div id="authButtons"></div>
@@ -63,13 +63,13 @@
                     <button id="pasteBtn" class="btn btn-primary font-bold" data-action="execute-paste">粘贴</button>
                     <button id="cancelPasteBtn" class="btn" data-action="clear-clipboard">取消</button>
                 </div>
-                <button class="btn admin-only" data-action="open-file-input" hidden>上传</button>
-                <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
+                <button class="btn admin-only" data-action="open-file-input" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>上传</button>
+                <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3"/><path d="M12 19H5a2 2 0 0 1-2-2V9"/><path d="M18 15v6"/><path d="M15 18h6"/></svg>新建</button>
                 <div class="hidden sm:flex items-center gap-2">
                     <button id="sortBtn" class="btn" data-action="toggle-sort">名称</button>
                     <button id="viewBtn" class="btn" data-action="toggle-view">列表</button>
-                    <button class="btn" data-action="open-filters">筛选</button>
-                    <button class="btn admin-only" data-action="open-trash" hidden>回收站</button>
+                    <button class="btn" data-action="open-filters"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 3H2l8 9.46V19l4 2v-8.54Z"/></svg>筛选</button>
+                    <button class="btn admin-only" data-action="open-trash" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>回收站</button>
                 </div>
                 <input type="file" id="fileInput" hidden multiple>
             </div>

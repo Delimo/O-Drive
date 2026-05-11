@@ -1,4 +1,6 @@
-export const escapeHtml = (value) =>
+import { fileIconSvg, iconSvg } from './icons.js';
+
+export const escapeHtml = value =>
   String(value ?? '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;',
     '<': '&lt;',
@@ -7,7 +9,7 @@ export const escapeHtml = (value) =>
     "'": '&#39;',
   }[ch]));
 
-export const sanitizeHtml = (html) => {
+export const sanitizeHtml = html => {
   const template = document.createElement('template');
   template.innerHTML = html;
   template.content.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach(node => node.remove());
@@ -52,63 +54,23 @@ export const Utils = {
     if (ext === 'pdf') return 'pdf';
     if (textExts.includes(ext)) return 'text';
     if (archiveExts.includes(ext)) return 'archive';
-    if (ext === 'exe' || ext === 'msi' || ext === 'app' || ext === 'deb' || ext === 'dmg') return 'exe';
+    if (['exe', 'msi', 'app', 'deb', 'dmg'].includes(ext)) return 'exe';
     return 'file';
   },
   getFileIcon(name) {
-    const ext = this.getExtension(name);
-    const map = {
-      jpg: '🖼️',
-      jpeg: '🖼️',
-      png: '🖼️',
-      webp: '🖼️',
-      gif: '🖼️',
-      mp4: '🎞️',
-      webm: '🎞️',
-      mp3: '🎵',
-      wav: '🎵',
-      ogg: '🎵',
-      flac: '🎵',
-      pdf: '📕',
-      zip: '🗃️',
-      rar: '🗃️',
-      '7z': '🗃️',
-      tar: '🗃️',
-      gz: '🗃️',
-      exe: '🖥️',
-      msi: '🖥️',
-      app: '🖥️',
-      deb: '🖥️',
-      dmg: '🖥️',
-      txt: '📝',
-      md: '📝',
-      js: '📝',
-      css: '📝',
-      html: '📝',
-      json: '📝',
-      py: '📝',
-      sh: '📝',
-      sql: '📝',
-      php: '📝',
-      yml: '📝',
-      yaml: '📝',
-      xml: '📝',
-      csv: '📝',
-      log: '📝',
-    };
-    return map[ext] || '📄';
+    return fileIconSvg(this.getFileKind(name));
   },
   getFolderIcon() {
-    return '📁';
+    return fileIconSvg('folder');
   },
   getParentIcon() {
-    return '📁';
+    return fileIconSvg('parent', 'file-kind-muted');
   },
   getBrandIcon() {
-    return '☁️';
+    return iconSvg('cloud', 'brand-icon-svg');
   },
   getAdminIcon() {
-    return '⚙️';
+    return iconSvg('settings', 'brand-icon-svg');
   },
   isPreviewable(name) {
     return ['image', 'video', 'audio', 'pdf', 'text'].includes(this.getFileKind(name));
