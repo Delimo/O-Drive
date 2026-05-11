@@ -1,6 +1,6 @@
 import { ensureCoreTables, jsonResponse } from './lib/common.js';
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
-import { handleAdminHealth, handleAdminLogs, handleHiddenSettings, handleAdminStats, handleAdminRebuildIndex } from './lib/admin.js';
+import { handleAdminHealth, handleAdminLogs, handleHiddenSettings, handleAdminStats, handleAdminMaintenance, handleAdminMaintenanceAction } from './lib/admin.js';
 import {
   loadProtectedPaths,
   handleProtectedSettings,
@@ -35,7 +35,7 @@ import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin
 const csrfProtectedRoutes = [
   ['/api/admin/settings/hidden', ['POST', 'DELETE']],
   ['/api/admin/settings/protected', ['POST', 'DELETE']],
-  ['/api/admin/index/rebuild', ['POST']],
+  ['/api/admin/maintenance', ['POST']],
   ['/api/paste', ['POST']],
   ['/api/files', ['POST', 'PUT']],
   ['/api/batch-delete', ['POST']],
@@ -93,8 +93,9 @@ export async function onRequest(context) {
     if (isAdmin(auth)) {
       if (path === '/api/admin/logs') return await handleAdminLogs(env, url);
       if (path === '/api/admin/stats') return await handleAdminStats(env);
-      if (path === '/api/admin/index/rebuild' && method === 'POST') return await handleAdminRebuildIndex(env);
       if (path === '/api/admin/health') return await handleAdminHealth(env);
+      if (path === '/api/admin/maintenance' && method === 'GET') return await handleAdminMaintenance(env);
+      if (path === '/api/admin/maintenance' && method === 'POST') return await handleAdminMaintenanceAction(env, request);
       if (path === '/api/admin/settings/hidden') return await handleHiddenSettings(env, request, method, url, hiddenPaths);
       if (path === '/api/admin/settings/protected') return await handleProtectedSettings(env, request, method, url);
       if (path === '/api/admin/settings/trash-retention') return await handleTrashRetention(env, request, method);

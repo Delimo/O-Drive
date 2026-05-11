@@ -39,8 +39,13 @@ export const api = {
   operationEstimate(paths) {
     return requestJson('/api/operation-estimate', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ paths }) });
   },
-  trashList(page = 1, size = 20) {
-    return requestJson(`/api/trash?page=${page}&size=${size}`);
+  trashList(page = 1, size = 20, filters = {}) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (filters.q) params.set('q', filters.q);
+    if (filters.kind && filters.kind !== 'all') params.set('kind', filters.kind);
+    if (filters.from) params.set('from', String(filters.from));
+    if (filters.to) params.set('to', String(filters.to));
+    return requestJson(`/api/trash?${params.toString()}`);
   },
   restoreTrash(id) {
     return requestJson('/api/trash/restore', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ id }) });
@@ -91,8 +96,9 @@ export const api = {
   download(path) { return apiFileUrl('/api/download', path); },
   adminLogs(page, size) { return requestJson(`/api/admin/logs?page=${page}&size=${size}`); },
   adminStats() { return requestJson('/api/admin/stats'); },
-  rebuildIndex() {
-    return requestJson('/api/admin/index/rebuild', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({}) });
+  maintenance() { return requestJson('/api/admin/maintenance'); },
+  maintenanceAction(action) {
+    return requestJson('/api/admin/maintenance', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ action }) });
   },
   adminHealth() { return requestJson('/api/admin/health'); },
   hiddenPaths() { return requestJson('/api/admin/settings/hidden'); },

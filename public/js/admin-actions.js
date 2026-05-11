@@ -4,7 +4,7 @@ import { escapeHtml } from './utils.js';
 
 export const AdminActions = {
   switchTab(id) {
-    ['overview', 'health', 'logs', 'privacy', 'protected'].forEach(tab => {
+    ['overview', 'health', 'logs', 'privacy', 'protected', 'maintenance'].forEach(tab => {
       document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', id !== tab);
       document.getElementById(`btn-${tab}`)?.classList.toggle('is-active', id === tab);
     });
@@ -14,6 +14,7 @@ export const AdminActions = {
     if (id === 'health') return this.loadHealth();
     if (id === 'logs') return this.loadLogs();
     if (id === 'privacy') return this.loadHidden();
+    if (id === 'maintenance') return this.loadMaintenance();
     return this.loadProtected();
   },
 
@@ -59,25 +60,6 @@ export const AdminActions = {
     `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
   },
 
-  async rebuildIndex() {
-    const button = document.getElementById('rebuildIndexBtn');
-    if (button) {
-      button.disabled = true;
-      button.textContent = '重建中...';
-    }
-    const { res, data } = await api.rebuildIndex();
-    if (!res.ok || data?.success === false) {
-      alert(data?.message || '重建索引失败');
-    } else {
-      alert(`索引已重建：同步 ${data.synced || 0} 个文件${data.truncated ? '，仍达到扫描上限' : ''}`);
-      await this.loadStats();
-    }
-    if (button) {
-      button.disabled = false;
-      button.textContent = '重建索引';
-    }
-  },
-
   healthItem(label, ok, detail = '') {
     return `
       <div class="health-item ${ok ? 'is-ok' : 'is-bad'}">
@@ -115,6 +97,51 @@ export const AdminActions = {
         data.env?.guestEnabled ? 'ALLOW_GUEST=true，访客可浏览' : '默认关闭；只有 ALLOW_GUEST=true 才开启'
       ),
     ].join('');
+  },
+
+  maintenanceItem(label, value, detail = '') {
+    return `
+      <div class="health-item is-ok">
+        <div>
+          <strong>${escapeHtml(label)}</strong>
+          ${detail ? `<span>${escapeHtml(detail)}</span>` : ''}
+        </div>
+        <em>${escapeHtml(String(value))}</em>
+      </div>
+    `;
+  },
+
+  async loadMaintenance() {
+    const grid = document.getElementById('maintenanceGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div class="text-sm text-slate-500">正在加载...</div>';
+    const { res, data } = await api.maintenance();
+    if (!res.ok) {
+      grid.innerHTML = '<div class="text-sm text-rose-600 font-bold">维护信息加载失败。</div>';
+      return;
+    }
+    grid.innerHTML = [
+      this.maintenanceItem('文件索引记录', data.indexCount || 0, '搜索和统计优先使用该索引'),
+      this.maintenanceItem('访问失败记录', data.accessAttemptCount || 0, '受保护路径密码错误计数'),
+      this.maintenanceItem('回收站记录', data.trashCount || 0, '仍会占用 R2 空间'),
+      this.maintenanceItem('操作日志', data.logsCount || 0, '管理员操作审计'),
+      this.maintenanceItem('缩略图缓存', data.thumbnailsPresent ? '存在' : '无', '.thumbs/ 系统前缀'),
+    ].join('');
+  },
+
+  async runMaintenanceAction(action) {
+    const label = document.getElementById('maintenanceResult');
+    if (label) label.textContent = '正在执行...';
+    const { res, data } = await api.maintenanceAction(action);
+    if (!res.ok || data?.success === false) {
+      if (label) label.textContent = data?.message || '维护操作失败';
+      return;
+    }
+    const summary = data.synced != null
+      ? `已同步 ${data.synced} 个文件${data.truncated ? '，仍达到扫描上限' : ''}`
+      : `已清理 ${data.deleted || 0} 项${data.truncated ? '，仍达到扫描上限' : ''}`;
+    if (label) label.textContent = summary;
+    await this.loadMaintenance();
   },
 
   renderStorageWarnings(data) {

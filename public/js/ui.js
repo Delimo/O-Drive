@@ -133,7 +133,7 @@ export const UI = {
     const total = document.getElementById('trashTotal');
     if (!tbody) return;
     const rows = state.trash.items || [];
-    if (count) count.textContent = String(rows.length);
+    if (count) count.textContent = String(state.trash.total ?? rows.length);
     if (page) page.textContent = String(state.trash.currentPage || 1);
     if (total) total.textContent = String(state.trash.totalPages || 1);
     tbody.innerHTML = rows.map(item => `

@@ -9,33 +9,6 @@ function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-let unlockCountdownTimer = null;
-
-function formatRetryAfter(seconds) {
-  const total = Math.max(1, Number(seconds || 0));
-  const minutes = Math.floor(total / 60);
-  const rest = total % 60;
-  return minutes ? `${minutes} 分 ${rest} 秒` : `${rest} 秒`;
-}
-
-function showUnlockCountdown(error, retryAfter) {
-  clearInterval(unlockCountdownTimer);
-  let remaining = Math.max(1, Number(retryAfter || 0));
-  const render = () => {
-    if (error) error.textContent = `密码错误次数过多，请 ${formatRetryAfter(remaining)} 后重试`;
-  };
-  render();
-  unlockCountdownTimer = setInterval(() => {
-    remaining -= 1;
-    if (remaining <= 0) {
-      clearInterval(unlockCountdownTimer);
-      if (error) error.textContent = '现在可以重新尝试';
-      return;
-    }
-    render();
-  }, 1000);
-}
-
 function appendHighlighted(target, line, query) {
   if (!query) {
     target.textContent = line || '\u00a0';
@@ -138,7 +111,6 @@ export const PreviewActions = {
     const error = document.getElementById('unlockError');
     if (label) label.textContent = `路径：${state.pendingUnlock.path}`;
     if (input) input.value = '';
-    clearInterval(unlockCountdownTimer);
     if (error) error.textContent = '';
     UI.showModal('unlockModal');
     setTimeout(() => input?.focus(), 30);
@@ -151,14 +123,9 @@ export const PreviewActions = {
     if (!pending || !input) return;
     const { res, data } = await api.unlockPath(pending.path, input.value);
     if (!res.ok) {
-      if (res.status === 429 && data?.retryAfter) {
-        showUnlockCountdown(error, data.retryAfter);
-        return;
-      }
       if (error) error.textContent = data?.message || '密码错误';
       return;
     }
-    clearInterval(unlockCountdownTimer);
     UI.closeModal('unlockModal');
     state.pendingUnlock = null;
     await pending.retry?.();

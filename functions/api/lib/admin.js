@@ -1,5 +1,6 @@
 import { jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
 import { getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
+import { mapWithConcurrency } from './r2-tree.js';
 
 function fileKind(key) {
   return indexedFileKind(key);
@@ -135,9 +136,58 @@ export async function handleAdminHealth(env) {
   });
 }
 
-export async function handleAdminRebuildIndex(env) {
-  const result = await rebuildFileIndex(env);
-  return jsonResponse({ success: true, ...result });
+async function countRows(env, table) {
+  try {
+    const row = await env.DB.prepare(`SELECT COUNT(*) as count FROM ${table}`).first();
+    return Number(row?.count || 0);
+  } catch (_) {
+    return 0;
+  }
+}
+
+async function deletePrefix(env, prefix, limit = 5000) {
+  const listed = await listR2Objects(env.R2_BUCKET, { prefix }, { maxObjects: limit });
+  await mapWithConcurrency(listed.objects || [], 8, item => env.R2_BUCKET.delete(item.key));
+  return { deleted: (listed.objects || []).length, truncated: Boolean(listed.truncated) };
+}
+
+export async function handleAdminMaintenance(env) {
+  const [indexCount, accessAttemptCount, trashCount, logsCount, thumbs] = await Promise.all([
+    indexedFileCount(env),
+    countRows(env, 'path_access_attempts'),
+    countRows(env, 'trash'),
+    countRows(env, 'logs'),
+    listR2Objects(env.R2_BUCKET, { prefix: '.thumbs/' }, { maxObjects: 1 }).catch(() => ({ objects: [], truncated: false })),
+  ]);
+  return jsonResponse({
+    indexCount,
+    accessAttemptCount,
+    trashCount,
+    logsCount,
+    thumbnailsPresent: Boolean((thumbs.objects || []).length || thumbs.truncated),
+  });
+}
+
+export async function handleAdminMaintenanceAction(env, request) {
+  const { action } = await request.json().catch(() => ({}));
+  if (action === 'rebuild-index') {
+    const result = await rebuildFileIndex(env);
+    return jsonResponse({ success: true, action, ...result });
+  }
+  if (action === 'cleanup-access-attempts') {
+    let deleted = 0;
+    try {
+      const row = await env.DB.prepare('SELECT COUNT(*) as count FROM path_access_attempts').first();
+      deleted = Number(row?.count || 0);
+      await env.DB.prepare('DELETE FROM path_access_attempts').run();
+    } catch (_) {}
+    return jsonResponse({ success: true, action, deleted });
+  }
+  if (action === 'cleanup-thumbnails') {
+    const result = await deletePrefix(env, '.thumbs/');
+    return jsonResponse({ success: true, action, ...result });
+  }
+  return jsonResponse({ success: false, message: 'Invalid maintenance action' }, 400);
 }
 
 export async function handleHiddenSettings(env, request, method, url, hiddenPaths) {

@@ -47,6 +47,28 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
       size: obj.size ?? sizeOf(obj.body),
       uploaded: obj.uploaded || new Date('2026-01-01'),
     }));
+  const filteredTrashRows = (bound = []) => {
+    let rows = [...trashRows];
+    let idx = 0;
+    if (bound.length >= 2 && typeof bound[idx] === 'string' && String(bound[idx]).startsWith('%')) {
+      const q = String(bound[idx]).replace(/%/g, '').toLowerCase();
+      idx += 2;
+      rows = rows.filter(row => row.original_key.toLowerCase().includes(q) || row.name.toLowerCase().includes(q));
+    }
+    if (['file', 'folder'].includes(bound[idx])) {
+      const kind = bound[idx++];
+      rows = rows.filter(row => row.kind === kind);
+    }
+    if (typeof bound[idx] === 'number') {
+      const from = bound[idx++];
+      rows = rows.filter(row => row.trashed_at >= from);
+    }
+    if (typeof bound[idx] === 'number') {
+      const to = bound[idx++];
+      rows = rows.filter(row => row.trashed_at <= to);
+    }
+    return rows;
+  };
   return {
     R2_BUCKET: {
       async head(key) {
@@ -230,15 +252,19 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
             if (/DELETE FROM file_index$/i.test(sql.trim())) {
               fileIndexRows.length = 0;
             }
+            if (/DELETE FROM path_access_attempts$/i.test(sql.trim())) {
+              pathAttemptRows.length = 0;
+            }
             return {};
           },
           async first() {
             if (/SELECT COUNT\(\*\) as count FROM file_index/i.test(sql)) return { count: fileIndexRows.length };
+            if (/SELECT COUNT\(\*\) as count FROM path_access_attempts/i.test(sql)) return { count: pathAttemptRows.length };
             if (/SELECT attempts, last_attempt FROM path_access_attempts WHERE path = \? AND ip = \?/i.test(sql)) {
               const [path, ip] = statement.bound || [];
               return pathAttemptRows.find(row => row.path === path && row.ip === ip) || null;
             }
-            if (/SELECT COUNT\(\*\) as count FROM trash/i.test(sql)) return { count: trashRows.length };
+            if (/SELECT COUNT\(\*\) as count FROM trash/i.test(sql)) return { count: filteredTrashRows(statement.bound || []).length };
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: logs.length };
             if (/SELECT value FROM settings WHERE key = 'trash_retention_days'/i.test(sql)) {
@@ -274,6 +300,12 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
             if (/SELECT \* FROM trash WHERE trashed_at < \? ORDER BY trashed_at DESC/i.test(sql)) {
               const cutoff = statement.bound?.[0] ?? 0;
               return { results: trashRows.filter(row => row.trashed_at < cutoff).sort((a, b) => b.trashed_at - a.trashed_at) };
+            }
+            if (/SELECT \* FROM trash WHERE/i.test(sql)) {
+              const bound = statement.bound || [];
+              const size = bound[bound.length - 2] ?? 20;
+              const offset = bound[bound.length - 1] ?? 0;
+              return { results: filteredTrashRows(bound.slice(0, -2)).sort((a, b) => b.trashed_at - a.trashed_at).slice(offset, offset + size) };
             }
             if (/SELECT \* FROM trash\s+ORDER BY trashed_at DESC/i.test(sql)) {
               return { results: [...trashRows].sort((a, b) => b.trashed_at - a.trashed_at) };
@@ -518,6 +550,37 @@ test('route smoke: admin can login, upload, list, and search', async () => {
   assert.deepEqual(searchData.files.map(file => file.fullKey), ['route-smoke.txt']);
 });
 
+test('route smoke: folder upload can target nested paths', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const form = new FormData();
+  form.append('file', new File(['nested'], 'inside.txt', { type: 'text/plain' }));
+  const upload = await onRequest({
+    env,
+    request: new Request('https://example.com/api/files/projects/folder-a', {
+      method: 'POST',
+      body: form,
+      headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+
+  assert.equal(upload.status, 200);
+  assert.ok(await env.R2_BUCKET.get('projects/folder-a/inside.txt'));
+});
+
 test('protected paths require password and unlock with signed cookie', async () => {
   const env = makeEnv({
     prefixes: ['public/', 'private/'],
@@ -628,37 +691,6 @@ test('protected path unlock locks after repeated wrong passwords and clears on s
     headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': failThenSuccessIp },
   }), { role: 'guest' }, rules);
   assert.equal(success.status, 200);
-});
-
-test('protected path unlock lockout can be configured with env vars', async () => {
-  const env = makeEnv();
-  env.ADMIN_PASSWORD = 'admin-secret';
-  env.PATH_UNLOCK_MAX_ATTEMPTS = '2';
-  env.PATH_UNLOCK_LOCK_MINUTES = '1';
-
-  await handleProtectedSettings(env, new Request('https://example.com/api/admin/settings/protected', {
-    method: 'POST',
-    body: JSON.stringify({ path: '/vault', password: '1234' }),
-    headers: { 'Content-Type': 'application/json' },
-  }), 'POST', new URL('https://example.com/api/admin/settings/protected'));
-  const rules = await loadProtectedPaths(env);
-
-  for (let i = 0; i < 2; i++) {
-    const wrong = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
-      method: 'POST',
-      body: JSON.stringify({ path: '/vault', password: 'bad' }),
-      headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.20' },
-    }), { role: 'guest' }, rules);
-    assert.equal(wrong.status, 403);
-  }
-
-  const locked = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
-    method: 'POST',
-    body: JSON.stringify({ path: '/vault', password: '1234' }),
-    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.20' },
-  }), { role: 'guest' }, rules);
-  assert.equal(locked.status, 429);
-  assert.ok(Number(locked.headers.get('Retry-After')) <= 60);
 });
 
 test('frontend file path helpers encode each path segment', () => {
@@ -838,6 +870,37 @@ test('trash items can be purged permanently', async () => {
   assert.equal(await env.R2_BUCKET.get('docs/temp.txt'), null);
 });
 
+test('trash list can filter by path, kind, and trashed date', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/alpha.txt', body: 'a', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'photos/beta.jpg', body: 'b', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const realNow = Date.now;
+  Date.now = () => new Date('2026-02-01T00:00:00Z').getTime();
+  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/alpha.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  Date.now = () => new Date('2026-03-01T00:00:00Z').getTime();
+  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['photos/beta.jpg'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  Date.now = realNow;
+
+  const byQuery = await handleTrashList(env, new URL('https://example.com/api/trash?q=alpha&page=1&size=20'));
+  assert.deepEqual((await byQuery.json()).items.map(item => item.original_key), ['docs/alpha.txt']);
+
+  const from = new Date('2026-02-15T00:00:00Z').getTime();
+  const byDate = await handleTrashList(env, new URL(`https://example.com/api/trash?kind=file&from=${from}&page=1&size=20`));
+  assert.deepEqual((await byDate.json()).items.map(item => item.original_key), ['photos/beta.jpg']);
+});
+
 test('file view model orders entries and exposes selectable keys', () => {
   const fileData = {
     folders: [{ name: 'b', fullKey: 'b' }, { name: 'a', fullKey: 'a' }],
@@ -906,11 +969,11 @@ test('admin stats can summarize from file index', async () => {
   assert.deepEqual(data.latest.map(item => item.key), ['photos/a.jpg', 'docs/readme.md']);
 });
 
-test('route smoke: admin can rebuild file index', async () => {
+test('admin maintenance reports counts and runs cleanup actions', async () => {
   const env = makeEnv({
     objects: [
       { key: 'docs/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-02') },
-      { key: '.trash/old.txt', body: 'x', size: 1, uploaded: new Date('2026-01-01') },
+      { key: '.thumbs/docs/a.jpg', body: 'thumb', size: 5, uploaded: new Date('2026-01-02') },
     ],
   });
   env.ADMIN_USERNAME = 'admin';
@@ -929,18 +992,37 @@ test('route smoke: admin can rebuild file index', async () => {
 
   const rebuild = await onRequest({
     env,
-    request: new Request('https://example.com/api/admin/index/rebuild', {
+    request: new Request('https://example.com/api/admin/maintenance', {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify({ action: 'rebuild-index' }),
       headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
     }),
   });
-  const data = await rebuild.json();
-
+  const rebuildData = await rebuild.json();
   assert.equal(rebuild.status, 200);
-  assert.equal(data.success, true);
-  assert.equal(data.synced, 1);
+  assert.equal(rebuildData.synced, 1);
   assert.equal(await indexedFileCount(env), 1);
+
+  const cleanupThumbs = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/maintenance', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'cleanup-thumbnails' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal((await cleanupThumbs.json()).deleted, 1);
+  assert.equal(await env.R2_BUCKET.get('.thumbs/docs/a.jpg'), null);
+
+  const status = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/maintenance', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const statusData = await status.json();
+  assert.equal(statusData.indexCount, 1);
+  assert.equal(statusData.thumbnailsPresent, false);
 });
 
 test('admin health reports bindings and required env vars', async () => {

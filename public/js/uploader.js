@@ -19,7 +19,7 @@ function createUploadItem(file, taskId) {
   item.dataset.taskId = taskId;
   item.innerHTML = `
     <div class="flex items-center justify-between gap-3 text-[12px] mb-2 text-slate-500">
-      <span class="font-semibold text-slate-900 truncate">${escapeHtml(file.name)}</span>
+      <span class="font-semibold text-slate-900 truncate">${escapeHtml(file.displayName || file.name)}</span>
       <span class="pct text-primary font-mono flex-shrink-0">0%</span>
     </div>
     <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -59,7 +59,7 @@ function writeResumeStore(store) {
 function taskFingerprint(task) {
   return [
     task.targetDir,
-    task.file.name,
+    task.uploadName || task.file.name,
     task.file.size,
     task.file.lastModified || 0,
     task.conflictMode || 'error',
@@ -113,7 +113,7 @@ async function uploadSmall(task) {
   });
 
   const fd = new FormData();
-  fd.append('file', task.file);
+  fd.append('file', task.file, task.uploadName || task.file.name);
   xhr.send(fd);
   await done;
 }
@@ -156,7 +156,7 @@ async function uploadMultipart(task) {
   } else {
     const create = await api.multipartCreate({
       targetDir: task.targetDir,
-      name: task.file.name,
+      name: task.uploadName || task.file.name,
       type: task.file.type,
       size: task.file.size,
       conflict: task.conflictMode || 'error',
@@ -330,11 +330,14 @@ export class UploadQueue {
     manager.classList.add('flex');
 
     [...files].forEach(file => {
+      const uploadName = file.uploadName || file.name;
+      const taskTargetDir = file.targetDir || targetDir;
       const taskId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       const task = {
         id: taskId,
         file,
-        targetDir,
+        targetDir: taskTargetDir,
+        uploadName,
         conflictMode: options.conflictMode || 'error',
         item: createUploadItem(file, taskId),
         paused: false,

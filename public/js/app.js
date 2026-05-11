@@ -32,6 +32,7 @@ document.addEventListener('click', event => {
     case 'close-mobile-actions': return UI.closeMobileActions();
     case 'toggle-mobile-actions': return UI.toggleMobileActions();
     case 'open-file-input': return document.getElementById('fileInput')?.click();
+    case 'open-folder-input': return document.getElementById('folderInput')?.click();
     case 'toggle-view': return Actions.toggleViewMode();
     case 'toggle-sort': return Actions.toggleSortMode();
     case 'search': return Actions.handleSearch();
@@ -50,6 +51,8 @@ document.addEventListener('click', event => {
     case 'save-text': return Actions.saveTextContent();
     case 'reset-filters': return Actions.resetFilters();
     case 'apply-filters': return Actions.applyFilters();
+    case 'apply-trash-filters': return Actions.applyTrashFilters();
+    case 'reset-trash-filters': return Actions.resetTrashFilters();
     case 'trash-page': return Actions.trashPage(Number(args[0] || 0));
     case 'restore-trash': return Actions.restoreTrash(args[0]);
     case 'purge-trash': return Actions.purgeTrash(args[0]);
@@ -108,6 +111,12 @@ document.addEventListener('keydown', event => {
 
 document.getElementById('fileInput')?.addEventListener('change', event => {
   Actions.uploadFiles(event.target.files);
+  event.target.value = '';
+});
+
+document.getElementById('folderInput')?.addEventListener('change', event => {
+  Actions.uploadFiles(event.target.files, { preserveRelativePath: true });
+  event.target.value = '';
 });
 
 Actions.init();

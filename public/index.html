@@ -63,6 +63,7 @@
                     <button id="cancelPasteBtn" class="btn" data-action="clear-clipboard">取消</button>
                 </div>
                 <button class="btn admin-only" data-action="open-file-input" hidden>上传</button>
+                <button class="btn admin-only" data-action="open-folder-input" hidden>上传文件夹</button>
                 <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
                 <div class="hidden sm:flex items-center gap-2">
                     <button id="sortBtn" class="btn" data-action="toggle-sort">名称</button>
@@ -71,6 +72,7 @@
                     <button class="btn admin-only" data-action="open-trash" hidden>回收站</button>
                 </div>
                 <input type="file" id="fileInput" hidden multiple>
+                <input type="file" id="folderInput" hidden multiple webkitdirectory directory>
             </div>
         </div>
         </div>
@@ -98,6 +100,7 @@
     <div id="mobileActionSheet" class="mobile-action-sheet">
         <div class="mobile-action-group">
             <button class="mobile-action-btn admin-only" data-action="open-file-input" hidden>上传</button>
+            <button class="mobile-action-btn admin-only" data-action="open-folder-input" hidden>上传文件夹</button>
             <button class="mobile-action-btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
         </div>
         <div class="mobile-action-group" id="mobileBatchGroup">
@@ -221,6 +224,18 @@
                         <button class="btn h-8 px-3" data-action="trash-page" data-args='[1]'>下一页</button>
                     </div>
                     <button class="text-2xl opacity-40 hover:opacity-100" data-action="close-modal" data-args='["trashModal"]'>&times;</button>
+                </div>
+            </div>
+            <div class="px-5 py-3 border-b border-border bg-background/70">
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs">
+                    <input id="trashFilterQuery" type="search" placeholder="搜索路径或名称" class="filter-input sm:col-span-2">
+                    <select id="trashFilterKind" class="filter-input"><option value="all">全部类型</option><option value="file">文件</option><option value="folder">文件夹</option></select>
+                    <input id="trashFilterFrom" type="date" class="filter-input">
+                    <input id="trashFilterTo" type="date" class="filter-input">
+                </div>
+                <div class="mt-2 flex justify-end gap-2">
+                    <button class="btn h-8 px-3 text-xs" data-action="reset-trash-filters">重置筛选</button>
+                    <button class="btn btn-primary h-8 px-3 text-xs" data-action="apply-trash-filters">筛选</button>
                 </div>
             </div>
             <div class="flex-1 overflow-auto custom-scroll">

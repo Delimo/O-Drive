@@ -228,6 +228,15 @@ export const FileOpsActions = {
   },
 
   async openTrash() {
+    const f = state.trash.filters || {};
+    const query = document.getElementById('trashFilterQuery');
+    const kind = document.getElementById('trashFilterKind');
+    const from = document.getElementById('trashFilterFrom');
+    const to = document.getElementById('trashFilterTo');
+    if (query) query.value = f.q || '';
+    if (kind) kind.value = f.kind || 'all';
+    if (from) from.value = f.from || '';
+    if (to) to.value = f.to || '';
     await this.loadTrash();
     const retention = await api.trashRetention();
     const input = document.getElementById('trashRetentionDays');
@@ -236,12 +245,41 @@ export const FileOpsActions = {
   },
 
   async loadTrash(page = state.trash.currentPage || 1) {
-    const { res, data } = await api.trashList(page, 20);
+    const f = state.trash.filters || {};
+    const filters = {
+      q: f.q || '',
+      kind: f.kind || 'all',
+      from: f.from ? new Date(`${f.from}T00:00:00`).getTime() : '',
+      to: f.to ? new Date(`${f.to}T23:59:59.999`).getTime() : '',
+    };
+    const { res, data } = await api.trashList(page, 20, filters);
     if (!res.ok) return;
     state.trash.items = data.items || [];
     state.trash.currentPage = data.currentPage || page;
     state.trash.totalPages = data.totalPages || 1;
+    state.trash.total = data.total || state.trash.items.length;
     UI.renderTrashList();
+  },
+
+  async applyTrashFilters() {
+    state.trash.filters = {
+      q: document.getElementById('trashFilterQuery')?.value.trim() || '',
+      kind: document.getElementById('trashFilterKind')?.value || 'all',
+      from: document.getElementById('trashFilterFrom')?.value || '',
+      to: document.getElementById('trashFilterTo')?.value || '',
+    };
+    await this.loadTrash(1);
+  },
+
+  async resetTrashFilters() {
+    state.trash.filters = { q: '', kind: 'all', from: '', to: '' };
+    ['trashFilterQuery', 'trashFilterFrom', 'trashFilterTo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const kind = document.getElementById('trashFilterKind');
+    if (kind) kind.value = 'all';
+    await this.loadTrash(1);
   },
 
   async trashPage(delta) {
@@ -390,11 +428,21 @@ export const FileOpsActions = {
     window.open(api.download(p), '_blank', 'noopener');
   },
 
-  async uploadFiles(files) {
+  async uploadFiles(files, options = {}) {
     if (state.userRole !== 'admin') return;
-    const incoming = [...files];
+    const incoming = [...files].map(file => {
+      if (!options.preserveRelativePath || !file.webkitRelativePath) return file;
+      const parts = file.webkitRelativePath.split('/').filter(Boolean);
+      const name = parts.pop() || file.name;
+      const relativeDir = parts.join('/');
+      const base = state.currentPath.replace(/^\/|\/$/g, '');
+      file.uploadName = name;
+      file.targetDir = '/' + [base, relativeDir].filter(Boolean).join('/');
+      file.displayName = file.webkitRelativePath;
+      return file;
+    });
     const existing = new Set((state.fileData.files || []).map(file => file.name));
-    const conflicts = incoming.filter(file => existing.has(file.name));
+    const conflicts = incoming.filter(file => !file.webkitRelativePath && existing.has(file.name));
     let conflictMode = 'error';
     if (conflicts.length) {
       const answer = prompt(

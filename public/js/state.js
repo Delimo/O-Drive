@@ -31,6 +31,8 @@ export const state = {
     items: [],
     currentPage: 1,
     totalPages: 1,
+    total: 0,
+    filters: { q: '', kind: 'all', from: '', to: '' },
   },
   sortModes: ['name', 'time', 'size'],
   sortNames: { name: '名称', time: '时间', size: '大小' },

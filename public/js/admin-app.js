@@ -26,7 +26,8 @@ document.addEventListener('click', event => {
     case 'add-protected': return AdminActions.addProtected();
     case 'remove-protected': return AdminActions.removeProtected(args[0]);
     case 'refresh-health': return AdminActions.loadHealth();
-    case 'rebuild-index': return AdminActions.rebuildIndex();
+    case 'refresh-maintenance': return AdminActions.loadMaintenance();
+    case 'maintenance-action': return AdminActions.runMaintenanceAction(args[0]);
   }
 });
 

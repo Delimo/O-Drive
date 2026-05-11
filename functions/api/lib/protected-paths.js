@@ -3,8 +3,8 @@ import { jsonResponse, normalizeHiddenPath, encodeBase64Url, base64UrlToUint8Arr
 const ACCESS_COOKIE = 'path_access';
 const ACCESS_TTL = 12 * 60 * 60 * 1000;
 const PASSWORD_ITERATIONS = 210000;
-const DEFAULT_UNLOCK_MAX_ATTEMPTS = 5;
-const DEFAULT_UNLOCK_LOCK_MINUTES = 15;
+const UNLOCK_MAX_ATTEMPTS = 5;
+const UNLOCK_LOCK_MS = 15 * 60 * 1000;
 const TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS path_passwords (
     path TEXT PRIMARY KEY,
@@ -153,25 +153,18 @@ function clientIp(request) {
   return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
 
-function unlockLimits(env) {
-  const maxAttempts = Math.max(1, Math.min(100, Number(env.PATH_UNLOCK_MAX_ATTEMPTS || DEFAULT_UNLOCK_MAX_ATTEMPTS)));
-  const lockMinutes = Math.max(1, Math.min(1440, Number(env.PATH_UNLOCK_LOCK_MINUTES || DEFAULT_UNLOCK_LOCK_MINUTES)));
-  return { maxAttempts, lockMs: lockMinutes * 60 * 1000 };
-}
-
 async function checkUnlockAttempts(env, request, path) {
   const ip = clientIp(request);
-  const limits = unlockLimits(env);
   try {
     const row = await env.DB.prepare('SELECT attempts, last_attempt FROM path_access_attempts WHERE path = ? AND ip = ?')
       .bind(path, ip)
       .first();
     const attempts = Number(row?.attempts || 0);
     const lastAttempt = Number(row?.last_attempt || 0);
-    if (attempts >= limits.maxAttempts && Date.now() - lastAttempt < limits.lockMs) {
+    if (attempts >= UNLOCK_MAX_ATTEMPTS && Date.now() - lastAttempt < UNLOCK_LOCK_MS) {
       return {
         ok: false,
-        retryAfter: Math.ceil((limits.lockMs - (Date.now() - lastAttempt)) / 1000),
+        retryAfter: Math.ceil((UNLOCK_LOCK_MS - (Date.now() - lastAttempt)) / 1000),
       };
     }
   } catch (_) {}
