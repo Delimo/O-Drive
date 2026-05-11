@@ -181,6 +181,18 @@ export const UI = {
     if (mobile) mobile.innerHTML = html;
   },
 
+  renderSearchBreadcrumb(query) {
+    const html = `
+      <button class="breadcrumb-root" data-action="navigate" data-args='["/"]'>根目录</button>
+      <span class="opacity-20 mx-1 text-slate-900">/</span>
+      <span class="search-breadcrumb-label">搜索结果: ${escapeHtml(query)}</span>
+    `;
+    const desktop = document.getElementById('breadcrumb');
+    if (desktop) desktop.innerHTML = html;
+    const mobile = document.getElementById('mobileBreadcrumb');
+    if (mobile) mobile.innerHTML = html;
+  },
+
   updateFileList() {
     const list = document.getElementById('fileList');
     if (!list) return;

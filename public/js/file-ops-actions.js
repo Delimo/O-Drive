@@ -1,7 +1,6 @@
 import { state } from './state.js';
 import { api } from './api.js';
 import { UI, Message } from './ui.js';
-import { escapeHtml } from './utils.js';
 import { getSelectableKeys } from './file-view-model.js';
 import { UploadQueue } from './uploader.js';
 import { PreviewActions } from './preview-actions.js';
@@ -144,7 +143,7 @@ export const FileOpsActions = {
     state.fileData = { folders: [], files: data?.files || [] };
     state.search.nextCursor = data?.nextCursor || '';
     UI.updateFileList();
-    document.getElementById('breadcrumb').innerHTML = `<span class="text-white font-bold tracking-wide">搜索结果: ${escapeHtml(q)}</span>`;
+    UI.renderSearchBreadcrumb(q);
   },
 
   async loadMoreSearch() {

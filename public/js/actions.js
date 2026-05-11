@@ -46,8 +46,16 @@ export const Actions = {
   },
 
   navigateTo(p) {
+    const wasSearching = state.isSearching;
     state.currentPath = p.endsWith('/') ? p : `${p}/`;
     state.isSearching = false;
+    if (wasSearching) {
+      state.search = { query: '', scope: '/', nextCursor: '', loadingMore: false };
+      const desktopInput = document.getElementById('searchInput');
+      if (desktopInput) desktopInput.value = '';
+      const mobileInput = document.getElementById('mobileSearchInput');
+      if (mobileInput) mobileInput.value = '';
+    }
     this.loadFiles();
   },
 };
