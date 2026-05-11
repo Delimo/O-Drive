@@ -31,15 +31,16 @@ export const AdminActions = {
     const breakdown = Object.entries(data.breakdown || {});
     const totalCount = breakdown.reduce((sum, [, item]) => sum + Number(item.count || 0), 0) || 1;
     document.getElementById('statsBreakdown').innerHTML = breakdown.map(([kind, item]) => {
-      const pct = Math.max(2, Math.round(((item.count || 0) / totalCount) * 100));
+      const count = Number(item.count || 0);
+      const pct = count > 0 ? Math.max(4, Math.round((count / totalCount) * 100)) : 0;
       return `
-        <div class="rounded-xl border border-border bg-background px-4 py-3">
-          <div class="flex items-center justify-between gap-3">
-            <span class="font-medium">${labels[kind] || kind}</span>
-            <strong class="font-mono text-sm">${item.count || 0} · ${escapeHtml(item.sizeFormatted || '0 B')}</strong>
+        <div class="breakdown-item rounded-xl border border-border bg-background">
+          <div class="breakdown-head">
+            <span class="breakdown-label">${labels[kind] || kind}</span>
+            <strong class="breakdown-value font-mono">${count} · ${escapeHtml(item.sizeFormatted || '0 B')}</strong>
           </div>
-          <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
-            <div class="h-full rounded-full bg-primary" style="width: ${pct}%"></div>
+          <div class="breakdown-track">
+            <div class="breakdown-bar" style="width: ${pct}%"></div>
           </div>
         </div>
       `;

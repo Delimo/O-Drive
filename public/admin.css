@@ -7,16 +7,16 @@ body.admin-page {
 .admin-page .container {
   flex: 1;
   min-height: 0;
-  padding: 8px 24px 0;
+  padding: 4px 24px 0;
 }
 
 .admin-page .header-card.mt-4 {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .admin-page .tab-shell.mt-4,
 .admin-page .explorer-card.mt-4 {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .admin-page .explorer-card {
@@ -95,40 +95,61 @@ body.admin-page {
   gap: 8px;
 }
 
-.admin-page .breakdown-grid > div,
+.admin-page .breakdown-item,
 .admin-page .latest-item {
   height: auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 8px 20px;
   overflow: hidden;
 }
 
-.admin-page .breakdown-grid > div {
-  gap: 8px;
+.admin-page .breakdown-item {
+  gap: 10px;
+  padding: 12px 20px;
 }
 
-.admin-page .breakdown-grid > div > div:first-child {
+.admin-page .breakdown-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
   min-width: 0;
 }
 
-.admin-page .breakdown-grid > div > div:first-child span {
+.admin-page .breakdown-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-.admin-page .breakdown-grid > div > div:first-child strong {
-  flex-shrink: 0;
+.admin-page .breakdown-value {
   white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
-.admin-page .breakdown-grid .h-2 {
+.admin-page .breakdown-track {
+  width: 100%;
   height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #f1f5f9;
   flex-shrink: 0;
+}
+
+.admin-page .breakdown-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.admin-page .latest-item {
+  padding: 8px 20px;
 }
 
 .admin-page .latest-item-name {
