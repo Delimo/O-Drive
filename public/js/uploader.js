@@ -85,6 +85,7 @@ function forgetMultipart(task) {
 }
 
 async function uploadSmall(task) {
+  if (task.cancelled) throw new Error(CANCEL_MESSAGE);
   const xhr = new XMLHttpRequest();
   task.xhr = xhr;
   const target = task.targetDir.replace(/^\/|\/$/g, '');
@@ -116,6 +117,7 @@ async function uploadSmall(task) {
   fd.append('file', task.file, task.uploadName || task.file.name);
   xhr.send(fd);
   await done;
+  if (task.cancelled) throw new Error(CANCEL_MESSAGE);
 }
 
 async function waitIfPaused(task) {
@@ -129,19 +131,25 @@ async function waitIfPaused(task) {
 async function uploadPartWithRetry(task, partNumber, chunk) {
   for (let attempt = 1; attempt <= PART_RETRIES; attempt++) {
     await waitIfPaused(task);
+    const controller = new AbortController();
+    task.partController = controller;
     try {
       const { res, data } = await api.multipartPart({
         key: task.key,
         uploadId: task.uploadId,
         partNumber,
         chunk,
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+      if (task.cancelled) throw new Error(CANCEL_MESSAGE);
       return data;
     } catch (e) {
       if (task.cancelled || attempt === PART_RETRIES) throw e;
       task.item.querySelector('.status').textContent = `重试第 ${partNumber} 片`;
       await sleep(800 * attempt);
+    } finally {
+      if (task.partController === controller) task.partController = null;
     }
   }
 }
@@ -172,6 +180,13 @@ async function uploadMultipart(task) {
     task.renamed = Boolean(create.data?.renamed);
     rememberMultipart(task);
   }
+  if (task.cancelled) {
+    if (task.key && task.uploadId) {
+      try { await api.multipartAbort({ key: task.key, uploadId: task.uploadId }); } catch (_) {}
+      forgetMultipart(task);
+    }
+    throw new Error(CANCEL_MESSAGE);
+  }
 
   const partCount = Math.ceil(task.file.size / PART_SIZE);
   const completed = new Set((task.parts || []).map(part => Number(part.partNumber)));
@@ -191,23 +206,41 @@ async function uploadMultipart(task) {
     updateProgress(task, end, task.file.size);
   }
 
-  const complete = await api.multipartComplete({
-    key: task.key,
-    uploadId: task.uploadId,
-    parts: task.parts,
-  });
-  if (!complete.res.ok) throw new Error(complete.data?.message || '无法完成分片上传');
-  forgetMultipart(task);
+  await waitIfPaused(task);
+  const controller = new AbortController();
+  task.completeController = controller;
+  try {
+    const complete = await api.multipartComplete({
+      key: task.key,
+      uploadId: task.uploadId,
+      parts: task.parts,
+    }, { signal: controller.signal });
+    if (!complete.res.ok) throw new Error(complete.data?.message || '无法完成分片上传');
+    if (task.cancelled) throw new Error(CANCEL_MESSAGE);
+    forgetMultipart(task);
+  } finally {
+    if (task.completeController === controller) task.completeController = null;
+  }
 }
 
 async function abortTask(task) {
+  if (!task || task.state === 'cancelled' || task.state === 'success') return;
   task.cancelled = true;
+  task.paused = false;
+  task.item.querySelector('.status').textContent = '正在取消...';
+  task.item.querySelector('.pct').textContent = '取消中';
+  task.item.querySelector('.pause-btn')?.setAttribute('disabled', '');
+  task.item.querySelector('.cancel-btn')?.setAttribute('disabled', '');
+  task.partController?.abort();
+  task.completeController?.abort();
   task.xhr?.abort();
   if (task.key && task.uploadId) {
-    try {
-      await api.multipartAbort({ key: task.key, uploadId: task.uploadId });
-    } catch (_) {}
-    forgetMultipart(task);
+    (async () => {
+      try {
+        await api.multipartAbort({ key: task.key, uploadId: task.uploadId });
+      } catch (_) {}
+      forgetMultipart(task);
+    })();
   }
 }
 
@@ -266,6 +299,12 @@ export class UploadQueue {
       }
       if (action === 'cancel') {
         abortTask(task);
+        if (task.state === 'queued') {
+          this.queue = this.queue.filter(item => item !== task);
+          this.markCancelled(task);
+          this.renderSummary();
+          this.scheduleAutoClose();
+        }
         return;
       }
       if (action === 'retry') {
@@ -347,6 +386,8 @@ export class UploadQueue {
         xhr: null,
         key: null,
         uploadId: null,
+        partController: null,
+        completeController: null,
         parts: [],
         skipped: false,
         renamed: false,
@@ -368,6 +409,8 @@ export class UploadQueue {
     task.error = '';
     task.key = null;
     task.uploadId = null;
+    task.partController = null;
+    task.completeController = null;
     task.parts = [];
     task.skipped = false;
     task.renamed = false;
@@ -407,6 +450,7 @@ export class UploadQueue {
       task.item.querySelector('.status').textContent = '准备上传';
       if (task.file.size >= MULTIPART_THRESHOLD) await uploadMultipart(task);
       else await uploadSmall(task);
+      if (task.cancelled) throw new Error(CANCEL_MESSAGE);
       this.markSuccess(task);
       this.onComplete?.(task);
     } catch (e) {

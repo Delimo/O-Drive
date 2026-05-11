@@ -68,15 +68,21 @@ export const api = {
   multipartCreate(payload) {
     return requestJson('/api/upload-multipart/create', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
   },
-  multipartPart({ key, uploadId, partNumber, chunk }) {
+  multipartPart({ key, uploadId, partNumber, chunk, signal }) {
     return requestJson(`/api/upload-multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
       method: 'PUT',
       headers: csrfHeaders(),
       body: chunk,
+      signal,
     });
   },
-  multipartComplete(payload) {
-    return requestJson('/api/upload-multipart/complete', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
+  multipartComplete(payload, options = {}) {
+    return requestJson('/api/upload-multipart/complete', {
+      method: 'POST',
+      headers: csrfHeaders(jsonHeaders),
+      body: JSON.stringify(payload),
+      signal: options.signal,
+    });
   },
   multipartAbort(payload) {
     return requestJson('/api/upload-multipart/abort', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
