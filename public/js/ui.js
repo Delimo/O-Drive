@@ -177,7 +177,7 @@ export const UI = {
   renderBreadcrumb() {
     if (state.isSearching) return;
     const parts = state.currentPath.split('/').filter(Boolean);
-    let html = `<button class="breadcrumb-root" data-action="navigate" data-args='["/"]'>全部文件</button>`;
+    let html = `<button class="breadcrumb-root" data-action="navigate" data-args='["/"]'>根目录</button>`;
 
     if (parts.length > 2) {
       html += `<span class="opacity-20 mx-1 text-slate-900">/</span><span class="opacity-40 text-slate-900">...</span>`;
