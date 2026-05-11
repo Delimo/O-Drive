@@ -1,19 +1,19 @@
 body.admin-page {
-  min-height: 100vh;
+  height: 100vh;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 .admin-page .container {
-  flex: none;
-  min-height: auto;
-  padding-bottom: 24px;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px 0;
 }
 
 .admin-page .explorer-card {
-  overflow: visible;
+  overflow: hidden;
   flex: 1;
-  min-height: min(680px, calc(100vh - 220px));
+  min-height: 0;
 }
 
 .admin-page .tab-shell {
@@ -28,7 +28,7 @@ body.admin-page {
 }
 
 .admin-page .overview-tab {
-  overflow: hidden;
+  overflow-y: auto;
   min-height: 0;
 }
 
@@ -65,7 +65,7 @@ body.admin-page {
 
 .admin-page .overview-panels-grid > section {
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .admin-page .breakdown-grid,
@@ -147,7 +147,7 @@ body.admin-page {
   }
 
   .admin-page .overview-tab {
-    overflow: visible;
+    overflow-y: auto;
     padding: 14px;
   }
 
@@ -197,12 +197,8 @@ body.admin-page {
     font-size: 24px;
   }
 
-  .admin-page #logs-tab {
-    overflow: visible;
-  }
-
   .admin-page #logs-tab #fileList {
-    overflow-y: visible;
+    overflow-y: auto;
   }
 
   .admin-page #logs-tab table,
