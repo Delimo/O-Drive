@@ -32,6 +32,11 @@ body.admin-page {
   white-space: nowrap;
 }
 
+.admin-page .admin-tab-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .admin-page .tab-shell::-webkit-scrollbar {
   display: none;
 }
@@ -204,7 +209,7 @@ body.admin-page {
 
 .admin-page .admin-protected-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.8fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(190px, 0.85fr) minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -215,11 +220,16 @@ body.admin-page {
   gap: 12px;
 }
 
+.admin-page .admin-protected-options .btn {
+  flex-shrink: 0;
+}
+
 .admin-page .admin-check-row {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   min-width: 0;
+  max-width: 560px;
   color: var(--text-main);
   cursor: pointer;
 }
@@ -228,6 +238,7 @@ body.admin-page {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
+  margin-top: 2px;
   accent-color: var(--primary);
 }
 
@@ -530,6 +541,14 @@ body.admin-page {
 @media (max-width: 1024px) {
   .admin-page .overview-panels-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-protected-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-page .admin-protected-fields .admin-input:first-child {
+    grid-column: 1 / -1;
   }
 }
 
