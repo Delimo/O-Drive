@@ -11,7 +11,7 @@ const keyPrefixes = [
 
 export async function loadHiddenPaths(env) {
   try {
-    const res = await env.DB.prepare('SELECT key FROM settings').all();
+    const res = await env.D1.prepare('SELECT key FROM settings').all();
     return res.results.map(r => r.key).filter(Boolean);
   } catch (e) {
     return [];

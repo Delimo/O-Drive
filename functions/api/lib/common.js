@@ -27,10 +27,10 @@ async function runStatement(statement) {
 }
 
 export async function ensureCoreTables(env) {
-  if (!env?.DB) return;
+  if (!env?.D1) return;
   if (initializedCoreTables.has(env)) return;
   for (const sql of CORE_TABLE_SQL) {
-    await runStatement(env.DB.prepare(sql));
+    await runStatement(env.D1.prepare(sql));
   }
   initializedCoreTables.add(env);
 }
@@ -93,7 +93,7 @@ export function isTrashKey(key) {
 export async function addLog(env, request, action, details) {
   await ensureCoreTables(env);
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-  try { await env.DB.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, details, ip).run(); } catch (e) {}
+  try { await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, details, ip).run(); } catch (e) {}
 }
 
 export function assertCompleteListing(listed, details = 'Object listing') {

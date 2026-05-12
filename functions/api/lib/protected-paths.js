@@ -105,13 +105,13 @@ async function verifySignature(value, signature, env) {
 }
 
 async function ensureTable(env) {
-  const stmt = env.DB.prepare(TABLE_SQL);
+  const stmt = env.D1.prepare(TABLE_SQL);
   if (typeof stmt.bind === 'function') {
     await stmt.bind().run();
   } else {
     await stmt.run();
   }
-  const attemptsStmt = env.DB.prepare(ATTEMPTS_TABLE_SQL);
+  const attemptsStmt = env.D1.prepare(ATTEMPTS_TABLE_SQL);
   if (typeof attemptsStmt.bind === 'function') {
     await attemptsStmt.bind().run();
   } else {
@@ -156,7 +156,7 @@ function clientIp(request) {
 async function checkUnlockAttempts(env, request, path) {
   const ip = clientIp(request);
   try {
-    const row = await env.DB.prepare('SELECT attempts, last_attempt FROM path_access_attempts WHERE path = ? AND ip = ?')
+    const row = await env.D1.prepare('SELECT attempts, last_attempt FROM path_access_attempts WHERE path = ? AND ip = ?')
       .bind(path, ip)
       .first();
     const attempts = Number(row?.attempts || 0);
@@ -173,7 +173,7 @@ async function checkUnlockAttempts(env, request, path) {
 
 async function recordUnlockFailure(env, path, ip) {
   try {
-    await env.DB.prepare(
+    await env.D1.prepare(
       `INSERT INTO path_access_attempts (path, ip, attempts, last_attempt)
        VALUES (?, ?, 1, ?)
        ON CONFLICT(path, ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt`
@@ -183,7 +183,7 @@ async function recordUnlockFailure(env, path, ip) {
 
 async function clearUnlockFailures(env, path, ip) {
   try {
-    await env.DB.prepare('DELETE FROM path_access_attempts WHERE path = ? AND ip = ?').bind(path, ip).run();
+    await env.D1.prepare('DELETE FROM path_access_attempts WHERE path = ? AND ip = ?').bind(path, ip).run();
   } catch (_) {}
 }
 
@@ -209,7 +209,7 @@ function hasPathAccess(access, rule) {
 export async function loadProtectedPaths(env) {
   try {
     await ensureTable(env);
-    const res = await env.DB.prepare('SELECT path, salt, password_hash, note, show_name, created_at FROM path_passwords ORDER BY path ASC').all();
+    const res = await env.D1.prepare('SELECT path, salt, password_hash, note, show_name, created_at FROM path_passwords ORDER BY path ASC').all();
     return (res.results || []).map(row => ({
       path: row.path,
       salt: row.salt,
@@ -264,14 +264,14 @@ export async function handleProtectedSettings(env, request, method, url) {
     const passwordHash = await hashPassword(password, salt);
     const note = String(body.note || '').trim();
     const showName = body.showName === false ? 0 : 1;
-    await env.DB.prepare(
+    await env.D1.prepare(
       'INSERT INTO path_passwords (path, salt, password_hash, note, show_name, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(path) DO UPDATE SET salt = excluded.salt, password_hash = excluded.password_hash, note = excluded.note, show_name = excluded.show_name'
     ).bind(path, salt, passwordHash, note, showName, Date.now()).run();
     return jsonResponse({ success: true });
   }
   if (method === 'DELETE') {
     const path = normalizeProtectedPath(url.searchParams.get('path'));
-    await env.DB.prepare('DELETE FROM path_passwords WHERE path = ?').bind(path).run();
+    await env.D1.prepare('DELETE FROM path_passwords WHERE path = ?').bind(path).run();
     return jsonResponse({ success: true });
   }
   return jsonResponse({ message: 'Method Not Allowed' }, 405);

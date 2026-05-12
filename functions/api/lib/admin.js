@@ -1,4 +1,4 @@
-import { jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
+﻿import { jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
 import { getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
 import { mapWithConcurrency } from './r2-tree.js';
 
@@ -21,8 +21,8 @@ function emptyBreakdown() {
 export async function handleAdminLogs(env, url) {
   const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
   const size = Math.max(1, Math.min(100, Number(url.searchParams.get('size') || '20')));
-  const totalRes = await env.DB.prepare('SELECT COUNT(*) as count FROM logs').first();
-  const logs = await env.DB.prepare('SELECT * FROM logs ORDER BY timestamp DESC LIMIT ? OFFSET ?').bind(size, (page - 1) * size).all();
+  const totalRes = await env.D1.prepare('SELECT COUNT(*) as count FROM logs').first();
+  const logs = await env.D1.prepare('SELECT * FROM logs ORDER BY timestamp DESC LIMIT ? OFFSET ?').bind(size, (page - 1) * size).all();
   return jsonResponse({ logs: logs.results, totalPages: Math.ceil((totalRes?.count || 0) / size), currentPage: page });
 }
 
@@ -31,7 +31,7 @@ export async function handleAdminStats(env) {
     const indexed = await getIndexedStats(env);
     if (indexed) return jsonResponse({ ...indexed, ...(await adminDbStats(env)) });
   }
-  const listed = await listR2Objects(env.R2_BUCKET, {}, { maxObjects: 20000 });
+  const listed = await listR2Objects(env.R2, {}, { maxObjects: 20000 });
   await syncFileIndexFromR2(env, { maxObjects: 20000 });
   const objects = (listed.objects || []).filter(obj => !isReservedKey(obj.key) && !obj.key.endsWith('/.folder'));
   const breakdown = emptyBreakdown();
@@ -81,37 +81,37 @@ async function adminDbStats(env) {
   let trash = { count: 0, size: 0, sizeFormatted: '0 B' };
   let logs = { count: 0 };
   try {
-    const trashCount = await env.DB.prepare('SELECT COUNT(*) as count FROM trash').first();
-    const trashRows = await env.DB.prepare('SELECT * FROM trash ORDER BY trashed_at DESC').all();
+    const trashCount = await env.D1.prepare('SELECT COUNT(*) as count FROM trash').first();
+    const trashRows = await env.D1.prepare('SELECT * FROM trash ORDER BY trashed_at DESC').all();
     const size = (trashRows.results || []).reduce((sum, row) => sum + Number(row.size || 0), 0);
     trash = { count: Number(trashCount?.count || 0), size, sizeFormatted: formatBytes(size) };
   } catch (_) {}
   try {
-    const logCount = await env.DB.prepare('SELECT COUNT(*) as count FROM logs').first();
+    const logCount = await env.D1.prepare('SELECT COUNT(*) as count FROM logs').first();
     logs = { count: Number(logCount?.count || 0) };
   } catch (_) {}
   return { trash, logs };
 }
 
 async function checkDb(env) {
-  if (!env.DB) return { bound: false, ok: false, message: 'DB binding missing' };
+  if (!env.D1) return { bound: false, ok: false, message: 'D1 binding missing' };
   try {
-    await env.DB.prepare('SELECT 1').first();
+    await env.D1.prepare('SELECT 1').first();
     let tables = [];
     try {
-      const res = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name ASC").all();
+      const res = await env.D1.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name ASC").all();
       tables = (res.results || []).map(row => row.name).filter(Boolean);
     } catch (_) {}
     return { bound: true, ok: true, tables };
   } catch (e) {
-    return { bound: true, ok: false, message: e.message || 'DB check failed' };
+    return { bound: true, ok: false, message: e.message || 'D1 check failed' };
   }
 }
 
 async function checkR2(env) {
-  if (!env.R2_BUCKET) return { bound: false, ok: false, message: 'R2_BUCKET binding missing' };
+  if (!env.R2) return { bound: false, ok: false, message: 'R2 binding missing' };
   try {
-    await env.R2_BUCKET.list({ limit: 1 });
+    await env.R2.list({ limit: 1 });
     return { bound: true, ok: true };
   } catch (e) {
     return { bound: true, ok: false, message: e.message || 'R2 check failed' };
@@ -138,7 +138,7 @@ export async function handleAdminHealth(env) {
 
 async function countRows(env, table) {
   try {
-    const row = await env.DB.prepare(`SELECT COUNT(*) as count FROM ${table}`).first();
+    const row = await env.D1.prepare(`SELECT COUNT(*) as count FROM ${table}`).first();
     return Number(row?.count || 0);
   } catch (_) {
     return 0;
@@ -146,8 +146,8 @@ async function countRows(env, table) {
 }
 
 async function deletePrefix(env, prefix, limit = 5000) {
-  const listed = await listR2Objects(env.R2_BUCKET, { prefix }, { maxObjects: limit });
-  await mapWithConcurrency(listed.objects || [], 8, item => env.R2_BUCKET.delete(item.key));
+  const listed = await listR2Objects(env.R2, { prefix }, { maxObjects: limit });
+  await mapWithConcurrency(listed.objects || [], 8, item => env.R2.delete(item.key));
   return { deleted: (listed.objects || []).length, truncated: Boolean(listed.truncated) };
 }
 
@@ -157,7 +157,7 @@ export async function handleAdminMaintenance(env) {
     countRows(env, 'path_access_attempts'),
     countRows(env, 'trash'),
     countRows(env, 'logs'),
-    listR2Objects(env.R2_BUCKET, { prefix: '.thumbs/' }, { maxObjects: 1 }).catch(() => ({ objects: [], truncated: false })),
+    listR2Objects(env.R2, { prefix: '.thumbs/' }, { maxObjects: 1 }).catch(() => ({ objects: [], truncated: false })),
   ]);
   return jsonResponse({
     indexCount,
@@ -177,9 +177,9 @@ export async function handleAdminMaintenanceAction(env, request) {
   if (action === 'cleanup-access-attempts') {
     let deleted = 0;
     try {
-      const row = await env.DB.prepare('SELECT COUNT(*) as count FROM path_access_attempts').first();
+      const row = await env.D1.prepare('SELECT COUNT(*) as count FROM path_access_attempts').first();
       deleted = Number(row?.count || 0);
-      await env.DB.prepare('DELETE FROM path_access_attempts').run();
+      await env.D1.prepare('DELETE FROM path_access_attempts').run();
     } catch (_) {}
     return jsonResponse({ success: true, action, deleted });
   }
@@ -194,12 +194,12 @@ export async function handleHiddenSettings(env, request, method, url, hiddenPath
   if (method === 'GET') return jsonResponse({ list: hiddenPaths.map(p => ({ path: p })) });
   if (method === 'POST') {
     const targetPath = normalizeHiddenPath((await request.json()).targetPath);
-    await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind(targetPath).run();
+    await env.D1.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind(targetPath).run();
     return jsonResponse({ success: true });
   }
   if (method === 'DELETE') {
     const targetPath = normalizeHiddenPath(url.searchParams.get('path'));
-    await env.DB.prepare('DELETE FROM settings WHERE key = ?').bind(targetPath).run();
+    await env.D1.prepare('DELETE FROM settings WHERE key = ?').bind(targetPath).run();
     return jsonResponse({ success: true });
   }
   return jsonResponse({ message: 'Method Not Allowed' }, 405);

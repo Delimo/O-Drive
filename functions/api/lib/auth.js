@@ -54,7 +54,7 @@ export async function handleLogin(request, env) {
   const { username, password } = await request.json();
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
   try {
-    const row = await env.DB.prepare('SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?').bind(ip).first();
+    const row = await env.D1.prepare('SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?').bind(ip).first();
     const recentAttempt = row?.last_attempt ? Number(row.last_attempt) : 0;
     if (row && Number(row.attempts || 0) >= 5 && Date.now() - recentAttempt < 15 * 60 * 1000) {
       return jsonResponse({ success: false, message: 'Too many attempts' }, 429);
@@ -62,7 +62,7 @@ export async function handleLogin(request, env) {
   } catch (e) {}
 
   if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
-    try { await env.DB.prepare('DELETE FROM login_attempts WHERE ip = ?').bind(ip).run(); } catch (e) {}
+    try { await env.D1.prepare('DELETE FROM login_attempts WHERE ip = ?').bind(ip).run(); } catch (e) {}
     const csrf = createCsrfToken();
     const now = Math.floor(Date.now() / 1000);
     const header = encodeBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -74,7 +74,7 @@ export async function handleLogin(request, env) {
   }
 
   try {
-    await env.DB.prepare(
+    await env.D1.prepare(
       'INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt'
     ).bind(ip, Date.now()).run();
   } catch (e) {}

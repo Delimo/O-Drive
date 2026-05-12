@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { onRequest } from '../functions/api/[[path]].js';
@@ -70,7 +70,7 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
     return rows;
   };
   return {
-    R2_BUCKET: {
+    R2: {
       async head(key) {
         const obj = byKey.get(key);
         if (!obj) return null;
@@ -151,7 +151,7 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
         };
       },
     },
-    DB: {
+    D1: {
       prepare(sql) {
         const statement = {
           bind(...params) {
@@ -578,7 +578,7 @@ test('route smoke: folder upload can target nested paths', async () => {
   });
 
   assert.equal(upload.status, 200);
-  assert.ok(await env.R2_BUCKET.get('projects/folder-a/inside.txt'));
+  assert.ok(await env.R2.get('projects/folder-a/inside.txt'));
 });
 
 test('protected paths require password and unlock with signed cookie', async () => {
@@ -748,7 +748,7 @@ test('multipart upload logs only final user-visible events', async () => {
   }));
   assert.equal(create.status, 200);
 
-  let logs = await env.DB.prepare('SELECT * FROM logs ORDER BY timestamp DESC').all();
+  let logs = await env.D1.prepare('SELECT * FROM logs ORDER BY timestamp DESC').all();
   assert.deepEqual(logs.results || [], []);
 
   await handleMultipartComplete(env, new Request('https://example.com', {
@@ -756,7 +756,7 @@ test('multipart upload logs only final user-visible events', async () => {
     body: JSON.stringify({ key: 'large.bin', uploadId: 'upload-1', parts: [{ partNumber: 1, etag: 'etag-1' }] }),
     headers: { 'Content-Type': 'application/json' },
   }));
-  logs = await env.DB.prepare('SELECT * FROM logs ORDER BY timestamp DESC').all();
+  logs = await env.D1.prepare('SELECT * FROM logs ORDER BY timestamp DESC').all();
   assert.deepEqual((logs.results || []).map(log => log.action), ['UPLOAD']);
 });
 
@@ -797,7 +797,7 @@ test('batch delete moves files into trash and restore returns them', async () =>
     headers: { 'Content-Type': 'application/json' },
   }));
   assert.equal((await restore.json()).success, true);
-  assert.ok(await env.R2_BUCKET.get('docs/readme.txt'));
+  assert.ok(await env.R2.get('docs/readme.txt'));
 
   const trashDelete = await handleTrashDelete(env, new Request('https://example.com', {
     method: 'DELETE',
@@ -888,7 +888,7 @@ test('trash items can be purged permanently', async () => {
   }));
   assert.equal((await purge.json()).success, true);
   assert.equal((await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).status, 200);
-  assert.equal(await env.R2_BUCKET.get('docs/temp.txt'), null);
+  assert.equal(await env.R2.get('docs/temp.txt'), null);
 });
 
 test('trash list can filter by path, kind, and trashed date', async () => {
@@ -1033,7 +1033,7 @@ test('admin maintenance reports counts and runs cleanup actions', async () => {
     }),
   });
   assert.equal((await cleanupThumbs.json()).deleted, 1);
-  assert.equal(await env.R2_BUCKET.get('.thumbs/docs/a.jpg'), null);
+  assert.equal(await env.R2.get('.thumbs/docs/a.jpg'), null);
 
   const status = await onRequest({
     env,

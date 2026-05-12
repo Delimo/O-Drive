@@ -1,4 +1,4 @@
-import { jsonResponse, formatBytes, isHiddenKey, isReservedKey, listR2Objects } from './common.js';
+﻿import { jsonResponse, formatBytes, isHiddenKey, isReservedKey, listR2Objects } from './common.js';
 import { checkProtectedAccess, markProtection } from './protected-paths.js';
 import { searchFileIndex } from './file-index.js';
 
@@ -30,7 +30,7 @@ export async function handleSearch(env, request, url, hiddenPaths, auth, protect
 
   do {
     const pageLimit = Math.max(1, Math.min(limit - matches.length, scanLimit - scanned));
-    const listed = await env.R2_BUCKET.list({ prefix: scope, cursor, limit: pageLimit });
+    const listed = await env.R2.list({ prefix: scope, cursor, limit: pageLimit });
     const objects = listed.objects || [];
     scanned += objects.length;
     const pageMatches = objects
@@ -51,7 +51,7 @@ export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, pr
     return jsonResponse({ success: false, code: 'password_required', path: access.rule.path, message: 'Password required' }, 403);
   }
   const prefix = r2Key ? r2Key + '/' : '';
-  const listed = await listR2Objects(env.R2_BUCKET, { prefix, delimiter: '/' });
+  const listed = await listR2Objects(env.R2, { prefix, delimiter: '/' });
   const folders = await markProtection((listed.delimitedPrefixes || [])
     .map(p => {
       const fullKey = p.slice(0, -1);
@@ -86,8 +86,8 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
   const rangeHeader = request.headers.get('Range');
   const parsedRange = parseByteRange(rangeHeader);
   const wantsRange = Boolean(parsedRange);
-  const meta = wantsRange ? await env.R2_BUCKET.head(r2Key) : null;
-  const obj = wantsRange ? meta : await env.R2_BUCKET.get(r2Key);
+  const meta = wantsRange ? await env.R2.head(r2Key) : null;
+  const obj = wantsRange ? meta : await env.R2.get(r2Key);
   if (!obj) return new Response('404', { status: 404 });
 
   const headers = new Headers();
@@ -125,7 +125,7 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
     length = end - offset + 1;
   }
 
-  const ranged = await env.R2_BUCKET.get(r2Key, { range: { offset, length } });
+  const ranged = await env.R2.get(r2Key, { range: { offset, length } });
   if (!ranged) return new Response('404', { status: 404 });
 
   headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${size}`);

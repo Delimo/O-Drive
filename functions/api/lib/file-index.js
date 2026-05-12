@@ -1,4 +1,4 @@
-import { formatBytes, isReservedKey, listR2Objects } from './common.js';
+﻿import { formatBytes, isReservedKey, listR2Objects } from './common.js';
 
 const FILE_INDEX_SQL = `
   CREATE TABLE IF NOT EXISTS file_index (
@@ -51,9 +51,9 @@ async function runStatement(statement) {
 }
 
 export async function ensureFileIndexTable(env) {
-  if (!env?.DB) return false;
+  if (!env?.D1) return false;
   try {
-    await runStatement(env.DB.prepare(FILE_INDEX_SQL));
+    await runStatement(env.D1.prepare(FILE_INDEX_SQL));
     return true;
   } catch (_) {
     return false;
@@ -66,7 +66,7 @@ export async function upsertFileIndex(env, key, meta = {}) {
   const contentType = meta.httpMetadata?.contentType || meta.contentType || '';
   const uploadedAt = uploadedMs(meta.uploaded);
   try {
-    await env.DB.prepare(
+    await env.D1.prepare(
       `INSERT INTO file_index (path, name, parent, kind, size, content_type, uploaded_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(path) DO UPDATE SET
@@ -84,7 +84,7 @@ export async function upsertFileIndex(env, key, meta = {}) {
 export async function deleteFileIndexKey(env, key) {
   if (!(await ensureFileIndexTable(env))) return;
   try {
-    await env.DB.prepare('DELETE FROM file_index WHERE path = ?').bind(key).run();
+    await env.D1.prepare('DELETE FROM file_index WHERE path = ?').bind(key).run();
   } catch (_) {}
 }
 
@@ -92,14 +92,14 @@ export async function deleteFileIndexPrefix(env, prefix) {
   if (!(await ensureFileIndexTable(env))) return;
   const clean = String(prefix || '').replace(/^\/+|\/+$/g, '');
   try {
-    await env.DB.prepare('DELETE FROM file_index WHERE path = ? OR path LIKE ?').bind(clean, `${clean}/%`).run();
+    await env.D1.prepare('DELETE FROM file_index WHERE path = ? OR path LIKE ?').bind(clean, `${clean}/%`).run();
   } catch (_) {}
 }
 
 export async function indexedFileCount(env) {
   if (!(await ensureFileIndexTable(env))) return 0;
   try {
-    const row = await env.DB.prepare('SELECT COUNT(*) as count FROM file_index').first();
+    const row = await env.D1.prepare('SELECT COUNT(*) as count FROM file_index').first();
     return Number(row?.count || 0);
   } catch (_) {
     return 0;
@@ -108,7 +108,7 @@ export async function indexedFileCount(env) {
 
 export async function syncFileIndexFromR2(env, { maxObjects = 20000 } = {}) {
   if (!(await ensureFileIndexTable(env))) return { synced: 0, truncated: false };
-  const listed = await listR2Objects(env.R2_BUCKET, {}, { maxObjects });
+  const listed = await listR2Objects(env.R2, {}, { maxObjects });
   let synced = 0;
   for (const obj of listed.objects || []) {
     if (!indexableKey(obj.key)) continue;
@@ -121,7 +121,7 @@ export async function syncFileIndexFromR2(env, { maxObjects = 20000 } = {}) {
 export async function rebuildFileIndex(env, { maxObjects = 50000 } = {}) {
   if (!(await ensureFileIndexTable(env))) return { synced: 0, truncated: false };
   try {
-    await env.DB.prepare('DELETE FROM file_index').run();
+    await env.D1.prepare('DELETE FROM file_index').run();
   } catch (_) {}
   return syncFileIndexFromR2(env, { maxObjects });
 }
@@ -150,7 +150,7 @@ export async function searchFileIndex(env, { q, scope, limit, cursor }, hiddenPa
     ? `SELECT * FROM file_index WHERE lower(name) LIKE ? AND (path = ? OR path LIKE ?) ORDER BY path ASC LIMIT ? OFFSET ?`
     : `SELECT * FROM file_index WHERE lower(name) LIKE ? ORDER BY path ASC LIMIT ? OFFSET ?`;
   try {
-    const rows = await env.DB.prepare(sql).bind(...params).all();
+    const rows = await env.D1.prepare(sql).bind(...params).all();
     const items = (rows.results || [])
       .map(mapIndexRow)
       .filter(f => auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey === hp || f.fullKey.startsWith(hp + '/')));
@@ -170,7 +170,7 @@ export async function getIndexedStats(env) {
   const count = await indexedFileCount(env);
   if (!count) return null;
   try {
-    const rows = await env.DB.prepare('SELECT * FROM file_index ORDER BY uploaded_at DESC LIMIT 20000').all();
+    const rows = await env.D1.prepare('SELECT * FROM file_index ORDER BY uploaded_at DESC LIMIT 20000').all();
     const objects = rows.results || [];
     const breakdown = {
       image: { count: 0, size: 0 },

@@ -1,4 +1,4 @@
-import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
+﻿import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
 import { deleteFileIndexKey, deleteFileIndexPrefix, upsertFileIndex } from './file-index.js';
 import { copyR2Object, copyTree, mapWithConcurrency } from './r2-tree.js';
 
@@ -22,7 +22,7 @@ const SETTINGS_TABLE_SQL = `
 `;
 
 async function ensureTrashTable(env) {
-  const stmt = env.DB.prepare(TRASH_TABLE_SQL);
+  const stmt = env.D1.prepare(TRASH_TABLE_SQL);
   if (typeof stmt.bind === 'function') {
     await stmt.bind().run();
     return;
@@ -31,7 +31,7 @@ async function ensureTrashTable(env) {
 }
 
 async function ensureSettingsTable(env) {
-  const stmt = env.DB.prepare(SETTINGS_TABLE_SQL);
+  const stmt = env.D1.prepare(SETTINGS_TABLE_SQL);
   if (typeof stmt.bind === 'function') {
     await stmt.bind().run();
     return;
@@ -73,8 +73,8 @@ function estimatePathList(paths) {
 }
 
 async function keyExists(env, key) {
-  if (await env.R2_BUCKET.head(key)) return true;
-  const listed = await env.R2_BUCKET.list({ prefix: key + '/', limit: 1 });
+  if (await env.R2.head(key)) return true;
+  const listed = await env.R2.list({ prefix: key + '/', limit: 1 });
   return Boolean((listed.objects || []).length || (listed.delimitedPrefixes || []).length);
 }
 
@@ -111,8 +111,8 @@ async function resolveUploadConflict(env, key, mode = 'error') {
 }
 
 async function softDeleteTree(env, sourceKey, request) {
-  const exact = await env.R2_BUCKET.get(sourceKey);
-  const listed = await listR2Objects(env.R2_BUCKET, { prefix: sourceKey + '/' });
+  const exact = await env.R2.get(sourceKey);
+  const listed = await listR2Objects(env.R2, { prefix: sourceKey + '/' });
   assertCompleteListing(listed, `Path ${sourceKey}`);
   const entries = [];
 
@@ -129,19 +129,19 @@ async function softDeleteTree(env, sourceKey, request) {
     const source = entry.key;
     const target = `.trash/${trashId}/${entry.key}`;
     const copied = await copyR2Object(env, source, target);
-    if (copied) await env.R2_BUCKET.delete(source);
+    if (copied) await env.R2.delete(source);
     if (copied) await deleteFileIndexKey(env, source);
   });
 
   if (!exact && entries.length === 1 && entries[0].key === `${sourceKey}/.folder`) {
-    await env.R2_BUCKET.put(`${trashKey}/.folder`, new Uint8Array(0));
+    await env.R2.put(`${trashKey}/.folder`, new Uint8Array(0));
   }
 
   const kind = exact && listed.objects.length === 0 ? 'file' : 'folder';
   const size = exact?.size || 0;
 
   await ensureTrashTable(env);
-  await env.DB.prepare('INSERT INTO trash (id, original_key, trash_key, name, kind, size, trashed_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+  await env.D1.prepare('INSERT INTO trash (id, original_key, trash_key, name, kind, size, trashed_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .bind(trashId, sourceKey, trashKey, sourceKey.split('/').pop() || sourceKey, kind, size, Date.now())
     .run();
 
@@ -220,8 +220,8 @@ export async function handleOperationEstimate(env, request) {
 
   for (const key of normalizedPaths) {
     assertUserKey(key);
-    const exact = await env.R2_BUCKET.head(key);
-    const listed = await listR2Objects(env.R2_BUCKET, { prefix: key + '/' }, { maxObjects: 1001 });
+    const exact = await env.R2.head(key);
+    const listed = await listR2Objects(env.R2, { prefix: key + '/' }, { maxObjects: 1001 });
     const childCount = (listed.objects || []).length;
     const isFolder = childCount > 0;
     const exists = Boolean(exact || isFolder);
@@ -254,7 +254,7 @@ export async function handleMkdir(env, request, r2Key) {
   const key = folderKey + '/.folder';
   assertUserKey(key);
   await assertTargetAvailable(env, folderKey);
-  await env.R2_BUCKET.put(key, new Uint8Array(0));
+  await env.R2.put(key, new Uint8Array(0));
   await addLog(env, request, 'MKDIR', cleanName);
   return jsonResponse({ success: true });
 }
@@ -268,7 +268,7 @@ export async function handleUpload(env, request, r2Key) {
   assertUserKey(key);
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped) return jsonResponse({ success: true, skipped: true, key });
-  await env.R2_BUCKET.put(resolved.key, file.stream(), { httpMetadata: { contentType: file.type } });
+  await env.R2.put(resolved.key, file.stream(), { httpMetadata: { contentType: file.type } });
   await upsertFileIndex(env, resolved.key, { size: file.size, contentType: file.type, uploaded: Date.now() });
   await addLog(env, request, resolved.conflict ? 'UPLOAD_CONFLICT' : 'UPLOAD', resolved.key);
   return jsonResponse({ success: true, key: resolved.key, renamed: resolved.key !== key });
@@ -286,7 +286,7 @@ export async function handleMultipartCreate(env, request) {
   assertUserKey(key);
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped) return jsonResponse({ key, skipped: true });
-  const upload = await env.R2_BUCKET.createMultipartUpload(resolved.key, {
+  const upload = await env.R2.createMultipartUpload(resolved.key, {
     httpMetadata: { contentType: type || 'application/octet-stream' },
   });
   return jsonResponse({ key: upload.key, uploadId: upload.uploadId, renamed: resolved.key !== key });
@@ -301,7 +301,7 @@ export async function handleMultipartPart(env, request, url) {
   }
   assertUserKey(key);
   if (!request.body) return jsonResponse({ success: false, message: 'Missing request body' }, 400);
-  const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+  const upload = env.R2.resumeMultipartUpload(key, uploadId);
   const part = await upload.uploadPart(partNumber, request.body);
   return jsonResponse(part);
 }
@@ -312,9 +312,9 @@ export async function handleMultipartComplete(env, request) {
     return jsonResponse({ success: false, message: 'Invalid multipart complete request' }, 400);
   }
   assertUserKey(key);
-  const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+  const upload = env.R2.resumeMultipartUpload(key, uploadId);
   const object = await upload.complete(parts.sort((a, b) => a.partNumber - b.partNumber));
-  const meta = await env.R2_BUCKET.head(key);
+  const meta = await env.R2.head(key);
   await upsertFileIndex(env, key, meta || { uploaded: Date.now() });
   await addLog(env, request, 'UPLOAD', key);
   return jsonResponse({ success: true, key: object.key, etag: object.httpEtag });
@@ -324,7 +324,7 @@ export async function handleMultipartAbort(env, request) {
   const { key, uploadId } = await request.json();
   if (!key || !uploadId) return jsonResponse({ success: false, message: 'Invalid multipart abort request' }, 400);
   assertUserKey(key);
-  const upload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+  const upload = env.R2.resumeMultipartUpload(key, uploadId);
   await upload.abort();
   await addLog(env, request, 'UPLOAD_ABORT', key);
   return jsonResponse({ success: true });
@@ -335,7 +335,7 @@ export async function handleSaveText(env, request, r2Key) {
   assertUserKey(r2Key);
   const body = await request.json();
   if (typeof body.content !== 'string') return jsonResponse({ success: false, message: 'Invalid content' }, 400);
-  await env.R2_BUCKET.put(r2Key, body.content, { httpMetadata: { contentType: 'text/plain' } });
+  await env.R2.put(r2Key, body.content, { httpMetadata: { contentType: 'text/plain' } });
   await upsertFileIndex(env, r2Key, { size: body.content.length, contentType: 'text/plain', uploaded: Date.now() });
   await addLog(env, request, 'SAVE_TEXT', r2Key);
   return jsonResponse({ success: true });
@@ -368,10 +368,10 @@ export async function handleTrashList(env, url) {
     params.push(to);
   }
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-  let totalStmt = env.DB.prepare(`SELECT COUNT(*) as count FROM trash ${where}`);
+  let totalStmt = env.D1.prepare(`SELECT COUNT(*) as count FROM trash ${where}`);
   if (params.length) totalStmt = totalStmt.bind(...params);
   const totalRes = await totalStmt.first();
-  const rows = await env.DB.prepare(`SELECT * FROM trash ${where} ORDER BY trashed_at DESC LIMIT ? OFFSET ?`)
+  const rows = await env.D1.prepare(`SELECT * FROM trash ${where} ORDER BY trashed_at DESC LIMIT ? OFFSET ?`)
     .bind(...params, size, (page - 1) * size)
     .all();
   return jsonResponse({
@@ -384,14 +384,14 @@ export async function handleTrashList(env, url) {
 
 async function trashRows(env, where = '', params = []) {
   await ensureTrashTable(env);
-  let stmt = env.DB.prepare(`SELECT * FROM trash ${where} ORDER BY trashed_at DESC`);
+  let stmt = env.D1.prepare(`SELECT * FROM trash ${where} ORDER BY trashed_at DESC`);
   if (params.length) stmt = stmt.bind(...params);
   const rows = await stmt.all();
   return rows.results || [];
 }
 
 async function restoreTrashRecord(env, row, request) {
-  const listed = await listR2Objects(env.R2_BUCKET, { prefix: row.trash_key });
+  const listed = await listR2Objects(env.R2, { prefix: row.trash_key });
   assertCompleteListing(listed, `Trash item ${row.id}`);
   if (await keyExists(env, row.original_key)) {
     const err = new Error('Target already exists');
@@ -401,24 +401,24 @@ async function restoreTrashRecord(env, row, request) {
   await mapWithConcurrency(listed.objects || [], 6, async item => {
     const suffix = item.key.slice(row.trash_key.length);
     const target = row.original_key + suffix;
-    const obj = await env.R2_BUCKET.get(item.key);
+    const obj = await env.R2.get(item.key);
     if (obj) {
-      await env.R2_BUCKET.put(target, obj.body, { httpMetadata: obj.httpMetadata });
+      await env.R2.put(target, obj.body, { httpMetadata: obj.httpMetadata });
       await upsertFileIndex(env, target, obj);
-      await env.R2_BUCKET.delete(item.key);
+      await env.R2.delete(item.key);
     }
   });
 
-  await env.DB.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
+  await env.D1.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
   await deleteFileIndexPrefix(env, row.trash_key);
   await addLog(env, request, 'RESTORE', row.original_key);
 }
 
 async function purgeTrashRecord(env, row, request) {
-  const listed = await listR2Objects(env.R2_BUCKET, { prefix: row.trash_key });
+  const listed = await listR2Objects(env.R2, { prefix: row.trash_key });
   assertCompleteListing(listed, `Trash item ${row.id}`);
-  await mapWithConcurrency(listed.objects || [], 8, item => env.R2_BUCKET.delete(item.key));
-  await env.DB.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
+  await mapWithConcurrency(listed.objects || [], 8, item => env.R2.delete(item.key));
+  await env.D1.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
   await addLog(env, request, 'PURGE', row.original_key);
 }
 
@@ -426,7 +426,7 @@ export async function handleTrashRestore(env, request) {
   const { id } = await request.json();
   if (!id) return jsonResponse({ success: false, message: 'Invalid trash record' }, 400);
   await ensureTrashTable(env);
-  const row = await env.DB.prepare('SELECT * FROM trash WHERE id = ?').bind(id).first();
+  const row = await env.D1.prepare('SELECT * FROM trash WHERE id = ?').bind(id).first();
   if (!row) return jsonResponse({ success: false, message: 'Trash item not found' }, 404);
   await restoreTrashRecord(env, row, request);
   return jsonResponse({ success: true });
@@ -436,7 +436,7 @@ export async function handleTrashDelete(env, request) {
   const { id } = await request.json();
   if (!id) return jsonResponse({ success: false, message: 'Invalid trash record' }, 400);
   await ensureTrashTable(env);
-  const row = await env.DB.prepare('SELECT * FROM trash WHERE id = ?').bind(id).first();
+  const row = await env.D1.prepare('SELECT * FROM trash WHERE id = ?').bind(id).first();
   if (!row) return jsonResponse({ success: false, message: 'Trash item not found' }, 404);
   await purgeTrashRecord(env, row, request);
   return jsonResponse({ success: true });
@@ -451,7 +451,7 @@ export async function handleTrashClear(env, request) {
 
 export async function handleTrashCleanup(env, request) {
   await ensureSettingsTable(env);
-  const setting = await env.DB.prepare("SELECT value FROM settings WHERE key = 'trash_retention_days'").first();
+  const setting = await env.D1.prepare("SELECT value FROM settings WHERE key = 'trash_retention_days'").first();
   const days = Math.max(0, Number(setting?.value || 0));
   if (!days) return jsonResponse({ success: true, deleted: 0, retentionDays: days });
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
@@ -464,13 +464,13 @@ export async function handleTrashCleanup(env, request) {
 export async function handleTrashRetention(env, request, method) {
   await ensureSettingsTable(env);
   if (method === 'GET') {
-    const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'trash_retention_days'").first();
+    const row = await env.D1.prepare("SELECT value FROM settings WHERE key = 'trash_retention_days'").first();
     return jsonResponse({ days: Number(row?.value || 0) });
   }
   if (method === 'PUT') {
     const body = await request.json();
     const days = Math.max(0, Math.min(3650, Number(body.days || 0)));
-    await env.DB.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('trash_retention_days', ?)")
+    await env.D1.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('trash_retention_days', ?)")
       .bind(String(days))
       .run();
     await addLog(env, request, 'TRASH_RETENTION', `${days} days`);
