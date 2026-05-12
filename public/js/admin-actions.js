@@ -2,6 +2,8 @@
 import { api } from './api.js';
 import { escapeHtml } from './utils.js';
 
+const LOG_PAGE_SIZE = 8;
+
 export const AdminActions = {
   switchTab(id) {
     ['overview', 'health', 'logs', 'privacy', 'protected', 'maintenance'].forEach(tab => {
@@ -192,7 +194,7 @@ export const AdminActions = {
   },
 
   async loadLogs() {
-    const { res, data } = await api.adminLogs(adminState.currentPage, 20);
+    const { res, data } = await api.adminLogs(adminState.currentPage, LOG_PAGE_SIZE);
     if (res.status !== 200) return window.location.href = '/';
     adminState.totalPages = data.totalPages || 1;
     document.getElementById('totalPages').textContent = adminState.totalPages;
@@ -246,9 +248,12 @@ export const AdminActions = {
     const { data } = await api.protectedPaths();
     document.getElementById('protectedTbody').innerHTML = (data?.list || []).map(i => {
       const path = escapeHtml(i.path);
-      const note = escapeHtml(i.note || '');
-      return `<tr class="hover:bg-slate-50 transition-colors"><td class="px-4 py-4 font-mono text-primary">${path}</td><td class="px-4 py-4">${i.show_name ? '显示' : '隐藏'}</td><td class="px-4 py-4 text-slate-500">${note}</td><td class="px-4 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-protected" data-args='${escapeHtml(JSON.stringify([i.path]))}'>删除</button></td></tr>`;
-    }).join('');
+      const note = escapeHtml(i.note || '-');
+      const visibility = i.show_name
+        ? '<span class="admin-status-badge is-visible">显示</span>'
+        : '<span class="admin-status-badge is-hidden">隐藏</span>';
+      return `<tr class="admin-protected-row hover:bg-slate-50 transition-colors"><td data-label="路径" class="px-5 py-4 font-mono text-primary break-all">${path}</td><td data-label="名称可见" class="px-5 py-4">${visibility}</td><td data-label="备注" class="px-5 py-4 text-slate-500 break-all">${note}</td><td data-label="操作" class="px-5 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-protected" data-args='${escapeHtml(JSON.stringify([i.path]))}'>删除</button></td></tr>`;
+    }).join('') || '<tr><td colspan="4"><div class="admin-empty-state">暂无访问密码规则</div></td></tr>';
   },
 
   async addProtected() {

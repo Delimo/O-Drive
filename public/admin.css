@@ -162,20 +162,6 @@ body.admin-page {
   line-height: 1.5;
 }
 
-.admin-page .admin-section-pill {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-soft);
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
 .admin-page .admin-form-panel {
   display: flex;
   gap: 10px;
@@ -206,6 +192,64 @@ body.admin-page {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+.admin-page .admin-protected-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.admin-page .admin-protected-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.8fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.admin-page .admin-protected-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-page .admin-check-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.admin-page .admin-check-row input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.admin-page .admin-check-row span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-page .admin-check-row strong {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.admin-page .admin-check-row em {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.35;
+}
+
 .admin-page .admin-table-card {
   min-height: 0;
   border: 1px solid var(--border);
@@ -217,6 +261,26 @@ body.admin-page {
 .admin-page .admin-table-card table {
   border-collapse: separate;
   border-spacing: 0;
+}
+
+.admin-page #logs-tab .admin-table-card {
+  flex: 0 1 auto;
+}
+
+.admin-page #logs-tab table {
+  table-layout: fixed;
+}
+
+.admin-page #logs-tab th:nth-child(1) {
+  width: 220px;
+}
+
+.admin-page #logs-tab th:nth-child(2) {
+  width: 190px;
+}
+
+.admin-page #logs-tab th:nth-child(4) {
+  width: 310px;
 }
 
 .admin-page .admin-pagination {
@@ -258,6 +322,28 @@ body.admin-page {
   border-color: rgba(185, 28, 28, 0.16);
   background: #fff5f5;
   color: #b91c1c;
+}
+
+.admin-page .admin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.admin-page .admin-status-badge.is-hidden {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: var(--text-muted);
 }
 
 .admin-page .admin-empty-state {
@@ -401,7 +487,18 @@ body.admin-page {
 
 .admin-page .admin-log-details {
   overflow-wrap: anywhere;
-  word-break: normal;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.admin-page .admin-log-ip {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.admin-page .admin-log-action {
+  white-space: nowrap;
 }
 
 .admin-page .admin-danger-btn {
@@ -567,14 +664,23 @@ body.admin-page {
     margin-bottom: 12px;
   }
 
-  .admin-page .admin-section-pill {
-    height: 26px;
-  }
-
   .admin-page .admin-form-panel {
     flex-direction: column;
     align-items: stretch;
     margin-bottom: 12px;
+  }
+
+  .admin-page .admin-protected-form {
+    margin-bottom: 12px;
+  }
+
+  .admin-page .admin-protected-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-protected-options {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .admin-page .admin-input {
@@ -590,17 +696,24 @@ body.admin-page {
   .admin-page #privacy-tab thead,
   .admin-page #privacy-tab tbody,
   .admin-page #privacy-tab tr,
-  .admin-page #privacy-tab td {
+  .admin-page #privacy-tab td,
+  .admin-page #protected-tab table,
+  .admin-page #protected-tab thead,
+  .admin-page #protected-tab tbody,
+  .admin-page #protected-tab tr,
+  .admin-page #protected-tab td {
     display: block;
   }
 
   .admin-page #logs-tab table,
-  .admin-page #privacy-tab table {
+  .admin-page #privacy-tab table,
+  .admin-page #protected-tab table {
     border-collapse: separate;
   }
 
   .admin-page #logs-tab thead,
-  .admin-page #privacy-tab thead {
+  .admin-page #privacy-tab thead,
+  .admin-page #protected-tab thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -625,8 +738,17 @@ body.admin-page {
     background: var(--surface-soft);
   }
 
+  .admin-page .admin-protected-row {
+    margin: 0 0 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+  }
+
   .admin-page .admin-log-row td,
-  .admin-page .admin-hidden-row td {
+  .admin-page .admin-hidden-row td,
+  .admin-page .admin-protected-row td {
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr);
     gap: 12px;
@@ -637,7 +759,8 @@ body.admin-page {
   }
 
   .admin-page .admin-log-row td::before,
-  .admin-page .admin-hidden-row td::before {
+  .admin-page .admin-hidden-row td::before,
+  .admin-page .admin-protected-row td::before {
     content: attr(data-label);
     color: #64748b;
     font-family: inherit;
@@ -658,7 +781,8 @@ body.admin-page {
     align-items: center;
   }
 
-  .admin-page .admin-hidden-row td:last-child .admin-danger-btn {
+  .admin-page .admin-hidden-row td:last-child .admin-danger-btn,
+  .admin-page .admin-protected-row td:last-child .admin-danger-btn {
     justify-self: start;
   }
 
