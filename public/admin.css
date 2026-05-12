@@ -216,7 +216,7 @@ body.admin-page {
 .admin-page .admin-protected-options {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
 }
 
@@ -226,10 +226,9 @@ body.admin-page {
 
 .admin-page .admin-check-row {
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   min-width: 0;
-  max-width: 560px;
   color: var(--text-main);
   cursor: pointer;
 }
@@ -238,27 +237,14 @@ body.admin-page {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
-  margin-top: 2px;
   accent-color: var(--primary);
 }
 
 .admin-page .admin-check-row span {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.admin-page .admin-check-row strong {
   font-size: 13px;
   font-weight: 800;
   line-height: 1.25;
-}
-
-.admin-page .admin-check-row em {
-  color: var(--text-muted);
-  font-size: 12px;
-  font-style: normal;
-  line-height: 1.35;
+  white-space: nowrap;
 }
 
 .admin-page .admin-table-card {
