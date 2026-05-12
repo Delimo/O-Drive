@@ -715,9 +715,17 @@ body.admin-page {
     flex-direction: column;
     align-items: stretch;
     margin-bottom: 12px;
-    padding: 14px;
+    padding: 14px 16px;
     border-radius: 14px;
     background: var(--surface-soft);
+  }
+
+  .admin-page #privacy-tab .admin-form-panel .admin-input {
+    height: 46px;
+    padding: 0 16px;
+    border-radius: 10px;
+    background: var(--surface);
+    font-size: 15px;
   }
 
   .admin-page .admin-protected-form {
@@ -846,6 +854,26 @@ body.admin-page {
     min-width: 0;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .admin-page .admin-log-row td {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 8px 0;
+  }
+
+  .admin-page .admin-log-row td::before {
+    display: block;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .admin-page .admin-log-row .admin-action-badge {
+    width: fit-content;
+    min-width: 0;
+    height: 30px;
+    padding: 0 12px;
   }
 
   .admin-page .admin-hidden-row td:last-child {
