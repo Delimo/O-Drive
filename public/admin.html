@@ -76,16 +76,23 @@
                 </section>
             </div>
 
-            <div id="logs-tab" class="hidden flex-1 flex flex-col overflow-hidden">
-                <div id="fileList" class="overflow-y-auto flex-1 custom-scroll relative">
+            <div id="logs-tab" class="hidden flex-1 flex flex-col overflow-hidden p-6 text-slate-900">
+                <div class="admin-section-head">
+                    <div>
+                        <h2>操作日志</h2>
+                        <p>记录管理员上传、删除、维护等关键操作，便于追踪变更来源。</p>
+                    </div>
+                    <span class="admin-section-pill">审计记录</span>
+                </div>
+                <div class="admin-table-card overflow-y-auto flex-1 custom-scroll relative">
                     <table class="w-full text-left border-collapse text-slate-900 text-sm">
-                        <thead class="sticky top-0 bg-background text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border z-10">
-                            <tr><th class="px-6 py-4 w-44">时间</th><th class="px-6 py-4 w-28">动作</th><th class="px-6 py-4">详情</th><th class="px-6 py-4 w-40 text-left">IP</th></tr>
+                        <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border z-10">
+                            <tr><th class="px-5 py-3 w-44">时间</th><th class="px-5 py-3 w-28">动作</th><th class="px-5 py-3">详情</th><th class="px-5 py-3 w-40 text-left">IP</th></tr>
                         </thead>
-                        <tbody id="logTbody" class="text-xs divide-y divide-border/30"></tbody>
+                        <tbody id="logTbody" class="text-xs divide-y divide-border/40"></tbody>
                     </table>
                 </div>
-                <div class="p-4 border-t border-border flex items-center justify-between bg-background text-xs">
+                <div class="admin-pagination">
                     <div class="text-slate-500 text-xs">共 <span id="totalPages" class="text-slate-600 font-bold">0</span> 页</div>
                     <div class="flex gap-2 text-slate-900">
                         <button data-admin-action="change-page" data-args='[-1]' class="btn">上一页</button>
@@ -96,16 +103,23 @@
             </div>
 
             <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
-                <div class="flex flex-col sm:flex-row gap-3 mb-8 bg-surface-soft p-4 rounded-xl border border-border shadow-inner">
-                    <input type="text" id="hideInput" placeholder="输入隐藏路径..." class="flex-1 bg-background border border-border rounded-lg px-4 h-11 text-sm outline-none focus:border-primary text-slate-900 transition-all">
-                    <button class="btn btn-primary h-11 px-8" data-admin-action="add-hidden">添加</button>
+                <div class="admin-section-head">
+                    <div>
+                        <h2>隐藏管理</h2>
+                        <p>被屏蔽的路径不会向访客展示，管理员仍可在云盘中查看和管理。</p>
+                    </div>
+                    <span class="admin-section-pill">访客可见性</span>
                 </div>
-                <div class="overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
+                <div class="admin-form-panel">
+                    <input type="text" id="hideInput" placeholder="输入隐藏路径，如 /private/" class="admin-input">
+                    <button class="btn btn-primary h-11 px-8" data-admin-action="add-hidden">添加隐藏</button>
+                </div>
+                <div class="admin-table-card overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
                     <table class="w-full text-left text-slate-900">
-                        <thead class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr><th class="px-4 py-3 text-slate-500">已屏蔽路径</th><th class="px-4 py-3 text-right text-slate-500">操作</th></tr>
+                        <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
+                            <tr><th class="px-5 py-3 text-slate-500">已屏蔽路径</th><th class="px-5 py-3 text-right text-slate-500">操作</th></tr>
                         </thead>
-                        <tbody id="hiddenTbody" class="text-sm divide-y divide-border/30 text-slate-600"></tbody>
+                        <tbody id="hiddenTbody" class="text-sm divide-y divide-border/40 text-slate-600"></tbody>
                     </table>
                 </div>
             </div>

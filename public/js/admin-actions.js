@@ -199,16 +199,16 @@ export const AdminActions = {
     document.getElementById('currentPage').textContent = adminState.currentPage;
     document.getElementById('logTbody').innerHTML = (data.logs || []).map(l => {
       const time = new Date(l.timestamp).toLocaleString('zh-CN', { hour12: false });
-      const color = l.action === 'DELETE' ? 'text-red-400' : l.action === 'UPLOAD' ? 'text-emerald-400' : 'text-primary';
+      const actionClass = l.action === 'DELETE' ? 'is-delete' : l.action === 'UPLOAD' ? 'is-upload' : 'is-default';
       return `
         <tr class="admin-log-row hover:bg-slate-50 transition-colors">
-          <td data-label="时间" class="admin-log-time px-6 py-4 text-slate-500 font-mono">${escapeHtml(time)}</td>
-          <td data-label="动作" class="admin-log-action px-6 py-4 font-bold ${color}">${escapeHtml(l.action)}</td>
-          <td data-label="详情" class="admin-log-details px-6 py-4 text-slate-600 font-mono">${escapeHtml(l.details || '')}</td>
-          <td data-label="IP" class="admin-log-ip px-6 py-4 text-slate-500 font-mono text-sm text-left">${escapeHtml(l.ip || '')}</td>
+          <td data-label="时间" class="admin-log-time px-5 py-4 text-slate-500 font-mono">${escapeHtml(time)}</td>
+          <td data-label="动作" class="admin-log-action px-5 py-4 font-bold"><span class="admin-action-badge ${actionClass}">${escapeHtml(l.action)}</span></td>
+          <td data-label="详情" class="admin-log-details px-5 py-4 text-slate-600 font-mono">${escapeHtml(l.details || '')}</td>
+          <td data-label="IP" class="admin-log-ip px-5 py-4 text-slate-500 font-mono text-sm text-left">${escapeHtml(l.ip || '')}</td>
         </tr>
       `;
-    }).join('');
+    }).join('') || '<tr><td colspan="4"><div class="admin-empty-state">暂无操作日志</div></td></tr>';
   },
 
   changePage(dir) {
@@ -223,8 +223,8 @@ export const AdminActions = {
     const { data } = await api.hiddenPaths();
     document.getElementById('hiddenTbody').innerHTML = (data?.list || []).map(i => {
       const path = escapeHtml(i.path);
-      return `<tr class="hover:bg-slate-50 transition-colors"><td class="px-4 py-4 font-mono text-primary">${path}</td><td class="px-4 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-hidden" data-args='${escapeHtml(JSON.stringify([i.path]))}'>取消屏蔽</button></td></tr>`;
-    }).join('');
+      return `<tr class="admin-hidden-row hover:bg-slate-50 transition-colors"><td data-label="路径" class="px-5 py-4 font-mono text-primary break-all">${path}</td><td data-label="操作" class="px-5 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-hidden" data-args='${escapeHtml(JSON.stringify([i.path]))}'>取消屏蔽</button></td></tr>`;
+    }).join('') || '<tr><td colspan="2"><div class="admin-empty-state">暂无隐藏路径</div></td></tr>';
   },
 
   async addHidden() {
