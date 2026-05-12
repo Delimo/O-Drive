@@ -167,6 +167,20 @@ body.admin-page {
   line-height: 1.5;
 }
 
+.admin-page .admin-page-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.admin-page .admin-page-panel .admin-section-head {
+  margin-bottom: 14px;
+}
+
 .admin-page .admin-form-panel {
   display: flex;
   gap: 10px;
@@ -298,7 +312,7 @@ body.admin-page {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 72px;
+  min-width: 82px;
   height: 28px;
   padding: 0 10px;
   border-radius: 999px;
@@ -676,6 +690,15 @@ body.admin-page {
     flex-direction: column;
     gap: 10px;
     margin-bottom: 12px;
+  }
+
+  .admin-page .admin-page-panel {
+    padding: 14px;
+  }
+
+  .admin-page .admin-page-panel .admin-section-head {
+    flex-direction: row;
+    align-items: flex-start;
   }
 
   .admin-page .admin-form-panel {

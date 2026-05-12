@@ -64,11 +64,11 @@
             </div>
 
             <div id="health-tab" class="hidden health-tab flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
-                <section class="health-panel bg-surface-soft border border-border rounded-2xl p-5">
-                    <div class="flex items-center justify-between gap-3 mb-4">
+                <section class="admin-page-panel">
+                    <div class="admin-section-head">
                         <div>
-                            <h2 class="font-bold">环境检查</h2>
-                            <p class="text-xs text-slate-500 mt-1">检查部署绑定、管理员变量和访客访问状态</p>
+                            <h2>环境检查</h2>
+                            <p>检查部署绑定、管理员变量和访客访问状态。</p>
                         </div>
                         <button class="btn h-8 px-3" data-admin-action="refresh-health">刷新</button>
                     </div>
@@ -105,7 +105,7 @@
                 <div class="admin-section-head">
                     <div>
                         <h2>隐藏管理</h2>
-                        <p>被屏蔽的路径不会向访客展示，管理员仍可在云盘中查看和管理。</p>
+                        <p>隐藏路径会从访客列表中移除，但管理员仍可查看和管理。需要让访客输入密码访问时，请使用“访问密码”。</p>
                     </div>
                 </div>
                 <div class="admin-form-panel">
@@ -126,7 +126,7 @@
                 <div class="admin-section-head">
                     <div>
                         <h2>访问密码</h2>
-                        <p>给指定文件或目录设置访问密码，访客输入密码后才能预览或下载。</p>
+                        <p>密码保护用于控制预览和下载；隐藏管理用于控制访客列表是否显示。关闭名称可见后，访客列表中也不会显示该路径。</p>
                     </div>
                 </div>
                 <div class="admin-protected-form">
@@ -153,11 +153,11 @@
                 </div>
             </div>
             <div id="maintenance-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
-                <section class="health-panel bg-surface-soft border border-border rounded-2xl p-5">
-                    <div class="flex items-center justify-between gap-3 mb-4">
+                <section class="admin-page-panel">
+                    <div class="admin-section-head">
                         <div>
-                            <h2 class="font-bold">维护工具</h2>
-                            <p class="text-xs text-slate-500 mt-1">重建索引、清理临时记录和缩略图缓存</p>
+                            <h2>维护工具</h2>
+                            <p>重建索引、清理临时记录和缩略图缓存。</p>
                         </div>
                         <button class="btn h-8 px-3" data-admin-action="refresh-maintenance">刷新</button>
                     </div>

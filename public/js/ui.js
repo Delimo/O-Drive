@@ -130,12 +130,10 @@ export const UI = {
         ${meta.sizeFormatted ? `<button class="btn" data-action="download-file" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>下载</button>` : ''}
         ${adminDirectLinkButton}
         <button class="btn" data-action="copy-path" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>复制路径</button>
-        <button class="btn" data-action="copy-path" data-args='${escapeHtml(JSON.stringify([meta.fullKey]))}'>复制原始键</button>
       </div>
       <div class="space-y-3 text-sm">
         <div class="detail-row"><span>类型</span><strong>${escapeHtml(meta.kind)}</strong></div>
         <div class="detail-row"><span>路径</span><strong class="break-all">${escapeHtml(meta.path)}</strong></div>
-        <div class="detail-row"><span>原始键</span><strong class="break-all">${escapeHtml(meta.fullKey)}</strong></div>
         <div class="detail-row"><span>大小</span><strong>${escapeHtml(meta.sizeFormatted || '文件夹')}</strong></div>
         <div class="detail-row"><span>时间</span><strong>${escapeHtml(Utils.formatDate(meta.time))}</strong></div>
         <div class="detail-row"><span>可预览</span><strong>${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? '是' : '否'}</strong></div>

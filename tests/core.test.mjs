@@ -739,6 +739,27 @@ test('multipart upload lifecycle returns upload id, parts, complete and abort', 
   assert.equal((await abort.json()).success, true);
 });
 
+test('multipart upload logs only final user-visible events', async () => {
+  const env = makeEnv();
+  const create = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/', name: 'large.bin', type: 'application/octet-stream' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(create.status, 200);
+
+  let logs = await env.DB.prepare('SELECT * FROM logs ORDER BY timestamp DESC').all();
+  assert.deepEqual(logs.results || [], []);
+
+  await handleMultipartComplete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'large.bin', uploadId: 'upload-1', parts: [{ partNumber: 1, etag: 'etag-1' }] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  logs = await env.DB.prepare('SELECT * FROM logs ORDER BY timestamp DESC').all();
+  assert.deepEqual((logs.results || []).map(log => log.action), ['UPLOAD']);
+});
+
 test('user writes cannot target reserved system prefixes', async () => {
   const env = makeEnv();
   await assert.rejects(

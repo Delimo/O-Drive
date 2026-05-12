@@ -4,6 +4,34 @@ import { escapeHtml } from './utils.js';
 
 const LOG_PAGE_SIZE = 8;
 
+function describeLogAction(action = '') {
+  const normalized = String(action || '').toUpperCase();
+  const labels = {
+    UPLOAD: '上传完成',
+    UPLOAD_START: '上传开始',
+    UPLOAD_ABORT: '上传取消',
+    DELETE: '删除',
+    RENAME: '重命名',
+    MOVE: '移动',
+    COPY: '复制',
+    MKDIR: '新建文件夹',
+    PASTE: '粘贴',
+    PROTECT: '设置密码',
+    UNPROTECT: '删除密码',
+    HIDE: '隐藏路径',
+    UNHIDE: '取消隐藏',
+    MAINTENANCE: '维护操作',
+  };
+  return labels[normalized] || normalized.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase()) || '未知操作';
+}
+
+function logActionClass(action = '') {
+  const normalized = String(action || '').toUpperCase();
+  if (normalized.includes('DELETE') || normalized.includes('ABORT') || normalized.includes('PURGE') || normalized.includes('CLEAR')) return 'is-delete';
+  if (normalized.includes('UPLOAD') || normalized.includes('CREATE') || normalized.includes('MKDIR')) return 'is-upload';
+  return 'is-default';
+}
+
 export const AdminActions = {
   switchTab(id) {
     ['overview', 'health', 'logs', 'privacy', 'protected', 'maintenance'].forEach(tab => {
@@ -126,7 +154,7 @@ export const AdminActions = {
       this.maintenanceItem('文件索引记录', data.indexCount || 0, '搜索和统计优先使用该索引'),
       this.maintenanceItem('访问失败记录', data.accessAttemptCount || 0, '受保护路径密码错误计数'),
       this.maintenanceItem('回收站记录', data.trashCount || 0, '仍会占用 R2 空间'),
-      this.maintenanceItem('操作日志', data.logsCount || 0, '管理员操作审计'),
+      this.maintenanceItem('操作日志', data.logsCount || 0, '管理员操作记录'),
       this.maintenanceItem('缩略图缓存', data.thumbnailsPresent ? '存在' : '无', '.thumbs/ 系统前缀'),
     ].join('');
   },
@@ -201,11 +229,12 @@ export const AdminActions = {
     document.getElementById('currentPage').textContent = adminState.currentPage;
     document.getElementById('logTbody').innerHTML = (data.logs || []).map(l => {
       const time = new Date(l.timestamp).toLocaleString('zh-CN', { hour12: false });
-      const actionClass = l.action === 'DELETE' ? 'is-delete' : l.action === 'UPLOAD' ? 'is-upload' : 'is-default';
+      const actionClass = logActionClass(l.action);
+      const actionLabel = describeLogAction(l.action);
       return `
         <tr class="admin-log-row hover:bg-slate-50 transition-colors">
           <td data-label="时间" class="admin-log-time px-5 py-4 text-slate-500 font-mono">${escapeHtml(time)}</td>
-          <td data-label="动作" class="admin-log-action px-5 py-4 font-bold"><span class="admin-action-badge ${actionClass}">${escapeHtml(l.action)}</span></td>
+          <td data-label="动作" class="admin-log-action px-5 py-4 font-bold"><span class="admin-action-badge ${actionClass}" title="${escapeHtml(l.action || '')}">${escapeHtml(actionLabel)}</span></td>
           <td data-label="详情" class="admin-log-details px-5 py-4 text-slate-600 font-mono">${escapeHtml(l.details || '')}</td>
           <td data-label="IP" class="admin-log-ip px-5 py-4 text-slate-500 font-mono text-sm text-left">${escapeHtml(l.ip || '')}</td>
         </tr>

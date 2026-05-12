@@ -289,7 +289,6 @@ export async function handleMultipartCreate(env, request) {
   const upload = await env.R2_BUCKET.createMultipartUpload(resolved.key, {
     httpMetadata: { contentType: type || 'application/octet-stream' },
   });
-  await addLog(env, request, resolved.conflict ? 'UPLOAD_CONFLICT_START' : 'UPLOAD_START', resolved.key);
   return jsonResponse({ key: upload.key, uploadId: upload.uploadId, renamed: resolved.key !== key });
 }
 
