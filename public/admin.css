@@ -772,7 +772,7 @@ body.admin-page {
 
   .admin-page .admin-hidden-row {
     margin: 0 0 12px;
-    padding: 12px;
+    padding: 14px;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--surface-soft);
@@ -780,7 +780,7 @@ body.admin-page {
 
   .admin-page .admin-protected-row {
     margin: 0 0 12px;
-    padding: 12px;
+    padding: 14px;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--surface-soft);
@@ -821,9 +821,40 @@ body.admin-page {
     align-items: center;
   }
 
+  .admin-page .admin-hidden-row td,
+  .admin-page .admin-protected-row td {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 8px 0;
+  }
+
+  .admin-page .admin-hidden-row td::before,
+  .admin-page .admin-protected-row td::before {
+    display: block;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .admin-page .admin-hidden-row td:first-child,
+  .admin-page .admin-protected-row td:first-child {
+    padding-top: 0;
+  }
+
+  .admin-page .admin-hidden-row td:last-child,
+  .admin-page .admin-protected-row td:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
   .admin-page .admin-hidden-row td:last-child .admin-danger-btn,
   .admin-page .admin-protected-row td:last-child .admin-danger-btn {
-    justify-self: start;
+    justify-self: auto;
   }
 
   .admin-page .admin-pagination {
