@@ -49,7 +49,6 @@
                     <section class="bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="font-bold">类型分布</h2>
-                            <button id="rebuildIndexBtn" class="btn h-8 px-3 text-xs" data-admin-action="rebuild-index">重建索引</button>
                         </div>
                         <div id="statsBreakdown" class="breakdown-grid grid gap-2"></div>
                     </section>
@@ -110,7 +109,7 @@
                 </div>
                 <div class="admin-form-panel">
                     <input type="text" id="hideInput" placeholder="输入隐藏路径，如 /private/" class="admin-input">
-                    <button class="btn btn-primary h-11 px-8" data-admin-action="add-hidden">添加隐藏</button>
+                    <button class="btn btn-primary admin-form-submit" data-admin-action="add-hidden">添加隐藏</button>
                 </div>
                 <div class="admin-table-card overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
                     <table class="w-full text-left text-slate-900">
