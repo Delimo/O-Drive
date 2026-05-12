@@ -199,7 +199,7 @@ body.admin-page {
   height: 44px;
   padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   outline: none;
   background: var(--surface);
   color: var(--text-main);
@@ -320,7 +320,7 @@ body.admin-page {
   min-width: 82px;
   height: 28px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid #bfdbfe;
   background: #eff6ff;
   color: var(--primary-strong);
@@ -348,7 +348,7 @@ body.admin-page {
   min-width: 54px;
   height: 28px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid #bfdbfe;
   background: #eff6ff;
   color: var(--primary-strong);
@@ -526,7 +526,7 @@ body.admin-page {
   height: 34px;
   padding: 0 12px;
   border: 1px solid rgba(185, 28, 28, 0.16);
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff5f5;
   color: #b91c1c;
   font-size: 12px;
@@ -542,6 +542,11 @@ body.admin-page {
   color: #991b1b;
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.admin-page .btn,
+.admin-page .admin-tab-btn {
+  border-radius: 8px;
 }
 
 @media (max-width: 1024px) {
@@ -916,6 +921,7 @@ body.admin-page {
   .admin-page .admin-protected-row td:last-child .admin-danger-btn {
     justify-self: auto;
     min-width: 96px;
+    height: 40px;
   }
 
   .admin-page .admin-pagination {
