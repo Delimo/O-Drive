@@ -199,7 +199,9 @@ body.admin-page {
 
 .admin-page .admin-protected-form {
   display: grid;
-  gap: 12px;
+  grid-template-columns: 140px 240px minmax(260px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
   margin-bottom: 14px;
   padding: 12px;
   border: 1px solid var(--border);
@@ -208,9 +210,7 @@ body.admin-page {
 }
 
 .admin-page .admin-protected-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(190px, 0.85fr) minmax(0, 1fr);
-  gap: 10px;
+  display: contents;
 }
 
 .admin-page .admin-protected-options {
@@ -218,6 +218,7 @@ body.admin-page {
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+  margin-left: auto;
 }
 
 .admin-page .admin-protected-options .btn {
@@ -529,11 +530,19 @@ body.admin-page {
     grid-template-columns: 1fr;
   }
 
-  .admin-page .admin-protected-fields {
+  .admin-page .admin-protected-form {
     grid-template-columns: 1fr 1fr;
   }
 
+  .admin-page .admin-protected-fields {
+    display: contents;
+  }
+
   .admin-page .admin-protected-fields .admin-input:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .admin-page .admin-protected-options {
     grid-column: 1 / -1;
   }
 }
@@ -677,15 +686,18 @@ body.admin-page {
 
   .admin-page .admin-protected-form {
     margin-bottom: 12px;
-  }
-
-  .admin-page .admin-protected-fields {
     grid-template-columns: 1fr;
   }
 
+  .admin-page .admin-protected-fields {
+    display: contents;
+  }
+
   .admin-page .admin-protected-options {
+    grid-column: auto;
     flex-direction: column;
     align-items: stretch;
+    margin-left: 0;
   }
 
   .admin-page .admin-input {
