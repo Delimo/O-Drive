@@ -118,6 +118,9 @@ export const UI = {
     }
 
     const meta = describeItem(item);
+    const adminDirectLinkButton = state.userRole === 'admin' && meta.sizeFormatted
+      ? `<button class="btn" data-action="copy-direct-link" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>复制直链</button>`
+      : '';
     title.textContent = meta.name;
     empty.classList.add('hidden');
     body.innerHTML = `
@@ -125,6 +128,7 @@ export const UI = {
         ${!meta.sizeFormatted ? `<button class="btn btn-primary" data-action="navigate" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>打开文件夹</button>` : ''}
         ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" data-action="open-preview" data-args='${escapeHtml(JSON.stringify([meta.path, meta.name, meta.protected ? true : false]))}'>预览</button>` : ''}
         ${meta.sizeFormatted ? `<button class="btn" data-action="download-file" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>下载</button>` : ''}
+        ${adminDirectLinkButton}
         <button class="btn" data-action="copy-path" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>复制路径</button>
         <button class="btn" data-action="copy-path" data-args='${escapeHtml(JSON.stringify([meta.fullKey]))}'>复制原始键</button>
       </div>

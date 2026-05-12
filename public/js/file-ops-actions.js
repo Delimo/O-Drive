@@ -198,6 +198,14 @@ export const FileOpsActions = {
       .catch(() => Message.error('复制失败'));
   },
 
+  copyDirectLink(path) {
+    if (state.userRole !== 'admin' || !path) return;
+    const link = new URL(api.previewUrl(path), window.location.origin).href;
+    navigator.clipboard?.writeText(link)
+      .then(() => Message.success('已复制直链'))
+      .catch(() => Message.error('复制失败'));
+  },
+
   openFilters() {
     const f = state.filters || {};
     document.getElementById('filterKind').value = f.kind || 'all';
