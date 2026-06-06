@@ -403,8 +403,8 @@ export const AdminActions = {
           <div class="webhook-url">${escapeHtml(item.url)}</div>
         </div>
         <div class="webhook-row-actions">
-          <button class="btn h-8 px-3" onclick="AdminActions.testWebhook(${i})">测试发送</button>
-          <button class="admin-danger-btn" onclick="AdminActions.removeWebhook(${i})">删除</button>
+          <button class="btn h-8 px-3" data-admin-action="test-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>测试发送</button>
+          <button class="admin-danger-btn" data-admin-action="remove-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>删除</button>
         </div>
       </div>
     `).join('');

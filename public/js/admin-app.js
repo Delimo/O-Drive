@@ -28,6 +28,12 @@ document.addEventListener('click', event => {
     case 'refresh-health': return AdminActions.loadHealth();
     case 'refresh-maintenance': return AdminActions.loadMaintenance();
     case 'maintenance-action': return AdminActions.runMaintenanceAction(args[0]);
+    case 'set-quota': return AdminActions.setQuota();
+    case 'fill-quota': return AdminActions.fillQuota(Number(args[0] || 0));
+    case 'add-webhook': return AdminActions.addWebhook();
+    case 'remove-webhook': return AdminActions.removeWebhook(Number(args[0] || 0));
+    case 'test-webhook': return AdminActions.testWebhook(Number(args[0] || 0));
+    case 'refresh-webhooks': return AdminActions.loadWebhooks();
   }
 });
 
