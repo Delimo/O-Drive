@@ -38,9 +38,11 @@ document.addEventListener('click', event => {
     case 'toggle-upload-menu': return UI.toggleUploadMenu(target.closest('.upload-menu-wrap'));
     case 'open-file-input':
       UI.closeUploadMenu();
+      UI.closeMobileActions?.();
       return document.getElementById('fileInput')?.click();
     case 'open-folder-input':
       UI.closeUploadMenu();
+      UI.closeMobileActions?.();
       return document.getElementById('folderInput')?.click();
     case 'toggle-view': return Actions.toggleViewMode();
     case 'toggle-sort': return Actions.toggleSortMode();

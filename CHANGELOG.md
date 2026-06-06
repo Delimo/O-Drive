@@ -6,23 +6,33 @@
 
 - Webhook 通知页面改为“发送设置”表单，支持配置 `url`、`method`、`content_type`、`headers`、`body`、`username`、`password`、名称和消息格式。
 - Webhook 发送逻辑支持自定义 HTTP 方法、自定义请求头、自定义请求体模板和 HTTP Basic Auth。
+- Webhook 支持按事件选择触发范围，可单独订阅上传、删除、彻底删除、移动、复制、重命名和新建文件夹。
 - Webhook 列表支持编辑已有配置；同一 URL 再保存时会更新原配置，避免重复添加。
 - 新增 Webhook 自定义请求设置测试，覆盖 method、content type、headers、body 模板和 Basic Auth。
+- 新增 Webhook 事件订阅过滤测试，确认未订阅事件不会发送通知。
 - README 重写为完整中文文档，补充 Cloudflare Pages 部署教程、环境变量说明、功能教程、运维建议和常见问题。
 
 ### Changed
 
-- Webhook 默认配置仍兼容旧的 `{ url, msgtype }` 和 `WEBHOOK_URLS` 环境变量写法。
+- Webhook 默认配置仍兼容后台保存过的旧 `{ url, msgtype }` 数据结构；通知入口统一改为后台 Webhook 页面配置，不再读取旧环境变量。
 - Webhook `headers` 会按 JSON 对象保存和发送，非法 header 名会被过滤。
 - Webhook 自定义 `body` 支持 `{event}`、`{timestamp}`、`{{data.path}}` 等简单模板变量。
 - 管理后台 Webhook 页面布局调整为更清晰的发送设置面板，并适配移动端。
+- 管理后台概览新增文件索引状态提示，可直接从概览触发重建索引。
+- 操作日志补充配额、Webhook、隐藏路径、访问密码和维护操作记录，并完善日志动作中文标签。
+- 维护、删除保护、取消隐藏、删除 Webhook 和保存配额等关键操作增加确认提示。
+- 移动端上传进度面板在小屏上改为底部面板布局。
 
 ### Verified
 
 - `node --check functions/api/lib/webhooks.js` 通过。
+- `node --check functions/api/lib/admin.js` 通过。
+- `node --check functions/api/lib/protected-paths.js` 通过。
 - `node --check public/js/admin-actions.js` 通过。
 - `node --check public/js/admin-app.js` 通过。
-- `node --test tests/*.test.mjs` 通过，42 个测试全绿。
+- `node --check public/js/app.js` 通过。
+- `node --check public/js/uploader.js` 通过。
+- `node --test tests/*.test.mjs` 通过，44 个测试全绿。
 
 ## 2026-05-12
 

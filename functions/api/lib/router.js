@@ -34,7 +34,7 @@ import {
   handleAdminMaintenanceAction,
   handleAdminQuota,
   handleAdminWebhooks,
-  loadWebhookUrls,
+  loadWebhookEndpoints,
 } from './admin.js';
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
 import { notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed } from './webhooks.js';
@@ -49,8 +49,8 @@ function waitForWebhook(context, promise) {
 
 async function notifyConfiguredWebhooks(env, context, notifyFn) {
   try {
-    const urls = await loadWebhookUrls(env);
-    waitForWebhook(context, notifyFn(urls));
+    const endpoints = await loadWebhookEndpoints(env);
+    waitForWebhook(context, notifyFn(endpoints));
   } catch (_) {}
 }
 

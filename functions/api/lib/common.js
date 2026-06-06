@@ -5,7 +5,6 @@
  * @property {R2Bucket} R2 - R2 object storage bucket binding
  * @property {string} [ADMIN_PASS] - Admin password
  * @property {string} [JWT_SECRET] - JWT signing secret
- * @property {string[]} [WEBHOOK_URLS] - Webhook notification URLs
  */
 
 /**

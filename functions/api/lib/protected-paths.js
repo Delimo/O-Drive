@@ -1,4 +1,4 @@
-import { jsonResponse, normalizeHiddenPath, encodeBase64Url, base64UrlToUint8Array, decodeBase64UrlJson } from './common.js';
+import { addLog, jsonResponse, normalizeHiddenPath, encodeBase64Url, base64UrlToUint8Array, decodeBase64UrlJson } from './common.js';
 
 const ACCESS_COOKIE = 'path_access';
 const ACCESS_TTL = 12 * 60 * 60 * 1000;
@@ -267,11 +267,13 @@ export async function handleProtectedSettings(env, request, method, url) {
     await env.D1.prepare(
       'INSERT INTO path_passwords (path, salt, password_hash, note, show_name, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(path) DO UPDATE SET salt = excluded.salt, password_hash = excluded.password_hash, note = excluded.note, show_name = excluded.show_name'
     ).bind(path, salt, passwordHash, note, showName, Date.now()).run();
+    await addLog(env, request, 'PROTECT', `设置访问密码 ${path}${showName ? '' : '（访客隐藏名称）'}`);
     return jsonResponse({ success: true });
   }
   if (method === 'DELETE') {
     const path = normalizeProtectedPath(url.searchParams.get('path'));
     await env.D1.prepare('DELETE FROM path_passwords WHERE path = ?').bind(path).run();
+    await addLog(env, request, 'UNPROTECT', `删除访问密码 ${path}`);
     return jsonResponse({ success: true });
   }
   return jsonResponse({ message: 'Method Not Allowed' }, 405);

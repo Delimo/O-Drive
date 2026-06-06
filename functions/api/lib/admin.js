@@ -1,4 +1,4 @@
-﻿import { jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
+﻿import { addLog, jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
 import { fileIndexStatus, getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
 import { mapWithConcurrency } from './r2-tree.js';
 import { getStorageQuota, setStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
@@ -31,7 +31,7 @@ export async function handleAdminLogs(env, url) {
 export async function handleAdminStats(env) {
   if (await indexedFileCount(env)) {
     const indexed = await getIndexedStats(env);
-    if (indexed) return jsonResponse({ ...indexed, ...(await adminDbStats(env)) });
+    if (indexed) return jsonResponse({ ...indexed, ...(await adminDbStats(env)), index: await overviewIndexStatus(env) });
   }
   const listed = await listR2Objects(env.R2, {}, { maxObjects: 20000 });
   await syncFileIndexFromR2(env, { maxObjects: 20000 });
@@ -76,6 +76,7 @@ export async function handleAdminStats(env) {
     ])),
     latest,
     ...(await adminDbStats(env)),
+    index: await overviewIndexStatus(env, listed),
   });
 }
 
@@ -93,6 +94,23 @@ async function adminDbStats(env) {
     logs = { count: Number(logCount?.count || 0) };
   } catch (_) {}
   return { trash, logs };
+}
+
+async function overviewIndexStatus(env, listed = null) {
+  const index = await fileIndexStatus(env);
+  const sample = listed || await listR2Objects(env.R2, {}, { maxObjects: 1000 }).catch(() => ({ objects: [], truncated: false }));
+  const visibleSampleCount = (sample.objects || []).filter(obj => !isReservedKey(obj.key) && !obj.key.endsWith('/.folder')).length;
+  const fresh = index.count > 0 && !sample.truncated ? index.count === visibleSampleCount : index.count > 0;
+  return {
+    count: index.count,
+    totalSize: index.totalSize,
+    totalSizeFormatted: formatBytes(index.totalSize),
+    latestUpdatedAt: index.latestUpdatedAt,
+    fresh,
+    sampleCount: visibleSampleCount,
+    sampleTruncated: Boolean(sample.truncated),
+    recommendation: fresh ? '索引可用' : '建议重建索引',
+  };
 }
 
 async function checkDb(env) {
@@ -182,6 +200,7 @@ export async function handleAdminMaintenanceAction(env, request) {
   const { action } = await request.json().catch(() => ({}));
   if (action === 'rebuild-index') {
     const result = await rebuildFileIndex(env);
+    await addLog(env, request, 'MAINTENANCE', `重建文件索引，同步 ${result.synced || 0} 个文件${result.truncated ? '，已达扫描上限' : ''}`);
     return jsonResponse({ success: true, action, ...result });
   }
   if (action === 'cleanup-access-attempts') {
@@ -191,10 +210,12 @@ export async function handleAdminMaintenanceAction(env, request) {
       deleted = Number(row?.count || 0);
       await env.D1.prepare('DELETE FROM path_access_attempts').run();
     } catch (_) {}
+    await addLog(env, request, 'MAINTENANCE', `清理访问失败记录 ${deleted} 项`);
     return jsonResponse({ success: true, action, deleted });
   }
   if (action === 'cleanup-thumbnails') {
     const result = await deletePrefix(env, '.thumbs/');
+    await addLog(env, request, 'MAINTENANCE', `清理缩略图缓存 ${result.deleted || 0} 项${result.truncated ? '，已达扫描上限' : ''}`);
     return jsonResponse({ success: true, action, ...result });
   }
   return jsonResponse({ success: false, message: 'Invalid maintenance action' }, 400);
@@ -207,50 +228,49 @@ export async function handleAdminQuota(env, request, method) {
   }
   if (method === 'PUT') {
     const { bytes } = await request.json().catch(() => ({}));
-    await setStorageQuota(env.D1, Number(bytes) || 0);
+    const nextBytes = Number(bytes) || 0;
+    await setStorageQuota(env.D1, nextBytes);
+    await addLog(env, request, 'QUOTA', nextBytes > 0 ? `设置存储配额为 ${formatQuotaBytes(nextBytes)}` : '取消存储配额限制');
     return jsonResponse({ success: true });
   }
   return jsonResponse({ message: 'Method Not Allowed' }, 405);
 }
 
-export async function loadWebhookUrls(env) {
+export async function loadWebhookEndpoints(env) {
   let items = [];
   try {
-    const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhook_urls'").first();
+    const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
     if (row?.value) items = JSON.parse(row.value);
   } catch (_) {}
-  const endpoints = normalizeWebhookEndpoints(items);
-  if (endpoints.length) return endpoints;
-  return env.WEBHOOK_URLS || '';
+  return normalizeWebhookEndpoints(items);
 }
 
 export async function handleAdminWebhooks(env, request, method) {
   if (method === 'GET') {
     let items = [];
     try {
-      const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhook_urls'").first();
+      const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
       if (row?.value) items = JSON.parse(row.value);
     } catch (_) {}
-    let endpoints = normalizeWebhookEndpoints(items);
-    if (!endpoints.length && env.WEBHOOK_URLS) {
-      endpoints = normalizeWebhookEndpoints(env.WEBHOOK_URLS);
-    }
-    return jsonResponse({ items: endpoints, urls: endpoints.map(item => item.url) });
+    const endpoints = normalizeWebhookEndpoints(items);
+    return jsonResponse({ items: endpoints, urls: endpoints.map(endpoint => endpoint.url) });
   }
   if (method === 'PUT') {
     const body = await request.json().catch(() => ({}));
-    const endpoints = normalizeWebhookEndpoints(body.items || body.urls || []);
+    const endpoints = normalizeWebhookEndpoints(body.items || []);
     if (endpoints.length) {
-      await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)').bind('webhook_urls', JSON.stringify(endpoints)).run();
+      await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)').bind('webhooks', JSON.stringify(endpoints)).run();
     } else {
-      await env.D1.prepare("DELETE FROM kv_config WHERE key = 'webhook_urls'").run();
+      await env.D1.prepare("DELETE FROM kv_config WHERE key = 'webhooks'").run();
     }
-    return jsonResponse({ success: true, items: endpoints, urls: endpoints.map(item => item.url) });
+    await addLog(env, request, 'WEBHOOKS', `保存 Webhook 配置 ${endpoints.length} 条`);
+    return jsonResponse({ success: true, items: endpoints, urls: endpoints.map(endpoint => endpoint.url) });
   }
   if (method === 'POST') {
     const body = await request.json().catch(() => ({}));
     const endpoint = body.endpoint || body;
     const result = await testWebhookEndpoint(endpoint);
+    await addLog(env, request, 'WEBHOOK_TEST', `${result.success ? '测试成功' : '测试失败'}：${endpoint.name || endpoint.url || 'Webhook'}`);
     return jsonResponse(result, result.success ? 200 : 502);
   }
   return jsonResponse({ message: 'Method Not Allowed' }, 405);
@@ -261,11 +281,13 @@ export async function handleHiddenSettings(env, request, method, url, hiddenPath
   if (method === 'POST') {
     const targetPath = normalizeHiddenPath((await request.json()).targetPath);
     await env.D1.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'hidden')").bind(targetPath).run();
+    await addLog(env, request, 'HIDE', `隐藏路径 ${targetPath}`);
     return jsonResponse({ success: true });
   }
   if (method === 'DELETE') {
     const targetPath = normalizeHiddenPath(url.searchParams.get('path'));
     await env.D1.prepare('DELETE FROM settings WHERE key = ?').bind(targetPath).run();
+    await addLog(env, request, 'UNHIDE', `取消隐藏路径 ${targetPath}`);
     return jsonResponse({ success: true });
   }
   return jsonResponse({ message: 'Method Not Allowed' }, 405);

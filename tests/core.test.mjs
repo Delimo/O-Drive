@@ -285,8 +285,8 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const idx = loginAttemptRows.findIndex(row => row.ip === ip);
               if (idx >= 0) loginAttemptRows.splice(idx, 1);
             }
-            if (/DELETE FROM kv_config WHERE key = 'webhook_urls'/i.test(sql)) {
-              kvRows.delete('webhook_urls');
+            if (/DELETE FROM kv_config WHERE key = 'webhooks'/i.test(sql)) {
+              kvRows.delete('webhooks');
             }
             if (/DELETE FROM file_index WHERE path = \?/i.test(sql)) {
               const path = statement.bound?.[0];
@@ -340,8 +340,8 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
                 latestUpdatedAt: fileIndexRows.reduce((max, row) => Math.max(max, Number(row.updated_at || 0)), 0),
               };
             }
-            if (/SELECT value FROM kv_config WHERE key = 'webhook_urls'/i.test(sql)) {
-              const value = kvRows.get('webhook_urls');
+            if (/SELECT value FROM kv_config WHERE key = 'webhooks'/i.test(sql)) {
+              const value = kvRows.get('webhooks');
               return value == null ? null : { value };
             }
             return null;
@@ -1307,6 +1307,67 @@ test('webhook settings saved in D1 are used for file operation notifications', a
   }
 });
 
+test('webhook endpoints can subscribe to selected events only', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const save = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'PUT',
+        body: JSON.stringify({
+          items: [
+            { name: 'uploads', url: 'https://hooks.example.test/uploads', events: ['file.uploaded'] },
+            { name: 'folders', url: 'https://hooks.example.test/folders', events: ['folder.created'] },
+          ],
+        }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(save.status, 200);
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'event-docs' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://hooks.example.test/folders');
+    assert.equal(calls[0].body.event, 'folder.created');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('webhook request settings customize outgoing notification requests', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -1546,6 +1607,58 @@ test('clearing webhook settings removes persisted endpoint data', async () => {
     }),
   });
   assert.deepEqual(await listed.json(), { items: [], urls: [] });
+});
+
+test('webhook notifications ignore legacy env settings', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  env[['WEBHOOK', 'URLS'].join('_')] = 'https://hooks.example.test/legacy-env';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: init?.body });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const listed = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        headers: { Cookie: cookie },
+      }),
+    });
+    assert.deepEqual(await listed.json(), { items: [], urls: [] });
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'no-env-webhook' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+    assert.equal(calls.length, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('admin health reports bindings and required env vars', async () => {

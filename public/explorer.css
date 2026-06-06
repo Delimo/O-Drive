@@ -1365,6 +1365,43 @@ html, body {
         min-width: 0;
     }
 
+    #uploadManager {
+        left: 10px;
+        right: 10px;
+        bottom: 76px;
+        width: auto;
+        max-height: 58vh;
+        border-radius: 18px;
+        z-index: 390;
+    }
+
+    #uploadManager > div:first-child {
+        padding: 10px 12px;
+    }
+
+    #uploadSummary {
+        max-width: none;
+    }
+
+    #uploadList {
+        max-height: calc(58vh - 54px);
+    }
+
+    #uploadList .upload-item {
+        padding: 12px;
+    }
+
+    #uploadList .upload-item .font-bold {
+        font-size: 13px;
+        line-height: 1.35;
+    }
+
+    .upload-control,
+    .upload-close-btn {
+        min-width: 36px;
+        min-height: 36px;
+    }
+
     .mobile-bottom-btn:first-child {
         background: var(--primary);
         border-color: var(--primary);

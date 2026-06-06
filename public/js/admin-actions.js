@@ -3,6 +3,16 @@ import { api } from './api.js';
 import { escapeHtml } from './utils.js';
 
 const LOG_PAGE_SIZE = 8;
+const WEBHOOK_EVENT_OPTIONS = [
+  ['file.uploaded', '上传'],
+  ['file.deleted', '删除'],
+  ['file.purged', '彻底删除'],
+  ['file.moved', '移动'],
+  ['file.copied', '复制'],
+  ['file.renamed', '重命名'],
+  ['folder.created', '新建文件夹'],
+];
+const WEBHOOK_EVENT_KEYS = WEBHOOK_EVENT_OPTIONS.map(([key]) => key);
 
 function describeLogAction(action = '') {
   const normalized = String(action || '').toUpperCase();
@@ -21,6 +31,17 @@ function describeLogAction(action = '') {
     HIDE: '隐藏路径',
     UNHIDE: '取消隐藏',
     MAINTENANCE: '维护操作',
+    QUOTA: '存储配额',
+    WEBHOOKS: 'Webhook 配置',
+    WEBHOOK_TEST: 'Webhook 测试',
+    TRASH: '回收站',
+    RESTORE: '恢复文件',
+    PURGE: '彻底删除',
+    TRASH_CLEAR: '清空回收站',
+    TRASH_CLEANUP: '清理回收站',
+    TRASH_RETENTION: '回收站保留期',
+    SAVE_TEXT: '保存文本',
+    UPLOAD_CONFLICT: '上传冲突',
   };
   return labels[normalized] || normalized.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase()) || '未知操作';
 }
@@ -33,26 +54,50 @@ function logActionClass(action = '') {
 }
 
 function normalizeWebhookItems(data = {}) {
-  const source = Array.isArray(data.items) && data.items.length
-    ? data.items
-    : (data.urls || []).map(url => ({ url, type: 'generic' }));
+  const source = Array.isArray(data.items) ? data.items : [];
   return source.map((item, index) => ({
     id: item.id || `${Date.now()}-${index}`,
     name: item.name || '',
     msgtype: ['json', 'text', 'markdown'].includes(item.msgtype)
       ? item.msgtype
-      : (item.type === 'wechat_text' ? 'text' : (['text', 'markdown'].includes(item.messageType) ? item.messageType : 'json')),
+      : 'json',
     url: item.url || '',
     method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(String(item.method || '').toUpperCase())
       ? String(item.method).toUpperCase()
       : 'POST',
-    contentType: item.contentType || item.content_type || 'application/json',
+    contentType: item.contentType || 'application/json',
     headers: item.headers && typeof item.headers === 'object' && !Array.isArray(item.headers) ? item.headers : {},
     body: item.body || '',
     username: item.username || '',
     password: item.password || '',
+    events: Array.isArray(item.events)
+      ? [...new Set(item.events.map(event => String(event || '').trim()).filter(event => WEBHOOK_EVENT_KEYS.includes(event)))]
+      : [],
     enabled: item.enabled !== false,
   })).filter(item => item.url);
+}
+
+function selectedWebhookEvents() {
+  return [...document.querySelectorAll('input[name="webhookEvents"]:checked')]
+    .map(input => input.value)
+    .filter(value => WEBHOOK_EVENT_KEYS.includes(value));
+}
+
+function setWebhookEvents(events = []) {
+  const selected = Array.isArray(events) && events.length ? new Set(events) : new Set(WEBHOOK_EVENT_KEYS);
+  document.querySelectorAll('input[name="webhookEvents"]').forEach(input => {
+    input.checked = selected.has(input.value);
+  });
+}
+
+function webhookEventsLabel(events = []) {
+  if (!Array.isArray(events) || events.length === 0 || events.length === WEBHOOK_EVENT_KEYS.length) return '全部事件';
+  return events.map(event => WEBHOOK_EVENT_OPTIONS.find(([key]) => key === event)?.[1] || event).join('、');
+}
+
+function adminConfirm(title, body = '') {
+  if (typeof window.showConfirm === 'function') return window.showConfirm(title, body);
+  return Promise.resolve(confirm([title, body].filter(Boolean).join('\n\n')));
 }
 
 function headersToText(headers = {}) {
@@ -83,9 +128,11 @@ function setWebhookForm(item = {}) {
     const input = document.getElementById(id);
     if (input) input.value = value;
   });
+  setWebhookEvents(item.events);
 }
 
 function readWebhookForm() {
+  const events = selectedWebhookEvents();
   return {
     id: `${Date.now()}`,
     name: (document.getElementById('webhookNameInput')?.value || '').trim(),
@@ -97,6 +144,7 @@ function readWebhookForm() {
     body: document.getElementById('webhookBodyInput')?.value || '',
     username: document.getElementById('webhookUsernameInput')?.value || '',
     password: document.getElementById('webhookPasswordInput')?.value || '',
+    events: events.length === WEBHOOK_EVENT_KEYS.length ? [] : events,
     enabled: true,
   };
 }
@@ -130,6 +178,7 @@ export const AdminActions = {
     `;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
     this.renderStorageWarnings(data);
+    this.renderIndexStatus(data.index);
 
     const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
     const breakdown = Object.entries(data.breakdown || {});
@@ -159,6 +208,29 @@ export const AdminActions = {
         </div>
       </div>
     `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
+  },
+
+  renderIndexStatus(index = {}) {
+    const panel = document.getElementById('indexStatusPanel');
+    if (!panel) return;
+    const latest = index.latestUpdatedAt
+      ? new Date(index.latestUpdatedAt).toLocaleString('zh-CN', { hour12: false })
+      : '尚未更新';
+    const fresh = Boolean(index.fresh);
+    panel.classList.remove('hidden');
+    panel.innerHTML = `
+      <div class="index-status-main">
+        <span class="index-status-badge ${fresh ? 'is-ok' : 'is-warning'}">${fresh ? '索引正常' : '需要关注'}</span>
+        <div>
+          <strong>${escapeHtml(index.recommendation || (fresh ? '索引可用' : '建议重建索引'))}</strong>
+          <p>索引记录 ${escapeHtml(String(index.count || 0))} 个文件，占用 ${escapeHtml(index.totalSizeFormatted || '0 B')}，最后更新：${escapeHtml(latest)}</p>
+        </div>
+      </div>
+      <div class="index-status-actions">
+        <span>${index.sampleTruncated ? 'R2 抽样已达上限' : `R2 抽样 ${escapeHtml(String(index.sampleCount || 0))} 个可见文件`}</span>
+        <button class="btn h-8 px-3" data-admin-action="maintenance-action" data-args='["rebuild-index"]'>重建索引</button>
+      </div>
+    `;
   },
 
   healthItem(label, ok, detail = '') {
@@ -238,6 +310,13 @@ export const AdminActions = {
   },
 
   async runMaintenanceAction(action) {
+    const names = {
+      'rebuild-index': ['重建文件索引？', '重建会重新扫描 R2 文件并刷新统计索引。'],
+      'cleanup-access-attempts': ['清理访问失败记录？', '这会移除受保护路径的密码错误计数。'],
+      'cleanup-thumbnails': ['清理缩略图缓存？', '缩略图会在后续预览时重新生成。'],
+    };
+    const confirmText = names[action];
+    if (confirmText && !(await adminConfirm(confirmText[0], confirmText[1]))) return;
     const label = document.getElementById('maintenanceResult');
     if (label) label.textContent = '正在执行...';
     const { res, data } = await api.maintenanceAction(action);
@@ -250,6 +329,7 @@ export const AdminActions = {
       : `已清理 ${data.deleted || 0} 项${data.truncated ? '（已达扫描上限）' : ''}`;
     if (label) label.textContent = summary;
     await this.loadMaintenance();
+    if (adminState.activeTab === 'overview') await this.loadStats();
   },
 
   renderStorageWarnings(data) {
@@ -345,7 +425,7 @@ export const AdminActions = {
   },
 
   async removeHidden(p) {
-    if (confirm('取消隐藏后，该路径将恢复可见。')) {
+    if (await adminConfirm('取消隐藏路径？', `路径 ${p} 将恢复可见。`)) {
       await api.removeHiddenPath(p);
       this.loadHidden();
     }
@@ -378,7 +458,7 @@ export const AdminActions = {
   },
 
   async removeProtected(p) {
-    if (confirm('删除保护将允许所有人访问该路径。')) {
+    if (await adminConfirm('删除访问密码？', `路径 ${p} 将允许所有人访问。`)) {
       await api.removeProtectedPath(p);
       this.loadProtected();
     }
@@ -417,6 +497,9 @@ export const AdminActions = {
     const result = document.getElementById('quotaResult');
     const bytes = Number(input?.value || 0);
     if (bytes < 0) { if (result) result.textContent = '配额不能为负数'; return; }
+    const confirmTitle = bytes > 0 ? '保存存储配额？' : '取消存储配额限制？';
+    const confirmBody = bytes > 0 ? `新的配额为 ${formatBytesLocal(bytes)}。` : '取消后上传不再受总量配额限制。';
+    if (!(await adminConfirm(confirmTitle, confirmBody))) return;
     if (result) result.textContent = '正在保存...';
     const { res, data } = await api.setAdminQuota(bytes);
     if (!res.ok || data?.success === false) {
@@ -448,12 +531,13 @@ export const AdminActions = {
         <div class="webhook-row-main">
           <div class="webhook-row-head">
             <span class="webhook-type-badge">${escapeHtml(item.method || 'POST')}</span>
-            <span class="webhook-type-badge">msgtype: ${escapeHtml(item.msgtype || 'json')}</span>
+            <span class="webhook-type-badge">格式 ${escapeHtml(item.msgtype || 'json')}</span>
             <strong>${escapeHtml(item.name || `Webhook #${i + 1}`)}</strong>
           </div>
           <div class="webhook-url">${escapeHtml(item.url)}</div>
           <div class="webhook-meta">
             <span>${escapeHtml(item.contentType || 'application/json')}</span>
+            <span>${escapeHtml(webhookEventsLabel(item.events))}</span>
             ${Object.keys(item.headers || {}).length ? '<span>headers</span>' : ''}
             ${item.body ? '<span>body</span>' : ''}
             ${item.username || item.password ? '<span>basic auth</span>' : ''}
@@ -514,6 +598,7 @@ export const AdminActions = {
     const { data } = await api.adminWebhooks();
     const current = normalizeWebhookItems(data);
     if (index < 0 || index >= current.length) return;
+    if (!(await adminConfirm('删除 Webhook？', current[index].name || current[index].url))) return;
     const removed = current.splice(index, 1);
     const result = document.getElementById('webhookResult');
     if (result) result.textContent = '正在保存...';

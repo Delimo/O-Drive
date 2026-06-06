@@ -3,7 +3,7 @@
  * Sends HTTP POST notifications to configured webhook URLs when
  * significant events occur (file upload, delete, move, etc.).
  *
- * Configured via WEBHOOK_URLS environment variable (comma-separated).
+ * Configured from the admin Webhook settings stored in D1.
  */
 
 /**
@@ -17,6 +17,15 @@ const WEBHOOK_TIMEOUT_MS = 5000;
 const MAX_RETRIES = 2;
 const WEBHOOK_MSG_TYPES = ['json', 'text', 'markdown'];
 const WEBHOOK_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+const WEBHOOK_EVENTS = [
+  'file.uploaded',
+  'file.deleted',
+  'file.purged',
+  'file.moved',
+  'file.copied',
+  'file.renamed',
+  'folder.created',
+];
 
 function endpointLabel(endpoint) {
   if (endpoint.name) return endpoint.name;
@@ -121,36 +130,33 @@ function buildRequestInit(endpoint, payload, controller) {
   return init;
 }
 
-/**
- * Parse webhook URLs from environment.
- * @param {string} envUrls
- * @returns {string[]}
- */
-function parseWebhookUrls(envUrls) {
-  if (!envUrls) return [];
-  return envUrls
-    .split(',')
-    .map(url => url.trim())
-    .filter(url => {
-      try {
-        new URL(url);
-        return true;
-      } catch {
-        return false;
-      }
-    });
+function normalizeEvents(events) {
+  if (!Array.isArray(events)) return [];
+  return [...new Set(events.map(event => String(event || '').trim()).filter(event => WEBHOOK_EVENTS.includes(event)))];
+}
+
+function endpointMatchesEvent(endpoint, event) {
+  return !endpoint.events?.length || endpoint.events.includes(event);
+}
+
+function normalizeMsgtype(endpoint) {
+  const explicit = String(endpoint.msgtype || '').toLowerCase();
+  if (WEBHOOK_MSG_TYPES.includes(explicit)) return explicit;
+
+  const legacyType = String(endpoint.type || '').toLowerCase();
+  if (legacyType.includes('markdown')) return 'markdown';
+  if (legacyType.includes('text')) return 'text';
+  return 'json';
 }
 
 export function normalizeWebhookEndpoints(input) {
-  const raw = Array.isArray(input) ? input : parseWebhookUrls(input);
+  const raw = Array.isArray(input) ? input : [];
   return raw
     .map((item, index) => {
-      const endpoint = typeof item === 'string' ? { url: item } : { ...item };
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+      const endpoint = { ...item };
       const url = String(endpoint.url || '').trim();
-      const legacyMsgtype = endpoint.type === 'wechat_text' ? 'text' : endpoint.messageType;
-      const msgtype = WEBHOOK_MSG_TYPES.includes(endpoint.msgtype)
-        ? endpoint.msgtype
-        : (WEBHOOK_MSG_TYPES.includes(legacyMsgtype) ? legacyMsgtype : 'json');
+      const msgtype = normalizeMsgtype(endpoint);
       try {
         new URL(url);
       } catch {
@@ -164,11 +170,12 @@ export function normalizeWebhookEndpoints(input) {
         method: WEBHOOK_METHODS.includes(String(endpoint.method || '').toUpperCase())
           ? String(endpoint.method).toUpperCase()
           : 'POST',
-        contentType: String(endpoint.contentType || endpoint.content_type || 'application/json').trim() || 'application/json',
+        contentType: String(endpoint.contentType || 'application/json').trim() || 'application/json',
         headers: parseHeaders(endpoint.headers),
         body: String(endpoint.body || ''),
         username: String(endpoint.username || ''),
         password: String(endpoint.password || ''),
+        events: normalizeEvents(endpoint.events),
         enabled: endpoint.enabled !== false,
       };
     })
@@ -205,13 +212,13 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
 
 /**
  * Send webhook notifications to all configured URLs.
- * @param {string} envUrls - WEBHOOK_URLS env value
+ * @param {Array|object|string} envUrls - Webhook endpoint configuration
  * @param {string} event - Event name
  * @param {object} data - Event payload data
  * @returns {Promise<boolean[]>}
  */
 export async function notifyWebhook(envUrls, event, data = {}) {
-  const endpoints = normalizeWebhookEndpoints(envUrls).filter(endpoint => endpoint.enabled);
+  const endpoints = normalizeWebhookEndpoints(envUrls).filter(endpoint => endpoint.enabled && endpointMatchesEvent(endpoint, event));
   if (!endpoints.length) return [];
 
   /** @type {WebhookPayload} */
