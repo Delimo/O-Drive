@@ -320,13 +320,6 @@ body.admin-page {
   font-weight: 700;
 }
 
-.admin-page .webhook-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 18px;
-  margin-bottom: 12px;
-}
-
 .admin-page .webhook-settings-body {
   display: grid;
   gap: 18px;
@@ -467,10 +460,63 @@ body.admin-page {
   gap: 10px;
 }
 
+.admin-page .webhook-list-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-page .webhook-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-page .webhook-list-head h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.admin-page .webhook-list-count {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-page .webhook-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
 .admin-page .webhook-empty {
-  padding: 10px 0;
+  display: flex;
+  min-height: 74px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
   color: var(--text-muted);
   font-size: 13px;
+  font-weight: 700;
 }
 
 .admin-page .webhook-row {
@@ -493,6 +539,7 @@ body.admin-page {
 .admin-page .webhook-row-head {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
 }
@@ -504,6 +551,10 @@ body.admin-page {
   white-space: nowrap;
   color: var(--text-main);
   font-size: 13px;
+}
+
+.admin-page .webhook-row-title {
+  min-width: 120px;
 }
 
 .admin-page .webhook-type-badge {
@@ -528,6 +579,27 @@ body.admin-page {
   color: var(--text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
+}
+
+.admin-page .webhook-row-status,
+.admin-page .webhook-result {
+  margin: 0;
+  min-width: 0;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .webhook-row-status.is-error,
+.admin-page .webhook-result.is-error {
+  color: #b91c1c;
+}
+
+.admin-page .webhook-row-status.is-muted,
+.admin-page .webhook-result.is-muted {
+  color: var(--text-muted);
 }
 
 .admin-page .webhook-meta {
@@ -559,6 +631,7 @@ body.admin-page {
 .admin-page .webhook-row-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 

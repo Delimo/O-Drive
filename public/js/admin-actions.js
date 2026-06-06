@@ -131,6 +131,32 @@ function setWebhookForm(item = {}) {
   setWebhookEvents(item.events);
 }
 
+function setWebhookResult(text = '', tone = 'muted') {
+  const result = document.getElementById('webhookResult');
+  if (!result) return;
+  result.textContent = text;
+  result.classList.toggle('hidden', !text);
+  result.classList.toggle('is-error', tone === 'error');
+  result.classList.toggle('is-muted', tone === 'muted');
+}
+
+function setWebhookListCount(count = 0) {
+  const label = document.getElementById('webhookListCount');
+  if (label) label.textContent = `${count} 个`;
+}
+
+function setWebhookRowStatus(index, text = '', tone = 'muted') {
+  const status = document.querySelector(`[data-webhook-status="${index}"]`);
+  if (!status) {
+    setWebhookResult(text, tone);
+    return;
+  }
+  status.textContent = text;
+  status.classList.toggle('hidden', !text);
+  status.classList.toggle('is-error', tone === 'error');
+  status.classList.toggle('is-muted', tone === 'muted');
+}
+
 function readWebhookForm() {
   const events = selectedWebhookEvents();
   return {
@@ -512,8 +538,8 @@ export const AdminActions = {
 
   async loadWebhooks() {
     const list = document.getElementById('webhookList');
-    const result = document.getElementById('webhookResult');
-    if (result) result.textContent = '';
+    setWebhookResult();
+    setWebhookListCount(0);
     if (!list) return;
     list.innerHTML = '<div class="text-sm text-slate-500">正在加载...</div>';
     const { res, data } = await api.adminWebhooks();
@@ -522,6 +548,7 @@ export const AdminActions = {
       return;
     }
     const items = normalizeWebhookItems(data);
+    setWebhookListCount(items.length);
     if (items.length === 0) {
       list.innerHTML = '<div class="webhook-empty">暂未配置 Webhook。</div>';
       return;
@@ -532,7 +559,7 @@ export const AdminActions = {
           <div class="webhook-row-head">
             <span class="webhook-type-badge">${escapeHtml(item.method || 'POST')}</span>
             <span class="webhook-type-badge">格式 ${escapeHtml(item.msgtype || 'json')}</span>
-            <strong>${escapeHtml(item.name || `Webhook #${i + 1}`)}</strong>
+            <strong class="webhook-row-title">${escapeHtml(item.name || `Webhook #${i + 1}`)}</strong>
           </div>
           <div class="webhook-url">${escapeHtml(item.url)}</div>
           <div class="webhook-meta">
@@ -542,6 +569,7 @@ export const AdminActions = {
             ${item.body ? '<span>body</span>' : ''}
             ${item.username || item.password ? '<span>basic auth</span>' : ''}
           </div>
+          <p class="webhook-row-status hidden" data-webhook-status="${i}"></p>
         </div>
         <div class="webhook-row-actions">
           <button class="btn h-8 px-3" data-admin-action="edit-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>编辑</button>
@@ -553,16 +581,15 @@ export const AdminActions = {
   },
 
   async addWebhook() {
-    const result = document.getElementById('webhookResult');
     let next;
     try {
       next = readWebhookForm();
     } catch (err) {
-      if (result) result.textContent = err.message || 'headers 不是有效 JSON';
+      setWebhookResult(err.message || 'headers 不是有效 JSON', 'error');
       return;
     }
     if (!next.url || !next.url.startsWith('http')) {
-      if (result) result.textContent = '请输入有效的 http(s) URL';
+      setWebhookResult('请输入有效的 http(s) URL', 'error');
       return;
     }
     const { data } = await api.adminWebhooks();
@@ -570,15 +597,15 @@ export const AdminActions = {
     const existingIndex = current.findIndex(item => item.url === next.url);
     if (existingIndex >= 0) current[existingIndex] = { ...current[existingIndex], ...next, id: current[existingIndex].id };
     else current.push(next);
-    if (result) result.textContent = '正在保存...';
+    setWebhookResult('正在保存...', 'muted');
     const { res, data: saveData } = await api.setAdminWebhooks(current);
     if (!res.ok || saveData?.success === false) {
-      if (result) result.textContent = saveData?.message || '保存失败';
+      setWebhookResult(saveData?.message || '保存失败', 'error');
       return;
     }
     setWebhookForm();
-    if (result) result.textContent = existingIndex >= 0 ? 'Webhook 已更新' : `已添加，共 ${current.length} 个 Webhook`;
     await this.loadWebhooks();
+    setWebhookResult(existingIndex >= 0 ? 'Webhook 已更新' : `已添加，共 ${current.length} 个 Webhook`, 'success');
   },
 
   async editWebhook(index) {
@@ -595,30 +622,29 @@ export const AdminActions = {
     if (index < 0 || index >= current.length) return;
     if (!(await adminConfirm('删除 Webhook？', current[index].name || current[index].url))) return;
     const removed = current.splice(index, 1);
-    const result = document.getElementById('webhookResult');
-    if (result) result.textContent = '正在保存...';
+    setWebhookResult('正在保存...', 'muted');
     const { res } = await api.setAdminWebhooks(current);
     if (!res.ok) {
-      if (result) result.textContent = '删除失败';
+      setWebhookResult('删除失败', 'error');
       return;
     }
-    if (result) result.textContent = `已删除 ${removed[0].name || removed[0].url}`;
     await this.loadWebhooks();
+    setWebhookResult(`已删除 ${removed[0].name || removed[0].url}`, 'success');
   },
 
   async testWebhook(index) {
-    const result = document.getElementById('webhookResult');
+    setWebhookResult();
     const { data } = await api.adminWebhooks();
     const current = normalizeWebhookItems(data);
     const endpoint = current[index];
     if (!endpoint) return;
-    if (result) result.textContent = '正在发送测试通知...';
+    setWebhookRowStatus(index, '正在发送测试通知...', 'muted');
     const { res, data: testData } = await api.testAdminWebhook(endpoint);
     if (!res.ok || testData?.success === false) {
-      if (result) result.textContent = testData?.message || '测试发送失败，请检查 URL、平台类型或签名配置。';
+      setWebhookRowStatus(index, testData?.message || '测试发送失败，请检查 URL、平台类型或签名配置。', 'error');
       return;
     }
-    if (result) result.textContent = `${testData.name || 'Webhook'} 测试发送成功`;
+    setWebhookRowStatus(index, `${testData.name || 'Webhook'} 测试发送成功`, 'success');
   },
 };
 
