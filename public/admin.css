@@ -41,13 +41,26 @@ body.admin-page {
   display: none;
 }
 
+.admin-page .hidden {
+  display: none !important;
+}
+
 .admin-page .overview-tab {
   overflow-y: auto;
   min-height: 0;
 }
 
-.admin-page .health-tab {
+.admin-page #health-tab {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
+  padding: 24px;
+  overflow-y: auto;
+  gap: 12px;
+}
+
+.admin-page #health-tab.hidden {
+  display: none !important;
 }
 
 .admin-page .overview-stats-grid {
@@ -90,6 +103,10 @@ body.admin-page {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.admin-page .health-grid.mb-5 {
+  margin-bottom: 20px;
 }
 
 .admin-page .health-item {
@@ -142,6 +159,17 @@ body.admin-page {
   color: #b91c1c;
   background: #fff5f5;
   border-color: rgba(185, 28, 28, 0.16);
+}
+
+.admin-page .maintenance-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-page .maintenance-result {
+  margin: 14px 0 0;
+  min-height: 18px;
 }
 
 .admin-page .admin-section-head {
@@ -1121,7 +1149,6 @@ body.admin-page {
   .admin-page #logs-tab,
   .admin-page #privacy-tab,
   .admin-page #protected-tab,
-  .admin-page #maintenance-tab,
   .admin-page #webhooks-tab {
     overflow: visible;
     padding: 0;
@@ -1139,6 +1166,10 @@ body.admin-page {
   }
 
   .admin-page .health-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .maintenance-actions {
     grid-template-columns: 1fr;
   }
 

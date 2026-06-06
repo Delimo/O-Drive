@@ -100,6 +100,11 @@ function adminConfirm(title, body = '') {
   return Promise.resolve(confirm([title, body].filter(Boolean).join('\n\n')));
 }
 
+function setMaintenanceResult(text = '') {
+  const label = document.getElementById('healthMaintenanceResult');
+  if (label) label.textContent = text;
+}
+
 function headersToText(headers = {}) {
   return Object.keys(headers).length ? JSON.stringify(headers, null, 2) : '';
 }
@@ -197,17 +202,16 @@ function readWebhookForm() {
 
 export const AdminActions = {
   switchTab(id) {
-    ['overview', 'health', 'logs', 'privacy', 'protected', 'maintenance', 'quota', 'webhooks'].forEach(tab => {
+    ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'webhooks'].forEach(tab => {
       document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', id !== tab);
       document.getElementById(`btn-${tab}`)?.classList.toggle('is-active', id === tab);
     });
     adminState.activeTab = id;
 
     if (id === 'overview') return this.loadStats();
-    if (id === 'health') return this.loadHealth();
+    if (id === 'health') return Promise.all([this.loadHealth(), this.loadMaintenance()]);
     if (id === 'logs') return this.loadLogs();
     if (id === 'privacy') return this.loadHidden();
-    if (id === 'maintenance') return this.loadMaintenance();
     if (id === 'quota') return this.loadQuota();
     if (id === 'webhooks') return this.loadWebhooks();
     return this.loadProtected();
@@ -331,12 +335,18 @@ export const AdminActions = {
   },
 
   async loadMaintenance() {
-    const grid = document.getElementById('maintenanceGrid');
-    if (!grid) return;
-    grid.innerHTML = '<div class="text-sm text-slate-500">正在检查...</div>';
+    const grids = ['healthMaintenanceGrid']
+      .map(id => document.getElementById(id))
+      .filter(Boolean);
+    if (!grids.length) return;
+    grids.forEach(grid => {
+      grid.innerHTML = '<div class="text-sm text-slate-500">正在检查...</div>';
+    });
     const { res, data } = await api.maintenance();
     if (!res.ok) {
-      grid.innerHTML = '<div class="text-sm text-rose-600 font-bold">维护信息加载失败。</div>';
+      grids.forEach(grid => {
+        grid.innerHTML = '<div class="text-sm text-rose-600 font-bold">维护信息加载失败。</div>';
+      });
       return;
     }
     const latestIndexUpdate = data.indexLatestUpdatedAt
@@ -345,7 +355,7 @@ export const AdminActions = {
     const indexDetail = data.r2SampleTruncated
       ? `索引占用 ${data.indexTotalSizeFormatted || '0 B'}，R2 抽样已达上限`
       : `R2 当前抽样 ${data.r2SampleCount || 0} 个可见文件`;
-    grid.innerHTML = [
+    const html = [
       this.maintenanceItem('文件索引记录', data.indexCount || 0, indexDetail),
       this.maintenanceItem('索引最后更新', latestIndexUpdate, data.indexFresh ? '索引与当前抽样一致' : '建议重建文件索引'),
       this.maintenanceItem('访问失败记录', data.accessAttemptCount || 0, '受保护路径的密码错误记录'),
@@ -353,6 +363,7 @@ export const AdminActions = {
       this.maintenanceItem('操作日志', data.logsCount || 0, '管理员操作记录'),
       this.maintenanceItem('缩略图缓存', data.thumbnailsPresent ? '有' : '无', '.thumbs/ 系统前缀'),
     ].join('');
+    grids.forEach(grid => { grid.innerHTML = html; });
   },
 
   async runMaintenanceAction(action) {
@@ -363,17 +374,16 @@ export const AdminActions = {
     };
     const confirmText = names[action];
     if (confirmText && !(await adminConfirm(confirmText[0], confirmText[1]))) return;
-    const label = document.getElementById('maintenanceResult');
-    if (label) label.textContent = '正在执行...';
+    setMaintenanceResult('正在执行...');
     const { res, data } = await api.maintenanceAction(action);
     if (!res.ok || data?.success === false) {
-      if (label) label.textContent = data?.message || '维护操作失败';
+      setMaintenanceResult(data?.message || '维护操作失败');
       return;
     }
     const summary = data.synced != null
       ? `已同步 ${data.synced} 个文件${data.truncated ? '（已达扫描上限）' : ''}`
       : `已清理 ${data.deleted || 0} 项${data.truncated ? '（已达扫描上限）' : ''}`;
-    if (label) label.textContent = summary;
+    setMaintenanceResult(summary);
     await this.loadMaintenance();
     if (adminState.activeTab === 'overview') await this.loadStats();
   },

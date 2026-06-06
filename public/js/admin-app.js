@@ -25,7 +25,7 @@ document.addEventListener('click', event => {
     case 'remove-hidden': return AdminActions.removeHidden(args[0]);
     case 'add-protected': return AdminActions.addProtected();
     case 'remove-protected': return AdminActions.removeProtected(args[0]);
-    case 'refresh-health': return AdminActions.loadHealth();
+    case 'refresh-health': return Promise.all([AdminActions.loadHealth(), AdminActions.loadMaintenance()]);
     case 'refresh-maintenance': return AdminActions.loadMaintenance();
     case 'maintenance-action': return AdminActions.runMaintenanceAction(args[0]);
     case 'set-quota': return AdminActions.setQuota();

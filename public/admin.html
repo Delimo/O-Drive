@@ -21,11 +21,10 @@
 
         <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-full shadow-sm mt-4">
             <button id="btn-overview" data-admin-action="switch-tab" data-args='["overview"]' class="admin-tab-btn is-active">概览</button>
-            <button id="btn-health" data-admin-action="switch-tab" data-args='["health"]' class="admin-tab-btn">环境检查</button>
+            <button id="btn-health" data-admin-action="switch-tab" data-args='["health"]' class="admin-tab-btn">系统状态</button>
             <button id="btn-logs" data-admin-action="switch-tab" data-args='["logs"]' class="admin-tab-btn">操作日志</button>
             <button id="btn-privacy" data-admin-action="switch-tab" data-args='["privacy"]' class="admin-tab-btn">隐藏管理</button>
             <button id="btn-protected" data-admin-action="switch-tab" data-args='["protected"]' class="admin-tab-btn">访问密码</button>
-            <button id="btn-maintenance" data-admin-action="switch-tab" data-args='["maintenance"]' class="admin-tab-btn">维护工具</button>
             <button id="btn-quota" data-admin-action="switch-tab" data-args='["quota"]' class="admin-tab-btn">存储配额</button>
             <button id="btn-webhooks" data-admin-action="switch-tab" data-args='["webhooks"]' class="admin-tab-btn">Webhook</button>
         </div>
@@ -75,6 +74,22 @@
                         <button class="btn h-8 px-3" data-admin-action="refresh-health">刷新</button>
                     </div>
                     <div id="healthGrid" class="health-grid"></div>
+                </section>
+                <section class="admin-page-panel">
+                    <div class="admin-section-head">
+                        <div>
+                            <h2>快捷维护</h2>
+                            <p>基础状态确认后，可直接处理索引、访问失败记录和缩略图缓存。</p>
+                        </div>
+                        <button class="btn h-8 px-3" data-admin-action="refresh-maintenance">刷新</button>
+                    </div>
+                    <div id="healthMaintenanceGrid" class="health-grid mb-5"></div>
+                    <div class="maintenance-actions">
+                        <button class="btn btn-primary h-11" data-admin-action="maintenance-action" data-args='["rebuild-index"]'>重建文件索引</button>
+                        <button class="btn h-11" data-admin-action="maintenance-action" data-args='["cleanup-access-attempts"]'>清理访问失败记录</button>
+                        <button class="btn btn-danger-soft h-11" data-admin-action="maintenance-action" data-args='["cleanup-thumbnails"]'>清理缩略图缓存</button>
+                    </div>
+                    <p id="healthMaintenanceResult" class="maintenance-result text-xs text-slate-500 mt-4"></p>
                 </section>
             </div>
 
@@ -154,25 +169,6 @@
                     </table>
                 </div>
             </div>
-            <div id="maintenance-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
-                <section class="admin-page-panel">
-                    <div class="admin-section-head">
-                        <div>
-                            <h2>维护工具</h2>
-                            <p>重建索引、清理临时记录和缩略图缓存。</p>
-                        </div>
-                        <button class="btn h-8 px-3" data-admin-action="refresh-maintenance">刷新</button>
-                    </div>
-                    <div id="maintenanceGrid" class="health-grid mb-5"></div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <button class="btn btn-primary h-11" data-admin-action="maintenance-action" data-args='["rebuild-index"]'>重建文件索引</button>
-                        <button class="btn h-11" data-admin-action="maintenance-action" data-args='["cleanup-access-attempts"]'>清理访问失败记录</button>
-                        <button class="btn btn-danger-soft h-11" data-admin-action="maintenance-action" data-args='["cleanup-thumbnails"]'>清理缩略图缓存</button>
-                    </div>
-                    <p id="maintenanceResult" class="text-xs text-slate-500 mt-4"></p>
-                </section>
-            </div>
-
             <div id="quota-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
                 <section class="admin-page-panel">
                     <div class="admin-section-head">
