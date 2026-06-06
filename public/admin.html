@@ -267,8 +267,11 @@
                             </div>
                         </div>
                         <div class="webhook-save-row">
-                            <button class="btn h-10 px-4" data-admin-action="refresh-webhooks">刷新列表</button>
-                            <button class="btn btn-primary h-10 px-5" data-admin-action="add-webhook">保存</button>
+                            <p id="webhookFormHint" class="webhook-form-hint hidden"></p>
+                            <div class="webhook-save-actions">
+                                <button class="btn h-10 px-4" data-admin-action="refresh-webhooks">刷新列表</button>
+                                <button id="webhookSaveButton" class="btn btn-primary h-10 px-5" data-admin-action="add-webhook">保存</button>
+                            </div>
                         </div>
                     </div>
                     <div class="webhook-list-panel">

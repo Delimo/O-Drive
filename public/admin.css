@@ -176,6 +176,7 @@ body.admin-page {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-soft);
+  box-sizing: border-box;
 }
 
 .admin-page .admin-page-panel .admin-section-head {
@@ -323,6 +324,7 @@ body.admin-page {
 .admin-page .webhook-settings-body {
   display: grid;
   gap: 18px;
+  width: 100%;
   min-width: 0;
 }
 
@@ -455,17 +457,41 @@ body.admin-page {
 
 .admin-page .webhook-save-row {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-page .webhook-save-actions {
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  margin-left: auto;
+}
+
+.admin-page .webhook-form-hint {
+  margin: 0;
+  min-width: 0;
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .admin-page .webhook-list-panel {
   display: grid;
   gap: 12px;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-sizing: border-box;
 }
 
 .admin-page .webhook-list-head {
@@ -523,10 +549,20 @@ body.admin-page {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--surface-soft);
+  box-sizing: border-box;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.admin-page .webhook-row.is-editing {
+  border-color: rgba(59, 130, 246, 0.62);
+  background: #f8fbff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
 }
 
 .admin-page .webhook-row-main {
@@ -1212,10 +1248,21 @@ body.admin-page {
   }
 
   .admin-page .webhook-save-row {
-    flex-direction: column-reverse;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .admin-page .webhook-save-row .btn {
+    width: 100%;
+  }
+
+  .admin-page .webhook-save-actions {
+    width: 100%;
+    flex-direction: column-reverse;
+    margin-left: 0;
+  }
+
+  .admin-page .webhook-form-hint {
     width: 100%;
   }
 

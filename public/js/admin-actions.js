@@ -145,6 +145,21 @@ function setWebhookListCount(count = 0) {
   if (label) label.textContent = `${count} 个`;
 }
 
+function setWebhookFormMode(item = null) {
+  const editing = adminState.webhookEditingIndex >= 0;
+  const hint = document.getElementById('webhookFormHint');
+  const button = document.getElementById('webhookSaveButton');
+  if (button) button.textContent = editing ? '更新' : '保存';
+  if (hint) {
+    const label = item?.name || item?.url || (editing ? `Webhook #${adminState.webhookEditingIndex + 1}` : '');
+    hint.textContent = editing ? `正在编辑：${label}` : '';
+    hint.classList.toggle('hidden', !editing);
+  }
+  document.querySelectorAll('.webhook-row').forEach((row, index) => {
+    row.classList.toggle('is-editing', editing && index === adminState.webhookEditingIndex);
+  });
+}
+
 function setWebhookRowStatus(index, text = '', tone = 'muted') {
   const status = document.querySelector(`[data-webhook-status="${index}"]`);
   if (!status) {
@@ -553,13 +568,16 @@ export const AdminActions = {
       return;
     }
     const items = normalizeWebhookItems(data);
+    if (adminState.webhookEditingIndex >= items.length) adminState.webhookEditingIndex = -1;
     setWebhookListCount(items.length);
     if (items.length === 0) {
+      adminState.webhookEditingIndex = -1;
+      setWebhookFormMode();
       list.innerHTML = '<div class="webhook-empty">暂未配置 Webhook。</div>';
       return;
     }
     list.innerHTML = items.map((item, i) => `
-      <div class="webhook-row">
+      <div class="webhook-row ${i === adminState.webhookEditingIndex ? 'is-editing' : ''}">
         <div class="webhook-row-main">
           <div class="webhook-row-head">
             <span class="webhook-type-badge">${escapeHtml(item.method || 'POST')}</span>
@@ -583,6 +601,7 @@ export const AdminActions = {
         </div>
       </div>
     `).join('');
+    setWebhookFormMode(items[adminState.webhookEditingIndex]);
   },
 
   async addWebhook() {
@@ -599,18 +618,30 @@ export const AdminActions = {
     }
     const { data } = await api.adminWebhooks();
     const current = normalizeWebhookItems(data);
-    const existingIndex = current.findIndex(item => item.url === next.url);
-    if (existingIndex >= 0) current[existingIndex] = { ...current[existingIndex], ...next, id: current[existingIndex].id };
-    else current.push(next);
+    const editingIndex = adminState.webhookEditingIndex;
+    const editingItem = editingIndex >= 0 ? current[editingIndex] : null;
+    let updated = Boolean(editingItem);
+    if (editingItem) {
+      current[editingIndex] = { ...editingItem, ...next, id: editingItem.id };
+    } else {
+      const existingIndex = current.findIndex(item => item.url === next.url);
+      if (existingIndex >= 0) {
+        current[existingIndex] = { ...current[existingIndex], ...next, id: current[existingIndex].id };
+        updated = true;
+      } else {
+        current.push(next);
+      }
+    }
     setWebhookResult('正在保存...', 'muted');
     const { res, data: saveData } = await api.setAdminWebhooks(current);
     if (!res.ok || saveData?.success === false) {
       setWebhookResult(saveData?.message || '保存失败', 'error');
       return;
     }
+    adminState.webhookEditingIndex = -1;
     setWebhookForm();
     await this.loadWebhooks();
-    setWebhookResult(existingIndex >= 0 ? 'Webhook 已更新' : `已添加，共 ${current.length} 个 Webhook`, 'success');
+    setWebhookResult(updated ? 'Webhook 已更新' : `已添加，共 ${current.length} 个 Webhook`, 'success');
   },
 
   async editWebhook(index) {
@@ -618,7 +649,10 @@ export const AdminActions = {
     const current = normalizeWebhookItems(data);
     const item = current[index];
     if (!item) return;
+    adminState.webhookEditingIndex = index;
     setWebhookForm(item);
+    setWebhookFormMode(item);
+    document.getElementById('webhookSettingsBody')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   },
 
   async removeWebhook(index) {
@@ -632,6 +666,12 @@ export const AdminActions = {
     if (!res.ok) {
       setWebhookResult('删除失败', 'error');
       return;
+    }
+    if (adminState.webhookEditingIndex === index) {
+      adminState.webhookEditingIndex = -1;
+      setWebhookForm();
+    } else if (adminState.webhookEditingIndex > index) {
+      adminState.webhookEditingIndex -= 1;
     }
     await this.loadWebhooks();
     setWebhookResult(`已删除 ${removed[0].name || removed[0].url}`, 'success');
