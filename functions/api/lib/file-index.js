@@ -136,6 +136,20 @@ export async function indexedFileCount(env) {
   }
 }
 
+export async function fileIndexStatus(env) {
+  if (!(await ensureFileIndexTable(env))) return { count: 0, totalSize: 0, latestUpdatedAt: 0 };
+  try {
+    const row = await env.D1.prepare('SELECT COUNT(*) as count, COALESCE(SUM(size), 0) as totalSize, COALESCE(MAX(updated_at), 0) as latestUpdatedAt FROM file_index').first();
+    return {
+      count: Number(row?.count || 0),
+      totalSize: Number(row?.totalSize || 0),
+      latestUpdatedAt: Number(row?.latestUpdatedAt || 0),
+    };
+  } catch (_) {
+    return { count: 0, totalSize: 0, latestUpdatedAt: 0 };
+  }
+}
+
 export async function syncFileIndexFromR2(env, { maxObjects = 20000 } = {}) {
   if (!(await ensureFileIndexTable(env))) return { synced: 0, truncated: false };
   const listed = await listR2Objects(env.R2, {}, { maxObjects });

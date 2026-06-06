@@ -32,6 +32,24 @@ function logActionClass(action = '') {
   return 'is-default';
 }
 
+function normalizeWebhookItems(data = {}) {
+  const source = Array.isArray(data.items) && data.items.length
+    ? data.items
+    : (data.urls || []).map(url => ({ url, type: 'generic' }));
+  return source.map((item, index) => ({
+    id: item.id || `${Date.now()}-${index}`,
+    name: item.name || '',
+    type: item.type || 'generic',
+    url: item.url || '',
+    secret: item.secret || '',
+    enabled: item.enabled !== false,
+  })).filter(item => item.url);
+}
+
+function webhookTypeLabel(type) {
+  return ({ generic: '通用 JSON', wecom: '企业微信', dingtalk: '钉钉' })[type] || '通用 JSON';
+}
+
 export const AdminActions = {
   switchTab(id) {
     ['overview', 'health', 'logs', 'privacy', 'protected', 'maintenance', 'quota', 'webhooks'].forEach(tab => {
@@ -152,8 +170,15 @@ export const AdminActions = {
       grid.innerHTML = '<div class="text-sm text-rose-600 font-bold">维护信息加载失败。</div>';
       return;
     }
+    const latestIndexUpdate = data.indexLatestUpdatedAt
+      ? new Date(data.indexLatestUpdatedAt).toLocaleString('zh-CN', { hour12: false })
+      : '尚未更新';
+    const indexDetail = data.r2SampleTruncated
+      ? `索引占用 ${data.indexTotalSizeFormatted || '0 B'}，R2 抽样已达上限`
+      : `R2 当前抽样 ${data.r2SampleCount || 0} 个可见文件`;
     grid.innerHTML = [
-      this.maintenanceItem('文件索引记录', data.indexCount || 0, '用于统计和搜索时使用该索引'),
+      this.maintenanceItem('文件索引记录', data.indexCount || 0, indexDetail),
+      this.maintenanceItem('索引最后更新', latestIndexUpdate, data.indexFresh ? '索引与当前抽样一致' : '建议重建文件索引'),
       this.maintenanceItem('访问失败记录', data.accessAttemptCount || 0, '受保护路径的密码错误记录'),
       this.maintenanceItem('回收站记录', data.trashCount || 0, '可回收站占用 R2 空间'),
       this.maintenanceItem('操作日志', data.logsCount || 0, '管理员操作记录'),
@@ -362,51 +387,61 @@ export const AdminActions = {
       list.innerHTML = '<div class="text-sm text-rose-600 font-bold">加载失败。</div>';
       return;
     }
-    const urls = data?.urls || [];
-    if (urls.length === 0) {
-      list.innerHTML = '<div class="text-sm text-slate-500">暂未配置 Webhook URL。</div>';
+    const items = normalizeWebhookItems(data);
+    if (items.length === 0) {
+      list.innerHTML = '<div class="text-sm text-slate-500">暂未配置 Webhook。</div>';
       return;
     }
-    list.innerHTML = urls.map((u, i) => `
-      <div class="health-item is-ok" style="cursor:pointer" title="点击删除">
+    list.innerHTML = items.map((item, i) => `
+      <div class="health-item ${item.enabled ? 'is-ok' : 'is-bad'}">
         <div>
-          <strong>Webhook #${i + 1}</strong>
-          <span style="word-break:break-all">${escapeHtml(u)}</span>
+          <strong>${escapeHtml(item.name || `Webhook #${i + 1}`)} · ${escapeHtml(webhookTypeLabel(item.type))}</strong>
+          <span style="word-break:break-all">${escapeHtml(item.url)}${item.type === 'dingtalk' && item.secret ? ' · 已配置加签' : ''}</span>
         </div>
-        <button class="admin-danger-btn" onclick="AdminActions.removeWebhook(${i})">删除</button>
+        <div class="flex gap-2">
+          <button class="btn h-8 px-3" onclick="AdminActions.testWebhook(${i})">测试</button>
+          <button class="admin-danger-btn" onclick="AdminActions.removeWebhook(${i})">删除</button>
+        </div>
       </div>
     `).join('');
   },
 
   async addWebhook() {
+    const typeInput = document.getElementById('webhookTypeInput');
+    const nameInput = document.getElementById('webhookNameInput');
     const input = document.getElementById('webhookUrlInput');
+    const secretInput = document.getElementById('webhookSecretInput');
     const result = document.getElementById('webhookResult');
+    const type = typeInput?.value || 'generic';
+    const name = (nameInput?.value || '').trim();
     const url = (input?.value || '').trim();
     if (!url || !url.startsWith('http')) {
       if (result) result.textContent = '请输入有效的 http(s) URL';
       return;
     }
     const { data } = await api.adminWebhooks();
-    const current = data?.urls || [];
-    if (current.includes(url)) {
+    const current = normalizeWebhookItems(data);
+    if (current.some(item => item.url === url)) {
       if (result) result.textContent = '该 URL 已存在';
       return;
     }
-    current.push(url);
+    current.push({ id: `${Date.now()}`, name, type, url, secret: type === 'dingtalk' ? (secretInput?.value || '').trim() : '', enabled: true });
     if (result) result.textContent = '正在保存...';
     const { res, data: saveData } = await api.setAdminWebhooks(current);
     if (!res.ok || saveData?.success === false) {
       if (result) result.textContent = saveData?.message || '保存失败';
       return;
     }
+    if (nameInput) nameInput.value = '';
     if (input) input.value = '';
+    if (secretInput) secretInput.value = '';
     if (result) result.textContent = `已添加，共 ${current.length} 个 Webhook`;
     await this.loadWebhooks();
   },
 
   async removeWebhook(index) {
     const { data } = await api.adminWebhooks();
-    const current = data?.urls || [];
+    const current = normalizeWebhookItems(data);
     if (index < 0 || index >= current.length) return;
     const removed = current.splice(index, 1);
     const result = document.getElementById('webhookResult');
@@ -416,8 +451,23 @@ export const AdminActions = {
       if (result) result.textContent = '删除失败';
       return;
     }
-    if (result) result.textContent = `已删除 ${removed[0]}`;
+    if (result) result.textContent = `已删除 ${removed[0].name || removed[0].url}`;
     await this.loadWebhooks();
+  },
+
+  async testWebhook(index) {
+    const result = document.getElementById('webhookResult');
+    const { data } = await api.adminWebhooks();
+    const current = normalizeWebhookItems(data);
+    const endpoint = current[index];
+    if (!endpoint) return;
+    if (result) result.textContent = '正在发送测试通知...';
+    const { res, data: testData } = await api.testAdminWebhook(endpoint);
+    if (!res.ok || testData?.success === false) {
+      if (result) result.textContent = testData?.message || '测试发送失败，请检查 URL、平台类型或签名配置。';
+      return;
+    }
+    if (result) result.textContent = `${testData.name || 'Webhook'} 测试发送成功`;
   },
 };
 

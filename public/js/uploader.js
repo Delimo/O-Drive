@@ -166,7 +166,7 @@ async function uploadMultipart(task) {
       targetDir: task.targetDir,
       name: task.uploadName || task.file.name,
       type: task.file.type,
-      size: task.file.size,
+      totalSize: task.file.size,
       conflict: task.conflictMode || 'error',
     });
     if (!create.res.ok) throw new Error(create.data?.message || '无法创建分片上传');

@@ -7,6 +7,7 @@
 import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
 import { deleteFileIndexKey, deleteFileIndexPrefix, upsertFileIndex } from './file-index.js';
 import { copyR2Object, copyTree, mapWithConcurrency } from './r2-tree.js';
+import { checkQuota, formatBytes as formatQuotaBytes } from './storage-quota.js';
 
 const TRASH_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS trash (
@@ -253,7 +254,7 @@ export async function handleBatchDelete(env, request) {
       await softDeleteTree(env, p, request);
       completed++;
     } catch (e) {
-      failed.push({ path: p, message: e.message || 'Failed' });
+      failed.push({ path: p, message: e.message || 'Failed', code: e.code || undefined });
     }
   }
   await addLog(env, request, 'DELETE', `Move to trash ${completed}/${normalizedPaths.length} items`);
@@ -272,6 +273,7 @@ export async function handleOperationEstimate(env, request) {
   const items = [];
   let totalObjects = 0;
   let truncated = false;
+  const maxObjectsPerRequest = 1000;
 
   for (const key of normalizedPaths) {
     assertUserKey(key);
@@ -298,6 +300,8 @@ export async function handleOperationEstimate(env, request) {
     totalObjects,
     truncated,
     large: truncated || totalObjects > 500,
+    shouldBatch: truncated || totalObjects > maxObjectsPerRequest,
+    recommendedBatchSize: maxObjectsPerRequest,
   });
 }
 
@@ -331,6 +335,13 @@ export async function handleMkdir(env, request, r2Key) {
 export async function handleUpload(env, request, r2Key) {
   const file = (await request.formData()).get('file');
   if (!file || typeof file.stream !== 'function') return jsonResponse({ success: false, message: 'Missing file' }, 400);
+  const quota = await checkQuota(env, Number(file.size || 0));
+  if (!quota.allowed) {
+    return jsonResponse(
+      { success: false, code: 'QUOTA_EXCEEDED', message: `Storage quota exceeded. Used: ${formatQuotaBytes(quota.used)}, Quota: ${formatQuotaBytes(quota.quota)}, Requested: ${formatQuotaBytes(file.size || 0)}` },
+      507,
+    );
+  }
   const cleanName = normalizeName((file?.name || '').split(/[\/\\]/).pop());
   const key = (r2Key ? normalizeUserKey(r2Key) + '/' : '') + cleanName;
   const conflict = new URL(request.url).searchParams.get('conflict') || 'error';

@@ -34,28 +34,28 @@ import {
   handleAdminMaintenanceAction,
   handleAdminQuota,
   handleAdminWebhooks,
+  loadWebhookUrls,
 } from './admin.js';
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
 import { notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed } from './webhooks.js';
 import { checkQuota, formatBytes as formatQuotaBytes } from './storage-quota.js';
 import { assertBodySize, jsonResponse } from './common.js';
 
-/** Wrap a handler to fire webhook notifications on success. */
-function withWebhook(env, handler, notifyFn) {
-  return async (...args) => {
-    const res = await handler(...args);
-    if (res.ok) {
-      try {
-        // notifyFn is called with the original args so it can extract body/path info
-        await notifyFn(res);
-      } catch (_) {}
-    }
-    return res;
-  };
+function waitForWebhook(context, promise) {
+  if (!promise) return;
+  if (typeof context?.waitUntil === 'function') context.waitUntil(promise.catch(() => {}));
+  else promise.catch(() => {});
+}
+
+async function notifyConfiguredWebhooks(env, context, notifyFn) {
+  try {
+    const urls = await loadWebhookUrls(env);
+    waitForWebhook(context, notifyFn(urls));
+  } catch (_) {}
 }
 
 /** Resolve admin-only routes. Returns a Response or null if not an admin route. */
-export async function resolveAdminRoute(env, request, method, path, url, r2Key, hiddenPaths, protectedPaths) {
+export async function resolveAdminRoute(env, request, method, path, url, r2Key, hiddenPaths, protectedPaths, context = {}) {
   if (path === '/api/admin/logs') return await handleAdminLogs(env, url);
   if (path === '/api/admin/stats') return await handleAdminStats(env);
   if (path === '/api/admin/health') return await handleAdminHealth(env);
@@ -69,11 +69,11 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 
   // Paste
   if (path === '/api/paste' && method === 'POST') {
+    const body = await request.clone().json().catch(() => null);
     const res = await handlePaste(env, request);
-    if (res.ok) {
+    if (res.ok && body) {
       try {
-        const body = await request.clone().json();
-        notifyFileMoved(env.WEBHOOK_URLS, body.action, body.paths, body.targetDir);
+        await notifyConfiguredWebhooks(env, context, urls => notifyFileMoved(urls, body.action, body.paths, body.targetDir));
       } catch (_) {}
     }
     return res;
@@ -81,11 +81,11 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 
   // Rename
   if (path.startsWith('/api/files/') && method === 'PUT') {
+    const body = await request.clone().json().catch(() => null);
     const res = await handleRename(env, request, r2Key);
-    if (res.ok) {
+    if (res.ok && body) {
       try {
-        const body = await request.clone().json();
-        notifyFileRenamed(env.WEBHOOK_URLS, '/' + r2Key, body.newName);
+        await notifyConfiguredWebhooks(env, context, urls => notifyFileRenamed(urls, '/' + r2Key, body.newName));
       } catch (_) {}
     }
     return res;
@@ -93,11 +93,11 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 
   // Batch delete
   if (path === '/api/batch-delete') {
+    const body = await request.clone().json().catch(() => null);
     const res = await handleBatchDelete(env, request);
-    if (res.ok) {
+    if (res.ok && body) {
       try {
-        const body = await request.clone().json();
-        notifyFileDeleted(env.WEBHOOK_URLS, body.paths, false);
+        await notifyConfiguredWebhooks(env, context, urls => notifyFileDeleted(urls, body.paths, false));
       } catch (_) {}
     }
     return res;
@@ -111,11 +111,11 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 
   // Trash delete (purge)
   if (path === '/api/trash/delete' && method === 'DELETE') {
+    const body = await request.clone().json().catch(() => null);
     const res = await handleTrashDelete(env, request);
-    if (res.ok) {
+    if (res.ok && body) {
       try {
-        const body = await request.clone().json();
-        notifyFileDeleted(env.WEBHOOK_URLS, [body.id], true);
+        await notifyConfiguredWebhooks(env, context, urls => notifyFileDeleted(urls, [body.id], true));
       } catch (_) {}
     }
     return res;
@@ -123,12 +123,12 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 
   // Mkdir
   if (path.startsWith('/api/mkdir') && method === 'POST') {
+    const body = await request.clone().json().catch(() => null);
     const res = await handleMkdir(env, request, r2Key);
-    if (res.ok) {
+    if (res.ok && body) {
       try {
-        const body = await request.clone().json();
         const folderPath = '/' + r2Key + body.folderName + '/';
-        notifyFolderCreated(env.WEBHOOK_URLS, folderPath);
+        await notifyConfiguredWebhooks(env, context, urls => notifyFolderCreated(urls, folderPath));
       } catch (_) {}
     }
     return res;
@@ -137,18 +137,8 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
   // Upload (single)
   if (path.startsWith('/api/files') && method === 'POST') {
     assertBodySize(request, true);
-    const contentLen = Number(request.headers.get('content-length') || 0);
-    if (contentLen > 0) {
-      const quota = await checkQuota(env.D1, contentLen);
-      if (!quota.allowed) {
-        return jsonResponse(
-          { success: false, code: 'QUOTA_EXCEEDED', message: `Storage quota exceeded. Used: ${formatQuotaBytes(quota.used)}, Quota: ${formatQuotaBytes(quota.quota)}, Requested: ${formatQuotaBytes(contentLen)}` },
-          507,
-        );
-      }
-    }
     const res = await handleUpload(env, request, r2Key);
-    if (res.ok) notifyFileUploaded(env.WEBHOOK_URLS, '/' + r2Key);
+    if (res.ok) await notifyConfiguredWebhooks(env, context, urls => notifyFileUploaded(urls, '/' + r2Key));
     return res;
   }
 
@@ -156,8 +146,9 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
   if (path === '/api/upload-multipart/create' && method === 'POST') {
     try {
       const body = await request.clone().json();
-      if (body.totalSize > 0) {
-        const quota = await checkQuota(env.D1, body.totalSize);
+      const totalSize = Number(body.totalSize || body.size || 0);
+      if (totalSize > 0) {
+        const quota = await checkQuota(env, totalSize);
         if (!quota.allowed) {
           return jsonResponse(
             { success: false, code: 'QUOTA_EXCEEDED', message: `Storage quota exceeded. ${formatQuotaBytes(quota.remaining)} remaining of ${formatQuotaBytes(quota.quota)}` },
@@ -175,11 +166,11 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
   }
 
   if (path === '/api/upload-multipart/complete' && method === 'POST') {
+    const body = await request.clone().json().catch(() => null);
     const res = await handleMultipartComplete(env, request);
-    if (res.ok) {
+    if (res.ok && body) {
       try {
-        const body = await request.clone().json();
-        if (body.key) notifyFileUploaded(env.WEBHOOK_URLS, '/' + body.key);
+        if (body.key) await notifyConfiguredWebhooks(env, context, urls => notifyFileUploaded(urls, '/' + body.key));
       } catch (_) {}
     }
     return res;

@@ -27,7 +27,8 @@ async function operationEstimateText(paths = []) {
     if (folderCount) lines.push(`其中包含 ${folderCount} 个文件夹或目录树。`);
     if (missingCount) lines.push(`${missingCount} 项可能已不存在。`);
     if (data.truncated) lines.push('部分目录超过预估扫描上限，实际数量可能更多。');
-    if (data.large) lines.push('这是较大的操作，建议确认路径无误，必要时分批处理。');
+    if (data.shouldBatch) lines.push(`这是超大操作，建议每批不超过 ${data.recommendedBatchSize || 1000} 个对象，分批处理更稳。`);
+    else if (data.large) lines.push('这是较大的操作，建议确认路径无误，执行期间请等待完成提示。');
     return lines.join('\n');
   } catch (_) {
     return '';
@@ -102,7 +103,7 @@ export const FileOpsActions = {
       state.clipboard = null;
       this.loadFiles();
     } else {
-      Message.error(data?.failed?.[0]?.message || data?.message || '失败');
+      Message.error(readableError(res, data, '粘贴失败'));
     }
   },
 
@@ -139,6 +140,7 @@ export const FileOpsActions = {
     const { res, data } = await api.searchFiles(q, state.currentPath);
     if (!res.ok) {
       if (data?.code === 'password_required') return PreviewActions.handlePasswordRequired(data, () => this.handleSearch());
+      Message.error(readableError(res, data, '搜索失败'));
       return;
     }
     state.fileData = { folders: [], files: data?.files || [] };
@@ -297,13 +299,13 @@ export const FileOpsActions = {
   },
 
   async restoreTrash(id) {
-    const { res } = await api.restoreTrash(id);
+    const { res, data } = await api.restoreTrash(id);
     if (res.ok) {
       Message.success('已恢复');
       await this.loadTrash();
       this.loadFiles();
     } else {
-      Message.error('恢复失败');
+      Message.error(readableError(res, data, '恢复失败'));
     }
   },
 
@@ -361,7 +363,7 @@ export const FileOpsActions = {
     const days = Math.max(0, Number(input?.value || 0));
     const { res } = await api.setTrashRetention(days);
     if (res.ok) Message.success(days ? `已设置保留 ${days} 天` : '已关闭自动清理');
-    else Message.error('保存失败');
+    else Message.error('保存清理策略失败');
   },
 
   startRenameSelected() {

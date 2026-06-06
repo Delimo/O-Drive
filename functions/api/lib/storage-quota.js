@@ -8,6 +8,8 @@
  *   value: number (0 = unlimited)
  */
 
+import { indexedFileCount, syncFileIndexFromR2 } from './file-index.js';
+
 const QUOTA_CONFIG_KEY = 'storage_quota_bytes';
 
 /**
@@ -54,8 +56,17 @@ export async function getStorageUsed(db) {
  * @param {number} incomingBytes - Size of file(s) to upload
  * @returns {Promise<{allowed: boolean, used: number, quota: number, remaining: number}>}
  */
-export async function checkQuota(db, incomingBytes = 0) {
-  const [quota, used] = await Promise.all([getStorageQuota(db), getStorageUsed(db)]);
+export async function checkQuota(target, incomingBytes = 0) {
+  const db = target?.D1 || target;
+  let syncedIndex = false;
+  let indexTruncated = false;
+  const quota = await getStorageQuota(db);
+  if (quota && target?.D1 && target?.R2 && (await indexedFileCount(target)) === 0) {
+    const sync = await syncFileIndexFromR2(target, { maxObjects: 50000 });
+    syncedIndex = true;
+    indexTruncated = Boolean(sync.truncated);
+  }
+  const used = await getStorageUsed(db);
   if (!quota) return { allowed: true, used, quota: 0, remaining: Infinity };
   const remaining = Math.max(0, quota - used);
   return {
@@ -63,6 +74,8 @@ export async function checkQuota(db, incomingBytes = 0) {
     used,
     quota,
     remaining,
+    syncedIndex,
+    indexTruncated,
   };
 }
 

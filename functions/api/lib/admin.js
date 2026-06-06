@@ -1,7 +1,8 @@
 ﻿import { jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
-import { getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
+import { fileIndexStatus, getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
 import { mapWithConcurrency } from './r2-tree.js';
 import { getStorageQuota, setStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
+import { normalizeWebhookEndpoints, testWebhookEndpoint } from './webhooks.js';
 
 function fileKind(key) {
   return indexedFileKind(key);
@@ -153,15 +154,23 @@ async function deletePrefix(env, prefix, limit = 5000) {
 }
 
 export async function handleAdminMaintenance(env) {
-  const [indexCount, accessAttemptCount, trashCount, logsCount, thumbs] = await Promise.all([
-    indexedFileCount(env),
+  const [index, accessAttemptCount, trashCount, logsCount, thumbs, r2Sample] = await Promise.all([
+    fileIndexStatus(env),
     countRows(env, 'path_access_attempts'),
     countRows(env, 'trash'),
     countRows(env, 'logs'),
     listR2Objects(env.R2, { prefix: '.thumbs/' }, { maxObjects: 1 }).catch(() => ({ objects: [], truncated: false })),
+    listR2Objects(env.R2, {}, { maxObjects: 1000 }).catch(() => ({ objects: [], truncated: false })),
   ]);
+  const visibleSampleCount = (r2Sample.objects || []).filter(obj => !isReservedKey(obj.key) && !obj.key.endsWith('/.folder')).length;
   return jsonResponse({
-    indexCount,
+    indexCount: index.count,
+    indexTotalSize: index.totalSize,
+    indexTotalSizeFormatted: formatBytes(index.totalSize),
+    indexLatestUpdatedAt: index.latestUpdatedAt,
+    indexFresh: index.count > 0 && !r2Sample.truncated ? index.count === visibleSampleCount : index.count > 0,
+    r2SampleCount: visibleSampleCount,
+    r2SampleTruncated: Boolean(r2Sample.truncated),
     accessAttemptCount,
     trashCount,
     logsCount,
@@ -204,20 +213,41 @@ export async function handleAdminQuota(env, request, method) {
   return jsonResponse({ message: 'Method Not Allowed' }, 405);
 }
 
+export async function loadWebhookUrls(env) {
+  let items = [];
+  try {
+    const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhook_urls'").first();
+    if (row?.value) items = JSON.parse(row.value);
+  } catch (_) {}
+  const endpoints = normalizeWebhookEndpoints(items);
+  if (endpoints.length) return endpoints;
+  return env.WEBHOOK_URLS || '';
+}
+
 export async function handleAdminWebhooks(env, request, method) {
   if (method === 'GET') {
-    let urls = [];
+    let items = [];
     try {
       const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhook_urls'").first();
-      if (row?.value) urls = JSON.parse(row.value);
+      if (row?.value) items = JSON.parse(row.value);
     } catch (_) {}
-    return jsonResponse({ urls });
+    let endpoints = normalizeWebhookEndpoints(items);
+    if (!endpoints.length && env.WEBHOOK_URLS) {
+      endpoints = normalizeWebhookEndpoints(env.WEBHOOK_URLS);
+    }
+    return jsonResponse({ items: endpoints, urls: endpoints.map(item => item.url) });
   }
   if (method === 'PUT') {
-    const { urls } = await request.json().catch(() => ({}));
-    const valid = Array.isArray(urls) ? urls.filter(u => typeof u === 'string' && u.startsWith('http')) : [];
-    await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)').bind('webhook_urls', JSON.stringify(valid)).run();
-    return jsonResponse({ success: true, urls: valid });
+    const body = await request.json().catch(() => ({}));
+    const endpoints = normalizeWebhookEndpoints(body.items || body.urls || []);
+    await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)').bind('webhook_urls', JSON.stringify(endpoints)).run();
+    return jsonResponse({ success: true, items: endpoints, urls: endpoints.map(item => item.url) });
+  }
+  if (method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const endpoint = body.endpoint || body;
+    const result = await testWebhookEndpoint(endpoint);
+    return jsonResponse(result, result.success ? 200 : 502);
   }
   return jsonResponse({ message: 'Method Not Allowed' }, 405);
 }

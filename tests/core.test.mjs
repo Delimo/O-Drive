@@ -16,12 +16,14 @@ import {
   handleTrashClear,
   handleTrashCleanup,
   handleTrashRetention,
+  handlePaste,
 } from '../functions/api/lib/file-mutations.js';
 import { handleAdminHealth, handleAdminStats } from '../functions/api/lib/admin.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
 import { indexedFileCount, upsertFileIndex } from '../functions/api/lib/file-index.js';
+import { setStorageQuota as setStorageQuotaForTest } from '../functions/api/lib/storage-quota.js';
 import {
   handleProtectedSettings,
   handleProtectedUnlock,
@@ -36,7 +38,9 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
   const trashRows = [];
   const protectedRows = [];
   const pathAttemptRows = [];
+  const loginAttemptRows = [];
   const settingsRows = new Map();
+  const kvRows = new Map();
   const fileIndexRows = [];
   const logs = [];
   const sizeOf = body => typeof body === 'string' ? body.length : body?.byteLength || 0;
@@ -238,8 +242,25 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
                 pathAttemptRows.push(row);
               }
             }
+            if (/INSERT INTO login_attempts/i.test(sql)) {
+              const row = {
+                ip: statement.bound?.[0],
+                attempts: 1,
+                last_attempt: statement.bound?.[1],
+              };
+              const idx = loginAttemptRows.findIndex(item => item.ip === row.ip);
+              if (idx >= 0) {
+                loginAttemptRows[idx].attempts += 1;
+                loginAttemptRows[idx].last_attempt = row.last_attempt;
+              } else {
+                loginAttemptRows.push(row);
+              }
+            }
             if (/INSERT OR REPLACE INTO settings/i.test(sql)) {
               settingsRows.set('trash_retention_days', statement.bound?.[0]);
+            }
+            if (/INSERT OR REPLACE INTO kv_config/i.test(sql)) {
+              kvRows.set(statement.bound?.[0], statement.bound?.[1]);
             }
             if (/INSERT OR IGNORE INTO settings/i.test(sql)) {
               settingsRows.set(statement.bound?.[0], 'hidden');
@@ -258,6 +279,11 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const [path, ip] = statement.bound || [];
               const idx = pathAttemptRows.findIndex(row => row.path === path && row.ip === ip);
               if (idx >= 0) pathAttemptRows.splice(idx, 1);
+            }
+            if (/DELETE FROM login_attempts WHERE ip = \?/i.test(sql)) {
+              const ip = statement.bound?.[0];
+              const idx = loginAttemptRows.findIndex(row => row.ip === ip);
+              if (idx >= 0) loginAttemptRows.splice(idx, 1);
             }
             if (/DELETE FROM file_index WHERE path = \?/i.test(sql)) {
               const path = statement.bound?.[0];
@@ -282,6 +308,10 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
           async first() {
             if (/SELECT COUNT\(\*\) as count FROM file_index/i.test(sql)) return { count: fileIndexRows.length };
             if (/SELECT COUNT\(\*\) as count FROM path_access_attempts/i.test(sql)) return { count: pathAttemptRows.length };
+            if (/SELECT attempts, last_attempt FROM login_attempts WHERE ip = \?/i.test(sql)) {
+              const ip = statement.bound?.[0];
+              return loginAttemptRows.find(row => row.ip === ip) || null;
+            }
             if (/SELECT attempts, last_attempt FROM path_access_attempts WHERE path = \? AND ip = \?/i.test(sql)) {
               const [path, ip] = statement.bound || [];
               return pathAttemptRows.find(row => row.path === path && row.ip === ip) || null;
@@ -291,6 +321,24 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: logs.length };
             if (/SELECT value FROM settings WHERE key = 'trash_retention_days'/i.test(sql)) {
               const value = settingsRows.get('trash_retention_days');
+              return value == null ? null : { value };
+            }
+            if (/SELECT value FROM kv_config WHERE key = \?/i.test(sql)) {
+              const value = kvRows.get(statement.bound?.[0]);
+              return value == null ? null : { value };
+            }
+            if (/SELECT COALESCE\(SUM\(size\), 0\) AS total FROM file_index/i.test(sql)) {
+              return { total: fileIndexRows.reduce((sum, row) => sum + Number(row.size || 0), 0) };
+            }
+            if (/SELECT COUNT\(\*\) as count, COALESCE\(SUM\(size\), 0\) as totalSize, COALESCE\(MAX\(updated_at\), 0\) as latestUpdatedAt FROM file_index/i.test(sql)) {
+              return {
+                count: fileIndexRows.length,
+                totalSize: fileIndexRows.reduce((sum, row) => sum + Number(row.size || 0), 0),
+                latestUpdatedAt: fileIndexRows.reduce((max, row) => Math.max(max, Number(row.updated_at || 0)), 0),
+              };
+            }
+            if (/SELECT value FROM kv_config WHERE key = 'webhook_urls'/i.test(sql)) {
+              const value = kvRows.get('webhook_urls');
               return value == null ? null : { value };
             }
             return null;
@@ -528,6 +576,56 @@ test('admin login issues csrf token and write requests must echo it', async () =
     method: 'POST',
     headers: { Cookie: cookie, 'X-CSRF-Token': 'bad' },
   }), auth), false);
+});
+
+test('admin login locks after repeated failed attempts and clears after success', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+
+  for (let i = 0; i < 5; i++) {
+    const failed = await handleLogin(new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'bad' }),
+      headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.50' },
+    }), env);
+    assert.equal(failed.status, 401);
+  }
+
+  const locked = await handleLogin(new Request('https://example.com/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'admin', password: 'pass' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.50' },
+  }), env);
+  assert.equal(locked.status, 429);
+
+  const otherIpSuccess = await handleLogin(new Request('https://example.com/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'admin', password: 'pass' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.51' },
+  }), env);
+  assert.equal(otherIpSuccess.status, 200);
+
+  const oneWrong = await handleLogin(new Request('https://example.com/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'admin', password: 'bad' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.52' },
+  }), env);
+  assert.equal(oneWrong.status, 401);
+  const clearsOnSuccess = await handleLogin(new Request('https://example.com/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'admin', password: 'pass' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.52' },
+  }), env);
+  assert.equal(clearsOnSuccess.status, 200);
+  for (let i = 0; i < 4; i++) {
+    const failed = await handleLogin(new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'bad' }),
+      headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.52' },
+    }), env);
+    assert.equal(failed.status, 401);
+  }
 });
 
 test('guest access is disabled unless ALLOW_GUEST is true', async () => {
@@ -902,6 +1000,37 @@ test('rename refuses to overwrite existing targets', async () => {
   );
 });
 
+test('copy and move operations keep file index in sync', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'docs/nested/b.txt', body: 'bb', size: 2, uploaded: new Date('2026-01-02') },
+    ],
+  });
+  await upsertFileIndex(env, 'docs/a.txt', { size: 1, contentType: 'text/plain', uploaded: new Date('2026-01-01') });
+  await upsertFileIndex(env, 'docs/nested/b.txt', { size: 2, contentType: 'text/plain', uploaded: new Date('2026-01-02') });
+
+  const copy = await handlePaste(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'copy', paths: ['docs/a.txt'], targetDir: '/copies' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await copy.json()).success, true);
+  let search = await handleSearch(env, new Request('https://example.com/api/search?q=a.txt&scope=/copies'), new URL('https://example.com/api/search?q=a.txt&scope=/copies'), [], { role: 'guest' }, []);
+  assert.deepEqual((await search.json()).files.map(file => file.fullKey), ['copies/a.txt']);
+
+  const move = await handlePaste(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'move', paths: ['docs/nested'], targetDir: '/moved' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await move.json()).success, true);
+  search = await handleSearch(env, new Request('https://example.com/api/search?q=b.txt&scope=/moved'), new URL('https://example.com/api/search?q=b.txt&scope=/moved'), [], { role: 'guest' }, []);
+  assert.deepEqual((await search.json()).files.map(file => file.fullKey), ['moved/nested/b.txt']);
+  search = await handleSearch(env, new Request('https://example.com/api/search?q=b.txt&scope=/docs'), new URL('https://example.com/api/search?q=b.txt&scope=/docs'), [], { role: 'guest' }, []);
+  assert.deepEqual((await search.json()).files.map(file => file.fullKey), []);
+});
+
 test('trash items can be purged permanently', async () => {
   const env = makeEnv({
     objects: [
@@ -995,6 +1124,40 @@ test('multipart uploads can resolve name conflicts', async () => {
   assert.equal((await skipped.json()).skipped, true);
 });
 
+test('quota check syncs empty file index from R2 before accepting uploads', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'existing.bin', body: '1234567890', size: 10, uploaded: new Date('2026-01-01') }],
+  });
+  await setStorageQuotaForTest(env.D1, 12);
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const form = new FormData();
+  form.append('file', new File(['abcde'], 'new.bin', { type: 'application/octet-stream' }));
+  const upload = await onRequest({
+    env,
+    request: new Request('https://example.com/api/files', {
+      method: 'POST',
+      body: form,
+      headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+
+  assert.equal(upload.status, 507);
+  assert.equal(await indexedFileCount(env), 1);
+});
+
 test('admin stats summarize visible stored files', async () => {
   const env = makeEnv({
     objects: [
@@ -1082,6 +1245,117 @@ test('admin maintenance reports counts and runs cleanup actions', async () => {
   const statusData = await status.json();
   assert.equal(statusData.indexCount, 1);
   assert.equal(statusData.thumbnailsPresent, false);
+});
+
+test('webhook settings saved in D1 are used for file operation notifications', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const save = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'PUT',
+        body: JSON.stringify({ items: [{ type: 'wecom', url: 'https://hooks.example.test/notify' }] }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(save.status, 200);
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'docs' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://hooks.example.test/notify');
+    assert.equal(calls[0].body.msgtype, 'markdown');
+    assert.match(calls[0].body.markdown.content, /folder\.created/);
+    assert.match(calls[0].body.markdown.content, /\/docs\//);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('admin can send webhook test messages with platform-specific payloads', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const wecom = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint: { type: 'wecom', url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc' } }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(wecom.status, 200);
+    assert.equal(calls[0].body.msgtype, 'markdown');
+    assert.match(calls[0].body.markdown.content, /测试通知/);
+
+    const dingtalk = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint: { type: 'dingtalk', url: 'https://oapi.dingtalk.com/robot/send?access_token=abc', secret: 'SEC123' } }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(dingtalk.status, 200);
+    assert.match(calls[1].url, /timestamp=/);
+    assert.match(calls[1].url, /sign=/);
+    assert.equal(calls[1].body.msgtype, 'markdown');
+    assert.match(calls[1].body.markdown.title, /O-Drive/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('admin health reports bindings and required env vars', async () => {

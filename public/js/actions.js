@@ -27,6 +27,7 @@ export const Actions = {
     const { res, data } = await api.listFiles(state.currentPath);
     if (!res.ok) {
       if (data?.code === 'password_required') return this.handlePasswordRequired(data, () => this.loadFiles());
+      Message.error(data?.message || '文件列表加载失败');
       return;
     }
     state.fileData = data;
@@ -35,9 +36,9 @@ export const Actions = {
   },
 
   async doLogin() {
-    const { data } = await api.login(document.getElementById('adminUser').value, document.getElementById('adminPass').value);
+    const { res, data } = await api.login(document.getElementById('adminUser').value, document.getElementById('adminPass').value);
     if (data?.success) window.location.reload();
-    else document.getElementById('loginError').textContent = '登录失败';
+    else document.getElementById('loginError').textContent = res.status === 429 ? '尝试次数过多，请稍后再试' : '登录失败';
   },
 
   async logout() {

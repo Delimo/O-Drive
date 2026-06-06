@@ -130,8 +130,11 @@ export const api = {
     return requestJson('/api/admin/settings/quota', { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ bytes }) });
   },
   adminWebhooks() { return requestJson('/api/admin/settings/webhooks'); },
-  setAdminWebhooks(urls) {
-    return requestJson('/api/admin/settings/webhooks', { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ urls }) });
+  setAdminWebhooks(items) {
+    return requestJson('/api/admin/settings/webhooks', { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ items }) });
+  },
+  testAdminWebhook(endpoint) {
+    return requestJson('/api/admin/settings/webhooks', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ endpoint }) });
   },
   csrfHeaders,
 };

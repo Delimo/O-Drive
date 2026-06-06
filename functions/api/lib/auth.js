@@ -67,7 +67,7 @@ export async function verifyAuth(request, env) {
   }
 }
 
-async function checkAndRecordLoginAttempt(env, ip) {
+async function checkLoginLocked(env, ip) {
   const now = Date.now();
   try {
     const row = await env.D1.prepare('SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?').bind(ip).first();
@@ -78,13 +78,17 @@ async function checkAndRecordLoginAttempt(env, ip) {
     }
     if (now - lastAttempt >= LOGIN_LOCKOUT_MS) {
       await env.D1.prepare('DELETE FROM login_attempts WHERE ip = ?').bind(ip).run();
-    } else {
-      await env.D1.prepare(
-        'INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt'
-      ).bind(ip, now).run();
     }
   } catch (e) {}
   return { locked: false };
+}
+
+async function recordLoginFailure(env, ip) {
+  try {
+    await env.D1.prepare(
+      'INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt'
+    ).bind(ip, Date.now()).run();
+  } catch (e) {}
 }
 
 export async function handleLogin(request, env) {
@@ -92,7 +96,7 @@ export async function handleLogin(request, env) {
   const { username, password } = await request.json();
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
 
-  const attemptResult = await checkAndRecordLoginAttempt(env, ip);
+  const attemptResult = await checkLoginLocked(env, ip);
   if (attemptResult.locked) {
     return jsonResponse({ success: false, message: 'Too many attempts' }, 429);
   }
@@ -109,6 +113,7 @@ export async function handleLogin(request, env) {
     return jsonResponse({ success: true, csrf }, 200, { 'Set-Cookie': `${cookieName(request)}=${header}.${payload}.${signature}; ${cookieAttributes(request)}` });
   }
 
+  await recordLoginFailure(env, ip);
   return jsonResponse({ success: false }, 401);
 }
 

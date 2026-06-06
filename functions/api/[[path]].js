@@ -19,7 +19,7 @@ const csrfProtectedRoutes = [
   ['/api/trash/cleanup', ['POST']],
   ['/api/admin/settings/trash-retention', ['PUT']],
   ['/api/admin/settings/quota', ['PUT']],
-  ['/api/admin/settings/webhooks', ['PUT']],
+  ['/api/admin/settings/webhooks', ['PUT', 'POST']],
   ['/api/mkdir', ['POST']],
   ['/api/upload-multipart/create', ['POST']],
   ['/api/upload-multipart/part', ['PUT']],
@@ -80,7 +80,7 @@ export async function onRequest(context) {
 
     // Admin routes
     if (isAdmin(auth)) {
-      const adminResult = await resolveAdminRoute(env, request, method, path, url, r2Key, hiddenPaths, protectedPaths);
+      const adminResult = await resolveAdminRoute(env, request, method, path, url, r2Key, hiddenPaths, protectedPaths, context);
       if (adminResult) return adminResult;
     }
 

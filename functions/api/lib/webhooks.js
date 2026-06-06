@@ -15,6 +15,44 @@
 
 const WEBHOOK_TIMEOUT_MS = 5000;
 const MAX_RETRIES = 2;
+const WEBHOOK_TYPES = ['generic', 'wecom', 'dingtalk'];
+
+function eventLabel(event) {
+  const labels = {
+    'file.uploaded': '文件上传',
+    'file.deleted': '文件删除',
+    'file.purged': '文件彻底删除',
+    'file.moved': '文件移动',
+    'file.copied': '文件复制',
+    'folder.created': '文件夹创建',
+    'file.renamed': '文件重命名',
+    'webhook.test': '测试通知',
+  };
+  return labels[event] || event;
+}
+
+function payloadLines(payload) {
+  const data = payload.data || {};
+  const lines = [
+    `### O-Drive ${eventLabel(payload.event)}`,
+    `- 事件：${payload.event}`,
+    `- 时间：${payload.timestamp}`,
+  ];
+  if (data.path) lines.push(`- 路径：${data.path}`);
+  if (data.oldPath) lines.push(`- 原路径：${data.oldPath}`);
+  if (data.newName) lines.push(`- 新名称：${data.newName}`);
+  if (data.paths) lines.push(`- 对象：${Array.isArray(data.paths) ? data.paths.join(', ') : data.paths}`);
+  if (data.targetDir) lines.push(`- 目标目录：${data.targetDir}`);
+  if (data.message) lines.push(`- 说明：${data.message}`);
+  return lines;
+}
+
+function endpointLabel(endpoint) {
+  if (endpoint.name) return endpoint.name;
+  if (endpoint.type === 'wecom') return '企业微信';
+  if (endpoint.type === 'dingtalk') return '钉钉';
+  return '通用';
+}
 
 /**
  * Parse webhook URLs from environment.
@@ -36,6 +74,62 @@ function parseWebhookUrls(envUrls) {
     });
 }
 
+export function normalizeWebhookEndpoints(input) {
+  const raw = Array.isArray(input) ? input : parseWebhookUrls(input);
+  return raw
+    .map((item, index) => {
+      const endpoint = typeof item === 'string' ? { url: item } : { ...item };
+      const type = WEBHOOK_TYPES.includes(endpoint.type) ? endpoint.type : 'generic';
+      const url = String(endpoint.url || '').trim();
+      try {
+        new URL(url);
+      } catch {
+        return null;
+      }
+      return {
+        id: String(endpoint.id || `${Date.now()}-${index}`),
+        name: String(endpoint.name || '').trim(),
+        type,
+        url,
+        secret: type === 'dingtalk' ? String(endpoint.secret || '').trim() : '',
+        enabled: endpoint.enabled !== false,
+      };
+    })
+    .filter(Boolean);
+}
+
+async function signDingTalkUrl(endpoint) {
+  if (!endpoint.secret) return endpoint.url;
+  const timestamp = Date.now();
+  const stringToSign = `${timestamp}\n${endpoint.secret}`;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(endpoint.secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(stringToSign));
+  const sign = encodeURIComponent(btoa(String.fromCharCode(...new Uint8Array(sig))));
+  const url = new URL(endpoint.url);
+  url.searchParams.set('timestamp', String(timestamp));
+  url.searchParams.set('sign', sign);
+  return url.toString();
+}
+
+function formatEndpointPayload(endpoint, payload) {
+  if (endpoint.type === 'wecom') {
+    return {
+      msgtype: 'markdown',
+      markdown: { content: payloadLines(payload).join('\n') },
+    };
+  }
+  if (endpoint.type === 'dingtalk') {
+    return {
+      msgtype: 'markdown',
+      markdown: {
+        title: `O-Drive ${eventLabel(payload.event)}`,
+        text: payloadLines(payload).join('\n\n'),
+      },
+    };
+  }
+  return payload;
+}
+
 /**
  * Send a webhook notification to a single URL.
  * @param {string} url
@@ -43,15 +137,16 @@ function parseWebhookUrls(envUrls) {
  * @param {number} [retries]
  * @returns {Promise<boolean>}
  */
-async function sendOne(url, payload, retries = MAX_RETRIES) {
+async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
+      const url = endpoint.type === 'dingtalk' ? await signDingTalkUrl(endpoint) : endpoint.url;
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(formatEndpointPayload(endpoint, payload)),
         signal: controller.signal,
       });
       clearTimeout(timer);
@@ -69,14 +164,15 @@ async function sendOne(url, payload, retries = MAX_RETRIES) {
 }
 
 /**
- * Fire-and-forget webhook notification to all configured URLs.
+ * Send webhook notifications to all configured URLs.
  * @param {string} envUrls - WEBHOOK_URLS env value
  * @param {string} event - Event name
  * @param {object} data - Event payload data
+ * @returns {Promise<boolean[]>}
  */
-export function notifyWebhook(envUrls, event, data = {}) {
-  const urls = parseWebhookUrls(envUrls);
-  if (!urls.length) return;
+export async function notifyWebhook(envUrls, event, data = {}) {
+  const endpoints = normalizeWebhookEndpoints(envUrls).filter(endpoint => endpoint.enabled);
+  if (!endpoints.length) return [];
 
   /** @type {WebhookPayload} */
   const payload = {
@@ -85,43 +181,52 @@ export function notifyWebhook(envUrls, event, data = {}) {
     data,
   };
 
-  // Fire and forget — don't block the response
-  for (const url of urls) {
-    sendOne(url, payload).catch(() => {});
-  }
+  return Promise.all(endpoints.map(endpoint => sendOne(endpoint, payload).catch(() => false)));
+}
+
+export async function testWebhookEndpoint(endpoint) {
+  const normalized = normalizeWebhookEndpoints([endpoint])[0];
+  if (!normalized) return { success: false, message: 'Invalid webhook URL' };
+  const payload = {
+    event: 'webhook.test',
+    timestamp: new Date().toISOString(),
+    data: { message: `这是一条来自 O-Drive 的 ${endpointLabel(normalized)} 测试通知。` },
+  };
+  const success = await sendOne(normalized, payload, 0);
+  return { success, type: normalized.type, name: endpointLabel(normalized), message: success ? '测试发送成功' : '测试发送失败' };
 }
 
 /**
  * Convenience: notify file uploaded.
  */
 export function notifyFileUploaded(envUrls, filePath, size, uploader = 'admin') {
-  notifyWebhook(envUrls, 'file.uploaded', { path: filePath, size, uploader });
+  return notifyWebhook(envUrls, 'file.uploaded', { path: filePath, size, uploader });
 }
 
 /**
  * Convenience: notify file deleted.
  */
 export function notifyFileDeleted(envUrls, paths, permanent = false) {
-  notifyWebhook(envUrls, permanent ? 'file.purged' : 'file.deleted', { paths });
+  return notifyWebhook(envUrls, permanent ? 'file.purged' : 'file.deleted', { paths });
 }
 
 /**
  * Convenience: notify file moved/copied.
  */
 export function notifyFileMoved(envUrls, action, paths, targetDir) {
-  notifyWebhook(envUrls, action === 'move' ? 'file.moved' : 'file.copied', { paths, targetDir });
+  return notifyWebhook(envUrls, action === 'move' ? 'file.moved' : 'file.copied', { paths, targetDir });
 }
 
 /**
  * Convenience: notify folder created.
  */
 export function notifyFolderCreated(envUrls, path) {
-  notifyWebhook(envUrls, 'folder.created', { path });
+  return notifyWebhook(envUrls, 'folder.created', { path });
 }
 
 /**
  * Convenience: notify file renamed.
  */
 export function notifyFileRenamed(envUrls, oldPath, newName) {
-  notifyWebhook(envUrls, 'file.renamed', { oldPath, newName });
+  return notifyWebhook(envUrls, 'file.renamed', { oldPath, newName });
 }

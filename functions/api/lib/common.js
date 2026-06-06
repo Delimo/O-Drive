@@ -200,6 +200,7 @@ export function assertCompleteListing(listed, details = 'Object listing') {
   if (!listed?.truncated) return;
   const err = new Error(`${details} is too large to process in one request`);
   err.status = 413;
+  err.code = 'LISTING_TRUNCATED';
   throw err;
 }
 

@@ -13,7 +13,7 @@ test('admin login opens file manager and admin console', async ({ page }) => {
 
   await page.getByRole('link', { name: '管理' }).click();
   await expect(page.getByRole('heading', { name: '管理控制台' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '重建索引' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '重建文件索引' })).toBeVisible();
 });
 
 test('protected path lockout shows retry message', async ({ page }) => {
