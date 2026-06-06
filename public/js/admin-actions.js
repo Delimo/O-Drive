@@ -292,9 +292,9 @@ export const AdminActions = {
     `;
   },
 
-  healthItem(label, ok, detail = '') {
+  healthItem(label, ok, detail = '', extraClass = '') {
     return `
-      <div class="health-item ${ok ? 'is-ok' : 'is-bad'}">
+      <div class="health-item ${ok ? 'is-ok' : 'is-bad'} ${extraClass}">
         <div>
           <strong>${escapeHtml(label)}</strong>
           ${detail ? `<span>${escapeHtml(detail)}</span>` : ''}
@@ -352,7 +352,8 @@ export const AdminActions = {
       this.healthItem(
         '访客访问',
         true,
-        data.env?.guestEnabled ? 'ALLOW_GUEST=true，访客可浏览' : '默认关闭；只有 ALLOW_GUEST=true 才开启'
+        data.env?.guestEnabled ? 'ALLOW_GUEST=true，访客可浏览' : '默认关闭；只有 ALLOW_GUEST=true 才开启',
+        'health-guest-item'
       ),
     ].join('');
   },

@@ -215,6 +215,10 @@ body.admin-page {
   border-color: rgba(185, 28, 28, 0.16);
 }
 
+.admin-page .health-guest-item {
+  grid-column: 1 / -1;
+}
+
 .admin-page .maintenance-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -436,7 +440,12 @@ body.admin-page {
 }
 
 .admin-page .webhook-target-grid {
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns:
+    minmax(150px, 0.85fr)
+    minmax(260px, 1.35fr)
+    minmax(150px, 0.8fr)
+    minmax(140px, 0.72fr)
+    minmax(180px, 0.9fr);
   align-items: end;
 }
 
@@ -564,11 +573,11 @@ body.admin-page {
 
 .admin-page .webhook-list-panel {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding-top: 18px;
+  padding: 18px 0 4px;
   border-top: 1px solid var(--border, #d9e1ee);
   box-sizing: border-box;
 }
@@ -605,7 +614,7 @@ body.admin-page {
 
 .admin-page .webhook-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -626,14 +635,14 @@ body.admin-page {
 .admin-page .webhook-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   width: 100%;
   max-width: 100%;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--surface-soft);
+  background: #fff;
   box-sizing: border-box;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
