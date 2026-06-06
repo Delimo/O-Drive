@@ -295,6 +295,33 @@ export const AdminActions = {
     `;
   },
 
+  adminCredentialsHealthItem(usernameOk, passwordOk) {
+    const rows = [
+      ['管理员用户名', usernameOk, '环境变量 ADMIN_USERNAME'],
+      ['管理员密码', passwordOk, '环境变量 ADMIN_PASSWORD'],
+    ];
+
+    return `
+      <div class="health-item health-credentials-item ${usernameOk && passwordOk ? 'is-ok' : 'is-bad'}">
+        <div class="health-credentials-head">
+          <strong>管理员登录凭据</strong>
+          <span>管理后台登录所需的环境变量</span>
+        </div>
+        <div class="health-credentials-list">
+          ${rows.map(([label, ok, detail]) => `
+            <div class="health-credential-row ${ok ? 'is-ok' : 'is-bad'}">
+              <div>
+                <strong>${escapeHtml(label)}</strong>
+                <span>${escapeHtml(detail)}</span>
+              </div>
+              <em>${ok ? '正常' : '异常'}</em>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+
   async loadHealth() {
     const grid = document.getElementById('healthGrid');
     if (!grid) return;
@@ -312,8 +339,7 @@ export const AdminActions = {
     grid.innerHTML = [
       this.healthItem('D1 数据库绑定 D1', Boolean(data.db?.ok), data.db?.message || tableList),
       this.healthItem('R2 存储绑定 R2', Boolean(data.r2?.ok), data.r2?.message || '文件读写使用该 Bucket'),
-      this.healthItem('管理员用户名', Boolean(data.env?.adminUsername), '环境变量 ADMIN_USERNAME'),
-      this.healthItem('管理员密码', Boolean(data.env?.adminPassword), '环境变量 ADMIN_PASSWORD'),
+      this.adminCredentialsHealthItem(Boolean(data.env?.adminUsername), Boolean(data.env?.adminPassword)),
       this.healthItem(
         '访客访问',
         true,

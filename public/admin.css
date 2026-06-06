@@ -161,6 +161,60 @@ body.admin-page {
   border-color: rgba(185, 28, 28, 0.16);
 }
 
+.admin-page .health-credentials-item {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+  background: #fff;
+}
+
+.admin-page .health-credentials-item .health-credentials-head {
+  align-content: center;
+}
+
+.admin-page .health-credentials-item .health-credentials-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-page .health-credentials-item .health-credential-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.admin-page .health-credentials-item .health-credential-row div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-page .health-credentials-item .health-credential-row em {
+  flex-shrink: 0;
+}
+
+.admin-page .health-credentials-item .health-credential-row.is-ok em {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.admin-page .health-credentials-item .health-credential-row.is-bad em {
+  color: #b91c1c;
+  background: #fff5f5;
+  border-color: rgba(185, 28, 28, 0.16);
+}
+
 .admin-page .maintenance-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -514,11 +568,8 @@ body.admin-page {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  margin-top: 16px;
-  padding: 14px 16px 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
+  padding-top: 18px;
+  border-top: 1px solid var(--border, #d9e1ee);
   box-sizing: border-box;
 }
 
@@ -1166,6 +1217,14 @@ body.admin-page {
   }
 
   .admin-page .health-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .health-credentials-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .health-credentials-item .health-credentials-list {
     grid-template-columns: 1fr;
   }
 
