@@ -365,8 +365,7 @@ body.admin-page {
   max-width: none;
 }
 
-.admin-page .webhook-request-grid,
-.admin-page .webhook-auth-grid {
+.admin-page .webhook-request-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1199,8 +1198,7 @@ body.admin-page {
   }
 
   .admin-page .webhook-target-grid,
-  .admin-page .webhook-request-grid,
-  .admin-page .webhook-auth-grid {
+  .admin-page .webhook-request-grid {
     grid-template-columns: 1fr;
   }
 

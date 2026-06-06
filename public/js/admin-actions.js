@@ -159,7 +159,7 @@ function setWebhookRowStatus(index, text = '', tone = 'muted') {
 
 function readWebhookForm() {
   const events = selectedWebhookEvents();
-  return {
+  const endpoint = {
     id: `${Date.now()}`,
     name: (document.getElementById('webhookNameInput')?.value || '').trim(),
     msgtype: document.getElementById('webhookMsgTypeInput')?.value || 'json',
@@ -168,11 +168,16 @@ function readWebhookForm() {
     contentType: (document.getElementById('webhookContentTypeInput')?.value || 'application/json').trim(),
     headers: parseHeadersText(document.getElementById('webhookHeadersInput')?.value || ''),
     body: document.getElementById('webhookBodyInput')?.value || '',
-    username: document.getElementById('webhookUsernameInput')?.value || '',
-    password: document.getElementById('webhookPasswordInput')?.value || '',
     events: events.length === WEBHOOK_EVENT_KEYS.length ? [] : events,
     enabled: true,
   };
+  const usernameInput = document.getElementById('webhookUsernameInput');
+  const passwordInput = document.getElementById('webhookPasswordInput');
+  if (usernameInput || passwordInput) {
+    endpoint.username = usernameInput?.value || '';
+    endpoint.password = passwordInput?.value || '';
+  }
+  return endpoint;
 }
 
 export const AdminActions = {
