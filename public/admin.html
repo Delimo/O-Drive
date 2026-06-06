@@ -245,17 +245,16 @@
                                 </label>
                             </div>
                         </div>
-                        <div class="webhook-form-block">
+                        <div class="webhook-form-block webhook-request-block">
                             <div class="webhook-block-title">请求内容</div>
                             <div class="webhook-grid webhook-request-grid">
-                                <label class="webhook-field">
+                                <label class="webhook-field webhook-headers-field">
                                     <span>Headers</span>
-                                    <small>JSON object</small>
-                                    <textarea id="webhookHeadersInput" class="admin-input webhook-textarea"></textarea>
+                                    <textarea id="webhookHeadersInput" class="admin-input webhook-textarea" placeholder='{"X-Token": "..."}'></textarea>
                                 </label>
-                                <label class="webhook-field">
+                                <label class="webhook-field webhook-body-field">
                                     <span>Body</span>
-                                    <textarea id="webhookBodyInput" class="admin-input webhook-textarea"></textarea>
+                                    <textarea id="webhookBodyInput" class="admin-input webhook-textarea" placeholder='{"event":"{event}","path":"{{data.path}}"}'></textarea>
                                 </label>
                             </div>
                         </div>
