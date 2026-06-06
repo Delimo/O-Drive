@@ -204,20 +204,65 @@
                             <p>文件上传、删除、移动、重命名、创建文件夹时，系统会向以下 URL 发送 POST 请求通知。</p>
                         </div>
                     </div>
+                    <div class="webhook-settings-panel">
+                        <div class="webhook-settings-head">
+                            <div>
+                                <h3>发送设置</h3>
+                                <p>详细设置您选择的信息发送渠道</p>
+                            </div>
+                            <button class="webhook-collapse-btn" type="button" aria-label="收起发送设置" data-admin-action="toggle-webhook-form">⌃</button>
+                        </div>
+                        <div id="webhookSettingsBody" class="webhook-settings-body">
+                            <label class="webhook-field webhook-url-field">
+                                <span>url *</span>
+                                <input type="url" id="webhookUrlInput" class="admin-input">
+                            </label>
+                            <label class="webhook-field webhook-method-field">
+                                <span>method</span>
+                                <select id="webhookMethodInput" class="admin-input">
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="PATCH">PATCH</option>
+                                    <option value="DELETE">DELETE</option>
+                                    <option value="GET">GET</option>
+                                </select>
+                            </label>
+                            <label class="webhook-field">
+                                <span>content_type</span>
+                                <input type="text" id="webhookContentTypeInput" class="admin-input" value="application/json">
+                            </label>
+                            <label class="webhook-field">
+                                <span>headers</span>
+                                <small>HTTP headers in JSON format</small>
+                                <textarea id="webhookHeadersInput" class="admin-input webhook-textarea"></textarea>
+                            </label>
+                            <label class="webhook-field">
+                                <span>body</span>
+                                <textarea id="webhookBodyInput" class="admin-input webhook-textarea"></textarea>
+                            </label>
+                            <label class="webhook-field">
+                                <span>username</span>
+                                <input type="text" id="webhookUsernameInput" class="admin-input" autocomplete="off">
+                            </label>
+                            <label class="webhook-field">
+                                <span>password</span>
+                                <input type="password" id="webhookPasswordInput" class="admin-input" autocomplete="new-password">
+                            </label>
+                            <div class="webhook-extra-row">
+                                <select id="webhookMsgTypeInput" class="admin-input">
+                                    <option value="json">json</option>
+                                    <option value="text">text</option>
+                                    <option value="markdown">markdown</option>
+                                </select>
+                                <input type="text" id="webhookNameInput" placeholder="名称，可选" class="admin-input">
+                            </div>
+                            <div class="webhook-save-row">
+                                <button class="btn h-10 px-4" data-admin-action="refresh-webhooks">刷新列表</button>
+                                <button class="btn btn-primary h-10 px-5" data-admin-action="add-webhook">保存</button>
+                            </div>
+                        </div>
+                    </div>
                     <div id="webhookList" class="webhook-list"></div>
-                    <div class="webhook-form">
-                        <select id="webhookMsgTypeInput" class="admin-input">
-                            <option value="json">json</option>
-                            <option value="text">text</option>
-                            <option value="markdown">markdown</option>
-                        </select>
-                        <input type="text" id="webhookNameInput" placeholder="名称，可选" class="admin-input">
-                        <input type="url" id="webhookUrlInput" placeholder="Webhook URL" class="admin-input webhook-url-input">
-                        <button class="btn btn-primary webhook-add-btn" data-admin-action="add-webhook">添加</button>
-                    </div>
-                    <div class="mt-3">
-                        <button class="btn h-8 px-3" data-admin-action="refresh-webhooks">刷新列表</button>
-                    </div>
                     <p id="webhookResult" class="text-xs text-slate-500 mt-4"></p>
                 </section>
             </div>

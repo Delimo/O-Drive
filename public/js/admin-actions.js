@@ -43,8 +43,62 @@ function normalizeWebhookItems(data = {}) {
       ? item.msgtype
       : (item.type === 'wechat_text' ? 'text' : (['text', 'markdown'].includes(item.messageType) ? item.messageType : 'json')),
     url: item.url || '',
+    method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(String(item.method || '').toUpperCase())
+      ? String(item.method).toUpperCase()
+      : 'POST',
+    contentType: item.contentType || item.content_type || 'application/json',
+    headers: item.headers && typeof item.headers === 'object' && !Array.isArray(item.headers) ? item.headers : {},
+    body: item.body || '',
+    username: item.username || '',
+    password: item.password || '',
     enabled: item.enabled !== false,
   })).filter(item => item.url);
+}
+
+function headersToText(headers = {}) {
+  return Object.keys(headers).length ? JSON.stringify(headers, null, 2) : '';
+}
+
+function parseHeadersText(text) {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return {};
+  const parsed = JSON.parse(trimmed);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('headers 必须是 JSON 对象');
+  return parsed;
+}
+
+function setWebhookForm(item = {}) {
+  const values = {
+    webhookUrlInput: item.url || '',
+    webhookMethodInput: item.method || 'POST',
+    webhookContentTypeInput: item.contentType || 'application/json',
+    webhookHeadersInput: headersToText(item.headers),
+    webhookBodyInput: item.body || '',
+    webhookUsernameInput: item.username || '',
+    webhookPasswordInput: item.password || '',
+    webhookMsgTypeInput: item.msgtype || 'json',
+    webhookNameInput: item.name || '',
+  };
+  Object.entries(values).forEach(([id, value]) => {
+    const input = document.getElementById(id);
+    if (input) input.value = value;
+  });
+}
+
+function readWebhookForm() {
+  return {
+    id: `${Date.now()}`,
+    name: (document.getElementById('webhookNameInput')?.value || '').trim(),
+    msgtype: document.getElementById('webhookMsgTypeInput')?.value || 'json',
+    url: (document.getElementById('webhookUrlInput')?.value || '').trim(),
+    method: (document.getElementById('webhookMethodInput')?.value || 'POST').toUpperCase(),
+    contentType: (document.getElementById('webhookContentTypeInput')?.value || 'application/json').trim(),
+    headers: parseHeadersText(document.getElementById('webhookHeadersInput')?.value || ''),
+    body: document.getElementById('webhookBodyInput')?.value || '',
+    username: document.getElementById('webhookUsernameInput')?.value || '',
+    password: document.getElementById('webhookPasswordInput')?.value || '',
+    enabled: true,
+  };
 }
 
 export const AdminActions = {
@@ -393,12 +447,20 @@ export const AdminActions = {
       <div class="webhook-row">
         <div class="webhook-row-main">
           <div class="webhook-row-head">
+            <span class="webhook-type-badge">${escapeHtml(item.method || 'POST')}</span>
             <span class="webhook-type-badge">msgtype: ${escapeHtml(item.msgtype || 'json')}</span>
             <strong>${escapeHtml(item.name || `Webhook #${i + 1}`)}</strong>
           </div>
           <div class="webhook-url">${escapeHtml(item.url)}</div>
+          <div class="webhook-meta">
+            <span>${escapeHtml(item.contentType || 'application/json')}</span>
+            ${Object.keys(item.headers || {}).length ? '<span>headers</span>' : ''}
+            ${item.body ? '<span>body</span>' : ''}
+            ${item.username || item.password ? '<span>basic auth</span>' : ''}
+          </div>
         </div>
         <div class="webhook-row-actions">
+          <button class="btn h-8 px-3" data-admin-action="edit-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>编辑</button>
           <button class="btn h-8 px-3" data-admin-action="test-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>测试发送</button>
           <button class="admin-danger-btn" data-admin-action="remove-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>删除</button>
         </div>
@@ -407,34 +469,45 @@ export const AdminActions = {
   },
 
   async addWebhook() {
-    const msgTypeInput = document.getElementById('webhookMsgTypeInput');
-    const nameInput = document.getElementById('webhookNameInput');
-    const input = document.getElementById('webhookUrlInput');
     const result = document.getElementById('webhookResult');
-    const msgtype = msgTypeInput?.value || 'json';
-    const name = (nameInput?.value || '').trim();
-    const url = (input?.value || '').trim();
-    if (!url || !url.startsWith('http')) {
+    let next;
+    try {
+      next = readWebhookForm();
+    } catch (err) {
+      if (result) result.textContent = err.message || 'headers 不是有效 JSON';
+      return;
+    }
+    if (!next.url || !next.url.startsWith('http')) {
       if (result) result.textContent = '请输入有效的 http(s) URL';
       return;
     }
     const { data } = await api.adminWebhooks();
     const current = normalizeWebhookItems(data);
-    if (current.some(item => item.url === url)) {
-      if (result) result.textContent = '该 URL 已存在';
-      return;
-    }
-    current.push({ id: `${Date.now()}`, name, msgtype, url, enabled: true });
+    const existingIndex = current.findIndex(item => item.url === next.url);
+    if (existingIndex >= 0) current[existingIndex] = { ...current[existingIndex], ...next, id: current[existingIndex].id };
+    else current.push(next);
     if (result) result.textContent = '正在保存...';
     const { res, data: saveData } = await api.setAdminWebhooks(current);
     if (!res.ok || saveData?.success === false) {
       if (result) result.textContent = saveData?.message || '保存失败';
       return;
     }
-    if (nameInput) nameInput.value = '';
-    if (input) input.value = '';
-    if (result) result.textContent = `已添加，共 ${current.length} 个 Webhook`;
+    setWebhookForm();
+    if (result) result.textContent = existingIndex >= 0 ? 'Webhook 已更新' : `已添加，共 ${current.length} 个 Webhook`;
     await this.loadWebhooks();
+  },
+
+  async editWebhook(index) {
+    const { data } = await api.adminWebhooks();
+    const current = normalizeWebhookItems(data);
+    const item = current[index];
+    if (!item) return;
+    setWebhookForm(item);
+    document.getElementById('webhookSettingsBody')?.classList.remove('is-collapsed');
+  },
+
+  toggleWebhookForm() {
+    document.getElementById('webhookSettingsBody')?.classList.toggle('is-collapsed');
   },
 
   async removeWebhook(index) {

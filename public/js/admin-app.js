@@ -31,9 +31,11 @@ document.addEventListener('click', event => {
     case 'set-quota': return AdminActions.setQuota();
     case 'fill-quota': return AdminActions.fillQuota(Number(args[0] || 0));
     case 'add-webhook': return AdminActions.addWebhook();
+    case 'edit-webhook': return AdminActions.editWebhook(Number(args[0] || 0));
     case 'remove-webhook': return AdminActions.removeWebhook(Number(args[0] || 0));
     case 'test-webhook': return AdminActions.testWebhook(Number(args[0] || 0));
     case 'refresh-webhooks': return AdminActions.loadWebhooks();
+    case 'toggle-webhook-form': return AdminActions.toggleWebhookForm();
   }
 });
 

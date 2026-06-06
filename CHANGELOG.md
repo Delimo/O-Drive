@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-06-06
+
+### Added
+
+- Webhook 通知页面改为“发送设置”表单，支持配置 `url`、`method`、`content_type`、`headers`、`body`、`username`、`password`、名称和消息格式。
+- Webhook 发送逻辑支持自定义 HTTP 方法、自定义请求头、自定义请求体模板和 HTTP Basic Auth。
+- Webhook 列表支持编辑已有配置；同一 URL 再保存时会更新原配置，避免重复添加。
+- 新增 Webhook 自定义请求设置测试，覆盖 method、content type、headers、body 模板和 Basic Auth。
+- README 重写为完整中文文档，补充 Cloudflare Pages 部署教程、环境变量说明、功能教程、运维建议和常见问题。
+
+### Changed
+
+- Webhook 默认配置仍兼容旧的 `{ url, msgtype }` 和 `WEBHOOK_URLS` 环境变量写法。
+- Webhook `headers` 会按 JSON 对象保存和发送，非法 header 名会被过滤。
+- Webhook 自定义 `body` 支持 `{event}`、`{timestamp}`、`{{data.path}}` 等简单模板变量。
+- 管理后台 Webhook 页面布局调整为更清晰的发送设置面板，并适配移动端。
+
+### Verified
+
+- `node --check functions/api/lib/webhooks.js` 通过。
+- `node --check public/js/admin-actions.js` 通过。
+- `node --check public/js/admin-app.js` 通过。
+- `node --test tests/*.test.mjs` 通过，42 个测试全绿。
+
 ## 2026-05-12
 
 ### Added

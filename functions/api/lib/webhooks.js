@@ -16,6 +16,7 @@
 const WEBHOOK_TIMEOUT_MS = 5000;
 const MAX_RETRIES = 2;
 const WEBHOOK_MSG_TYPES = ['json', 'text', 'markdown'];
+const WEBHOOK_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
 function endpointLabel(endpoint) {
   if (endpoint.name) return endpoint.name;
@@ -68,6 +69,58 @@ function formatPayload(endpoint, payload) {
   return payload;
 }
 
+function parseHeaders(headers) {
+  if (!headers) return {};
+  if (typeof headers === 'string') {
+    try {
+      return parseHeaders(JSON.parse(headers));
+    } catch {
+      return {};
+    }
+  }
+  if (typeof headers !== 'object' || Array.isArray(headers)) return {};
+  return Object.fromEntries(
+    Object.entries(headers)
+      .map(([key, value]) => [String(key).trim(), String(value ?? '')])
+      .filter(([key]) => key && !/[\r\n:]/.test(key))
+  );
+}
+
+function readPayloadPath(payload, path) {
+  return String(path || '')
+    .split('.')
+    .filter(Boolean)
+    .reduce((value, part) => value && value[part], payload);
+}
+
+function renderTemplate(source, payload) {
+  return String(source || '').replace(/\{\{\s*([\w.]+)\s*\}\}|\{\s*([\w.]+)\s*\}/g, (_, a, b) => {
+    const value = readPayloadPath(payload, a || b);
+    if (value == null) return '';
+    return typeof value === 'object' ? JSON.stringify(value) : String(value);
+  });
+}
+
+function formatBody(endpoint, payload) {
+  if (endpoint.body) return renderTemplate(endpoint.body, payload);
+  return JSON.stringify(formatPayload(endpoint, payload));
+}
+
+function buildRequestInit(endpoint, payload, controller) {
+  const method = endpoint.method || 'POST';
+  const headers = {
+    ...(endpoint.contentType ? { 'Content-Type': endpoint.contentType } : {}),
+    ...parseHeaders(endpoint.headers),
+  };
+  if (endpoint.username || endpoint.password) {
+    const hasAuth = Object.keys(headers).some(key => key.toLowerCase() === 'authorization');
+    if (!hasAuth) headers.Authorization = `Basic ${btoa(`${endpoint.username}:${endpoint.password}`)}`;
+  }
+  const init = { method, headers, signal: controller.signal };
+  if (!['GET', 'HEAD'].includes(method)) init.body = formatBody(endpoint, payload);
+  return init;
+}
+
 /**
  * Parse webhook URLs from environment.
  * @param {string} envUrls
@@ -108,6 +161,14 @@ export function normalizeWebhookEndpoints(input) {
         name: String(endpoint.name || '').trim(),
         msgtype,
         url,
+        method: WEBHOOK_METHODS.includes(String(endpoint.method || '').toUpperCase())
+          ? String(endpoint.method).toUpperCase()
+          : 'POST',
+        contentType: String(endpoint.contentType || endpoint.content_type || 'application/json').trim() || 'application/json',
+        headers: parseHeaders(endpoint.headers),
+        body: String(endpoint.body || ''),
+        username: String(endpoint.username || ''),
+        password: String(endpoint.password || ''),
         enabled: endpoint.enabled !== false,
       };
     })
@@ -127,12 +188,7 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
       const url = endpoint.url;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formatPayload(endpoint, payload)),
-        signal: controller.signal,
-      });
+      const res = await fetch(url, buildRequestInit(endpoint, payload, controller));
       clearTimeout(timer);
       if (res.ok) return true;
       // Non-retryable client errors

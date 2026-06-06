@@ -1307,6 +1307,76 @@ test('webhook settings saved in D1 are used for file operation notifications', a
   }
 });
 
+test('webhook request settings customize outgoing notification requests', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const save = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'PUT',
+        body: JSON.stringify({
+          items: [{
+            name: 'custom',
+            url: 'https://hooks.example.test/custom',
+            method: 'PUT',
+            contentType: 'application/custom+json',
+            headers: { 'X-Source': 'O-Drive' },
+            body: '{"event":"{event}","path":"{{data.path}}"}',
+            username: 'robot',
+            password: 'secret',
+          }],
+        }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(save.status, 200);
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'custom-docs' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls[0].url, 'https://hooks.example.test/custom');
+    assert.equal(calls[0].init.method, 'PUT');
+    assert.equal(calls[0].init.headers['Content-Type'], 'application/custom+json');
+    assert.equal(calls[0].init.headers['X-Source'], 'O-Drive');
+    assert.equal(calls[0].init.headers.Authorization, `Basic ${btoa('robot:secret')}`);
+    assert.equal(calls[0].init.body, '{"event":"folder.created","path":"/custom-docs/"}');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('admin can send generic webhook test messages', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
