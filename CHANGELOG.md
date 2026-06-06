@@ -4,11 +4,11 @@
 
 ### Added
 
-- Webhook 通知页面改为“发送设置”表单，支持配置 `url`、`method`、`content_type`、`headers`、`body`、`username`、`password`、名称和消息格式。
-- Webhook 发送逻辑支持自定义 HTTP 方法、自定义请求头、自定义请求体模板和 HTTP Basic Auth。
+- Webhook 通知页面改为“发送设置”表单，支持配置 `url`、`method`、`content_type`、`headers`、`body`、名称和消息格式。
+- Webhook 发送逻辑支持自定义 HTTP 方法、自定义请求头和自定义请求体模板。
 - Webhook 支持按事件选择触发范围，可单独订阅上传、删除、彻底删除、移动、复制、重命名和新建文件夹。
 - Webhook 列表支持编辑已有配置；同一 URL 再保存时会更新原配置，避免重复添加。
-- 新增 Webhook 自定义请求设置测试，覆盖 method、content type、headers、body 模板和 Basic Auth。
+- 新增 Webhook 自定义请求设置测试，覆盖 method、content type、headers 和 body 模板。
 - 新增 Webhook 事件订阅过滤测试，确认未订阅事件不会发送通知。
 - README 重写为完整中文文档，补充 Cloudflare Pages 部署教程、环境变量说明、功能教程、运维建议和常见问题。
 

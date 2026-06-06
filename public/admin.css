@@ -1119,6 +1119,20 @@ body.admin-page {
   border-radius: 8px;
 }
 
+.admin-page .btn:disabled,
+.admin-page .admin-danger-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+  transform: none;
+  box-shadow: none;
+}
+
+.admin-page .btn:disabled:hover,
+.admin-page .admin-danger-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 @media (max-width: 1024px) {
   .admin-page .overview-panels-grid {
     grid-template-columns: 1fr;

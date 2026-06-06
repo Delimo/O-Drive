@@ -19,14 +19,14 @@
             <a href="/" class="btn text-slate-900">返回云盘</a>
         </header>
 
-        <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-full shadow-sm mt-4">
-            <button id="btn-overview" data-admin-action="switch-tab" data-args='["overview"]' class="admin-tab-btn is-active">概览</button>
-            <button id="btn-health" data-admin-action="switch-tab" data-args='["health"]' class="admin-tab-btn">系统状态</button>
-            <button id="btn-logs" data-admin-action="switch-tab" data-args='["logs"]' class="admin-tab-btn">操作日志</button>
-            <button id="btn-privacy" data-admin-action="switch-tab" data-args='["privacy"]' class="admin-tab-btn">隐藏管理</button>
-            <button id="btn-protected" data-admin-action="switch-tab" data-args='["protected"]' class="admin-tab-btn">访问密码</button>
-            <button id="btn-quota" data-admin-action="switch-tab" data-args='["quota"]' class="admin-tab-btn">存储配额</button>
-            <button id="btn-webhooks" data-admin-action="switch-tab" data-args='["webhooks"]' class="admin-tab-btn">Webhook</button>
+        <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-full shadow-sm mt-4" role="tablist" aria-label="后台管理">
+            <button id="btn-overview" role="tab" aria-selected="true" data-admin-action="switch-tab" data-args='["overview"]' class="admin-tab-btn is-active">概览</button>
+            <button id="btn-health" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["health"]' class="admin-tab-btn">系统状态</button>
+            <button id="btn-logs" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["logs"]' class="admin-tab-btn">操作日志</button>
+            <button id="btn-privacy" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["privacy"]' class="admin-tab-btn">隐藏管理</button>
+            <button id="btn-protected" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["protected"]' class="admin-tab-btn">访问密码</button>
+            <button id="btn-quota" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["quota"]' class="admin-tab-btn">存储配额</button>
+            <button id="btn-webhooks" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["webhooks"]' class="admin-tab-btn">Webhook</button>
         </div>
 
         <div class="explorer-card mt-4 mb-4">
@@ -111,9 +111,9 @@
                 <div class="admin-pagination">
                     <div class="text-slate-500 text-xs">共 <span id="totalPages" class="text-slate-600 font-bold">0</span> 页</div>
                     <div class="flex gap-2 text-slate-900">
-                        <button data-admin-action="change-page" data-args='[-1]' class="btn">上一页</button>
+                        <button id="logPrevButton" data-admin-action="change-page" data-args='[-1]' class="btn" disabled>上一页</button>
                         <span class="px-4 py-2 font-bold text-primary font-mono bg-background border border-border rounded-lg">第 <span id="currentPage">1</span> 页</span>
-                        <button data-admin-action="change-page" data-args='[1]' class="btn">下一页</button>
+                        <button id="logNextButton" data-admin-action="change-page" data-args='[1]' class="btn" disabled>下一页</button>
                     </div>
                 </div>
             </div>
@@ -198,7 +198,7 @@
                     <div class="admin-section-head">
                         <div>
                             <h2>Webhook 通知</h2>
-                            <p>文件上传、删除、移动、重命名、创建文件夹时，系统会向以下 URL 发送 POST 请求通知。</p>
+                            <p>文件上传、删除、移动、重命名、创建文件夹时，系统会按当前配置发送请求通知。</p>
                         </div>
                     </div>
                     <div id="webhookSettingsBody" class="webhook-settings-body">

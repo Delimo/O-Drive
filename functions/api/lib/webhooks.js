@@ -121,10 +121,6 @@ function buildRequestInit(endpoint, payload, controller) {
     ...(endpoint.contentType ? { 'Content-Type': endpoint.contentType } : {}),
     ...parseHeaders(endpoint.headers),
   };
-  if (endpoint.username || endpoint.password) {
-    const hasAuth = Object.keys(headers).some(key => key.toLowerCase() === 'authorization');
-    if (!hasAuth) headers.Authorization = `Basic ${btoa(`${endpoint.username}:${endpoint.password}`)}`;
-  }
   const init = { method, headers, signal: controller.signal };
   if (!['GET', 'HEAD'].includes(method)) init.body = formatBody(endpoint, payload);
   return init;
@@ -173,8 +169,6 @@ export function normalizeWebhookEndpoints(input) {
         contentType: String(endpoint.contentType || 'application/json').trim() || 'application/json',
         headers: parseHeaders(endpoint.headers),
         body: String(endpoint.body || ''),
-        username: String(endpoint.username || ''),
-        password: String(endpoint.password || ''),
         events: normalizeEvents(endpoint.events),
         enabled: endpoint.enabled !== false,
       };

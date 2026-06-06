@@ -17,7 +17,7 @@ O-Drive 是一个部署在 Cloudflare Pages 上的轻量文件管理器。它使
 - 支持隐藏路径管理，隐藏后的路径不会向游客展示。
 - 支持路径访问密码，控制预览和下载，并带错误次数锁定。
 - 管理后台提供概览、文件索引状态、操作日志、系统状态、存储配额和 Webhook 通知。
-- Webhook 支持自定义 URL、method、content_type、headers、body、Basic Auth、消息格式和事件订阅范围。
+- Webhook 支持自定义 URL、method、content_type、headers、body、消息格式和事件订阅范围。
 - 移动端可浏览、预览、上传文件，并执行管理员批量操作。
 
 ## 技术栈
@@ -433,8 +433,6 @@ Webhook 发送设置字段：
 | `content_type` | 请求体类型，默认 `application/json` |
 | `headers` | 自定义请求头，填写 JSON 对象 |
 | `body` | 自定义请求体模板，留空时使用系统默认载荷 |
-| `username` | HTTP Basic Auth 用户名，可选 |
-| `password` | HTTP Basic Auth 密码，可选 |
 | `msgtype` | 消息格式，支持 `json`、`text`、`markdown` |
 | `名称` | 仅用于后台区分不同 Webhook |
 | `触发事件` | 选择哪些文件事件会触发该 Webhook；全选或留空表示全部事件 |
@@ -457,8 +455,6 @@ Webhook 发送设置字段：
   "path": "{{data.path}}"
 }
 ```
-
-如果填写了 `username` 或 `password`，且 `headers` 中没有手动设置 `Authorization`，系统会自动添加 HTTP Basic Auth 请求头。
 
 企业微信机器人可以直接填写机器人地址，并按需要选择 `text` 或 `markdown`：
 
@@ -531,7 +527,6 @@ ALLOW_GUEST=true
 - URL 是否能从 Cloudflare 访问。
 - 目标服务是否要求 HTTPS。
 - method、content_type、headers 是否符合接收端要求。
-- 如果使用 Basic Auth，username 和 password 是否正确。
 - 如果平台要求签名，是否需要通过中转服务处理。
 
 ## 测试

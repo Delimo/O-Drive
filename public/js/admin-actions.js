@@ -13,6 +13,12 @@ const WEBHOOK_EVENT_OPTIONS = [
   ['folder.created', '新建文件夹'],
 ];
 const WEBHOOK_EVENT_KEYS = WEBHOOK_EVENT_OPTIONS.map(([key]) => key);
+export const ADMIN_TABS = ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'webhooks'];
+
+export function getInitialAdminTab() {
+  const tab = (window.location.hash || '').replace(/^#/, '');
+  return ADMIN_TABS.includes(tab) ? tab : 'overview';
+}
 
 function describeLogAction(action = '') {
   const normalized = String(action || '').toUpperCase();
@@ -68,8 +74,6 @@ function normalizeWebhookItems(data = {}) {
     contentType: item.contentType || 'application/json',
     headers: item.headers && typeof item.headers === 'object' && !Array.isArray(item.headers) ? item.headers : {},
     body: item.body || '',
-    username: item.username || '',
-    password: item.password || '',
     events: Array.isArray(item.events)
       ? [...new Set(item.events.map(event => String(event || '').trim()).filter(event => WEBHOOK_EVENT_KEYS.includes(event)))]
       : [],
@@ -124,8 +128,6 @@ function setWebhookForm(item = {}) {
     webhookContentTypeInput: item.contentType || 'application/json',
     webhookHeadersInput: headersToText(item.headers),
     webhookBodyInput: item.body || '',
-    webhookUsernameInput: item.username || '',
-    webhookPasswordInput: item.password || '',
     webhookMsgTypeInput: item.msgtype || 'json',
     webhookNameInput: item.name || '',
   };
@@ -148,6 +150,13 @@ function setWebhookResult(text = '', tone = 'muted') {
 function setWebhookListCount(count = 0) {
   const label = document.getElementById('webhookListCount');
   if (label) label.textContent = `${count} 个`;
+}
+
+function setLogPaginationState() {
+  const prev = document.getElementById('logPrevButton');
+  const next = document.getElementById('logNextButton');
+  if (prev) prev.disabled = adminState.currentPage <= 1;
+  if (next) next.disabled = adminState.currentPage >= adminState.totalPages;
 }
 
 function setWebhookFormMode(item = null) {
@@ -191,29 +200,29 @@ function readWebhookForm() {
     events: events.length === WEBHOOK_EVENT_KEYS.length ? [] : events,
     enabled: true,
   };
-  const usernameInput = document.getElementById('webhookUsernameInput');
-  const passwordInput = document.getElementById('webhookPasswordInput');
-  if (usernameInput || passwordInput) {
-    endpoint.username = usernameInput?.value || '';
-    endpoint.password = passwordInput?.value || '';
-  }
   return endpoint;
 }
 
 export const AdminActions = {
-  switchTab(id) {
-    ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'webhooks'].forEach(tab => {
-      document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', id !== tab);
-      document.getElementById(`btn-${tab}`)?.classList.toggle('is-active', id === tab);
+  switchTab(id, options = {}) {
+    const tabId = ADMIN_TABS.includes(id) ? id : 'overview';
+    ADMIN_TABS.forEach(tab => {
+      document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', tabId !== tab);
+      const button = document.getElementById(`btn-${tab}`);
+      button?.classList.toggle('is-active', tabId === tab);
+      button?.setAttribute('aria-selected', tabId === tab ? 'true' : 'false');
     });
-    adminState.activeTab = id;
+    adminState.activeTab = tabId;
+    if (options.persist !== false && window.location.hash !== `#${tabId}`) {
+      history.replaceState(null, '', `#${tabId}`);
+    }
 
-    if (id === 'overview') return this.loadStats();
-    if (id === 'health') return Promise.all([this.loadHealth(), this.loadMaintenance()]);
-    if (id === 'logs') return this.loadLogs();
-    if (id === 'privacy') return this.loadHidden();
-    if (id === 'quota') return this.loadQuota();
-    if (id === 'webhooks') return this.loadWebhooks();
+    if (tabId === 'overview') return this.loadStats();
+    if (tabId === 'health') return Promise.all([this.loadHealth(), this.loadMaintenance()]);
+    if (tabId === 'logs') return this.loadLogs();
+    if (tabId === 'privacy') return this.loadHidden();
+    if (tabId === 'quota') return this.loadQuota();
+    if (tabId === 'webhooks') return this.loadWebhooks();
     return this.loadProtected();
   },
 
@@ -467,6 +476,7 @@ export const AdminActions = {
     adminState.totalPages = data.totalPages || 1;
     document.getElementById('totalPages').textContent = adminState.totalPages;
     document.getElementById('currentPage').textContent = adminState.currentPage;
+    setLogPaginationState();
     document.getElementById('logTbody').innerHTML = (data.logs || []).map(l => {
       const time = new Date(l.timestamp).toLocaleString('zh-CN', { hour12: false });
       const actionClass = logActionClass(l.action);
@@ -626,7 +636,6 @@ export const AdminActions = {
             <span>${escapeHtml(webhookEventsLabel(item.events))}</span>
             ${Object.keys(item.headers || {}).length ? '<span>headers</span>' : ''}
             ${item.body ? '<span>body</span>' : ''}
-            ${item.username || item.password ? '<span>basic auth</span>' : ''}
           </div>
           <p class="webhook-row-status hidden" data-webhook-status="${i}"></p>
         </div>

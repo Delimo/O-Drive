@@ -1402,10 +1402,8 @@ test('webhook request settings customize outgoing notification requests', async 
             url: 'https://hooks.example.test/custom',
             method: 'PUT',
             contentType: 'application/custom+json',
-            headers: { 'X-Source': 'O-Drive' },
+            headers: { 'X-Source': 'O-Drive', Authorization: 'Bearer custom-token' },
             body: '{"event":"{event}","path":"{{data.path}}"}',
-            username: 'robot',
-            password: 'secret',
           }],
         }),
         headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
@@ -1431,7 +1429,7 @@ test('webhook request settings customize outgoing notification requests', async 
     assert.equal(calls[0].init.method, 'PUT');
     assert.equal(calls[0].init.headers['Content-Type'], 'application/custom+json');
     assert.equal(calls[0].init.headers['X-Source'], 'O-Drive');
-    assert.equal(calls[0].init.headers.Authorization, `Basic ${btoa('robot:secret')}`);
+    assert.equal(calls[0].init.headers.Authorization, 'Bearer custom-token');
     assert.equal(calls[0].init.body, '{"event":"folder.created","path":"/custom-docs/"}');
   } finally {
     globalThis.fetch = originalFetch;
