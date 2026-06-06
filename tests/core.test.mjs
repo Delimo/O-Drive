@@ -285,6 +285,9 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const idx = loginAttemptRows.findIndex(row => row.ip === ip);
               if (idx >= 0) loginAttemptRows.splice(idx, 1);
             }
+            if (/DELETE FROM kv_config WHERE key = 'webhook_urls'/i.test(sql)) {
+              kvRows.delete('webhook_urls');
+            }
             if (/DELETE FROM file_index WHERE path = \?/i.test(sql)) {
               const path = statement.bound?.[0];
               const idx = fileIndexRows.findIndex(row => row.path === path);
@@ -1275,7 +1278,7 @@ test('webhook settings saved in D1 are used for file operation notifications', a
       env,
       request: new Request('https://example.com/api/admin/settings/webhooks', {
         method: 'PUT',
-        body: JSON.stringify({ items: [{ type: 'wecom', url: 'https://hooks.example.test/notify' }] }),
+        body: JSON.stringify({ items: [{ name: 'notify', url: 'https://hooks.example.test/notify' }] }),
         headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
       }),
     });
@@ -1297,19 +1300,19 @@ test('webhook settings saved in D1 are used for file operation notifications', a
 
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, 'https://hooks.example.test/notify');
-    assert.equal(calls[0].body.msgtype, 'markdown');
-    assert.match(calls[0].body.markdown.content, /folder\.created/);
-    assert.match(calls[0].body.markdown.content, /\/docs\//);
+    assert.equal(calls[0].body.event, 'folder.created');
+    assert.equal(calls[0].body.data.path, '/docs/');
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test('admin can send webhook test messages with platform-specific payloads', async () => {
+test('admin can send generic webhook test messages', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
   env.ADMIN_PASSWORD = 'admin-secret';
   const calls = [];
+  const waitUntilPromises = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
     calls.push({ url: String(url), body: JSON.parse(init.body) });
@@ -1328,34 +1331,151 @@ test('admin can send webhook test messages with platform-specific payloads', asy
     const loginData = await login.json();
     const cookie = login.headers.get('Set-Cookie');
 
-    const wecom = await onRequest({
+    const testSend = await onRequest({
       env,
       request: new Request('https://example.com/api/admin/settings/webhooks', {
         method: 'POST',
-        body: JSON.stringify({ endpoint: { type: 'wecom', url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc' } }),
+        body: JSON.stringify({ endpoint: { name: 'receiver', url: 'https://example.com/webhook', type: 'dingtalk', secret: 'SEC123' } }),
         headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
       }),
     });
-    assert.equal(wecom.status, 200);
-    assert.equal(calls[0].body.msgtype, 'markdown');
-    assert.match(calls[0].body.markdown.content, /测试通知/);
-
-    const dingtalk = await onRequest({
-      env,
-      request: new Request('https://example.com/api/admin/settings/webhooks', {
-        method: 'POST',
-        body: JSON.stringify({ endpoint: { type: 'dingtalk', url: 'https://oapi.dingtalk.com/robot/send?access_token=abc', secret: 'SEC123' } }),
-        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
-      }),
-    });
-    assert.equal(dingtalk.status, 200);
-    assert.match(calls[1].url, /timestamp=/);
-    assert.match(calls[1].url, /sign=/);
-    assert.equal(calls[1].body.msgtype, 'markdown');
-    assert.match(calls[1].body.markdown.title, /O-Drive/);
+    assert.equal(testSend.status, 200);
+    assert.equal(calls[0].url, 'https://example.com/webhook');
+    assert.equal(calls[0].body.event, 'webhook.test');
+    assert.match(calls[0].body.data.message, /O-Drive/);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('webhook msgtype supports text and markdown payloads', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const save = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'PUT',
+        body: JSON.stringify({ items: [{ msgtype: 'text', url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc' }] }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(save.status, 200);
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'wechat-docs' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls[0].body.msgtype, 'text');
+    assert.match(calls[0].body.text.content, /O-Drive 文件夹创建/);
+    assert.match(calls[0].body.text.content, /wechat-docs/);
+
+    const markdown = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint: { msgtype: 'markdown', url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc' } }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(markdown.status, 200);
+    assert.equal(calls[1].body.msgtype, 'markdown');
+    assert.match(calls[1].body.markdown.content, /O-Drive 测试通知/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('clearing webhook settings removes persisted endpoint data', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const save = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/webhooks', {
+      method: 'PUT',
+      body: JSON.stringify({ items: [{ type: 'dingtalk', url: 'https://oapi.dingtalk.com/robot/send?access_token=abc', secret: 'SEC123' }] }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(save.status, 200);
+  const savedData = await save.json();
+  assert.equal(savedData.items.length, 1);
+  assert.equal(savedData.items[0].msgtype, 'json');
+  assert.equal(Object.prototype.hasOwnProperty.call(savedData.items[0], 'type'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(savedData.items[0], 'secret'), false);
+
+  const legacyWecom = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/webhooks', {
+      method: 'PUT',
+      body: JSON.stringify({ items: [{ type: 'wechat_text', url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc' }] }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  const legacyData = await legacyWecom.json();
+  assert.equal(legacyData.items[0].msgtype, 'text');
+
+  const clear = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/webhooks', {
+      method: 'PUT',
+      body: JSON.stringify({ items: [] }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(clear.status, 200);
+  assert.deepEqual(await clear.json(), { success: true, items: [], urls: [] });
+
+  const listed = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/webhooks', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  assert.deepEqual(await listed.json(), { items: [], urls: [] });
 });
 
 test('admin health reports bindings and required env vars', async () => {

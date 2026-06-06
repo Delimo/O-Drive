@@ -15,7 +15,12 @@
 
 const WEBHOOK_TIMEOUT_MS = 5000;
 const MAX_RETRIES = 2;
-const WEBHOOK_TYPES = ['generic', 'wecom', 'dingtalk'];
+const WEBHOOK_MSG_TYPES = ['json', 'text', 'markdown'];
+
+function endpointLabel(endpoint) {
+  if (endpoint.name) return endpoint.name;
+  return '通用';
+}
 
 function eventLabel(event) {
   const labels = {
@@ -24,34 +29,43 @@ function eventLabel(event) {
     'file.purged': '文件彻底删除',
     'file.moved': '文件移动',
     'file.copied': '文件复制',
-    'folder.created': '文件夹创建',
     'file.renamed': '文件重命名',
+    'folder.created': '文件夹创建',
     'webhook.test': '测试通知',
   };
   return labels[event] || event;
 }
 
-function payloadLines(payload) {
+function textPayload(payload) {
   const data = payload.data || {};
   const lines = [
-    `### O-Drive ${eventLabel(payload.event)}`,
-    `- 事件：${payload.event}`,
-    `- 时间：${payload.timestamp}`,
+    `O-Drive ${eventLabel(payload.event)}`,
+    `事件：${payload.event}`,
+    `时间：${payload.timestamp}`,
   ];
-  if (data.path) lines.push(`- 路径：${data.path}`);
-  if (data.oldPath) lines.push(`- 原路径：${data.oldPath}`);
-  if (data.newName) lines.push(`- 新名称：${data.newName}`);
-  if (data.paths) lines.push(`- 对象：${Array.isArray(data.paths) ? data.paths.join(', ') : data.paths}`);
-  if (data.targetDir) lines.push(`- 目标目录：${data.targetDir}`);
-  if (data.message) lines.push(`- 说明：${data.message}`);
-  return lines;
+  if (data.path) lines.push(`路径：${data.path}`);
+  if (data.oldPath) lines.push(`原路径：${data.oldPath}`);
+  if (data.newName) lines.push(`新名称：${data.newName}`);
+  if (data.paths) lines.push(`对象：${Array.isArray(data.paths) ? data.paths.join(', ') : data.paths}`);
+  if (data.targetDir) lines.push(`目标目录：${data.targetDir}`);
+  if (data.message) lines.push(`说明：${data.message}`);
+  return lines.join('\n');
 }
 
-function endpointLabel(endpoint) {
-  if (endpoint.name) return endpoint.name;
-  if (endpoint.type === 'wecom') return '企业微信';
-  if (endpoint.type === 'dingtalk') return '钉钉';
-  return '通用';
+function formatPayload(endpoint, payload) {
+  if (endpoint.msgtype === 'text') {
+    return {
+      msgtype: 'text',
+      text: { content: textPayload(payload) },
+    };
+  }
+  if (endpoint.msgtype === 'markdown') {
+    return {
+      msgtype: 'markdown',
+      markdown: { content: textPayload(payload) },
+    };
+  }
+  return payload;
 }
 
 /**
@@ -79,8 +93,11 @@ export function normalizeWebhookEndpoints(input) {
   return raw
     .map((item, index) => {
       const endpoint = typeof item === 'string' ? { url: item } : { ...item };
-      const type = WEBHOOK_TYPES.includes(endpoint.type) ? endpoint.type : 'generic';
       const url = String(endpoint.url || '').trim();
+      const legacyMsgtype = endpoint.type === 'wechat_text' ? 'text' : endpoint.messageType;
+      const msgtype = WEBHOOK_MSG_TYPES.includes(endpoint.msgtype)
+        ? endpoint.msgtype
+        : (WEBHOOK_MSG_TYPES.includes(legacyMsgtype) ? legacyMsgtype : 'json');
       try {
         new URL(url);
       } catch {
@@ -89,45 +106,12 @@ export function normalizeWebhookEndpoints(input) {
       return {
         id: String(endpoint.id || `${Date.now()}-${index}`),
         name: String(endpoint.name || '').trim(),
-        type,
+        msgtype,
         url,
-        secret: type === 'dingtalk' ? String(endpoint.secret || '').trim() : '',
         enabled: endpoint.enabled !== false,
       };
     })
     .filter(Boolean);
-}
-
-async function signDingTalkUrl(endpoint) {
-  if (!endpoint.secret) return endpoint.url;
-  const timestamp = Date.now();
-  const stringToSign = `${timestamp}\n${endpoint.secret}`;
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(endpoint.secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(stringToSign));
-  const sign = encodeURIComponent(btoa(String.fromCharCode(...new Uint8Array(sig))));
-  const url = new URL(endpoint.url);
-  url.searchParams.set('timestamp', String(timestamp));
-  url.searchParams.set('sign', sign);
-  return url.toString();
-}
-
-function formatEndpointPayload(endpoint, payload) {
-  if (endpoint.type === 'wecom') {
-    return {
-      msgtype: 'markdown',
-      markdown: { content: payloadLines(payload).join('\n') },
-    };
-  }
-  if (endpoint.type === 'dingtalk') {
-    return {
-      msgtype: 'markdown',
-      markdown: {
-        title: `O-Drive ${eventLabel(payload.event)}`,
-        text: payloadLines(payload).join('\n\n'),
-      },
-    };
-  }
-  return payload;
 }
 
 /**
@@ -142,11 +126,11 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
-      const url = endpoint.type === 'dingtalk' ? await signDingTalkUrl(endpoint) : endpoint.url;
+      const url = endpoint.url;
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formatEndpointPayload(endpoint, payload)),
+        body: JSON.stringify(formatPayload(endpoint, payload)),
         signal: controller.signal,
       });
       clearTimeout(timer);
@@ -193,7 +177,7 @@ export async function testWebhookEndpoint(endpoint) {
     data: { message: `这是一条来自 O-Drive 的 ${endpointLabel(normalized)} 测试通知。` },
   };
   const success = await sendOne(normalized, payload, 0);
-  return { success, type: normalized.type, name: endpointLabel(normalized), message: success ? '测试发送成功' : '测试发送失败' };
+  return { success, msgtype: normalized.msgtype, name: endpointLabel(normalized), message: success ? '测试发送成功' : '测试发送失败' };
 }
 
 /**

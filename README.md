@@ -91,6 +91,53 @@ npm test
 - 访问密码输错会按同一 IP 和同一路径计数，默认 5 次后暂停 15 分钟。
 - 不要用 `.trash`、`.thumbs`、`.meta`、`.system` 作为用户目录名，它们是系统保留前缀。
 
+## Webhook 配置
+
+打开 `/admin.html`，进入“Webhook”页，填写：
+
+- 消息格式：
+  - `json`：向 URL 发送原始事件 JSON。
+  - `text`：发送 `{ "msgtype": "text", "text": { "content": "..." } }`。
+  - `markdown`：发送 `{ "msgtype": "markdown", "markdown": { "content": "..." } }`。
+- 名称：可选，用于在管理页区分不同 Webhook。
+- Webhook URL：接收 POST 请求的地址。
+
+添加后可以点击“测试发送”，确认接收端是否能收到请求。文件上传、删除、移动、复制、重命名、彻底删除和创建文件夹时，O-Drive 会向已配置的 URL 发送通知。
+
+通用 JSON 格式如下：
+
+```json
+{
+  "event": "file.uploaded",
+  "timestamp": "2026-06-06T12:00:00.000Z",
+  "data": {
+    "path": "/example.txt",
+    "uploader": "admin"
+  }
+}
+```
+
+常见事件名包括：
+
+- `file.uploaded`
+- `file.deleted`
+- `file.purged`
+- `file.moved`
+- `file.copied`
+- `file.renamed`
+- `folder.created`
+- `webhook.test`
+
+企业微信机器人可以直接填写机器人地址，并按需要选择 `text` 或 `markdown`：
+
+```text
+https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx
+```
+
+注意：普通微信个人聊天不能直接接收 Webhook。企业微信机器人消息适用于企业微信外部联系人群、企业微信互通群等能显示企业微信机器人消息的场景。普通微信侧看不到 markdown 时，可以把消息格式改为 `text`。
+
+钉钉等要求签名或特殊字段的平台，建议准备一个中转服务：让 O-Drive 发送通用 JSON 到中转服务，再由中转服务转换成目标平台要求的格式。
+
 ## 测试
 
 ```bash

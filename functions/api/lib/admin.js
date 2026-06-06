@@ -240,7 +240,11 @@ export async function handleAdminWebhooks(env, request, method) {
   if (method === 'PUT') {
     const body = await request.json().catch(() => ({}));
     const endpoints = normalizeWebhookEndpoints(body.items || body.urls || []);
-    await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)').bind('webhook_urls', JSON.stringify(endpoints)).run();
+    if (endpoints.length) {
+      await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)').bind('webhook_urls', JSON.stringify(endpoints)).run();
+    } else {
+      await env.D1.prepare("DELETE FROM kv_config WHERE key = 'webhook_urls'").run();
+    }
     return jsonResponse({ success: true, items: endpoints, urls: endpoints.map(item => item.url) });
   }
   if (method === 'POST') {

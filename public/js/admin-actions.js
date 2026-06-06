@@ -39,15 +39,12 @@ function normalizeWebhookItems(data = {}) {
   return source.map((item, index) => ({
     id: item.id || `${Date.now()}-${index}`,
     name: item.name || '',
-    type: item.type || 'generic',
+    msgtype: ['json', 'text', 'markdown'].includes(item.msgtype)
+      ? item.msgtype
+      : (item.type === 'wechat_text' ? 'text' : (['text', 'markdown'].includes(item.messageType) ? item.messageType : 'json')),
     url: item.url || '',
-    secret: item.secret || '',
     enabled: item.enabled !== false,
   })).filter(item => item.url);
-}
-
-function webhookTypeLabel(type) {
-  return ({ generic: '通用 JSON', wecom: '企业微信', dingtalk: '钉钉' })[type] || '通用 JSON';
 }
 
 export const AdminActions = {
@@ -396,9 +393,8 @@ export const AdminActions = {
       <div class="webhook-row">
         <div class="webhook-row-main">
           <div class="webhook-row-head">
-            <span class="webhook-type-badge">${escapeHtml(webhookTypeLabel(item.type))}</span>
+            <span class="webhook-type-badge">msgtype: ${escapeHtml(item.msgtype || 'json')}</span>
             <strong>${escapeHtml(item.name || `Webhook #${i + 1}`)}</strong>
-            ${item.type === 'dingtalk' && item.secret ? '<span class="webhook-secret-badge">已加签</span>' : ''}
           </div>
           <div class="webhook-url">${escapeHtml(item.url)}</div>
         </div>
@@ -411,12 +407,11 @@ export const AdminActions = {
   },
 
   async addWebhook() {
-    const typeInput = document.getElementById('webhookTypeInput');
+    const msgTypeInput = document.getElementById('webhookMsgTypeInput');
     const nameInput = document.getElementById('webhookNameInput');
     const input = document.getElementById('webhookUrlInput');
-    const secretInput = document.getElementById('webhookSecretInput');
     const result = document.getElementById('webhookResult');
-    const type = typeInput?.value || 'generic';
+    const msgtype = msgTypeInput?.value || 'json';
     const name = (nameInput?.value || '').trim();
     const url = (input?.value || '').trim();
     if (!url || !url.startsWith('http')) {
@@ -429,7 +424,7 @@ export const AdminActions = {
       if (result) result.textContent = '该 URL 已存在';
       return;
     }
-    current.push({ id: `${Date.now()}`, name, type, url, secret: type === 'dingtalk' ? (secretInput?.value || '').trim() : '', enabled: true });
+    current.push({ id: `${Date.now()}`, name, msgtype, url, enabled: true });
     if (result) result.textContent = '正在保存...';
     const { res, data: saveData } = await api.setAdminWebhooks(current);
     if (!res.ok || saveData?.success === false) {
@@ -438,7 +433,6 @@ export const AdminActions = {
     }
     if (nameInput) nameInput.value = '';
     if (input) input.value = '';
-    if (secretInput) secretInput.value = '';
     if (result) result.textContent = `已添加，共 ${current.length} 个 Webhook`;
     await this.loadWebhooks();
   },

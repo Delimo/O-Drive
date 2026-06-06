@@ -206,14 +206,13 @@
                     </div>
                     <div id="webhookList" class="webhook-list"></div>
                     <div class="webhook-form">
-                        <select id="webhookTypeInput" class="admin-input">
-                            <option value="generic">通用 JSON</option>
-                            <option value="wecom">企业微信机器人</option>
-                            <option value="dingtalk">钉钉机器人</option>
+                        <select id="webhookMsgTypeInput" class="admin-input">
+                            <option value="json">json</option>
+                            <option value="text">text</option>
+                            <option value="markdown">markdown</option>
                         </select>
                         <input type="text" id="webhookNameInput" placeholder="名称，可选" class="admin-input">
                         <input type="url" id="webhookUrlInput" placeholder="Webhook URL" class="admin-input webhook-url-input">
-                        <input type="password" id="webhookSecretInput" placeholder="钉钉 Secret，可选" class="admin-input">
                         <button class="btn btn-primary webhook-add-btn" data-admin-action="add-webhook">添加</button>
                     </div>
                     <div class="mt-3">

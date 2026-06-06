@@ -295,8 +295,7 @@ body.admin-page {
   font-size: 13px;
 }
 
-.admin-page .webhook-type-badge,
-.admin-page .webhook-secret-badge {
+.admin-page .webhook-type-badge {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -308,12 +307,6 @@ body.admin-page {
   color: var(--primary-strong);
   font-size: 11px;
   font-weight: 900;
-}
-
-.admin-page .webhook-secret-badge {
-  border-color: #a7f3d0;
-  background: #ecfdf5;
-  color: #047857;
 }
 
 .admin-page .webhook-url {
@@ -342,7 +335,7 @@ body.admin-page {
 
 .admin-page .webhook-form {
   display: grid;
-  grid-template-columns: 180px 160px minmax(260px, 1fr) 190px 86px;
+  grid-template-columns: 130px 170px minmax(260px, 1fr) 86px;
   gap: 10px;
   align-items: center;
   margin-bottom: 12px;
