@@ -7,22 +7,22 @@ const LOG_PAGE_SIZE = 8;
 function describeLogAction(action = '') {
   const normalized = String(action || '').toUpperCase();
   const labels = {
-    UPLOAD: '�ϴ����',
-    UPLOAD_START: '�ϴ���ʼ',
-    UPLOAD_ABORT: '�ϴ�ȡ��',
-    DELETE: 'ɾ��',
-    RENAME: '������',
-    MOVE: '�ƶ�',
-    COPY: '����',
-    MKDIR: '�½��ļ���',
-    PASTE: 'ճ��',
-    PROTECT: '��������',
-    UNPROTECT: 'ɾ������',
-    HIDE: '����·��',
-    UNHIDE: 'ȡ������',
-    MAINTENANCE: 'ά������',
+    UPLOAD: '上传文件',
+    UPLOAD_START: '上传开始',
+    UPLOAD_ABORT: '上传取消',
+    DELETE: '删除',
+    RENAME: '重命名',
+    MOVE: '移动',
+    COPY: '复制',
+    MKDIR: '新建文件夹',
+    PASTE: '粘贴',
+    PROTECT: '设置密码',
+    UNPROTECT: '删除密码',
+    HIDE: '隐藏路径',
+    UNHIDE: '取消隐藏',
+    MAINTENANCE: '维护操作',
   };
-  return labels[normalized] || normalized.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase()) || 'δ֪����';
+  return labels[normalized] || normalized.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase()) || '未知操作';
 }
 
 function logActionClass(action = '') {
@@ -56,13 +56,13 @@ export const AdminActions = {
     document.getElementById('statFileCount').textContent = String(data.files?.count || 0);
     document.getElementById('statTotalSize').textContent = data.files?.totalSizeFormatted || '0 B';
     document.getElementById('statTrash').innerHTML = `
-      <span class="stat-trash-count">${data.trash?.count || 0} <span class="text-sm font-semibold text-slate-500">��</span></span>
+      <span class="stat-trash-count">${data.trash?.count || 0} <span class="text-sm font-semibold text-slate-500">项</span></span>
       <span class="stat-trash-size text-sm font-semibold text-slate-500">${escapeHtml(data.trash?.sizeFormatted || '0 B')}</span>
     `;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
     this.renderStorageWarnings(data);
 
-    const labels = { image: 'ͼƬ', video: '��Ƶ', audio: '��Ƶ', text: '�ı�', archive: 'ѹ����', exe: '����', other: '����' };
+    const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
     const breakdown = Object.entries(data.breakdown || {});
     const totalCount = breakdown.reduce((sum, [, item]) => sum + Number(item.count || 0), 0) || 1;
     document.getElementById('statsBreakdown').innerHTML = breakdown.map(([kind, item]) => {
@@ -89,7 +89,7 @@ export const AdminActions = {
           <span>${escapeHtml(item.uploaded ? new Date(item.uploaded).toLocaleString('zh-CN', { hour12: false }) : '-')}</span>
         </div>
       </div>
-    `).join('') || '<div class="text-slate-500 text-sm">�����ļ�</div>';
+    `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
   },
 
   healthItem(label, ok, detail = '') {
@@ -99,7 +99,7 @@ export const AdminActions = {
           <strong>${escapeHtml(label)}</strong>
           ${detail ? `<span>${escapeHtml(detail)}</span>` : ''}
         </div>
-        <em>${ok ? '����' : '�账��'}</em>
+        <em>${ok ? '正常' : '异常'}</em>
       </div>
     `;
   },
@@ -146,32 +146,32 @@ export const AdminActions = {
   async loadMaintenance() {
     const grid = document.getElementById('maintenanceGrid');
     if (!grid) return;
-    grid.innerHTML = '<div class="text-sm text-slate-500">���ڼ���...</div>';
+    grid.innerHTML = '<div class="text-sm text-slate-500">正在检查...</div>';
     const { res, data } = await api.maintenance();
     if (!res.ok) {
-      grid.innerHTML = '<div class="text-sm text-rose-600 font-bold">ά����Ϣ����ʧ�ܡ�</div>';
+      grid.innerHTML = '<div class="text-sm text-rose-600 font-bold">维护信息加载失败。</div>';
       return;
     }
     grid.innerHTML = [
-      this.maintenanceItem('�ļ�������¼', data.indexCount || 0, '������ͳ������ʹ�ø�����'),
-      this.maintenanceItem('����ʧ�ܼ�¼', data.accessAttemptCount || 0, '�ܱ���·������������'),
-      this.maintenanceItem('����վ��¼', data.trashCount || 0, '�Ի�ռ�� R2 �ռ�'),
-      this.maintenanceItem('������־', data.logsCount || 0, '����Ա������¼'),
-      this.maintenanceItem('����ͼ����', data.thumbnailsPresent ? '����' : '��', '.thumbs/ ϵͳǰ׺'),
+      this.maintenanceItem('文件索引记录', data.indexCount || 0, '用于统计和搜索时使用该索引'),
+      this.maintenanceItem('访问失败记录', data.accessAttemptCount || 0, '受保护路径的密码错误记录'),
+      this.maintenanceItem('回收站记录', data.trashCount || 0, '可回收站占用 R2 空间'),
+      this.maintenanceItem('操作日志', data.logsCount || 0, '管理员操作记录'),
+      this.maintenanceItem('缩略图缓存', data.thumbnailsPresent ? '有' : '无', '.thumbs/ 系统前缀'),
     ].join('');
   },
 
   async runMaintenanceAction(action) {
     const label = document.getElementById('maintenanceResult');
-    if (label) label.textContent = '����ִ��...';
+    if (label) label.textContent = '正在执行...';
     const { res, data } = await api.maintenanceAction(action);
     if (!res.ok || data?.success === false) {
-      if (label) label.textContent = data?.message || 'ά������ʧ��';
+      if (label) label.textContent = data?.message || '维护操作失败';
       return;
     }
     const summary = data.synced != null
-      ? `��ͬ�� ${data.synced} ���ļ�${data.truncated ? '���Դﵽɨ������' : ''}`
-      : `������ ${data.deleted || 0} ��${data.truncated ? '���Դﵽɨ������' : ''}`;
+      ? `已同步 ${data.synced} 个文件${data.truncated ? '（已达扫描上限）' : ''}`
+      : `已清理 ${data.deleted || 0} 项${data.truncated ? '（已达扫描上限）' : ''}`;
     if (label) label.textContent = summary;
     await this.loadMaintenance();
   },
@@ -188,29 +188,29 @@ export const AdminActions = {
     if (data.files?.truncated) {
       warnings.push({
         level: 'warning',
-        title: '�ļ�ͳ���Ѵﵽɨ������',
-        body: '�������ɨ�� 20000 ������ʵ���ļ����ܸ��ࡣ�����Ŀ¼���������������������'
+        title: '文件统计已达到扫描上限',
+        body: '当前最多扫描 20000 个文件，实际文件数可能更多。建议分目录管理，避免单次操作耗时过长。'
       });
     }
     if (fileCount >= 15000) {
       warnings.push({
         level: 'info',
-        title: '�ļ������϶�',
-        body: `��ǰ��ͳ�� ${fileCount} ���ļ�����Ŀ¼���ơ��ƶ���ɾ��ʱ�������������`
+        title: '文件数量较多',
+        body: `当前已统计 ${fileCount} 个文件，跨目录复制、移动、删除时可能耗时较长。`
       });
     }
     if (trashCount >= 100 || trashSize > Math.max(totalSize * 0.2, 1024 * 1024 * 1024)) {
       warnings.push({
         level: 'warning',
-        title: '����վռ��ƫ��',
-        body: `����վ�� ${trashCount} �ռ�� ${data.trash?.sizeFormatted || '0 B'}���������ñ������������������Ŀ��`
+        title: '回收站占用偏大',
+        body: `回收站有 ${trashCount} 项，占用 ${data.trash?.sizeFormatted || '0 B'}，建议及时清理或设置自动清理以释放空间。`
       });
     }
     if (totalSize >= 50 * 1024 * 1024 * 1024) {
       warnings.push({
         level: 'info',
-        title: '�洢����ϴ�',
-        body: '���鶨�ڼ����ļ��ͻ���վ�����ⳤ�ڱ����ظ��ϴ�����ʱ�ļ���'
+        title: '存储容量较大',
+        body: '建议定期检查文件和回收站，避免长期保存重复上传的临时文件。'
       });
     }
 
@@ -235,13 +235,13 @@ export const AdminActions = {
       const actionLabel = describeLogAction(l.action);
       return `
         <tr class="admin-log-row hover:bg-slate-50 transition-colors">
-          <td data-label="ʱ��" class="admin-log-time px-5 py-4 text-slate-500 font-mono">${escapeHtml(time)}</td>
-          <td data-label="����" class="admin-log-action px-5 py-4 font-bold"><span class="admin-action-badge ${actionClass}" title="${escapeHtml(l.action || '')}">${escapeHtml(actionLabel)}</span></td>
-          <td data-label="����" class="admin-log-details px-5 py-4 text-slate-600 font-mono">${escapeHtml(l.details || '')}</td>
+          <td data-label="时间" class="admin-log-time px-5 py-4 text-slate-500 font-mono">${escapeHtml(time)}</td>
+          <td data-label="动作" class="admin-log-action px-5 py-4 font-bold"><span class="admin-action-badge ${actionClass}" title="${escapeHtml(l.action || '')}">${escapeHtml(actionLabel)}</span></td>
+          <td data-label="详情" class="admin-log-details px-5 py-4 text-slate-600 font-mono">${escapeHtml(l.details || '')}</td>
           <td data-label="IP" class="admin-log-ip px-5 py-4 text-slate-500 font-mono text-sm text-left">${escapeHtml(l.ip || '')}</td>
         </tr>
       `;
-    }).join('') || '<tr><td colspan="4"><div class="admin-empty-state">���޲�����־</div></td></tr>';
+    }).join('') || '<tr><td colspan="4"><div class="admin-empty-state">暂无操作日志</div></td></tr>';
   },
 
   changePage(dir) {
@@ -256,8 +256,8 @@ export const AdminActions = {
     const { data } = await api.hiddenPaths();
     document.getElementById('hiddenTbody').innerHTML = (data?.list || []).map(i => {
       const path = escapeHtml(i.path);
-      return `<tr class="admin-hidden-row hover:bg-slate-50 transition-colors"><td data-label="·��" class="px-5 py-4 font-mono text-primary break-all">${path}</td><td data-label="����" class="px-5 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-hidden" data-args='${escapeHtml(JSON.stringify([i.path]))}'>ȡ������</button></td></tr>`;
-    }).join('') || '<tr><td colspan="2"><div class="admin-empty-state">��������·��</div></td></tr>';
+      return `<tr class="admin-hidden-row hover:bg-slate-50 transition-colors"><td data-label="路径" class="px-5 py-4 font-mono text-primary break-all">${path}</td><td data-label="操作" class="px-5 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-hidden" data-args='${escapeHtml(JSON.stringify([i.path]))}'>取消隐藏</button></td></tr>`;
+    }).join('') || '<tr><td colspan="2"><div class="admin-empty-state">暂无隐藏路径</div></td></tr>';
   },
 
   async addHidden() {
@@ -269,7 +269,7 @@ export const AdminActions = {
   },
 
   async removeHidden(p) {
-    if (confirm('ȡ����������·����')) {
+    if (confirm('取消隐藏后，该路径将恢复可见。')) {
       await api.removeHiddenPath(p);
       this.loadHidden();
     }
@@ -281,10 +281,10 @@ export const AdminActions = {
       const path = escapeHtml(i.path);
       const note = escapeHtml(i.note || '-');
       const visibility = i.show_name
-        ? '<span class="admin-status-badge is-visible">��ʾ</span>'
-        : '<span class="admin-status-badge is-hidden">����</span>';
-      return `<tr class="admin-protected-row hover:bg-slate-50 transition-colors"><td data-label="·��" class="px-5 py-4 font-mono text-primary break-all">${path}</td><td data-label="���ƿɼ�" class="px-5 py-4">${visibility}</td><td data-label="��ע" class="px-5 py-4 text-slate-500 break-all">${note}</td><td data-label="����" class="px-5 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-protected" data-args='${escapeHtml(JSON.stringify([i.path]))}'>ɾ��</button></td></tr>`;
-    }).join('') || '<tr><td colspan="4"><div class="admin-empty-state">���޷����������</div></td></tr>';
+        ? '<span class="admin-status-badge is-visible">显示</span>'
+        : '<span class="admin-status-badge is-hidden">隐藏</span>';
+      return `<tr class="admin-protected-row hover:bg-slate-50 transition-colors"><td data-label="路径" class="px-5 py-4 font-mono text-primary break-all">${path}</td><td data-label="名称可见" class="px-5 py-4">${visibility}</td><td data-label="备注" class="px-5 py-4 text-slate-500 break-all">${note}</td><td data-label="操作" class="px-5 py-4 text-right"><button class="admin-danger-btn" data-admin-action="remove-protected" data-args='${escapeHtml(JSON.stringify([i.path]))}'>删除</button></td></tr>`;
+    }).join('') || '<tr><td colspan="4"><div class="admin-empty-state">暂无受保护路径</div></td></tr>';
   },
 
   async addProtected() {
@@ -327,7 +327,6 @@ export const AdminActions = {
       this.maintenanceItem('已使用', data.usedFormatted, `${usedPercent}%`),
       this.maintenanceItem('剩余空间', remainingLabel, ''),
     ].join('');
-    // Fill current value in input
     const input = document.getElementById('quotaInput');
     if (input && data.quota > 0) input.value = data.quota;
   },
@@ -387,7 +386,6 @@ export const AdminActions = {
       if (result) result.textContent = '请输入有效的 http(s) URL';
       return;
     }
-    // Get current list, append new one
     const { data } = await api.adminWebhooks();
     const current = data?.urls || [];
     if (current.includes(url)) {
