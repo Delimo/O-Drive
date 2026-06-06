@@ -381,12 +381,30 @@ body.admin-page {
 }
 
 .admin-page .webhook-target-grid {
-  grid-template-columns: minmax(150px, 0.8fr) minmax(260px, 1.8fr) minmax(132px, 0.65fr) minmax(110px, 0.55fr);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   align-items: end;
 }
 
-.admin-page .webhook-content-type-field {
+.admin-page .webhook-name-field {
+  grid-column: span 3;
+}
+
+.admin-page .webhook-url-field {
+  grid-column: span 7;
+}
+
+.admin-page .webhook-msgtype-field {
   grid-column: span 2;
+}
+
+.admin-page .webhook-method-field {
+  grid-column: span 2;
+  max-width: 180px;
+}
+
+.admin-page .webhook-content-type-field {
+  grid-column: span 4;
+  max-width: 420px;
 }
 
 .admin-page .webhook-request-grid,
@@ -419,8 +437,17 @@ body.admin-page {
   line-height: 1.4;
 }
 
-.admin-page .webhook-url-field {
-  grid-column: span 2;
+.admin-page .webhook-target-grid select.admin-input {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #475569 50%),
+    linear-gradient(135deg, #475569 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 20px,
+    calc(100% - 13px) 20px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
 }
 
 .admin-page .webhook-textarea {
@@ -581,15 +608,26 @@ body.admin-page {
 
 @media (max-width: 1180px) {
   .admin-page .webhook-target-grid {
-    grid-template-columns: minmax(150px, 0.8fr) minmax(240px, 1.4fr) minmax(128px, 0.65fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .admin-page .webhook-name-field {
+    grid-column: span 2;
   }
 
   .admin-page .webhook-url-field {
+    grid-column: span 4;
+  }
+
+  .admin-page .webhook-method-field,
+  .admin-page .webhook-msgtype-field {
     grid-column: span 2;
+    max-width: none;
   }
 
   .admin-page .webhook-content-type-field {
     grid-column: span 2;
+    max-width: none;
   }
 }
 
@@ -1155,8 +1193,12 @@ body.admin-page {
   }
 
   .admin-page .webhook-url-field,
-  .admin-page .webhook-content-type-field {
+  .admin-page .webhook-content-type-field,
+  .admin-page .webhook-method-field,
+  .admin-page .webhook-msgtype-field,
+  .admin-page .webhook-name-field {
     grid-column: auto;
+    max-width: none;
   }
 
   .admin-page .webhook-save-row {
