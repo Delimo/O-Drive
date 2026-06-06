@@ -389,17 +389,21 @@ export const AdminActions = {
     }
     const items = normalizeWebhookItems(data);
     if (items.length === 0) {
-      list.innerHTML = '<div class="text-sm text-slate-500">暂未配置 Webhook。</div>';
+      list.innerHTML = '<div class="webhook-empty">暂未配置 Webhook。</div>';
       return;
     }
     list.innerHTML = items.map((item, i) => `
-      <div class="health-item ${item.enabled ? 'is-ok' : 'is-bad'}">
-        <div>
-          <strong>${escapeHtml(item.name || `Webhook #${i + 1}`)} · ${escapeHtml(webhookTypeLabel(item.type))}</strong>
-          <span style="word-break:break-all">${escapeHtml(item.url)}${item.type === 'dingtalk' && item.secret ? ' · 已配置加签' : ''}</span>
+      <div class="webhook-row">
+        <div class="webhook-row-main">
+          <div class="webhook-row-head">
+            <span class="webhook-type-badge">${escapeHtml(webhookTypeLabel(item.type))}</span>
+            <strong>${escapeHtml(item.name || `Webhook #${i + 1}`)}</strong>
+            ${item.type === 'dingtalk' && item.secret ? '<span class="webhook-secret-badge">已加签</span>' : ''}
+          </div>
+          <div class="webhook-url">${escapeHtml(item.url)}</div>
         </div>
-        <div class="flex gap-2">
-          <button class="btn h-8 px-3" onclick="AdminActions.testWebhook(${i})">测试</button>
+        <div class="webhook-row-actions">
+          <button class="btn h-8 px-3" onclick="AdminActions.testWebhook(${i})">测试发送</button>
           <button class="admin-danger-btn" onclick="AdminActions.removeWebhook(${i})">删除</button>
         </div>
       </div>

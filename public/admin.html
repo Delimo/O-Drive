@@ -181,9 +181,9 @@
                         </div>
                     </div>
                     <div id="quotaInfo" class="health-grid mb-5"></div>
-                    <div class="admin-form-panel">
+                    <div class="quota-form-row">
                         <input type="number" id="quotaInput" placeholder="输入配额字节数，如 10737418240 = 10 GB" min="0" class="admin-input">
-                        <button class="btn btn-primary admin-form-submit" onclick="AdminActions.setQuota()">保存配额</button>
+                        <button class="btn btn-primary quota-save-btn" onclick="AdminActions.setQuota()">保存</button>
                     </div>
                     <div class="flex gap-2 flex-wrap mt-2">
                         <button class="btn h-8 px-3" onclick="AdminActions.fillQuota(5*1024*1024*1024)">5 GB</button>
@@ -204,17 +204,17 @@
                             <p>文件上传、删除、移动、重命名、创建文件夹时，系统会向以下 URL 发送 POST 请求通知。</p>
                         </div>
                     </div>
-                    <div id="webhookList" class="mb-4"></div>
-                    <div class="admin-form-panel">
+                    <div id="webhookList" class="webhook-list"></div>
+                    <div class="webhook-form">
                         <select id="webhookTypeInput" class="admin-input">
                             <option value="generic">通用 JSON</option>
                             <option value="wecom">企业微信机器人</option>
                             <option value="dingtalk">钉钉机器人</option>
                         </select>
                         <input type="text" id="webhookNameInput" placeholder="名称，可选" class="admin-input">
-                        <input type="url" id="webhookUrlInput" placeholder="https://example.com/webhook" class="admin-input">
-                        <input type="password" id="webhookSecretInput" placeholder="钉钉加签 Secret，可选" class="admin-input">
-                        <button class="btn btn-primary admin-form-submit" onclick="AdminActions.addWebhook()">添加 Webhook</button>
+                        <input type="url" id="webhookUrlInput" placeholder="Webhook URL" class="admin-input webhook-url-input">
+                        <input type="password" id="webhookSecretInput" placeholder="钉钉 Secret，可选" class="admin-input">
+                        <button class="btn btn-primary webhook-add-btn" onclick="AdminActions.addWebhook()">添加</button>
                     </div>
                     <div class="mt-3">
                         <button class="btn h-8 px-3" onclick="AdminActions.loadWebhooks()">刷新列表</button>
