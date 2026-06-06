@@ -360,22 +360,21 @@ body.admin-page {
 
 .admin-page .webhook-collapse-btn {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 24px;
+  background: var(--surface-soft);
+  color: var(--primary-strong);
+  font-size: 20px;
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
 }
 
 .admin-page .webhook-settings-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  gap: 16px;
   padding: 16px 18px 18px;
 }
 
@@ -383,42 +382,42 @@ body.admin-page {
   display: none;
 }
 
-.admin-page .webhook-form-section {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  min-width: 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-
-.admin-page .webhook-form-section:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.admin-page .webhook-section-title {
-  color: var(--text-main);
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 40px;
-  white-space: nowrap;
-}
-
-.admin-page .webhook-grid {
+.admin-page .webhook-form-block {
   display: grid;
   gap: 12px;
   min-width: 0;
 }
 
-.admin-page .webhook-grid-primary {
-  grid-template-columns: minmax(150px, 0.8fr) minmax(280px, 2fr) 138px 118px minmax(170px, 0.9fr);
+.admin-page .webhook-form-block + .webhook-form-block,
+.admin-page .webhook-save-row {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-page .webhook-block-title {
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.admin-page .webhook-grid {
+  display: grid;
+  gap: 12px 14px;
+  min-width: 0;
+}
+
+.admin-page .webhook-target-grid {
+  grid-template-columns: minmax(160px, 0.8fr) minmax(260px, 1.8fr) minmax(130px, 0.65fr) minmax(112px, 0.55fr);
   align-items: end;
 }
 
-.admin-page .webhook-grid-content,
-.admin-page .webhook-grid-auth {
+.admin-page .webhook-content-type-field {
+  grid-column: 2 / -1;
+}
+
+.admin-page .webhook-request-grid,
+.admin-page .webhook-auth-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -443,7 +442,7 @@ body.admin-page {
 }
 
 .admin-page .webhook-url-field {
-  grid-column: span 1;
+  grid-column: span 2;
 }
 
 .admin-page .webhook-textarea {
@@ -463,12 +462,12 @@ body.admin-page {
 }
 
 .admin-page .webhook-event-field {
-  align-items: start;
+  gap: 12px;
 }
 
 .admin-page .webhook-event-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 8px;
 }
 
@@ -497,7 +496,6 @@ body.admin-page {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding-top: 2px;
 }
 
 .admin-page .webhook-empty {
@@ -604,33 +602,17 @@ body.admin-page {
 }
 
 @media (max-width: 1180px) {
-  .admin-page .webhook-grid-primary {
-    grid-template-columns: minmax(150px, 0.8fr) minmax(280px, 2fr) 138px;
+  .admin-page .webhook-target-grid {
+    grid-template-columns: minmax(150px, 0.8fr) minmax(240px, 1.4fr) minmax(128px, 0.65fr);
+  }
+
+  .admin-page .webhook-url-field {
+    grid-column: span 2;
   }
 
   .admin-page .webhook-content-type-field {
     grid-column: span 2;
   }
-}
-
-.admin-page .webhook-form {
-  display: grid;
-  grid-template-columns: 130px 170px minmax(260px, 1fr) 86px;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.admin-page .webhook-form .admin-input {
-  height: 42px;
-}
-
-.admin-page .webhook-add-btn {
-  width: 86px;
-  height: 42px;
-  padding: 0 12px;
-  font-size: 13px;
-  font-weight: 800;
 }
 
 .admin-page .admin-protected-form {
@@ -1180,8 +1162,7 @@ body.admin-page {
     height: 50px;
   }
 
-  .admin-page .quota-form-row,
-  .admin-page .webhook-form {
+  .admin-page .quota-form-row {
     grid-template-columns: 1fr;
   }
 
@@ -1194,21 +1175,13 @@ body.admin-page {
     padding: 14px;
   }
 
-  .admin-page .webhook-form-section {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .admin-page .webhook-section-title {
-    line-height: 1.2;
-  }
-
-  .admin-page .webhook-grid-primary,
-  .admin-page .webhook-grid-content,
-  .admin-page .webhook-grid-auth {
+  .admin-page .webhook-target-grid,
+  .admin-page .webhook-request-grid,
+  .admin-page .webhook-auth-grid {
     grid-template-columns: 1fr;
   }
 
+  .admin-page .webhook-url-field,
   .admin-page .webhook-content-type-field {
     grid-column: auto;
   }
@@ -1221,8 +1194,7 @@ body.admin-page {
     width: 100%;
   }
 
-  .admin-page .quota-save-btn,
-  .admin-page .webhook-add-btn {
+  .admin-page .quota-save-btn {
     width: 100%;
   }
 

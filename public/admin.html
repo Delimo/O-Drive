@@ -214,10 +214,10 @@
                             <button class="webhook-collapse-btn" type="button" aria-label="收起发送设置" data-admin-action="toggle-webhook-form">⌃</button>
                         </div>
                         <div id="webhookSettingsBody" class="webhook-settings-body">
-                            <div class="webhook-form-section">
-                                <div class="webhook-section-title">基础信息</div>
-                                <div class="webhook-grid webhook-grid-primary">
-                                    <label class="webhook-field webhook-name-field">
+                            <div class="webhook-form-block">
+                                <div class="webhook-block-title">发送目标</div>
+                                <div class="webhook-grid webhook-target-grid">
+                                    <label class="webhook-field">
                                         <span>名称</span>
                                         <input type="text" id="webhookNameInput" placeholder="可选" class="admin-input">
                                     </label>
@@ -249,9 +249,9 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="webhook-form-section">
-                                <div class="webhook-section-title">请求内容</div>
-                                <div class="webhook-grid webhook-grid-content">
+                            <div class="webhook-form-block">
+                                <div class="webhook-block-title">请求内容</div>
+                                <div class="webhook-grid webhook-request-grid">
                                     <label class="webhook-field">
                                         <span>Headers</span>
                                         <small>JSON object</small>
@@ -263,9 +263,9 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="webhook-form-section">
-                                <div class="webhook-section-title">鉴权</div>
-                                <div class="webhook-grid webhook-grid-auth">
+                            <div class="webhook-form-block">
+                                <div class="webhook-block-title">Basic Auth</div>
+                                <div class="webhook-grid webhook-auth-grid">
                                     <label class="webhook-field">
                                         <span>Username</span>
                                         <input type="text" id="webhookUsernameInput" class="admin-input" autocomplete="off">
@@ -276,8 +276,8 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="webhook-form-section webhook-event-field">
-                                <div class="webhook-section-title">触发事件</div>
+                            <div class="webhook-form-block webhook-event-field">
+                                <div class="webhook-block-title">触发事件</div>
                                 <div class="webhook-event-grid">
                                     <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.uploaded" checked><span>上传</span></label>
                                     <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.deleted" checked><span>删除</span></label>
