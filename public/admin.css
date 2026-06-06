@@ -323,63 +323,36 @@ body.admin-page {
 .admin-page .webhook-list {
   display: grid;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 18px;
   margin-bottom: 12px;
-}
-
-.admin-page .webhook-settings-panel {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.admin-page .webhook-settings-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.admin-page .webhook-settings-head h3 {
-  margin: 0;
-  color: var(--text-main);
-  font-size: 16px;
-  font-weight: 900;
-  line-height: 1.2;
-}
-
-.admin-page .webhook-settings-head p {
-  margin: 6px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.admin-page .webhook-collapse-btn {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-soft);
-  color: var(--primary-strong);
-  font-size: 20px;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
 }
 
 .admin-page .webhook-settings-body {
   display: grid;
-  gap: 16px;
-  padding: 16px 18px 18px;
+  gap: 18px;
+  min-width: 0;
 }
 
-.admin-page .webhook-settings-body.is-collapsed {
-  display: none;
+.admin-page .webhook-form-heading {
+  display: grid;
+  gap: 5px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-page .webhook-form-heading h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.admin-page .webhook-form-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .admin-page .webhook-form-block {
@@ -390,7 +363,7 @@ body.admin-page {
 
 .admin-page .webhook-form-block + .webhook-form-block,
 .admin-page .webhook-save-row {
-  padding-top: 16px;
+  padding-top: 18px;
   border-top: 1px solid var(--border);
 }
 
@@ -403,17 +376,17 @@ body.admin-page {
 
 .admin-page .webhook-grid {
   display: grid;
-  gap: 12px 14px;
+  gap: 12px;
   min-width: 0;
 }
 
 .admin-page .webhook-target-grid {
-  grid-template-columns: minmax(160px, 0.8fr) minmax(260px, 1.8fr) minmax(130px, 0.65fr) minmax(112px, 0.55fr);
+  grid-template-columns: minmax(150px, 0.8fr) minmax(260px, 1.8fr) minmax(132px, 0.65fr) minmax(110px, 0.55fr);
   align-items: end;
 }
 
 .admin-page .webhook-content-type-field {
-  grid-column: 2 / -1;
+  grid-column: span 2;
 }
 
 .admin-page .webhook-request-grid,
@@ -467,22 +440,18 @@ body.admin-page {
 
 .admin-page .webhook-event-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px 14px;
 }
 
 .admin-page .webhook-event-option {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-soft);
+  min-height: 28px;
   color: var(--text-main);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -1166,13 +1135,8 @@ body.admin-page {
     grid-template-columns: 1fr;
   }
 
-  .admin-page .webhook-settings-head {
-    padding: 14px;
-  }
-
   .admin-page .webhook-settings-body {
     gap: 16px;
-    padding: 14px;
   }
 
   .admin-page .webhook-target-grid,

@@ -587,11 +587,6 @@ export const AdminActions = {
     const item = current[index];
     if (!item) return;
     setWebhookForm(item);
-    document.getElementById('webhookSettingsBody')?.classList.remove('is-collapsed');
-  },
-
-  toggleWebhookForm() {
-    document.getElementById('webhookSettingsBody')?.classList.toggle('is-collapsed');
   },
 
   async removeWebhook(index) {
