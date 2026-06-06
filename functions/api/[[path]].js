@@ -1,36 +1,9 @@
 import { ensureCoreTables, jsonResponse } from './lib/common.js';
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
-import { handleAdminHealth, handleAdminLogs, handleHiddenSettings, handleAdminStats, handleAdminMaintenance, handleAdminMaintenanceAction } from './lib/admin.js';
-import {
-  loadProtectedPaths,
-  handleProtectedSettings,
-  handleProtectedUnlock,
-  checkProtectedAccess,
-} from './lib/protected-paths.js';
-import {
-  handlePaste,
-  handleRename,
-  handleBatchDelete,
-  handleOperationEstimate,
-  handleMkdir,
-  handleUpload,
-  handleMultipartCreate,
-  handleMultipartPart,
-  handleMultipartComplete,
-  handleMultipartAbort,
-  handleSaveText,
-  handleTrashList,
-  handleTrashRestore,
-  handleTrashDelete,
-  handleTrashClear,
-  handleTrashCleanup,
-  handleTrashRetention,
-  handleSearch,
-  handleListFiles,
-  handleDownloadOrPreview,
-  handleThumbnail,
-} from './lib/files.js';
+import { loadProtectedPaths, checkProtectedAccess } from './lib/protected-paths.js';
 import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin } from './lib/request-context.js';
+import { checkRateLimit, getClientIp } from './lib/rate-limiter.js';
+import { resolveAdminRoute, resolvePublicRoute } from './lib/router.js';
 
 const csrfProtectedRoutes = [
   ['/api/admin/settings/hidden', ['POST', 'DELETE']],
@@ -45,6 +18,8 @@ const csrfProtectedRoutes = [
   ['/api/trash/clear', ['DELETE']],
   ['/api/trash/cleanup', ['POST']],
   ['/api/admin/settings/trash-retention', ['PUT']],
+  ['/api/admin/settings/quota', ['PUT']],
+  ['/api/admin/settings/webhooks', ['PUT']],
   ['/api/mkdir', ['POST']],
   ['/api/upload-multipart/create', ['POST']],
   ['/api/upload-multipart/part', ['PUT']],
@@ -66,6 +41,18 @@ export async function onRequest(context) {
   try {
     await ensureCoreTables(env);
 
+    // Global API rate limit: 120 requests per minute per IP (skip file download streams)
+    if (!path.startsWith('/api/download/') && !path.startsWith('/api/preview/') && !path.startsWith('/api/thumbnail/')) {
+      const rl = await checkRateLimit(env.D1, `ip:${getClientIp(request)}`, 120, 60000);
+      if (!rl.allowed) {
+        return jsonResponse(
+          { success: false, code: 'RATE_LIMITED', message: 'Rate limit exceeded' },
+          429,
+          { 'Retry-After': String(rl.retryAfter) },
+        );
+      }
+    }
+
     if (path === '/api/login' && method === 'POST') return await handleLogin(request, env);
     if (path === '/api/logout') return handleLogout(request);
 
@@ -84,45 +71,24 @@ export async function onRequest(context) {
     if (isAdmin(auth) && r2Key && needsCsrf(path, method) && !canWriteUserKey(r2Key)) {
       return jsonResponse({ success: false, message: 'Reserved system path' }, 403);
     }
-    if (path === '/api/access/unlock' && method === 'POST') return await handleProtectedUnlock(env, request, auth, protectedPaths);
+
+    // Protected path access check for download/preview/thumbnail
     if (r2Key && (path.startsWith('/api/thumbnail/') || path.startsWith('/api/download/') || path.startsWith('/api/preview/'))) {
       const access = await checkProtectedAccess(request, env, auth, protectedPaths, r2Key);
       if (!access.ok) return jsonResponse({ success: false, code: 'password_required', path: access.rule.path, message: 'Password required' }, 403);
     }
 
+    // Admin routes
     if (isAdmin(auth)) {
-      if (path === '/api/admin/logs') return await handleAdminLogs(env, url);
-      if (path === '/api/admin/stats') return await handleAdminStats(env);
-      if (path === '/api/admin/health') return await handleAdminHealth(env);
-      if (path === '/api/admin/maintenance' && method === 'GET') return await handleAdminMaintenance(env);
-      if (path === '/api/admin/maintenance' && method === 'POST') return await handleAdminMaintenanceAction(env, request);
-      if (path === '/api/admin/settings/hidden') return await handleHiddenSettings(env, request, method, url, hiddenPaths);
-      if (path === '/api/admin/settings/protected') return await handleProtectedSettings(env, request, method, url);
-      if (path === '/api/admin/settings/trash-retention') return await handleTrashRetention(env, request, method);
-      if (path === '/api/paste' && method === 'POST') return await handlePaste(env, request);
-      if (path.startsWith('/api/files/') && method === 'PUT') return await handleRename(env, request, r2Key);
-      if (path === '/api/batch-delete') return await handleBatchDelete(env, request);
-      if (path === '/api/operation-estimate' && method === 'POST') return await handleOperationEstimate(env, request);
-      if (path === '/api/trash' && method === 'GET') return await handleTrashList(env, url);
-      if (path === '/api/trash/restore' && method === 'POST') return await handleTrashRestore(env, request);
-      if (path === '/api/trash/delete' && method === 'DELETE') return await handleTrashDelete(env, request);
-      if (path === '/api/trash/clear' && method === 'DELETE') return await handleTrashClear(env, request);
-      if (path === '/api/trash/cleanup' && method === 'POST') return await handleTrashCleanup(env, request);
-      if (path.startsWith('/api/mkdir') && method === 'POST') return await handleMkdir(env, request, r2Key);
-      if (path.startsWith('/api/files') && method === 'POST') return await handleUpload(env, request, r2Key);
-      if (path === '/api/upload-multipart/create' && method === 'POST') return await handleMultipartCreate(env, request);
-      if (path === '/api/upload-multipart/part' && method === 'PUT') return await handleMultipartPart(env, request, url);
-      if (path === '/api/upload-multipart/complete' && method === 'POST') return await handleMultipartComplete(env, request);
-      if (path === '/api/upload-multipart/abort' && method === 'POST') return await handleMultipartAbort(env, request);
-      if (path.startsWith('/api/save-text/') && method === 'POST') return await handleSaveText(env, request, r2Key);
+      const adminResult = await resolveAdminRoute(env, request, method, path, url, r2Key, hiddenPaths, protectedPaths);
+      if (adminResult) return adminResult;
     }
 
-    if (path === '/api/search') return await handleSearch(env, request, url, hiddenPaths, auth, protectedPaths);
-    if (path.startsWith('/api/files') && method === 'GET') return await handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths);
-    if (path.startsWith('/api/thumbnail/')) return await handleThumbnail(env, request, r2Key, context);
-    if (path.startsWith('/api/download/') || path.startsWith('/api/preview/')) return await handleDownloadOrPreview(env, request, path, r2Key);
+    // Public routes (accessible by any authenticated user)
+    const publicResult = await resolvePublicRoute(env, request, url, path, method, hiddenPaths, auth, r2Key, protectedPaths);
+    if (publicResult) return publicResult;
 
-    return jsonResponse({ message: 'Not Found' }, 404);
+    return jsonResponse({ success: false, message: 'Not Found' }, 404);
   } catch (err) {
     const status = Number(err.status || 500);
     const message = status >= 500 ? 'Internal Server Error' : err.message;

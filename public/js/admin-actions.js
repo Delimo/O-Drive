@@ -34,7 +34,7 @@ function logActionClass(action = '') {
 
 export const AdminActions = {
   switchTab(id) {
-    ['overview', 'health', 'logs', 'privacy', 'protected', 'maintenance'].forEach(tab => {
+    ['overview', 'health', 'logs', 'privacy', 'protected', 'maintenance', 'quota', 'webhooks'].forEach(tab => {
       document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', id !== tab);
       document.getElementById(`btn-${tab}`)?.classList.toggle('is-active', id === tab);
     });
@@ -45,6 +45,8 @@ export const AdminActions = {
     if (id === 'logs') return this.loadLogs();
     if (id === 'privacy') return this.loadHidden();
     if (id === 'maintenance') return this.loadMaintenance();
+    if (id === 'quota') return this.loadQuota();
+    if (id === 'webhooks') return this.loadWebhooks();
     return this.loadProtected();
   },
 
@@ -300,9 +302,130 @@ export const AdminActions = {
   },
 
   async removeProtected(p) {
-    if (confirm('ɾ�����������������')) {
+    if (confirm('删除保护将允许所有人访问该路径。')) {
       await api.removeProtectedPath(p);
       this.loadProtected();
     }
   },
+
+  async loadQuota() {
+    const info = document.getElementById('quotaInfo');
+    const result = document.getElementById('quotaResult');
+    if (result) result.textContent = '';
+    if (!info) return;
+    info.innerHTML = '<div class="text-sm text-slate-500">正在加载...</div>';
+    const { res, data } = await api.adminQuota();
+    if (!res.ok) {
+      info.innerHTML = '<div class="text-sm text-rose-600 font-bold">加载配额信息失败。</div>';
+      return;
+    }
+    const quotaLabel = data.quota > 0 ? data.quotaFormatted : '无限制';
+    const usedPercent = data.quota > 0 ? Math.round((data.used / data.quota) * 100) : 0;
+    const remainingLabel = data.quota > 0 ? `${formatBytesLocal(data.remaining)} 剩余` : '无限制';
+    info.innerHTML = [
+      this.maintenanceItem('存储配额', quotaLabel, data.quota > 0 ? `已用 ${usedPercent}%` : '未设置上限'),
+      this.maintenanceItem('已使用', data.usedFormatted, `${usedPercent}%`),
+      this.maintenanceItem('剩余空间', remainingLabel, ''),
+    ].join('');
+    // Fill current value in input
+    const input = document.getElementById('quotaInput');
+    if (input && data.quota > 0) input.value = data.quota;
+  },
+
+  fillQuota(bytes) {
+    const input = document.getElementById('quotaInput');
+    if (input) input.value = bytes;
+  },
+
+  async setQuota() {
+    const input = document.getElementById('quotaInput');
+    const result = document.getElementById('quotaResult');
+    const bytes = Number(input?.value || 0);
+    if (bytes < 0) { if (result) result.textContent = '配额不能为负数'; return; }
+    if (result) result.textContent = '正在保存...';
+    const { res, data } = await api.setAdminQuota(bytes);
+    if (!res.ok || data?.success === false) {
+      if (result) result.textContent = data?.message || '保存失败';
+      return;
+    }
+    if (result) result.textContent = bytes > 0 ? `配额已设为 ${formatBytesLocal(bytes)}` : '已取消配额限制';
+    await this.loadQuota();
+  },
+
+  async loadWebhooks() {
+    const list = document.getElementById('webhookList');
+    const result = document.getElementById('webhookResult');
+    if (result) result.textContent = '';
+    if (!list) return;
+    list.innerHTML = '<div class="text-sm text-slate-500">正在加载...</div>';
+    const { res, data } = await api.adminWebhooks();
+    if (!res.ok) {
+      list.innerHTML = '<div class="text-sm text-rose-600 font-bold">加载失败。</div>';
+      return;
+    }
+    const urls = data?.urls || [];
+    if (urls.length === 0) {
+      list.innerHTML = '<div class="text-sm text-slate-500">暂未配置 Webhook URL。</div>';
+      return;
+    }
+    list.innerHTML = urls.map((u, i) => `
+      <div class="health-item is-ok" style="cursor:pointer" title="点击删除">
+        <div>
+          <strong>Webhook #${i + 1}</strong>
+          <span style="word-break:break-all">${escapeHtml(u)}</span>
+        </div>
+        <button class="admin-danger-btn" onclick="AdminActions.removeWebhook(${i})">删除</button>
+      </div>
+    `).join('');
+  },
+
+  async addWebhook() {
+    const input = document.getElementById('webhookUrlInput');
+    const result = document.getElementById('webhookResult');
+    const url = (input?.value || '').trim();
+    if (!url || !url.startsWith('http')) {
+      if (result) result.textContent = '请输入有效的 http(s) URL';
+      return;
+    }
+    // Get current list, append new one
+    const { data } = await api.adminWebhooks();
+    const current = data?.urls || [];
+    if (current.includes(url)) {
+      if (result) result.textContent = '该 URL 已存在';
+      return;
+    }
+    current.push(url);
+    if (result) result.textContent = '正在保存...';
+    const { res, data: saveData } = await api.setAdminWebhooks(current);
+    if (!res.ok || saveData?.success === false) {
+      if (result) result.textContent = saveData?.message || '保存失败';
+      return;
+    }
+    if (input) input.value = '';
+    if (result) result.textContent = `已添加，共 ${current.length} 个 Webhook`;
+    await this.loadWebhooks();
+  },
+
+  async removeWebhook(index) {
+    const { data } = await api.adminWebhooks();
+    const current = data?.urls || [];
+    if (index < 0 || index >= current.length) return;
+    const removed = current.splice(index, 1);
+    const result = document.getElementById('webhookResult');
+    if (result) result.textContent = '正在保存...';
+    const { res } = await api.setAdminWebhooks(current);
+    if (!res.ok) {
+      if (result) result.textContent = '删除失败';
+      return;
+    }
+    if (result) result.textContent = `已删除 ${removed[0]}`;
+    await this.loadWebhooks();
+  },
 };
+
+function formatBytesLocal(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 2 : 0) + ' ' + units[i];
+}

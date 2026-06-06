@@ -1,4 +1,10 @@
-﻿import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
+﻿/**
+ * @typedef {import('./common.js').Env} Env
+ * @typedef {{ success: boolean, message?: string, code?: string }} ApiError
+ * @typedef {ApiError & { completed?: number, failed?: Array<{path: string, message: string}> }} BatchResult
+ */
+
+import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
 import { deleteFileIndexKey, deleteFileIndexPrefix, upsertFileIndex } from './file-index.js';
 import { copyR2Object, copyTree, mapWithConcurrency } from './r2-tree.js';
 
@@ -21,6 +27,11 @@ const SETTINGS_TABLE_SQL = `
   )
 `;
 
+/**
+ * Ensure the trash and settings D1 tables exist.
+ * @param {Env} env
+ * @returns {Promise<void>}
+ */
 async function ensureTrashTable(env) {
   const stmt = env.D1.prepare(TRASH_TABLE_SQL);
   if (typeof stmt.bind === 'function') {
@@ -39,10 +50,16 @@ async function ensureSettingsTable(env) {
   await stmt.run();
 }
 
+/** Generate a unique trash record ID. @returns {string} */
 function createTrashId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/**
+ * Throw if the key targets a reserved system path.
+ * @param {string} key
+ * @throws {Error}
+ */
 function assertUserKey(key) {
   if (isReservedKey(key)) throw new Error('Reserved system path');
 }
@@ -72,6 +89,12 @@ function estimatePathList(paths) {
   return paths.map(normalizeUserKey);
 }
 
+/**
+ * Check if a key exists in R2 (as object or prefix).
+ * @param {Env} env
+ * @param {string} key
+ * @returns {Promise<boolean>}
+ */
 async function keyExists(env, key) {
   if (await env.R2.head(key)) return true;
   const listed = await env.R2.list({ prefix: key + '/', limit: 1 });
@@ -86,6 +109,13 @@ async function assertTargetAvailable(env, key) {
   }
 }
 
+/**
+ * Resolve upload filename conflict.
+ * @param {Env} env
+ * @param {string} key - Target R2 key
+ * @param {'error'|'overwrite'|'rename'|'skip'} mode
+ * @returns {Promise<{key: string, skipped: boolean, conflict: boolean}>}
+ */
 async function resolveUploadConflict(env, key, mode = 'error') {
   const conflictMode = ['error', 'overwrite', 'rename', 'skip'].includes(mode) ? mode : 'error';
   if (!(await keyExists(env, key))) return { key, skipped: false, conflict: false };
@@ -149,6 +179,12 @@ async function softDeleteTree(env, sourceKey, request) {
   return { id: trashId, originalKey: sourceKey, trashKey, kind };
 }
 
+/**
+ * Handle paste (copy/move) operation.
+ * @param {Env} env
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
 export async function handlePaste(env, request) {
   const { action, paths, targetDir } = await request.json();
   if (!['copy', 'move'].includes(action)) return jsonResponse({ success: false, message: 'Invalid paste action' }, 400);
@@ -178,6 +214,13 @@ export async function handlePaste(env, request) {
   return jsonResponse({ success: failed.length === 0, completed, failed }, failed.length && !completed ? 409 : 200);
 }
 
+/**
+ * Handle file/folder rename.
+ * @param {Env} env
+ * @param {Request} request
+ * @param {string} r2Key
+ * @returns {Promise<Response>}
+ */
 export async function handleRename(env, request, r2Key) {
   const { newName } = await request.json();
   const cleanName = normalizeName(newName);
@@ -193,6 +236,12 @@ export async function handleRename(env, request, r2Key) {
   return jsonResponse({ success: true });
 }
 
+/**
+ * Handle batch soft-delete (move to trash).
+ * @param {Env} env
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
 export async function handleBatchDelete(env, request) {
   const { paths } = await request.json();
   const normalizedPaths = assertPathList(paths);
@@ -211,6 +260,12 @@ export async function handleBatchDelete(env, request) {
   return jsonResponse({ success: failed.length === 0, completed, failed }, failed.length && !completed ? 400 : 200);
 }
 
+/**
+ * Estimate the cost of an operation before executing it.
+ * @param {Env} env
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
 export async function handleOperationEstimate(env, request) {
   const { paths } = await request.json();
   const normalizedPaths = estimatePathList(paths);
@@ -246,6 +301,13 @@ export async function handleOperationEstimate(env, request) {
   });
 }
 
+/**
+ * Create a new folder.
+ * @param {Env} env
+ * @param {Request} request
+ * @param {string} r2Key
+ * @returns {Promise<Response>}
+ */
 export async function handleMkdir(env, request, r2Key) {
   const { folderName } = await request.json();
   const cleanName = normalizeName(folderName);
@@ -259,6 +321,13 @@ export async function handleMkdir(env, request, r2Key) {
   return jsonResponse({ success: true });
 }
 
+/**
+ * Handle single-file upload to R2.
+ * @param {Env} env
+ * @param {Request} request
+ * @param {string} r2Key
+ * @returns {Promise<Response>}
+ */
 export async function handleUpload(env, request, r2Key) {
   const file = (await request.formData()).get('file');
   if (!file || typeof file.stream !== 'function') return jsonResponse({ success: false, message: 'Missing file' }, 400);
@@ -280,6 +349,12 @@ function uploadKey(targetDir, name) {
   return destDir + normalizeName(String(name || '').split(/[\/\\]/).pop());
 }
 
+/**
+ * Initiate a multipart upload.
+ * @param {Env} env
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
 export async function handleMultipartCreate(env, request) {
   const { targetDir, name, type, conflict = 'error' } = await request.json();
   const key = uploadKey(targetDir, name);
@@ -330,6 +405,13 @@ export async function handleMultipartAbort(env, request) {
   return jsonResponse({ success: true });
 }
 
+/**
+ * Save text content to a file.
+ * @param {Env} env
+ * @param {Request} request
+ * @param {string} r2Key
+ * @returns {Promise<Response>}
+ */
 export async function handleSaveText(env, request, r2Key) {
   r2Key = normalizeUserKey(r2Key);
   assertUserKey(r2Key);
@@ -341,6 +423,12 @@ export async function handleSaveText(env, request, r2Key) {
   return jsonResponse({ success: true });
 }
 
+/**
+ * List trash items with pagination and filtering.
+ * @param {Env} env
+ * @param {URL} url
+ * @returns {Promise<Response>}
+ */
 export async function handleTrashList(env, url) {
   await ensureTrashTable(env);
   const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
@@ -444,9 +532,18 @@ export async function handleTrashDelete(env, request) {
 
 export async function handleTrashClear(env, request) {
   const rows = await trashRows(env);
-  for (const row of rows) await purgeTrashRecord(env, row, request);
-  await addLog(env, request, 'TRASH_CLEAR', `${rows.length} items`);
-  return jsonResponse({ success: true, deleted: rows.length });
+  let deleted = 0;
+  const errors = [];
+  for (const row of rows) {
+    try {
+      await purgeTrashRecord(env, row, request);
+      deleted++;
+    } catch (e) {
+      errors.push({ id: row.id, original: row.original_key, error: e.message });
+    }
+  }
+  await addLog(env, request, 'TRASH_CLEAR', `${deleted}/${rows.length} items`);
+  return jsonResponse({ success: true, deleted, total: rows.length, errors: errors.length ? errors : undefined });
 }
 
 export async function handleTrashCleanup(env, request) {
@@ -456,11 +553,31 @@ export async function handleTrashCleanup(env, request) {
   if (!days) return jsonResponse({ success: true, deleted: 0, retentionDays: days });
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
   const rows = await trashRows(env, 'WHERE trashed_at < ?', [cutoff]);
-  for (const row of rows) await purgeTrashRecord(env, row, request);
-  await addLog(env, request, 'TRASH_CLEANUP', `${rows.length} items older than ${days} days`);
-  return jsonResponse({ success: true, deleted: rows.length, retentionDays: days });
+  let deleted = 0;
+  const errors = [];
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
+    await Promise.allSettled(batch.map(async row => {
+      try {
+        await purgeTrashRecord(env, row, request);
+        deleted++;
+      } catch (e) {
+        errors.push({ id: row.id, original: row.original_key, error: e.message });
+      }
+    }));
+  }
+  await addLog(env, request, 'TRASH_CLEANUP', `${deleted}/${rows.length} items older than ${days} days`);
+  return jsonResponse({ success: true, deleted, total: rows.length, retentionDays: days, errors: errors.length ? errors : undefined });
 }
 
+/**
+ * Get or set trash retention period in days.
+ * @param {Env} env
+ * @param {Request} request
+ * @param {string} method
+ * @returns {Promise<Response>}
+ */
 export async function handleTrashRetention(env, request, method) {
   await ensureSettingsTable(env);
   if (method === 'GET') {

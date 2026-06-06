@@ -125,5 +125,13 @@ export const api = {
   setTrashRetention(days) {
     return requestJson('/api/admin/settings/trash-retention', { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ days }) });
   },
+  adminQuota() { return requestJson('/api/admin/settings/quota'); },
+  setAdminQuota(bytes) {
+    return requestJson('/api/admin/settings/quota', { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ bytes }) });
+  },
+  adminWebhooks() { return requestJson('/api/admin/settings/webhooks'); },
+  setAdminWebhooks(urls) {
+    return requestJson('/api/admin/settings/webhooks', { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ urls }) });
+  },
   csrfHeaders,
 };

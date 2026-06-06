@@ -4,8 +4,11 @@ import { escapeHtml, Utils } from './utils.js';
 import { getOrderedEntries } from './file-view-model.js';
 import { describeItem, matchesFilters } from './filters.js';
 import { Message } from './message.js';
+import { VirtualScroller, VIRTUAL_SCROLL_THRESHOLD, getItemHeight } from './virtual-scroll.js';
 
 export { Message };
+
+let virtualScroller = null;
 
 export const UI = {
   renderAuthButtons() {
@@ -251,100 +254,131 @@ export const UI = {
 
     const visibleEntries = getOrderedEntries(state.fileData, state.sortBy).filter(item => matchesFilters(item, state.filters));
     state.visibleKeys = visibleEntries.map(item => item.fullKey);
-    visibleEntries.forEach(item => {
-      const isFolder = !item.sizeFormatted;
-      const isSelected = state.selectedPaths.includes(item.fullKey);
-      const el = document.createElement('div');
-      el.dataset.key = item.fullKey;
-      const previewArgs = escapeHtml(JSON.stringify([item.path, item.name, Boolean(item.protected)]));
-      const downloadArg = escapeHtml(JSON.stringify([item.path]));
-      const detailArg = escapeHtml(JSON.stringify([{
-        name: item.name,
-        path: item.path,
-        fullKey: item.fullKey,
-        sizeFormatted: item.sizeFormatted,
-        rawSize: item.rawSize,
-        time: item.time,
-        protected: Boolean(item.protected),
-      }]));
-      const safeName = escapeHtml(item.name);
-      const protectedBadge = item.protected ? '<span class="protected-badge">受保护</span>' : '';
-      const safeSize = escapeHtml(isFolder ? '文件夹' : item.sizeFormatted);
-      const safeIcon = isFolder ? Utils.getFolderIcon() : Utils.getFileIcon(item.name);
-      const thumbUrl = !isFolder && Utils.isImageFile(item.name) ? escapeHtml(api.thumbnailUrl(item.path)) : '';
-      const selectControl = state.userRole === 'admin'
-        ? `<button class="file-select-btn ${isSelected ? 'is-selected' : ''}" aria-label="${isSelected ? '取消选择' : '选择'} ${safeName}" data-action="toggle-select" data-args='${escapeHtml(JSON.stringify([item.fullKey]))}'>${isSelected ? '✓' : ''}</button>`
-        : '';
-      const visual = thumbUrl
-        ? `<div class="file-thumb-wrap"><img class="file-thumb" src="${thumbUrl}" alt="" loading="lazy" decoding="async"></div>`
-        : `<div class="file-icon select-none">${safeIcon}</div>`;
 
-      if (state.viewMode === 'grid') {
-        el.className = `grid-item ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `${selectControl}${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div>`;
-      } else {
-        el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
-        el.innerHTML = `<div class="col-name text-slate-900">${selectControl}<span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div></div>`;
-      }
+    // Virtual scroll: only enabled for large lists to avoid overhead on small ones
+    const useVirtualScroll = visibleEntries.length >= VIRTUAL_SCROLL_THRESHOLD;
 
-      const thumb = el.querySelector('.file-thumb');
-      if (thumb) {
-        thumb.addEventListener('error', () => {
-          const wrap = thumb.closest('.file-thumb-wrap');
-          if (wrap) wrap.outerHTML = `<div class="file-icon select-none">${safeIcon}</div>`;
-        });
-      }
+    if (useVirtualScroll) {
+      // Destroy previous virtual scroller if exists
+      if (virtualScroller) { virtualScroller.destroy(); virtualScroller = null; }
 
-      el.addEventListener('click', event => {
-        if (event.target.closest('[data-action]')) return;
-        if (el.dataset.suppressClick === '1') {
-          delete el.dataset.suppressClick;
-          event.preventDefault();
-          event.stopPropagation();
-          return;
-        }
-        if (isFolder) {
-          if (item.protected && state.userRole !== 'admin') {
-            Actions.handlePasswordRequired({ path: item.path }, () => Actions.navigateTo(item.path));
-            return;
-          }
-          Actions.navigateTo(item.path);
-          return;
-        }
-        if (Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name, Boolean(item.protected));
+      const virtualContainer = document.createElement('div');
+      virtualContainer.className = state.viewMode === 'grid' ? 'grid-layout' : 'list-layout';
+      list.appendChild(virtualContainer);
+
+      virtualScroller = new VirtualScroller({
+        container: virtualContainer,
+        itemHeight: getItemHeight(state.viewMode),
+        viewMode: state.viewMode,
       });
-      if (state.userRole === 'admin') {
-        let longPressTimer = null;
-        let longPressFired = false;
-        el.addEventListener('touchstart', event => {
-          if (event.target.closest('[data-action]')) return;
-          longPressFired = false;
-          longPressTimer = setTimeout(() => {
-            longPressFired = true;
-            el.dataset.suppressClick = '1';
-            Actions.toggleSelect(item.fullKey, el, event);
-          }, 450);
-        }, { passive: true });
-        ['touchend', 'touchcancel', 'touchmove'].forEach(type => {
-          el.addEventListener(type, event => {
-            clearTimeout(longPressTimer);
-            if (longPressFired) {
-              event.preventDefault();
-              event.stopPropagation();
-            }
-          });
-        });
-      }
-      container.appendChild(el);
-    });
 
-    list.appendChild(container);
+      virtualScroller.mount(visibleEntries, (item) => this._renderFileItem(item, Actions));
+    } else {
+      // Destroy any existing virtual scroller before standard rendering
+      if (virtualScroller) { virtualScroller.destroy(); virtualScroller = null; }
+
+      visibleEntries.forEach(item => {
+        const el = this._renderFileItem(item, Actions);
+        if (el) container.appendChild(el);
+      });
+    }
+
+    if (!useVirtualScroll) {
+      list.appendChild(container);
+    }
     if (state.isSearching && state.search?.nextCursor) {
       const more = document.createElement('div');
       more.className = 'flex justify-center py-4';
       more.innerHTML = `<button class="btn btn-primary" data-action="load-more-search" ${state.search.loadingMore ? 'disabled' : ''}>${state.search.loadingMore ? '加载中...' : '加载更多'}</button>`;
       list.appendChild(more);
     }
+  },
+
+  _renderFileItem(item, Actions) {
+    const isFolder = !item.sizeFormatted;
+    const isSelected = state.selectedPaths.includes(item.fullKey);
+    const el = document.createElement('div');
+    el.dataset.key = item.fullKey;
+    const previewArgs = escapeHtml(JSON.stringify([item.path, item.name, Boolean(item.protected)]));
+    const downloadArg = escapeHtml(JSON.stringify([item.path]));
+    const detailArg = escapeHtml(JSON.stringify([{
+      name: item.name,
+      path: item.path,
+      fullKey: item.fullKey,
+      sizeFormatted: item.sizeFormatted,
+      rawSize: item.rawSize,
+      time: item.time,
+      protected: Boolean(item.protected),
+    }]));
+    const safeName = escapeHtml(item.name);
+    const protectedBadge = item.protected ? '<span class="protected-badge">受保护</span>' : '';
+    const safeSize = escapeHtml(isFolder ? '文件夹' : item.sizeFormatted);
+    const safeIcon = isFolder ? Utils.getFolderIcon() : Utils.getFileIcon(item.name);
+    const thumbUrl = !isFolder && Utils.isImageFile(item.name) ? escapeHtml(api.thumbnailUrl(item.path)) : '';
+    const selectControl = state.userRole === 'admin'
+      ? `<button class="file-select-btn ${isSelected ? 'is-selected' : ''}" aria-label="${isSelected ? '取消选择' : '选择'} ${safeName}" data-action="toggle-select" data-args='${escapeHtml(JSON.stringify([item.fullKey]))}'>${isSelected ? '✓' : ''}</button>`
+      : '';
+    const visual = thumbUrl
+      ? `<div class="file-thumb-wrap"><img class="file-thumb" src="${thumbUrl}" alt="" loading="lazy" decoding="async"></div>`
+      : `<div class="file-icon select-none">${safeIcon}</div>`;
+
+    if (state.viewMode === 'grid') {
+      el.className = `grid-item ${isSelected ? 'selected' : ''}`;
+      el.innerHTML = `${selectControl}${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div>`;
+    } else {
+      el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
+      el.innerHTML = `<div class="col-name text-slate-900">${selectControl}<span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div></div>`;
+    }
+
+    const thumb = el.querySelector('.file-thumb');
+    if (thumb) {
+      thumb.addEventListener('error', () => {
+        const wrap = thumb.closest('.file-thumb-wrap');
+        if (wrap) wrap.outerHTML = `<div class="file-icon select-none">${safeIcon}</div>`;
+      });
+    }
+
+    el.addEventListener('click', event => {
+      if (event.target.closest('[data-action]')) return;
+      if (el.dataset.suppressClick === '1') {
+        delete el.dataset.suppressClick;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (isFolder) {
+        if (item.protected && state.userRole !== 'admin') {
+          Actions.handlePasswordRequired({ path: item.path }, () => Actions.navigateTo(item.path));
+          return;
+        }
+        Actions.navigateTo(item.path);
+        return;
+      }
+      if (Utils.isPreviewable(item.name)) Actions.openPreview(item.path, item.name, Boolean(item.protected));
+    });
+    if (state.userRole === 'admin') {
+      let longPressTimer = null;
+      let longPressFired = false;
+      el.addEventListener('touchstart', event => {
+        if (event.target.closest('[data-action]')) return;
+        longPressFired = false;
+        longPressTimer = setTimeout(() => {
+          longPressFired = true;
+          el.dataset.suppressClick = '1';
+          Actions.toggleSelect(item.fullKey, el, event);
+        }, 450);
+      }, { passive: true });
+      ['touchend', 'touchcancel', 'touchmove'].forEach(type => {
+        el.addEventListener(type, event => {
+          clearTimeout(longPressTimer);
+          if (longPressFired) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        });
+      });
+    }
+    return el;
   },
 
   updateBatchUI() {

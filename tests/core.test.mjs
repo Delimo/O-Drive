@@ -152,8 +152,30 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
       },
     },
     D1: {
+      async batch(statements) {
+        const results = [];
+        for (const stmt of statements) {
+          const sql = stmt.sql || '';
+          if (/^\s*(INSERT|UPDATE|DELETE|CREATE)/i.test(sql)) {
+            results.push(await stmt.run());
+          } else {
+            try {
+              const result = await stmt.all();
+              results.push(result);
+            } catch (_) {
+              try {
+                results.push(await stmt.first());
+              } catch (_2) {
+                results.push(null);
+              }
+            }
+          }
+        }
+        return results;
+      },
       prepare(sql) {
         const statement = {
+          sql,
           bind(...params) {
             statement.bound = params;
             return statement;
@@ -285,6 +307,22 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const limit = statement.bound?.[statement.bound.length - 2] ?? rows.length;
               const offset = statement.bound?.[statement.bound.length - 1] ?? 0;
               return { results: rows.sort((a, b) => a.path.localeCompare(b.path)).slice(offset, offset + limit) };
+            }
+            if (/SELECT kind, COUNT\(\*\) as count, SUM\(size\) as size FROM file_index GROUP BY kind/i.test(sql)) {
+              const byKind = {};
+              for (const row of fileIndexRows) {
+                if (!byKind[row.kind]) byKind[row.kind] = { kind: row.kind, count: 0, size: 0 };
+                byKind[row.kind].count++;
+                byKind[row.kind].size += Number(row.size || 0);
+              }
+              return { results: Object.values(byKind) };
+            }
+            if (/SELECT COUNT\(\*\) as count, SUM\(size\) as totalSize FROM file_index/i.test(sql)) {
+              const totalSize = fileIndexRows.reduce((sum, r) => sum + Number(r.size || 0), 0);
+              return { results: [{ count: fileIndexRows.length, totalSize }] };
+            }
+            if (/SELECT path, size, uploaded_at, updated_at FROM file_index ORDER BY uploaded_at DESC/i.test(sql)) {
+              return { results: [...fileIndexRows].sort((a, b) => b.uploaded_at - a.uploaded_at) };
             }
             if (/SELECT \* FROM file_index ORDER BY uploaded_at DESC/i.test(sql)) {
               return { results: [...fileIndexRows].sort((a, b) => b.uploaded_at - a.uploaded_at) };

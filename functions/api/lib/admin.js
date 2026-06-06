@@ -1,6 +1,7 @@
 ﻿import { jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
 import { getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
 import { mapWithConcurrency } from './r2-tree.js';
+import { getStorageQuota, setStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
 
 function fileKind(key) {
   return indexedFileKind(key);
@@ -188,6 +189,37 @@ export async function handleAdminMaintenanceAction(env, request) {
     return jsonResponse({ success: true, action, ...result });
   }
   return jsonResponse({ success: false, message: 'Invalid maintenance action' }, 400);
+}
+
+export async function handleAdminQuota(env, request, method) {
+  if (method === 'GET') {
+    const [quota, used] = await Promise.all([getStorageQuota(env.D1), getStorageUsed(env.D1)]);
+    return jsonResponse({ quota, used, remaining: quota ? Math.max(0, quota - used) : Infinity, quotaFormatted: quota ? formatQuotaBytes(quota) : '无限制', usedFormatted: formatQuotaBytes(used) });
+  }
+  if (method === 'PUT') {
+    const { bytes } = await request.json().catch(() => ({}));
+    await setStorageQuota(env.D1, Number(bytes) || 0);
+    return jsonResponse({ success: true });
+  }
+  return jsonResponse({ message: 'Method Not Allowed' }, 405);
+}
+
+export async function handleAdminWebhooks(env, request, method) {
+  if (method === 'GET') {
+    let urls = [];
+    try {
+      const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhook_urls'").first();
+      if (row?.value) urls = JSON.parse(row.value);
+    } catch (_) {}
+    return jsonResponse({ urls });
+  }
+  if (method === 'PUT') {
+    const { urls } = await request.json().catch(() => ({}));
+    const valid = Array.isArray(urls) ? urls.filter(u => typeof u === 'string' && u.startsWith('http')) : [];
+    await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)').bind('webhook_urls', JSON.stringify(valid)).run();
+    return jsonResponse({ success: true, urls: valid });
+  }
+  return jsonResponse({ message: 'Method Not Allowed' }, 405);
 }
 
 export async function handleHiddenSettings(env, request, method, url, hiddenPaths) {

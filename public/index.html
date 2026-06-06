@@ -83,7 +83,14 @@
         </div>
         </div>
 
-        <div class="explorer-card">
+        <div class="explorer-card" id="explorerCard">
+            <div id="dropOverlay" class="hidden fixed inset-0 z-[250] bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-2xl flex items-center justify-center pointer-events-none">
+                <div class="text-center">
+                    <div class="text-5xl mb-3">📁</div>
+                    <p class="text-lg font-bold text-primary">释放以上传文件</p>
+                    <p class="text-sm text-slate-500 mt-1">文件将上传到当前目录</p>
+                </div>
+            </div>
             <div id="fileList" class="custom-scroll relative"></div>
         </div>
 
@@ -137,6 +144,17 @@
         <button class="mobile-bottom-btn" data-action="toggle-mobile-actions">操作</button>
         <button class="mobile-bottom-btn" id="mobileQuickViewBtn" data-action="toggle-view">列表</button>
         <button class="mobile-bottom-btn" data-action="open-filters">筛选</button>
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[400] hidden items-center justify-center p-4 text-slate-900">
+        <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-md shadow-2xl">
+            <h1 id="confirmTitle" class="text-lg font-bold mb-3 text-center">确认操作</h1>
+            <div id="confirmBody" class="text-sm text-slate-600 mb-4 max-h-60 overflow-y-auto whitespace-pre-line"></div>
+            <div class="flex gap-2">
+                <button class="btn flex-1" id="confirmCancelBtn">取消</button>
+                <button class="btn btn-danger-soft flex-1 font-bold" id="confirmOkBtn">确认</button>
+            </div>
+        </div>
     </div>
 
     <div id="loginModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">

@@ -129,4 +129,83 @@ document.getElementById('folderInput')?.addEventListener('change', event => {
   event.target.value = '';
 });
 
+// Drag-and-drop upload with visual feedback
+const dropOverlay = document.getElementById('dropOverlay');
+let dragCounter = 0;
+
+document.addEventListener('dragenter', event => {
+  event.preventDefault();
+  if (state.userRole !== 'admin') return;
+  dragCounter++;
+  if (dropOverlay) {
+    dropOverlay.classList.remove('hidden');
+    dropOverlay.classList.add('flex');
+  }
+});
+
+document.addEventListener('dragleave', event => {
+  event.preventDefault();
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    if (dropOverlay) {
+      dropOverlay.classList.add('hidden');
+      dropOverlay.classList.remove('flex');
+    }
+  }
+});
+
+document.addEventListener('dragover', event => {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = state.userRole === 'admin' ? 'copy' : 'none';
+});
+
+document.addEventListener('drop', event => {
+  event.preventDefault();
+  dragCounter = 0;
+  if (dropOverlay) {
+    dropOverlay.classList.add('hidden');
+    dropOverlay.classList.remove('flex');
+  }
+  if (state.userRole !== 'admin') return;
+  const files = event.dataTransfer?.files;
+  if (files?.length) {
+    Actions.uploadFiles(files);
+  }
+});
+
+// Confirm dialog utility
+window.showConfirm = function(title, body, { danger = false } = {}) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('confirmModal');
+    const titleEl = document.getElementById('confirmTitle');
+    const bodyEl = document.getElementById('confirmBody');
+    const okBtn = document.getElementById('confirmOkBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    if (!modal || !titleEl || !bodyEl || !okBtn || !cancelBtn) {
+      resolve(confirm([title, body].filter(Boolean).join('\n\n')));
+      return;
+    }
+    titleEl.textContent = title;
+    bodyEl.textContent = body;
+    okBtn.className = danger
+      ? 'btn btn-danger-soft flex-1 font-bold'
+      : 'btn btn-primary flex-1 font-bold';
+    okBtn.textContent = danger ? '确认删除' : '确认';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    function cleanup() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+    }
+    function onOk() { cleanup(); resolve(true); }
+    function onCancel() { cleanup(); resolve(false); }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+};
+
 Actions.init();

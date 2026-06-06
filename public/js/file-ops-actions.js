@@ -12,11 +12,9 @@ function formatPathList(paths = [], limit = 8) {
   return lines.join('\n');
 }
 
-function confirmDanger(title, paths = [], extra = '') {
-  const parts = [title];
-  if (paths.length) parts.push(formatPathList(paths));
-  if (extra) parts.push(extra);
-  return confirm(parts.join('\n\n'));
+function confirmDanger(title, paths = [], extra = '', { danger = false } = {}) {
+  const parts = [formatPathList(paths), extra].filter(Boolean);
+  return window.showConfirm(title, parts.join('\n'), { danger });
 }
 
 async function operationEstimateText(paths = []) {
@@ -87,11 +85,12 @@ export const FileOpsActions = {
   async executePaste() {
     if (!state.clipboard) return;
     const estimate = await operationEstimateText(state.clipboard.paths);
-    if (estimate && !confirmDanger(
+    const pasteConfirmed = estimate ? await confirmDanger(
       `确认${state.clipboard.action === 'move' ? '移动' : '复制'} ${state.clipboard.paths.length} 项到当前目录？`,
       state.clipboard.paths,
       estimate
-    )) return;
+    ) : true;
+    if (!pasteConfirmed) return;
     Message.show('正在处理...');
     const { res, data } = await api.paste({ ...state.clipboard, targetDir: state.currentPath });
     if (res.ok && data?.success !== false) {
@@ -109,11 +108,13 @@ export const FileOpsActions = {
 
   async batchDelete() {
     const estimate = await operationEstimateText(state.selectedPaths);
-    if (!confirmDanger(
+    const confirmed = await confirmDanger(
       `确认将选中的 ${state.selectedPaths.length} 项移入回收站？`,
       state.selectedPaths,
-      ['这些项目不会立即彻底删除，可以在回收站恢复。', estimate].filter(Boolean).join('\n')
-    )) return;
+      ['这些项目不会立即彻底删除，可以在回收站恢复。', estimate].filter(Boolean).join('\n'),
+      { danger: true }
+    );
+    if (!confirmed) return;
     const { res, data } = await api.batchDelete(state.selectedPaths);
     if (res.ok && data?.success !== false) {
       Message.success('已移入回收站');
@@ -308,11 +309,13 @@ export const FileOpsActions = {
 
   async purgeTrash(id) {
     const item = (state.trash.items || []).find(row => row.id === id);
-    if (!confirmDanger(
+    const confirmed = await confirmDanger(
       '确认彻底删除这条回收站记录？',
       item?.original_key ? [item.original_key] : [],
-      '彻底删除后无法恢复。'
-    )) return;
+      '彻底删除后无法恢复。',
+      { danger: true }
+    );
+    if (!confirmed) return;
     const { res, data } = await api.deleteTrash(id);
     if (res.ok) {
       Message.success('已彻底删除');
@@ -325,11 +328,13 @@ export const FileOpsActions = {
 
   async clearTrash() {
     const paths = (state.trash.items || []).map(item => item.original_key);
-    if (!confirmDanger(
+    const confirmed = await confirmDanger(
       `确认清空回收站当前可见的 ${paths.length} 项？`,
       paths,
-      '清空后无法恢复。分页之外的记录也会被一并清理。'
-    )) return;
+      '清空后无法恢复。分页之外的记录也会被一并清理。',
+      { danger: true }
+    );
+    if (!confirmed) return;
     const { res, data } = await api.clearTrash();
     if (res.ok) {
       Message.success(`已清空 ${data?.deleted || 0} 项`);
@@ -380,7 +385,8 @@ export const FileOpsActions = {
       if (newName && newName !== oldName) {
         if (!item.sizeFormatted) {
           const estimate = await operationEstimateText([item.fullKey]);
-          if (estimate && !confirmDanger('确认重命名这个文件夹？', [item.fullKey], estimate)) {
+          const renameConfirmed = estimate ? await confirmDanger('确认重命名这个文件夹？', [item.fullKey], estimate) : true;
+          if (!renameConfirmed) {
             this.loadFiles();
             return;
           }

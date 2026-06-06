@@ -153,11 +153,16 @@ html, body {
 #breadcrumb {
     flex: 1;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
     font-size: 14px;
     font-weight: 600;
     color: var(--primary);
+}
+
+#breadcrumb::-webkit-scrollbar {
+    display: none;
 }
 
 .tools-right {

@@ -60,25 +60,55 @@ export async function ensureFileIndexTable(env) {
   }
 }
 
-export async function upsertFileIndex(env, key, meta = {}) {
-  if (!indexableKey(key) || !(await ensureFileIndexTable(env))) return;
+const UPSERT_SQL = `INSERT INTO file_index (path, name, parent, kind, size, content_type, uploaded_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(path) DO UPDATE SET
+    name = excluded.name,
+    parent = excluded.parent,
+    kind = excluded.kind,
+    size = excluded.size,
+    content_type = excluded.content_type,
+    uploaded_at = excluded.uploaded_at,
+    updated_at = excluded.updated_at`;
+
+export function buildUpsertParams(key, meta = {}) {
   const size = Number(meta.size || 0);
   const contentType = meta.httpMetadata?.contentType || meta.contentType || '';
   const uploadedAt = uploadedMs(meta.uploaded);
+  return [key, nameOf(key), parentOf(key), indexedFileKind(key), size, contentType, uploadedAt, Date.now()];
+}
+
+export async function upsertFileIndex(env, key, meta = {}) {
+  if (!indexableKey(key) || !(await ensureFileIndexTable(env))) return;
   try {
-    await env.D1.prepare(
-      `INSERT INTO file_index (path, name, parent, kind, size, content_type, uploaded_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(path) DO UPDATE SET
-         name = excluded.name,
-         parent = excluded.parent,
-         kind = excluded.kind,
-         size = excluded.size,
-         content_type = excluded.content_type,
-         uploaded_at = excluded.uploaded_at,
-         updated_at = excluded.updated_at`
-    ).bind(key, nameOf(key), parentOf(key), indexedFileKind(key), size, contentType, uploadedAt, Date.now()).run();
+    await env.D1.prepare(UPSERT_SQL).bind(...buildUpsertParams(key, meta)).run();
   } catch (_) {}
+}
+
+export async function batchUpsertFileIndex(env, entries) {
+  if (!(await ensureFileIndexTable(env))) return 0;
+  const validEntries = entries.filter(([key]) => indexableKey(key));
+  if (!validEntries.length) return 0;
+  const BATCH_SIZE = 50;
+  let written = 0;
+  for (let i = 0; i < validEntries.length; i += BATCH_SIZE) {
+    const chunk = validEntries.slice(i, i + BATCH_SIZE);
+    try {
+      const stmts = chunk.map(([key, meta]) =>
+        env.D1.prepare(UPSERT_SQL).bind(...buildUpsertParams(key, meta))
+      );
+      await env.D1.batch(stmts);
+      written += chunk.length;
+    } catch (_) {
+      for (const [key, meta] of chunk) {
+        try {
+          await env.D1.prepare(UPSERT_SQL).bind(...buildUpsertParams(key, meta)).run();
+          written++;
+        } catch (_) {}
+      }
+    }
+  }
+  return written;
 }
 
 export async function deleteFileIndexKey(env, key) {
@@ -109,12 +139,10 @@ export async function indexedFileCount(env) {
 export async function syncFileIndexFromR2(env, { maxObjects = 20000 } = {}) {
   if (!(await ensureFileIndexTable(env))) return { synced: 0, truncated: false };
   const listed = await listR2Objects(env.R2, {}, { maxObjects });
-  let synced = 0;
-  for (const obj of listed.objects || []) {
-    if (!indexableKey(obj.key)) continue;
-    await upsertFileIndex(env, obj.key, obj);
-    synced++;
-  }
+  const entries = (listed.objects || [])
+    .filter(obj => indexableKey(obj.key))
+    .map(obj => [obj.key, obj]);
+  const synced = await batchUpsertFileIndex(env, entries);
   return { synced, truncated: Boolean(listed.truncated) };
 }
 
@@ -170,39 +198,33 @@ export async function getIndexedStats(env) {
   const count = await indexedFileCount(env);
   if (!count) return null;
   try {
-    const rows = await env.D1.prepare('SELECT * FROM file_index ORDER BY uploaded_at DESC LIMIT 20000').all();
-    const objects = rows.results || [];
-    const breakdown = {
-      image: { count: 0, size: 0 },
-      video: { count: 0, size: 0 },
-      audio: { count: 0, size: 0 },
-      text: { count: 0, size: 0 },
-      archive: { count: 0, size: 0 },
-      exe: { count: 0, size: 0 },
-      other: { count: 0, size: 0 },
-    };
-    let totalSize = 0;
-    for (const obj of objects) {
-      const size = Number(obj.size || 0);
-      const kind = obj.kind || indexedFileKind(obj.path);
-      totalSize += size;
-      if (!breakdown[kind]) breakdown[kind] = { count: 0, size: 0 };
-      breakdown[kind].count++;
-      breakdown[kind].size += size;
+    const [kindRows, totalRow, latestRows] = await env.D1.batch([
+      env.D1.prepare('SELECT kind, COUNT(*) as count, SUM(size) as size FROM file_index GROUP BY kind'),
+      env.D1.prepare('SELECT COUNT(*) as count, SUM(size) as totalSize FROM file_index'),
+      env.D1.prepare('SELECT path, size, uploaded_at, updated_at FROM file_index ORDER BY uploaded_at DESC LIMIT 10'),
+    ]);
+    const allKinds = ['image', 'video', 'audio', 'text', 'archive', 'exe', 'other'];
+    const breakdown = {};
+    for (const kind of allKinds) {
+      breakdown[kind] = { count: 0, size: 0, sizeFormatted: formatBytes(0) };
     }
+    for (const row of (kindRows.results || [])) {
+      const kind = row.kind || 'other';
+      const size = Number(row.size || 0);
+      breakdown[kind] = { count: Number(row.count || 0), size, sizeFormatted: formatBytes(size) };
+    }
+    const total = totalRow.results?.[0] || {};
+    const totalSize = Number(total.totalSize || 0);
     return {
       files: {
-        count: objects.length,
+        count: Number(total.count || 0),
         totalSize,
         totalSizeFormatted: formatBytes(totalSize),
         folderMarkers: 0,
-        truncated: objects.length < count,
+        truncated: false,
       },
-      breakdown: Object.fromEntries(Object.entries(breakdown).map(([kind, value]) => [
-        kind,
-        { ...value, sizeFormatted: formatBytes(value.size) },
-      ])),
-      latest: objects.slice(0, 10).map(row => ({
+      breakdown,
+      latest: (latestRows.results || []).map(row => ({
         key: row.path,
         size: Number(row.size || 0),
         sizeFormatted: formatBytes(row.size || 0),
