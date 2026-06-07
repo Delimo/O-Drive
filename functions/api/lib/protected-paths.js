@@ -1,29 +1,12 @@
-import { addLog, jsonResponse, normalizeHiddenPath, encodeBase64Url, base64UrlToUint8Array, decodeBase64UrlJson } from './common.js';
+import { addLog, jsonResponse, normalizeHiddenPath, encodeBase64Url, decodeBase64UrlJson } from './common.js';
+import { signHmac, verifyHmac } from './secrets.js';
+import { ensureProtectedTables } from './schema.js';
 
 const ACCESS_COOKIE = 'path_access';
 const ACCESS_TTL = 12 * 60 * 60 * 1000;
 const PASSWORD_ITERATIONS = 210000;
 const UNLOCK_MAX_ATTEMPTS = 5;
 const UNLOCK_LOCK_MS = 15 * 60 * 1000;
-const TABLE_SQL = `
-  CREATE TABLE IF NOT EXISTS path_passwords (
-    path TEXT PRIMARY KEY,
-    salt TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
-    note TEXT DEFAULT '',
-    show_name INTEGER NOT NULL DEFAULT 1,
-    created_at INTEGER NOT NULL
-  )
-`;
-const ATTEMPTS_TABLE_SQL = `
-  CREATE TABLE IF NOT EXISTS path_access_attempts (
-    path TEXT NOT NULL,
-    ip TEXT NOT NULL,
-    attempts INTEGER NOT NULL DEFAULT 0,
-    last_attempt INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (path, ip)
-  )
-`;
 
 function bytesToHex(bytes) {
   return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -76,47 +59,15 @@ async function verifyPassword(password, rule) {
 }
 
 async function sign(value, env) {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(env.ADMIN_PASSWORD || 'o-drive'),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
-  return encodeBase64Url(String.fromCharCode(...new Uint8Array(sig)));
+  return signHmac(env, value);
 }
 
 async function verifySignature(value, signature, env) {
-  if (!value || !signature) return false;
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(env.ADMIN_PASSWORD || 'o-drive'),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['verify']
-  );
-  return crypto.subtle.verify(
-    'HMAC',
-    key,
-    base64UrlToUint8Array(signature),
-    new TextEncoder().encode(value)
-  );
+  return verifyHmac(env, value, signature);
 }
 
 async function ensureTable(env) {
-  const stmt = env.D1.prepare(TABLE_SQL);
-  if (typeof stmt.bind === 'function') {
-    await stmt.bind().run();
-  } else {
-    await stmt.run();
-  }
-  const attemptsStmt = env.D1.prepare(ATTEMPTS_TABLE_SQL);
-  if (typeof attemptsStmt.bind === 'function') {
-    await attemptsStmt.bind().run();
-  } else {
-    await attemptsStmt.run();
-  }
+  await ensureProtectedTables(env);
 }
 
 function normalizeProtectedPath(path) {

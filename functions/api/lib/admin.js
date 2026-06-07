@@ -1,7 +1,8 @@
-﻿import { addLog, jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects } from './common.js';
+﻿import { addLog, jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects, recordSystemWarning } from './common.js';
 import { fileIndexStatus, getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
 import { mapWithConcurrency } from './r2-tree.js';
 import { getStorageQuota, setStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
+import { tokenSecretStatus } from './secrets.js';
 import { normalizeWebhookEndpoints, testWebhookEndpoint } from './webhooks.js';
 
 function fileKind(key) {
@@ -118,11 +119,15 @@ async function adminDbStats(env) {
     const trashRows = await env.D1.prepare('SELECT * FROM trash ORDER BY trashed_at DESC').all();
     const size = (trashRows.results || []).reduce((sum, row) => sum + Number(row.size || 0), 0);
     trash = { count: Number(trashCount?.count || 0), size, sizeFormatted: formatBytes(size) };
-  } catch (_) {}
+  } catch (err) {
+    await recordSystemWarning(env, 'admin.stats', err?.message || 'Trash stats failed');
+  }
   try {
     const logCount = await env.D1.prepare('SELECT COUNT(*) as count FROM logs').first();
     logs = { count: Number(logCount?.count || 0) };
-  } catch (_) {}
+  } catch (err) {
+    await recordSystemWarning(env, 'admin.stats', err?.message || 'Log stats failed');
+  }
   return { trash, logs };
 }
 
@@ -168,11 +173,22 @@ async function checkR2(env) {
   }
 }
 
+async function latestSystemWarnings(env) {
+  try {
+    const rows = await env.D1.prepare('SELECT * FROM system_warnings ORDER BY created_at DESC LIMIT 10').all();
+    return rows.results || [];
+  } catch (_) {
+    return [];
+  }
+}
+
 export async function handleAdminHealth(env) {
-  const [db, r2] = await Promise.all([checkDb(env), checkR2(env)]);
+  const [db, r2, warnings] = await Promise.all([checkDb(env), checkR2(env), latestSystemWarnings(env)]);
+  const tokenSecret = tokenSecretStatus(env);
   const envStatus = {
     adminUsername: Boolean(env.ADMIN_USERNAME),
     adminPassword: Boolean(env.ADMIN_PASSWORD),
+    tokenSecret,
     allowGuestConfigured: Object.prototype.hasOwnProperty.call(env, 'ALLOW_GUEST'),
     guestEnabled: env.ALLOW_GUEST === 'true',
   };
@@ -183,6 +199,7 @@ export async function handleAdminHealth(env) {
     db,
     r2,
     env: envStatus,
+    warnings,
   });
 }
 
@@ -271,7 +288,9 @@ export async function loadWebhookEndpoints(env) {
   try {
     const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
     if (row?.value) items = JSON.parse(row.value);
-  } catch (_) {}
+  } catch (err) {
+    await recordSystemWarning(env, 'webhooks.config', err?.message || 'Webhook settings load failed');
+  }
   return normalizeWebhookEndpoints(items);
 }
 
@@ -281,7 +300,9 @@ export async function handleAdminWebhooks(env, request, method) {
     try {
       const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
       if (row?.value) items = JSON.parse(row.value);
-    } catch (_) {}
+    } catch (err) {
+      await recordSystemWarning(env, 'webhooks.config', err?.message || 'Webhook settings load failed');
+    }
     const endpoints = normalizeWebhookEndpoints(items);
     return jsonResponse({ items: endpoints, urls: endpoints.map(endpoint => endpoint.url) });
   }

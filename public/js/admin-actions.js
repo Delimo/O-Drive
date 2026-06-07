@@ -1,107 +1,23 @@
 ﻿import { adminState } from './admin-state.js';
 import { api } from './api.js';
 import { escapeHtml } from './utils.js';
+import { describeLogAction, logActionClass } from './admin-log-utils.js';
+import {
+  WEBHOOK_EVENT_KEYS,
+  headersToText,
+  normalizeWebhookItems,
+  parseHeadersText,
+  selectedWebhookEvents,
+  setWebhookEvents,
+  webhookEventsLabel,
+} from './admin-webhook-utils.js';
 
 const LOG_PAGE_SIZE = 10;
-const WEBHOOK_EVENT_OPTIONS = [
-  ['file.uploaded', '上传'],
-  ['file.deleted', '删除'],
-  ['file.purged', '彻底删除'],
-  ['file.moved', '移动'],
-  ['file.copied', '复制'],
-  ['file.renamed', '重命名'],
-  ['folder.created', '新建文件夹'],
-  ['download.burst', '大量下载'],
-  ['login.burst', '登录异常'],
-];
-const WEBHOOK_EVENT_KEYS = WEBHOOK_EVENT_OPTIONS.map(([key]) => key);
 export const ADMIN_TABS = ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'shares', 'webhooks'];
 
 export function getInitialAdminTab() {
   const tab = (window.location.hash || '').replace(/^#/, '');
   return ADMIN_TABS.includes(tab) ? tab : 'overview';
-}
-
-function describeLogAction(action = '') {
-  const normalized = String(action || '').toUpperCase();
-  const labels = {
-    UPLOAD: '上传文件',
-    UPLOAD_START: '上传开始',
-    UPLOAD_ABORT: '上传取消',
-    DELETE: '删除',
-    RENAME: '重命名',
-    MOVE: '移动',
-    COPY: '复制',
-    MKDIR: '新建文件夹',
-    PASTE: '粘贴',
-    PROTECT: '设置密码',
-    UNPROTECT: '删除密码',
-    HIDE: '隐藏路径',
-    UNHIDE: '取消隐藏',
-    MAINTENANCE: '维护操作',
-    QUOTA: '存储配额',
-    WEBHOOKS: 'Webhook 配置',
-    WEBHOOK_TEST: 'Webhook 测试',
-    SHARE_CREATE: '创建分享',
-    SHARE_DELETE: '删除分享',
-    SHARE_CLEANUP: '清理分享',
-    TRASH: '回收站',
-    RESTORE: '恢复文件',
-    PURGE: '彻底删除',
-    TRASH_CLEAR: '清空回收站',
-    TRASH_CLEANUP: '清理回收站',
-    TRASH_RETENTION: '回收站保留期',
-    SAVE_TEXT: '保存文本',
-    UPLOAD_CONFLICT: '上传冲突',
-  };
-  return labels[normalized] || normalized.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase()) || '未知操作';
-}
-
-function logActionClass(action = '') {
-  const normalized = String(action || '').toUpperCase();
-  if (normalized.includes('DELETE') || normalized.includes('ABORT') || normalized.includes('PURGE') || normalized.includes('CLEAR')) return 'is-delete';
-  if (normalized.includes('UPLOAD') || normalized.includes('CREATE') || normalized.includes('MKDIR')) return 'is-upload';
-  return 'is-default';
-}
-
-function normalizeWebhookItems(data = {}) {
-  const source = Array.isArray(data.items) ? data.items : [];
-  return source.map((item, index) => ({
-    id: item.id || `${Date.now()}-${index}`,
-    name: item.name || '',
-    msgtype: ['json', 'text', 'markdown'].includes(item.msgtype)
-      ? item.msgtype
-      : 'json',
-    url: item.url || '',
-    method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(String(item.method || '').toUpperCase())
-      ? String(item.method).toUpperCase()
-      : 'POST',
-    contentType: item.contentType || 'application/json',
-    headers: item.headers && typeof item.headers === 'object' && !Array.isArray(item.headers) ? item.headers : {},
-    body: item.body || '',
-    events: Array.isArray(item.events)
-      ? [...new Set(item.events.map(event => String(event || '').trim()).filter(event => WEBHOOK_EVENT_KEYS.includes(event)))]
-      : [],
-    enabled: item.enabled !== false,
-  })).filter(item => item.url);
-}
-
-function selectedWebhookEvents() {
-  return [...document.querySelectorAll('input[name="webhookEvents"]:checked')]
-    .map(input => input.value)
-    .filter(value => WEBHOOK_EVENT_KEYS.includes(value));
-}
-
-function setWebhookEvents(events = []) {
-  const selected = Array.isArray(events) && events.length ? new Set(events) : new Set(WEBHOOK_EVENT_KEYS);
-  document.querySelectorAll('input[name="webhookEvents"]').forEach(input => {
-    input.checked = selected.has(input.value);
-  });
-}
-
-function webhookEventsLabel(events = []) {
-  if (!Array.isArray(events) || events.length === 0 || events.length === WEBHOOK_EVENT_KEYS.length) return '全部事件';
-  return events.map(event => WEBHOOK_EVENT_OPTIONS.find(([key]) => key === event)?.[1] || event).join('、');
 }
 
 function adminConfirm(title, body = '') {
@@ -112,18 +28,6 @@ function adminConfirm(title, body = '') {
 function setMaintenanceResult(text = '') {
   const label = document.getElementById('healthMaintenanceResult');
   if (label) label.textContent = text;
-}
-
-function headersToText(headers = {}) {
-  return Object.keys(headers).length ? JSON.stringify(headers, null, 2) : '';
-}
-
-function parseHeadersText(text) {
-  const trimmed = String(text || '').trim();
-  if (!trimmed) return {};
-  const parsed = JSON.parse(trimmed);
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('headers 必须是 JSON 对象');
-  return parsed;
 }
 
 function setWebhookForm(item = {}) {
@@ -188,11 +92,10 @@ function setWebhookRowStatus(index, text = '', tone = 'muted') {
   document.querySelectorAll('.webhook-row-status').forEach(item => {
     if (item === status) return;
     item.textContent = '';
-    item.classList.add('hidden');
-    item.classList.remove('is-error', 'is-muted', 'is-success');
+    item.classList.remove('is-visible', 'is-error', 'is-muted', 'is-success');
   });
   status.textContent = text;
-  status.classList.toggle('hidden', !text);
+  status.classList.toggle('is-visible', Boolean(text));
   status.classList.toggle('is-error', tone === 'error');
   status.classList.toggle('is-muted', tone === 'muted');
   status.classList.toggle('is-success', tone === 'success');
@@ -332,15 +235,17 @@ export const AdminActions = {
     `;
   },
 
-  adminCredentialsHealthItem(usernameOk, passwordOk, guestEnabled) {
+  adminCredentialsHealthItem(usernameOk, passwordOk, guestEnabled, tokenSecret = {}) {
+    const tokenSecretOk = Boolean(tokenSecret.configured && tokenSecret.recommended);
     const rows = [
       ['管理员用户名', usernameOk, '环境变量 ADMIN_USERNAME'],
       ['管理员密码', passwordOk, '环境变量 ADMIN_PASSWORD'],
+      ['签名密钥', tokenSecretOk, tokenSecret.configured ? 'TOKEN_SECRET 已配置' : '建议配置 TOKEN_SECRET，当前回退到 ADMIN_PASSWORD'],
       ['访客访问', true, guestEnabled ? 'ALLOW_GUEST=true，访客可浏览' : '默认关闭；只有 ALLOW_GUEST=true 才开启'],
     ];
 
     return `
-      <div class="health-item health-credentials-item ${usernameOk && passwordOk ? 'is-ok' : 'is-bad'}">
+      <div class="health-item health-credentials-item ${usernameOk && passwordOk && tokenSecretOk ? 'is-ok' : 'is-bad'}">
         <div class="health-credentials-head">
           <strong>登录与访问</strong>
           <span>管理员凭据和访客访问状态</span>
@@ -374,10 +279,24 @@ export const AdminActions = {
       ? `已存在表：${data.db.tables.join(', ')}`
       : '所需表会在功能首次使用时自动创建';
 
+    const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+    const warningsHtml = warnings.length
+      ? `
+        <div class="health-item is-bad">
+          <div>
+            <strong>系统提醒</strong>
+            <span>${escapeHtml(warnings.map(item => `${item.source}: ${item.message}`).join('；'))}</span>
+          </div>
+          <em>${warnings.length} 条</em>
+        </div>
+      `
+      : this.healthItem('系统提醒', true, '暂无非致命运行告警');
+
     grid.innerHTML = [
       this.healthItem('D1 数据库绑定 D1', Boolean(data.db?.ok), data.db?.message || tableList),
       this.healthItem('R2 存储绑定 R2', Boolean(data.r2?.ok), data.r2?.message || '文件读写使用该 Bucket'),
-      this.adminCredentialsHealthItem(Boolean(data.env?.adminUsername), Boolean(data.env?.adminPassword), Boolean(data.env?.guestEnabled)),
+      this.adminCredentialsHealthItem(Boolean(data.env?.adminUsername), Boolean(data.env?.adminPassword), Boolean(data.env?.guestEnabled), data.env?.tokenSecret || {}),
+      warningsHtml,
     ].join('');
   },
 
@@ -793,7 +712,7 @@ export const AdminActions = {
             <button class="btn h-8 px-3" data-admin-action="test-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>测试发送</button>
             <button class="admin-danger-btn" data-admin-action="remove-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>删除</button>
           </div>
-          <p class="webhook-row-status hidden" data-webhook-status="${i}" role="status" aria-live="polite"></p>
+          <p class="webhook-row-status" data-webhook-status="${i}" role="status" aria-live="polite"></p>
         </div>
       </div>
     `).join('');

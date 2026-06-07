@@ -40,7 +40,7 @@ import {
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
 import { handleAdminShares } from './shares.js';
 import { notifyDownloadBurst, notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed, notifyWebhookWithLog } from './webhooks.js';
-import { assertBodySize, jsonResponse } from './common.js';
+import { assertBodySize, jsonResponse, recordSystemWarning } from './common.js';
 import { checkDownloadBlocked, recordDownloadBurst } from './download-bursts.js';
 
 function waitForWebhook(context, promise) {
@@ -53,14 +53,18 @@ async function notifyConfiguredWebhooks(env, context, notifyFn) {
   try {
     const endpoints = await loadWebhookEndpoints(env);
     waitForWebhook(context, notifyFn(endpoints));
-  } catch (_) {}
+  } catch (err) {
+    await recordSystemWarning(env, 'webhooks.notify', err?.message || 'Webhook notification setup failed');
+  }
 }
 
 async function notifyConfiguredWebhookEvent(env, context, event, data) {
   try {
     const endpoints = await loadWebhookEndpoints(env);
     waitForWebhook(context, notifyWebhookWithLog(env, endpoints, event, data));
-  } catch (_) {}
+  } catch (err) {
+    await recordSystemWarning(env, 'webhooks.notify', err?.message || `Webhook event failed: ${event}`);
+  }
 }
 
 async function monitorDownloadBurst(env, request, auth, r2Key, context) {
@@ -68,7 +72,9 @@ async function monitorDownloadBurst(env, request, auth, r2Key, context) {
     const alert = await recordDownloadBurst(env, request, auth, r2Key);
     if (!alert) return;
     await notifyConfiguredWebhookEvent(env, context, 'download.burst', alert);
-  } catch (_) {}
+  } catch (err) {
+    await recordSystemWarning(env, 'download.burst', err?.message || 'Download burst monitor failed');
+  }
 }
 
 /** Resolve admin-only routes. Returns a Response or null if not an admin route. */

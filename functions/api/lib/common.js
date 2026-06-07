@@ -1,10 +1,14 @@
+import { ensureCoreTables } from './schema.js';
+
+export { ensureCoreTables } from './schema.js';
+
 /**
  * Cloudflare Workers environment bindings.
  * @typedef {Object} Env
  * @property {D1Database} D1 - D1 SQL database binding
  * @property {R2Bucket} R2 - R2 object storage bucket binding
- * @property {string} [ADMIN_PASS] - Admin password
- * @property {string} [JWT_SECRET] - JWT signing secret
+ * @property {string} [ADMIN_PASSWORD] - Admin password
+ * @property {string} [TOKEN_SECRET] - HMAC signing secret
  */
 
 /**
@@ -16,86 +20,6 @@
  */
 export const jsonResponse = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
-
-const CORE_TABLE_SQL = [
-  `CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    action TEXT NOT NULL,
-    details TEXT,
-    ip TEXT,
-    timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`,
-  `CREATE TABLE IF NOT EXISTS login_attempts (
-    ip TEXT PRIMARY KEY,
-    attempts INTEGER NOT NULL DEFAULT 0,
-    last_attempt INTEGER NOT NULL DEFAULT 0
-  )`,
-  `CREATE TABLE IF NOT EXISTS login_alerts (
-    key TEXT PRIMARY KEY,
-    last_alert INTEGER NOT NULL DEFAULT 0
-  )`,
-  `CREATE TABLE IF NOT EXISTS kv_config (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS api_rate_limits (
-    key TEXT PRIMARY KEY,
-    request_count INTEGER NOT NULL DEFAULT 0,
-    window_start INTEGER NOT NULL DEFAULT 0
-  )`,
-  `CREATE TABLE IF NOT EXISTS download_bursts (
-    key TEXT PRIMARY KEY,
-    request_count INTEGER NOT NULL DEFAULT 0,
-    window_start INTEGER NOT NULL DEFAULT 0,
-    last_alert INTEGER NOT NULL DEFAULT 0,
-    blocked_until INTEGER NOT NULL DEFAULT 0,
-    sample_paths TEXT NOT NULL DEFAULT '[]'
-  )`,
-  `CREATE TABLE IF NOT EXISTS webhook_deliveries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event TEXT NOT NULL,
-    endpoint TEXT NOT NULL,
-    url TEXT NOT NULL,
-    ok INTEGER NOT NULL DEFAULT 0,
-    status INTEGER NOT NULL DEFAULT 0,
-    error TEXT DEFAULT '',
-    duration_ms INTEGER NOT NULL DEFAULT 0,
-    created_at INTEGER NOT NULL
-  )`,
-];
-const initializedCoreTables = new WeakSet();
-const CORE_MIGRATION_SQL = [
-  `ALTER TABLE download_bursts ADD COLUMN blocked_until INTEGER NOT NULL DEFAULT 0`,
-];
-
-async function runStatement(statement) {
-  if (typeof statement.bind === 'function') return statement.bind().run();
-  return statement.run();
-}
-
-/**
- * Initialize core D1 tables (settings, logs, login_attempts, kv_config, api_rate_limits).
- * Uses WeakSet to avoid re-initializing in the same request context.
- * @param {Env} env
- * @returns {Promise<void>}
- */
-export async function ensureCoreTables(env) {
-  if (!env?.D1) return;
-  if (initializedCoreTables.has(env)) return;
-  for (const sql of CORE_TABLE_SQL) {
-    await runStatement(env.D1.prepare(sql));
-  }
-  for (const sql of CORE_MIGRATION_SQL) {
-    try {
-      await runStatement(env.D1.prepare(sql));
-    } catch {}
-  }
-  initializedCoreTables.add(env);
-}
 
 /**
  * Format a byte count into a human-readable string.
@@ -195,6 +119,16 @@ export async function addLog(env, request, action, details) {
   await ensureCoreTables(env);
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
   try { await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, details, ip).run(); } catch (e) {}
+}
+
+export async function recordSystemWarning(env, source, message) {
+  if (!env?.D1) return;
+  try {
+    await ensureCoreTables(env);
+    await env.D1.prepare('INSERT INTO system_warnings (source, message, created_at) VALUES (?, ?, ?)')
+      .bind(String(source || 'system'), String(message || 'Unknown warning').slice(0, 1000), Date.now())
+      .run();
+  } catch (_) {}
 }
 
 const MAX_BODY_SIZE = 512 * 1024; // 512 KB for JSON/regular requests

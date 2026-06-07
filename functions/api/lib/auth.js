@@ -1,4 +1,5 @@
-import { jsonResponse, base64UrlToUint8Array, decodeBase64UrlJson, encodeBase64Url, ensureCoreTables } from './common.js';
+import { jsonResponse, decodeBase64UrlJson, encodeBase64Url, ensureCoreTables } from './common.js';
+import { signHmac, verifyHmac } from './secrets.js';
 import { normalizeWebhookEndpoints, notifyLoginBurst } from './webhooks.js';
 
 function createCsrfToken() {
@@ -47,19 +48,7 @@ export async function verifyAuth(request, env) {
   try {
     const [header, payload, signature] = token.split('.');
     if (!header || !payload || !signature || !env.ADMIN_PASSWORD) return isGuestMode ? { role: 'guest' } : null;
-    const key = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(env.ADMIN_PASSWORD),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify']
-    );
-    const valid = await crypto.subtle.verify(
-      'HMAC',
-      key,
-      base64UrlToUint8Array(signature),
-      new TextEncoder().encode(`${header}.${payload}`)
-    );
+    const valid = await verifyHmac(env, `${header}.${payload}`, signature);
     if (!valid) return isGuestMode ? { role: 'guest' } : null;
     const claims = decodeBase64UrlJson(payload);
     if (!claims?.exp || Date.now() >= Number(claims.exp) * 1000) return isGuestMode ? { role: 'guest' } : null;
@@ -159,9 +148,7 @@ export async function handleLogin(request, env, context = {}) {
     const now = Math.floor(Date.now() / 1000);
     const header = encodeBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
     const payload = encodeBase64Url(JSON.stringify({ role: 'admin', csrf, iat: now, exp: now + SESSION_TTL_SECONDS }));
-    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.ADMIN_PASSWORD), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${header}.${payload}`));
-    const signature = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const signature = await signHmac(env, `${header}.${payload}`);
     return jsonResponse({ success: true, csrf }, 200, { 'Set-Cookie': `${cookieName(request)}=${header}.${payload}.${signature}; ${cookieAttributes(request)}` });
   }
 

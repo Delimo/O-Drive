@@ -1,47 +1,11 @@
 import { addLog, encodeBase64Url, formatBytes, isReservedKey, jsonResponse, normalizeName } from './common.js';
 import { handleDownloadOrPreview } from './file-reads.js';
+import { signHmac } from './secrets.js';
+import { ensureShareTable } from './schema.js';
 
 const EXPIRED_SHARE_AUTO_DELETE_MS = 7 * 24 * 60 * 60 * 1000;
 const SHARE_ACCESS_TTL_SECONDS = 12 * 60 * 60;
 const SHARE_PASSWORD_ITERATIONS = 210000;
-
-const SHARE_TABLE_SQL = `
-  CREATE TABLE IF NOT EXISTS share_links (
-    token TEXT PRIMARY KEY,
-    path TEXT NOT NULL,
-    name TEXT NOT NULL,
-    size INTEGER NOT NULL DEFAULT 0,
-    content_type TEXT DEFAULT '',
-    allow_preview INTEGER NOT NULL DEFAULT 1,
-    allow_download INTEGER NOT NULL DEFAULT 1,
-    expires_at INTEGER NOT NULL DEFAULT 0,
-    max_downloads INTEGER NOT NULL DEFAULT 0,
-    download_count INTEGER NOT NULL DEFAULT 0,
-    password_salt TEXT DEFAULT '',
-    password_hash TEXT DEFAULT '',
-    created_at INTEGER NOT NULL,
-    last_accessed_at INTEGER NOT NULL DEFAULT 0
-  )
-`;
-const SHARE_MIGRATION_SQL = [
-  `ALTER TABLE share_links ADD COLUMN password_salt TEXT DEFAULT ''`,
-  `ALTER TABLE share_links ADD COLUMN password_hash TEXT DEFAULT ''`,
-];
-
-async function runStatement(statement) {
-  if (typeof statement.bind === 'function') return statement.bind().run();
-  return statement.run();
-}
-
-export async function ensureShareTable(env) {
-  if (!env?.D1) return;
-  await runStatement(env.D1.prepare(SHARE_TABLE_SQL));
-  for (const sql of SHARE_MIGRATION_SQL) {
-    try {
-      await runStatement(env.D1.prepare(sql));
-    } catch {}
-  }
-}
 
 function bytesToHex(bytes) {
   return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -110,15 +74,7 @@ function shareAccessCookieName(token) {
 
 async function signShareAccess(env, token, exp) {
   const value = `${token}.${exp}`;
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(env.ADMIN_PASSWORD || 'o-drive'),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
-  return `${value}.${encodeBase64Url(String.fromCharCode(...new Uint8Array(sig)))}`;
+  return `${value}.${await signHmac(env, value)}`;
 }
 
 async function hasShareAccess(env, request, token, row) {

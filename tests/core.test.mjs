@@ -232,6 +232,30 @@ test('admin login issues csrf token and write requests must echo it', async () =
   }), auth), false);
 });
 
+test('token secret signs admin sessions independently from admin password', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+  env.TOKEN_SECRET = 'test-token-secret-that-is-long-enough-for-hmac';
+
+  const login = await handleLogin(new Request('https://example.com/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'admin', password: 'pass' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), env);
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+  assert.equal(login.status, 200);
+
+  env.ADMIN_PASSWORD = 'new-admin-password';
+  const auth = await verifyAuth(new Request('https://example.com/api/auth/role', {
+    headers: { Cookie: cookie },
+  }), env);
+
+  assert.equal(auth.role, 'admin');
+  assert.equal(auth.csrf, loginData.csrf);
+});
+
 test('admin login locks after repeated failed attempts and clears after success', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -2084,7 +2108,10 @@ test('admin health reports bindings and required env vars', async () => {
   assert.equal(data.r2.ok, true);
   assert.equal(data.env.adminUsername, true);
   assert.equal(data.env.adminPassword, true);
+  assert.equal(data.env.tokenSecret.configured, false);
+  assert.equal(data.env.tokenSecret.source, 'ADMIN_PASSWORD');
   assert.equal(data.env.guestEnabled, false);
+  assert.deepEqual(data.warnings, []);
 });
 
 test('operation estimate counts files inside selected folders', async () => {

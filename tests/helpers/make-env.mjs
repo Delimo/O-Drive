@@ -7,6 +7,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const loginAlertRows = [];
   const downloadBurstRows = [];
   const webhookDeliveryRows = [];
+  const systemWarningRows = [];
   const settingsRows = new Map();
   const kvRows = new Map();
   const fileIndexRows = [];
@@ -263,6 +264,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 created_at: statement.bound?.[7],
               });
             }
+            if (/INSERT INTO system_warnings/i.test(sql)) {
+              systemWarningRows.push({
+                id: systemWarningRows.length + 1,
+                source: statement.bound?.[0],
+                message: statement.bound?.[1],
+                created_at: statement.bound?.[2],
+              });
+            }
             if (/INSERT INTO path_access_attempts/i.test(sql)) {
               const row = {
                 path: statement.bound?.[0],
@@ -484,6 +493,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/SELECT \* FROM webhook_deliveries ORDER BY created_at DESC LIMIT 20/i.test(sql)) {
               return { results: [...webhookDeliveryRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, 20) };
+            }
+            if (/SELECT \* FROM system_warnings ORDER BY created_at DESC LIMIT 10/i.test(sql)) {
+              return { results: [...systemWarningRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, 10) };
             }
             if (/SELECT kind, COUNT\(\*\) as count, SUM\(size\) as size FROM file_index GROUP BY kind/i.test(sql)) {
               const byKind = {};

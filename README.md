@@ -120,7 +120,8 @@ Pages Functions 会自动读取 `functions` 目录。
 | 变量名 | 必填 | 示例 | 说明 |
 | --- | --- | --- | --- |
 | `ADMIN_USERNAME` | 是 | `admin` | 管理员用户名 |
-| `ADMIN_PASSWORD` | 是 | `change-me` | 管理员密码，也用于签名会话 |
+| `ADMIN_PASSWORD` | 是 | `change-me` | 管理员密码 |
+| `TOKEN_SECRET` | 推荐 | `生成的随机字符串` | 用于签名登录、分享和路径解锁 Cookie；未配置时会回退到 `ADMIN_PASSWORD` |
 | `ALLOW_GUEST` | 否 | `true` | 设为 `true` 时允许游客浏览 |
 | `PATH_UNLOCK_MAX_ATTEMPTS` | 否 | `5` | 受保护路径密码最大错误次数 |
 | `PATH_UNLOCK_LOCK_MINUTES` | 否 | `15` | 受保护路径锁定分钟数 |
@@ -129,7 +130,43 @@ Pages Functions 会自动读取 `functions` 目录。
 | `DOWNLOAD_BURST_COOLDOWN_SECONDS` | 否 | `1800` | 下载异常提醒冷却时间 |
 | `DOWNLOAD_BURST_BLOCK_SECONDS` | 否 | `600` | 异常下载临时阻断时长，`0` 表示只告警不阻断 |
 
+`TOKEN_SECRET` 是系统用来给登录状态、分享访问和路径解锁 Cookie 做签名的随机密钥。它不是管理员密码，不需要自己记住，也不要填固定的简单文字。
+
+推荐生成一次 48 字节随机值，然后长期保存到 Cloudflare Pages 的环境变量里。Windows PowerShell、macOS 终端或 Linux 终端都可以运行：
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+运行后会输出一长串随机字符，例如：
+
+```text
+4z7iP8...中间很长...Kq2w
+```
+
+把这整串内容复制到 Cloudflare Pages 的环境变量：
+
+```text
+变量名：TOKEN_SECRET
+变量值：刚才生成的整串随机字符
+```
+
+注意：
+
+- 只需要生成一次，不要每次部署都换。
+- 不要把真实的 `TOKEN_SECRET` 写进 README、截图、聊天记录或公开仓库。
+- 如果以后手动更换 `TOKEN_SECRET`，已登录的浏览器、已解锁的分享和路径访问会需要重新验证。
+
 修改绑定或环境变量后，需要重新部署 Pages。
+
+### 最短部署路径
+
+1. 在 Cloudflare 创建 R2 Bucket 和 D1 数据库。
+2. 在 Pages 项目中绑定 `R2` 和 `D1`，变量名必须分别叫 `R2`、`D1`。
+3. 配置 `ADMIN_USERNAME`、`ADMIN_PASSWORD`、`TOKEN_SECRET`。
+4. 运行远程 D1 迁移：`npm run db:migrate:remote`。
+5. 部署 Pages：`npm run deploy`，或在 Cloudflare Pages 里使用构建命令 `npm run build`、输出目录 `public`。
+6. 首次登录 `/admin.html` 后，在“系统状态”里检查绑定、密钥和索引状态。
 
 ### 首次检查
 
@@ -502,6 +539,7 @@ npm run test:browser
 ## 运维建议
 
 - 给 `ADMIN_PASSWORD` 设置强密码。
+- 给 `TOKEN_SECRET` 设置独立随机值，推荐 48 字节随机 base64url 字符串。
 - 不需要公开目录时，不要启用 `ALLOW_GUEST=true`。
 - 文件多时定期重建文件索引。
 - 回收站会占用 R2 空间，建议设置保留天数并定期清理。
@@ -525,6 +563,7 @@ npm run test:browser
 
 - `ADMIN_USERNAME` 是否配置。
 - `ADMIN_PASSWORD` 是否配置。
+- `TOKEN_SECRET` 是否配置；未配置时仍可登录，但会回退到 `ADMIN_PASSWORD` 签名。
 - 修改环境变量后是否重新部署。
 
 ### 管理员操作提示安全校验失败
