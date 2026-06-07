@@ -136,7 +136,6 @@ export const UI = {
         ${meta.sizeFormatted ? `<button class="btn" data-action="download-file" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>下载</button>` : ''}
         ${adminDirectLinkButton}
         ${adminShareButton}
-        <button class="btn" data-action="copy-path" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>复制路径</button>
       </div>
       <div class="space-y-3 text-sm">
         <div class="detail-row"><span>类型</span><strong>${escapeHtml(meta.kind)}</strong></div>

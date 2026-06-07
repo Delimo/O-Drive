@@ -58,6 +58,7 @@ document.addEventListener('click', event => {
     case 'open-trash': return Actions.openTrash();
     case 'submit-mkdir': return Actions.submitMkdir();
     case 'submit-unlock': return Actions.submitUnlock();
+    case 'submit-share': return Actions.submitShare();
     case 'toggle-edit': return Actions.toggleEditMode();
     case 'save-text': return Actions.saveTextContent();
     case 'reset-filters': return Actions.resetFilters();
@@ -70,7 +71,6 @@ document.addEventListener('click', event => {
     case 'clear-trash': return Actions.clearTrash();
     case 'cleanup-trash': return Actions.cleanupTrash();
     case 'save-trash-retention': return Actions.saveTrashRetention();
-    case 'copy-path': return Actions.copyPath(args[0]);
     case 'copy-direct-link': return Actions.copyDirectLink(args[0]);
     case 'create-share': return Actions.createShare(args[0]);
     case 'navigate': return Actions.navigateTo(args[0]);
@@ -119,6 +119,7 @@ document.addEventListener('keydown', event => {
     case 'search': return Actions.handleSearch();
     case 'mkdir': return Actions.submitMkdir();
     case 'unlock': return Actions.submitUnlock();
+    case 'share': return Actions.submitShare();
   }
 });
 

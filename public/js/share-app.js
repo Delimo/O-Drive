@@ -59,6 +59,26 @@ function previewMarkup(item) {
   return '<div class="share-preview-empty">当前文件类型暂不支持在线预览，可直接下载。</div>';
 }
 
+function renderUnlock(error = '') {
+  card.className = 'share-card share-card-unlock';
+  card.innerHTML = `
+    <div class="share-unlock">
+      <div class="share-status-icon" aria-hidden="true">密</div>
+      <div class="share-unlock-title">
+        <div class="share-kicker">O-Drive 分享文件</div>
+        <h1>需要分享密码</h1>
+        <p>输入分享者设置的密码后继续查看文件。</p>
+      </div>
+      <form id="shareUnlockForm" class="share-unlock-form">
+        <input id="sharePasswordInput" type="password" autocomplete="current-password" placeholder="请输入分享密码">
+        <p id="sharePasswordError" class="share-unlock-error">${escapeHtml(error)}</p>
+        <button class="btn btn-primary" type="submit">解锁分享</button>
+      </form>
+    </div>
+  `;
+  document.getElementById('sharePasswordInput')?.focus();
+}
+
 function renderItem(item) {
   const downloadUrl = `/api/share/${encodeURIComponent(item.token)}/download`;
   const hasLimit = Number(item.maxDownloads || 0) > 0;
@@ -88,6 +108,34 @@ function renderItem(item) {
   `;
 }
 
+async function loadShare() {
+  const res = await fetch(`/api/share/${encodeURIComponent(token)}/info`);
+  const data = await res.json().catch(() => null);
+  if (res.status === 403 && data?.code === 'SHARE_PASSWORD_REQUIRED') {
+    renderUnlock();
+    return;
+  }
+  if (!res.ok || !data?.item) {
+    renderStatus(shareUnavailableMessage(data || {}), 'error');
+    return;
+  }
+  renderItem(data.item);
+}
+
+async function unlockShare(password) {
+  const res = await fetch(`/api/share/${encodeURIComponent(token)}/unlock`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || data?.success === false) {
+    renderUnlock(data?.message || '分享密码不正确');
+    return;
+  }
+  await loadShare();
+}
+
 async function init() {
   if (!token) {
     renderStatus('分享链接缺少 token。', 'error');
@@ -95,17 +143,23 @@ async function init() {
   }
   renderStatus('正在加载分享...', 'loading');
   try {
-    const res = await fetch(`/api/share/${encodeURIComponent(token)}/info`);
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.item) {
-      renderStatus(shareUnavailableMessage(data || {}), 'error');
-      return;
-    }
-    renderItem(data.item);
+    await loadShare();
   } catch (_) {
     renderStatus('分享链接加载失败。', 'error');
-    return;
   }
 }
+
+card.addEventListener('submit', event => {
+  const form = event.target.closest('#shareUnlockForm');
+  if (!form) return;
+  event.preventDefault();
+  const input = document.getElementById('sharePasswordInput');
+  const password = input?.value || '';
+  if (!password) {
+    renderUnlock('请输入分享密码');
+    return;
+  }
+  unlockShare(password);
+});
 
 init();

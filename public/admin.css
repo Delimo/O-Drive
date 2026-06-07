@@ -628,63 +628,6 @@ body.admin-page {
   font-weight: 700;
 }
 
-.admin-page .webhook-deliveries {
-  display: grid;
-  gap: 8px;
-}
-
-.admin-page .webhook-delivery-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-soft);
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.admin-page .webhook-delivery-row em {
-  min-width: 42px;
-  height: 24px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.admin-page .webhook-delivery-row.is-ok em {
-  border: 1px solid #a7f3d0;
-  background: #ecfdf5;
-}
-
-.admin-page .webhook-delivery-row.is-bad em {
-  border: 1px solid rgba(185, 28, 28, 0.16);
-  background: #fff5f5;
-}
-
-.admin-page .webhook-delivery-row strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-main);
-}
-
-.admin-page .webhook-delivery-row.is-ok em {
-  color: #047857;
-}
-
-.admin-page .webhook-delivery-row.is-bad em {
-  color: #b91c1c;
-}
-
 .admin-page .webhook-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -768,13 +711,21 @@ body.admin-page {
 }
 
 .admin-page .webhook-row-status {
-  max-width: 360px;
-  min-height: 18px;
-  padding: 0 2px;
-  border: 0;
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  background: #ecfdf5;
   color: #047857;
-  text-align: right;
+  text-align: left;
+}
+
+.admin-page .webhook-row-status.hidden {
+  display: none;
 }
 
 .admin-page .webhook-result {
@@ -787,7 +738,8 @@ body.admin-page {
 }
 
 .admin-page .webhook-row-status.is-error {
-  background: transparent;
+  border-color: rgba(185, 28, 28, 0.16);
+  background: #fff5f5;
 }
 
 .admin-page .webhook-row-status.is-muted,
@@ -796,7 +748,8 @@ body.admin-page {
 }
 
 .admin-page .webhook-row-status.is-muted {
-  background: transparent;
+  border-color: var(--border);
+  background: var(--surface-soft);
 }
 
 .admin-page .webhook-meta {
@@ -950,7 +903,8 @@ body.admin-page {
 }
 
 .admin-page #shares-tab .admin-table-card {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .admin-page #shares-tab table {
@@ -1078,7 +1032,9 @@ body.admin-page {
 }
 
 .admin-page #logs-tab .admin-table-card {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .admin-page #logs-tab table {
@@ -1102,12 +1058,40 @@ body.admin-page {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 12px;
-  padding: 12px;
+  margin-top: 10px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-soft);
   font-size: 12px;
+}
+
+.admin-page #logs-tab,
+.admin-page #shares-tab {
+  gap: 0;
+}
+
+.admin-page #logs-tab .admin-section-head,
+.admin-page #shares-tab .admin-section-head {
+  flex-shrink: 0;
+}
+
+.admin-page #logs-tab .admin-log-filters {
+  flex-shrink: 0;
+}
+
+.admin-page #logs-tab .admin-pagination,
+.admin-page #shares-tab #sharesResult {
+  flex-shrink: 0;
+}
+
+.admin-page #quota-tab {
+  min-height: 0;
+}
+
+.admin-page #quota-tab .admin-page-panel {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .admin-page .admin-action-badge {
@@ -1895,16 +1879,6 @@ body.admin-page {
   .admin-page .admin-share-buttons .admin-danger-btn {
     min-width: 96px;
     height: 40px;
-  }
-
-  .admin-page .webhook-delivery-row {
-    grid-template-columns: 1fr;
-    align-items: start;
-  }
-
-  .admin-page .webhook-delivery-row strong {
-    white-space: normal;
-    overflow-wrap: anywhere;
   }
 
   .admin-page .admin-pagination {

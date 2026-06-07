@@ -194,6 +194,53 @@
         </div>
     </div>
 
+    <div id="shareModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[430] hidden items-center justify-center p-4 text-slate-900">
+        <div class="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-border flex items-center justify-between">
+                <div class="min-w-0">
+                    <h1 class="text-lg font-bold">创建分享</h1>
+                    <p id="sharePathLabel" class="text-xs text-slate-500 mt-1 truncate"></p>
+                </div>
+                <button class="text-2xl opacity-40 hover:opacity-100" data-action="close-modal" data-args='["shareModal"]'>&times;</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <input type="hidden" id="sharePathInput">
+                <div class="share-form-grid">
+                    <label class="share-field">
+                        <span>有效期</span>
+                        <div class="share-input-suffix">
+                            <input id="shareDaysInput" type="number" min="0" max="3650" value="7" data-enter-action="share" class="filter-input">
+                            <em>天</em>
+                        </div>
+                        <small>填 0 表示长期有效</small>
+                    </label>
+                    <label class="share-field">
+                        <span>下载次数</span>
+                        <div class="share-input-suffix">
+                            <input id="shareMaxDownloadsInput" type="number" min="0" max="1000000" value="0" data-enter-action="share" class="filter-input">
+                            <em>次</em>
+                        </div>
+                        <small>填 0 表示不限制</small>
+                    </label>
+                </div>
+                <label class="share-field">
+                    <span>分享密码</span>
+                    <input id="sharePasswordInput" type="text" placeholder="可选，至少 4 位" autocomplete="off" data-enter-action="share" class="filter-input">
+                    <small>设置后，访问分享页需要先输入密码</small>
+                </label>
+                <div class="share-toggle-grid">
+                    <label class="share-toggle"><input id="shareAllowPreviewInput" type="checkbox" checked><span>允许在线预览</span></label>
+                    <label class="share-toggle"><input id="shareAllowDownloadInput" type="checkbox" checked><span>允许下载文件</span></label>
+                </div>
+                <p id="shareCreateError" class="text-red-500 text-xs min-h-4"></p>
+                <div class="flex justify-end gap-2">
+                    <button class="btn" data-action="close-modal" data-args='["shareModal"]'>取消</button>
+                    <button class="btn btn-primary font-bold" data-action="submit-share">创建并复制链接</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="previewModal" class="fixed inset-0 hidden items-center justify-center bg-black/35 backdrop-blur-sm z-[500] p-4 text-slate-900" data-action="close-preview">
         <div class="w-full max-w-6xl h-[85vh] bg-surface border border-border rounded-2xl overflow-hidden flex flex-col shadow-2xl">
             <div class="flex items-center justify-between p-4 border-b border-border bg-background text-slate-900">

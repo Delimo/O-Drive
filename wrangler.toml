@@ -1,0 +1,23 @@
+name = "o-drive"
+compatibility_date = "2026-06-07"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "D1"
+database_name = "o-drive-db"
+database_id = "replace-with-your-d1-database-id"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "o-drive-files"
+preview_bucket_name = "o-drive-files-dev"
+
+[vars]
+ALLOW_GUEST = "false"
+PATH_UNLOCK_MAX_ATTEMPTS = "5"
+PATH_UNLOCK_LOCK_MINUTES = "15"
+DOWNLOAD_BURST_THRESHOLD = "30"
+DOWNLOAD_BURST_WINDOW_SECONDS = "300"
+DOWNLOAD_BURST_COOLDOWN_SECONDS = "1800"
+DOWNLOAD_BURST_BLOCK_SECONDS = "0"

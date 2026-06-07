@@ -189,42 +189,13 @@ function setWebhookRowStatus(index, text = '', tone = 'muted') {
     if (item === status) return;
     item.textContent = '';
     item.classList.add('hidden');
-    item.classList.remove('is-error', 'is-muted');
+    item.classList.remove('is-error', 'is-muted', 'is-success');
   });
   status.textContent = text;
   status.classList.toggle('hidden', !text);
   status.classList.toggle('is-error', tone === 'error');
   status.classList.toggle('is-muted', tone === 'muted');
-}
-
-async function renderWebhookDeliveries() {
-  const box = document.getElementById('webhookDeliveries');
-  if (!box) return;
-  const { res, data } = await api.adminWebhookDeliveries();
-  if (!res.ok) {
-    box.innerHTML = '';
-    return;
-  }
-  const items = data.items || [];
-  if (!items.length) {
-    box.innerHTML = '<div class="webhook-empty">暂无发送记录。</div>';
-    return;
-  }
-  box.innerHTML = [
-    '<div class="webhook-block-title">最近发送</div>',
-    ...items.map(item => {
-      const ok = Number(item.ok || 0) === 1;
-      const time = item.created_at ? new Date(Number(item.created_at)).toLocaleString('zh-CN', { hour12: false }) : '-';
-      const status = item.status ? `HTTP ${item.status}` : (item.error || '-');
-      return `
-        <div class="webhook-delivery-row ${ok ? 'is-ok' : 'is-bad'}">
-          <em>${ok ? '成功' : '失败'}</em>
-          <strong title="${escapeHtml(item.url || '')}">${escapeHtml(item.event || '')} · ${escapeHtml(item.endpoint || item.url || '')}</strong>
-          <span>${escapeHtml(status)} · ${escapeHtml(String(item.duration_ms || 0))}ms · ${escapeHtml(time)}</span>
-        </div>
-      `;
-    }),
-  ].join('');
+  status.classList.toggle('is-success', tone === 'success');
 }
 
 function readWebhookForm() {
@@ -718,6 +689,9 @@ export const AdminActions = {
       const policy = [
         `<span>过期 ${escapeHtml(shareTime(item.expiresAt))}</span>`,
         `<span>下载 ${escapeHtml(String(item.downloadCount || 0))}/${item.maxDownloads ? escapeHtml(String(item.maxDownloads)) : '不限'}</span>`,
+        item.allowPreview ? '<span>可预览</span>' : '<span>不可预览</span>',
+        item.allowDownload ? '<span>可下载</span>' : '<span>不可下载</span>',
+        item.hasPassword ? '<span>有密码</span>' : '<span>无密码</span>',
       ].join('');
       return `
           <tr class="admin-share-row hover:bg-slate-50 transition-colors">
@@ -795,7 +769,6 @@ export const AdminActions = {
       adminState.webhookEditingIndex = -1;
       setWebhookFormMode();
       list.innerHTML = '<div class="webhook-empty">暂未配置 Webhook。</div>';
-      await renderWebhookDeliveries();
       return;
     }
     list.innerHTML = items.map((item, i) => `
@@ -813,6 +786,7 @@ export const AdminActions = {
             ${Object.keys(item.headers || {}).length ? '<span>headers</span>' : ''}
             ${item.body ? '<span>body</span>' : ''}
           </div>
+          <p class="webhook-row-status hidden" data-webhook-status="${i}" role="status" aria-live="polite"></p>
         </div>
         <div class="webhook-row-actions">
           <div class="webhook-row-buttons">
@@ -820,12 +794,10 @@ export const AdminActions = {
             <button class="btn h-8 px-3" data-admin-action="test-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>测试发送</button>
             <button class="admin-danger-btn" data-admin-action="remove-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>删除</button>
           </div>
-          <p class="webhook-row-status hidden" data-webhook-status="${i}" role="status" aria-live="polite"></p>
         </div>
       </div>
     `).join('');
     setWebhookFormMode(items[adminState.webhookEditingIndex]);
-    await renderWebhookDeliveries();
   },
 
   async addWebhook() {
@@ -911,11 +883,9 @@ export const AdminActions = {
     const { res, data: testData } = await api.testAdminWebhook(endpoint);
     if (!res.ok || testData?.success === false) {
       setWebhookRowStatus(index, testData?.message || '测试发送失败，请检查 URL、平台类型或签名配置。', 'error');
-      await renderWebhookDeliveries();
       return;
     }
-    setWebhookRowStatus(index, `${testData.name || 'Webhook'} 测试发送成功`, 'success');
-    await renderWebhookDeliveries();
+    setWebhookRowStatus(index, '测试发送成功', 'success');
   },
 };
 

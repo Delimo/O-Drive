@@ -1047,6 +1047,76 @@ html, body {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.share-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.share-field {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.share-field small {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.share-input-suffix {
+    position: relative;
+    min-width: 0;
+}
+
+.share-input-suffix .filter-input {
+    width: 100%;
+    padding-right: 42px;
+}
+
+.share-input-suffix em {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-style: normal;
+    font-size: 12px;
+    font-weight: 900;
+    pointer-events: none;
+}
+
+.share-toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.share-toggle {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.share-toggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+}
+
 .detail-row {
     display: flex;
     justify-content: space-between;
@@ -1081,6 +1151,11 @@ html, body {
 }
 
 @media (max-width: 640px) {
+    .share-form-grid,
+    .share-toggle-grid {
+        grid-template-columns: 1fr;
+    }
+
     .container {
         padding: 12px 14px 0;
     }
