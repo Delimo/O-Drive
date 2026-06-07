@@ -1459,6 +1459,27 @@ test('download burst webhook alerts once during cooldown', async () => {
   }
 });
 
+test('download burst block can be disabled with zero seconds', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
+  });
+  env.ALLOW_GUEST = 'true';
+  env.DOWNLOAD_BURST_THRESHOLD = '2';
+  env.DOWNLOAD_BURST_WINDOW_SECONDS = '300';
+  env.DOWNLOAD_BURST_COOLDOWN_SECONDS = '1800';
+  env.DOWNLOAD_BURST_BLOCK_SECONDS = '0';
+
+  for (let i = 0; i < 3; i++) {
+    const res = await onRequest({
+      env,
+      request: new Request('https://example.com/api/download/docs/readme.txt', {
+        headers: { 'cf-connecting-ip': '203.0.113.88' },
+      }),
+    });
+    assert.equal(res.status, 200);
+  }
+});
+
 test('webhook request settings customize outgoing notification requests', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -1631,7 +1652,8 @@ test('webhook msgtype supports text and markdown payloads', async () => {
     assert.equal(calls[0].body.msgtype, 'text');
     assert.match(calls[0].body.text.content, /O-Drive 新建文件夹/);
     assert.match(calls[0].body.text.content, /事件：新建文件夹/);
-    assert.match(calls[0].body.text.content, /时间：.+中国时间/);
+    assert.match(calls[0].body.text.content, /时间：\d{4}\/\d{1,2}\/\d{1,2}/);
+    assert.doesNotMatch(calls[0].body.text.content, /中国时间/);
     assert.doesNotMatch(calls[0].body.text.content, /folder\.created/);
     assert.match(calls[0].body.text.content, /wechat-docs/);
 

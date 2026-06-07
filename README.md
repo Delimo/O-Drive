@@ -127,7 +127,7 @@ Pages Functions 会自动读取 `functions` 目录。
 | `DOWNLOAD_BURST_THRESHOLD` | 否 | `30` | 下载异常提醒阈值 |
 | `DOWNLOAD_BURST_WINDOW_SECONDS` | 否 | `300` | 下载异常统计窗口 |
 | `DOWNLOAD_BURST_COOLDOWN_SECONDS` | 否 | `1800` | 下载异常提醒冷却时间 |
-| `DOWNLOAD_BURST_BLOCK_SECONDS` | 否 | `0` | 异常下载临时阻断时长，`0` 表示不阻断 |
+| `DOWNLOAD_BURST_BLOCK_SECONDS` | 否 | `600` | 异常下载临时阻断时长，`0` 表示只告警不阻断 |
 
 修改绑定或环境变量后，需要重新部署 Pages。
 

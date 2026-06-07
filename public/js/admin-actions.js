@@ -2,7 +2,7 @@
 import { api } from './api.js';
 import { escapeHtml } from './utils.js';
 
-const LOG_PAGE_SIZE = 8;
+const LOG_PAGE_SIZE = 10;
 const WEBHOOK_EVENT_OPTIONS = [
   ['file.uploaded', '上传'],
   ['file.deleted', '删除'],
@@ -786,7 +786,6 @@ export const AdminActions = {
             ${Object.keys(item.headers || {}).length ? '<span>headers</span>' : ''}
             ${item.body ? '<span>body</span>' : ''}
           </div>
-          <p class="webhook-row-status hidden" data-webhook-status="${i}" role="status" aria-live="polite"></p>
         </div>
         <div class="webhook-row-actions">
           <div class="webhook-row-buttons">
@@ -794,6 +793,7 @@ export const AdminActions = {
             <button class="btn h-8 px-3" data-admin-action="test-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>测试发送</button>
             <button class="admin-danger-btn" data-admin-action="remove-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>删除</button>
           </div>
+          <p class="webhook-row-status hidden" data-webhook-status="${i}" role="status" aria-live="polite"></p>
         </div>
       </div>
     `).join('');

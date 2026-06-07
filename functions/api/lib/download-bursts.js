@@ -3,7 +3,7 @@ import { getClientIp } from './rate-limiter.js';
 const DEFAULT_WINDOW_MS = 5 * 60 * 1000;
 const DEFAULT_THRESHOLD = 20;
 const DEFAULT_COOLDOWN_MS = 30 * 60 * 1000;
-const DEFAULT_BLOCK_MS = 30 * 60 * 1000;
+const DEFAULT_BLOCK_MS = 10 * 60 * 1000;
 const SAMPLE_LIMIT = 5;
 
 function positiveNumber(value, fallback) {
@@ -11,12 +11,17 @@ function positiveNumber(value, fallback) {
   return Number.isFinite(number) && number > 0 ? number : fallback;
 }
 
+function nonNegativeNumber(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : fallback;
+}
+
 function settings(env) {
   return {
     windowMs: positiveNumber(env.DOWNLOAD_BURST_WINDOW_SECONDS, DEFAULT_WINDOW_MS / 1000) * 1000,
     threshold: positiveNumber(env.DOWNLOAD_BURST_THRESHOLD, DEFAULT_THRESHOLD),
     cooldownMs: positiveNumber(env.DOWNLOAD_BURST_COOLDOWN_SECONDS, DEFAULT_COOLDOWN_MS / 1000) * 1000,
-    blockMs: positiveNumber(env.DOWNLOAD_BURST_BLOCK_SECONDS, DEFAULT_BLOCK_MS / 1000) * 1000,
+    blockMs: nonNegativeNumber(env.DOWNLOAD_BURST_BLOCK_SECONDS, DEFAULT_BLOCK_MS / 1000) * 1000,
   };
 }
 
@@ -89,7 +94,9 @@ export async function recordDownloadBurst(env, request, auth, r2Key) {
     const samplePaths = addSample(parseSamples(row.sample_paths), path);
     const shouldAlert = count >= threshold && now - previousAlert >= cooldownMs;
     const lastAlert = shouldAlert ? now : previousAlert;
-    const blockedUntil = count >= threshold ? Math.max(Number(row.blocked_until || 0), now + blockMs) : Number(row.blocked_until || 0);
+    const blockedUntil = count >= threshold && blockMs > 0
+      ? Math.max(Number(row.blocked_until || 0), now + blockMs)
+      : Number(row.blocked_until || 0);
 
     await env.D1.prepare(
       'UPDATE download_bursts SET request_count = ?, last_alert = ?, blocked_until = ?, sample_paths = ? WHERE key = ?'
@@ -104,7 +111,7 @@ export async function recordDownloadBurst(env, request, auth, r2Key) {
       windowSeconds: Math.round(windowMs / 1000),
       cooldownSeconds: Math.round(cooldownMs / 1000),
       blockSeconds: Math.round(blockMs / 1000),
-      blockedUntil: new Date(blockedUntil).toISOString(),
+      blockedUntil: blockMs > 0 ? new Date(blockedUntil).toISOString() : '',
       windowStartedAt: new Date(windowStart).toISOString(),
       samplePaths,
       userAgent: request.headers.get('user-agent') || '',
