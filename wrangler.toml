@@ -2,16 +2,12 @@ name = "o-drive"
 compatibility_date = "2026-06-07"
 pages_build_output_dir = "public"
 
-[[d1_databases]]
-binding = "D1"
-database_name = "o-drive-db"
-database_id = "replace-with-your-d1-database-id"
-migrations_dir = "migrations"
-
-[[r2_buckets]]
-binding = "R2"
-bucket_name = "o-drive-files"
-preview_bucket_name = "o-drive-files-dev"
+# Configure D1 and R2 bindings in the Cloudflare Pages dashboard:
+# Settings -> Functions -> Bindings
+#
+# Required binding names:
+# - D1 database: D1
+# - R2 bucket: R2
 
 [vars]
 ALLOW_GUEST = "false"

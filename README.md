@@ -43,7 +43,7 @@ public/share.html               公开分享页
 public/js/                      前端模块
 public/style.css                Tailwind 输入
 public/main.css                 Tailwind 输出
-wrangler.toml                   Cloudflare 本地开发和绑定示例
+wrangler.toml                   Cloudflare Pages 部署基础配置
 tests/core.test.mjs             核心测试
 tests/helpers/                  测试夹具
 tests/browser/                  浏览器测试
@@ -111,6 +111,8 @@ Pages Functions 会自动读取 `functions` 目录。
 | R2 bucket | `R2` | 选择 R2 Bucket |
 
 变量名必须是 `D1` 和 `R2`。
+
+仓库里的 `wrangler.toml` 不包含 D1 的 `database_id` 或 R2 的 Bucket 名称，避免把本地/生产资源 ID 写入公开仓库。请在 Cloudflare Pages Dashboard 的 Bindings 页面配置真实绑定。
 
 ### 配置环境变量
 
