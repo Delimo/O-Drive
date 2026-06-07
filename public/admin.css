@@ -713,6 +713,7 @@ body.admin-page {
 .admin-page .webhook-row-status {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   width: fit-content;
   max-width: 100%;
   min-height: 28px;
@@ -781,10 +782,11 @@ body.admin-page {
 .admin-page .webhook-row-actions {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   justify-content: center;
   gap: 8px;
   align-self: stretch;
+  width: max-content;
   min-width: 0;
 }
 
@@ -794,6 +796,14 @@ body.admin-page {
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: nowrap;
+  width: 100%;
+}
+
+.admin-page .webhook-row-actions .webhook-row-status {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 .admin-page .webhook-row-buttons .btn,
