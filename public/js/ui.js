@@ -179,6 +179,29 @@ export const UI = {
     this.renderAuthButtons();
   },
 
+  renderLockedState() {
+    if (virtualScroller) { virtualScroller.destroy(); virtualScroller = null; }
+    state.fileData = { folders: [], files: [] };
+    state.visibleKeys = [];
+    state.selectedPaths = [];
+    state.detailsItem = null;
+    this.renderDetailsPanel(null);
+    this.updateBatchUI();
+    this.renderBreadcrumb();
+
+    const list = document.getElementById('fileList');
+    if (!list) return;
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">O</div>
+        <div>
+          <strong>需要登录</strong>
+          <p>当前站点未开启游客浏览，请登录后查看文件。</p>
+        </div>
+      </div>
+    `;
+  },
+
   renderBreadcrumb() {
     if (state.isSearching) return;
     const parts = state.currentPath.split('/').filter(Boolean);

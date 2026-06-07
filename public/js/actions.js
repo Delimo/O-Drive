@@ -9,7 +9,11 @@ export const Actions = {
     const { res, data } = await api.getRole();
     state.userRole = res.status === 200 ? data.role : 'guest';
     UI.updateAuth();
-    await this.loadFiles();
+    if (res.status === 401) {
+      UI.renderLockedState();
+    } else {
+      await this.loadFiles();
+    }
 
     const startYear = 2026;
     const currentYear = new Date().getFullYear();
@@ -38,7 +42,7 @@ export const Actions = {
   async doLogin() {
     const { res, data } = await api.login(document.getElementById('adminUser').value, document.getElementById('adminPass').value);
     if (data?.success) window.location.reload();
-    else document.getElementById('loginError').textContent = res.status === 429 ? '尝试次数过多，请稍后再试' : '登录失败';
+    else document.getElementById('loginError').textContent = res.status === 429 ? '尝试次数过多，请稍后再试' : '登录失败，请检查用户名、密码和部署环境变量';
   },
 
   async logout() {
