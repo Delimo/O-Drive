@@ -5,6 +5,10 @@ import { sanitizeHtml, escapeHtml } from './utils.js';
 import { renderMarkdown } from './markdown-renderer.js';
 import { audioExts, imageExts, textExts, videoExts } from './file-types.js';
 
+const LARGE_TEXT_PREVIEW_THRESHOLD = 400;
+const TEXT_PREVIEW_CHUNK_SIZE = 200;
+const TEXT_PREVIEW_SEARCH_DEBOUNCE_MS = 120;
+
 function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -27,6 +31,19 @@ function appendHighlighted(target, line, query) {
   }
   if (lastIndex < line.length) target.appendChild(document.createTextNode(line.slice(lastIndex)));
   if (!target.childNodes.length) target.textContent = '\u00a0';
+}
+
+function createPreviewLine(line, index, query) {
+  const row = document.createElement('div');
+  row.className = 'preview-line';
+  const no = document.createElement('span');
+  no.className = 'preview-line-no';
+  no.textContent = String(index + 1);
+  const textEl = document.createElement('span');
+  textEl.className = 'preview-line-text';
+  appendHighlighted(textEl, line, query);
+  row.append(no, textEl);
+  return row;
 }
 
 function buildTextPreviewShell(text) {
@@ -64,31 +81,59 @@ function buildTextPreviewShell(text) {
   const body = document.createElement('div');
   body.className = 'preview-text-body';
   shell.append(toolbar, body);
-  let wrap = true;
 
-  const render = () => {
-    const query = search.value.trim();
-    body.classList.toggle('is-nowrap', !wrap);
-    body.replaceChildren();
-    lines.forEach((line, index) => {
-      const row = document.createElement('div');
-      row.className = 'preview-line';
-      const no = document.createElement('span');
-      no.className = 'preview-line-no';
-      no.textContent = String(index + 1);
-      const textEl = document.createElement('span');
-      textEl.className = 'preview-line-text';
-      appendHighlighted(textEl, line, query);
-      row.append(no, textEl);
-      body.appendChild(row);
-    });
+  let wrap = true;
+  let renderToken = 0;
+  let debounceTimer = 0;
+
+  const renderAll = query => {
+    const fragment = document.createDocumentFragment();
+    lines.forEach((line, index) => fragment.appendChild(createPreviewLine(line, index, query)));
+    body.replaceChildren(fragment);
   };
 
-  search.addEventListener('input', render);
+  const renderChunked = query => {
+    const token = ++renderToken;
+    body.replaceChildren();
+
+    let cursor = 0;
+    const paintChunk = () => {
+      if (token !== renderToken) return;
+      const fragment = document.createDocumentFragment();
+      const end = Math.min(cursor + TEXT_PREVIEW_CHUNK_SIZE, lines.length);
+      for (; cursor < end; cursor++) {
+        fragment.appendChild(createPreviewLine(lines[cursor], cursor, query));
+      }
+      body.appendChild(fragment);
+      if (cursor < lines.length) requestAnimationFrame(paintChunk);
+    };
+
+    requestAnimationFrame(paintChunk);
+  };
+
+  const render = ({ debounce = false } = {}) => {
+    const query = search.value.trim();
+    body.classList.toggle('is-nowrap', !wrap);
+    clearTimeout(debounceTimer);
+
+    if (lines.length <= LARGE_TEXT_PREVIEW_THRESHOLD) {
+      renderAll(query);
+      return;
+    }
+
+    const paint = () => renderChunked(query);
+    if (debounce) {
+      debounceTimer = window.setTimeout(paint, TEXT_PREVIEW_SEARCH_DEBOUNCE_MS);
+      return;
+    }
+    paint();
+  };
+
+  search.addEventListener('input', () => render({ debounce: true }));
   toggle.addEventListener('click', () => {
     wrap = !wrap;
     toggle.textContent = wrap ? '换行' : '不换行';
-    render();
+    body.classList.toggle('is-nowrap', !wrap);
   });
   copy.addEventListener('click', async () => {
     try {
@@ -203,7 +248,7 @@ export const PreviewActions = {
           content.appendChild(buildTextPreviewShell(text));
         }
       } else {
-        content.innerHTML = '<div class="p-12 text-slate-400 text-center">该文件类型暂不支持在线预览</div>';
+        content.innerHTML = '<div class="p-12 text-slate-400 text-center">当前文件类型暂不支持在线预览</div>';
       }
       title.textContent = name;
     } catch (e) {

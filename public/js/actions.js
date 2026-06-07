@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { api } from './api.js';
-import { UI } from './ui.js';
+import { UI, Message } from './ui.js';
 import { PreviewActions } from './preview-actions.js';
 import { FileOpsActions } from './file-ops-actions.js';
 

@@ -22,7 +22,7 @@ import { handleAdminHealth, handleAdminStats } from '../functions/api/lib/admin.
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
-import { indexedFileCount, upsertFileIndex } from '../functions/api/lib/file-index.js';
+import { indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index.js';
 import { setStorageQuota as setStorageQuotaForTest } from '../functions/api/lib/storage-quota.js';
 import {
   handleProtectedSettings,
@@ -572,6 +572,24 @@ test('search uses D1 file index when available', async () => {
   assert.equal(data.scanLimitReached, false);
 });
 
+test('indexed search keeps scanning past hidden rows for guest pagination', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'hidden/alpha-1.txt', { size: 1, uploaded: Date.now() });
+  await upsertFileIndex(env, 'hidden/alpha-2.txt', { size: 1, uploaded: Date.now() });
+  await upsertFileIndex(env, 'visible/alpha-3.txt', { size: 1, uploaded: Date.now() });
+
+  const indexed = await searchFileIndex(
+    env,
+    { q: 'alpha', scope: '/', limit: 1, cursor: '' },
+    ['hidden'],
+    { role: 'guest' },
+  );
+
+  assert.equal(indexed.files.length, 1);
+  assert.equal(indexed.files[0].fullKey, 'visible/alpha-3.txt');
+  assert.equal(indexed.nextCursor, '');
+});
+
 test('preview response streams existing object, supports range, and 404s missing object', async () => {
   const env = makeEnv({
     objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
@@ -1081,6 +1099,27 @@ test('batch delete reports partial failures', async () => {
   assert.equal(data.failed.length, 1);
 });
 
+test('batch delete preserves serial-like behavior for duplicate paths', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const res = await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/readme.txt', 'docs/readme.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+
+  assert.equal(res.status, 200);
+  assert.equal(data.completed, 1);
+  assert.equal(data.failed.length, 1);
+  assert.equal(data.failed[0].path, 'docs/readme.txt');
+  assert.match(data.failed[0].message, /not found/i);
+});
+
 test('batch delete reports oversized folders instead of silently truncating', async () => {
   const objects = Array.from({ length: 10001 }, (_, index) => ({
     key: `docs/file-${index}.txt`,
@@ -1148,6 +1187,28 @@ test('copy and move operations keep file index in sync', async () => {
   assert.deepEqual((await search.json()).files.map(file => file.fullKey), ['moved/nested/b.txt']);
   search = await handleSearch(env, new Request('https://example.com/api/search?q=b.txt&scope=/docs'), new URL('https://example.com/api/search?q=b.txt&scope=/docs'), [], { role: 'guest' }, []);
   assert.deepEqual((await search.json()).files.map(file => file.fullKey), []);
+});
+
+test('paste preserves conflict behavior when multiple sources target the same destination name', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'misc/a.txt', body: 'aa', size: 2, uploaded: new Date('2026-01-02') },
+    ],
+  });
+
+  const res = await handlePaste(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'copy', paths: ['docs/a.txt', 'misc/a.txt'], targetDir: '/copies' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+
+  assert.equal(res.status, 200);
+  assert.equal(data.completed, 1);
+  assert.equal(data.failed.length, 1);
+  assert.match(data.failed[0].message, /already exists/i);
+  assert.ok(await env.R2.get('copies/a.txt'));
 });
 
 test('trash items can be purged permanently', async () => {
@@ -1479,6 +1540,204 @@ test('webhook endpoints can subscribe to selected events only', async () => {
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, 'https://hooks.example.test/folders');
     assert.equal(calls[0].body.event, 'folder.created');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('single-file upload webhook uses the final uploaded file path', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const save = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'PUT',
+        body: JSON.stringify({ items: [{ url: 'https://hooks.example.test/upload' }] }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(save.status, 200);
+
+    const form = new FormData();
+    form.set('file', new File(['hello'], 'note.txt', { type: 'text/plain' }));
+    const upload = await onRequest({
+      env,
+      request: new Request('https://example.com/api/files/docs', {
+        method: 'POST',
+        body: form,
+        headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(upload.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.event, 'file.uploaded');
+    assert.equal(calls[0].body.data.path, '/docs/note.txt');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('nested mkdir webhook uses the created folder path', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const save = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'PUT',
+        body: JSON.stringify({ items: [{ url: 'https://hooks.example.test/folder' }] }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(save.status, 200);
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir/docs', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'nested' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.event, 'folder.created');
+    assert.equal(calls[0].body.data.path, '/docs/nested/');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('purge webhook sends the original trash path instead of the trash record id', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/report.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const save = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'PUT',
+        body: JSON.stringify({ items: [{ url: 'https://hooks.example.test/purge' }] }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(save.status, 200);
+
+    const trash = await onRequest({
+      env,
+      request: new Request('https://example.com/api/batch-delete', {
+        method: 'POST',
+        body: JSON.stringify({ paths: ['docs/report.txt'] }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(trash.status, 200);
+
+    const trashList = await onRequest({
+      env,
+      request: new Request('https://example.com/api/trash', {
+        headers: { Cookie: cookie },
+      }),
+    });
+    const trashData = await trashList.json();
+    const id = trashData.items[0]?.id;
+    assert.ok(id);
+
+    calls.length = 0;
+    waitUntilPromises.length = 0;
+
+    const purge = await onRequest({
+      env,
+      request: new Request('https://example.com/api/trash/delete', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(purge.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.event, 'file.purged');
+    assert.deepEqual(calls[0].body.data.paths, ['docs/report.txt']);
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -180,6 +180,17 @@ async function softDeleteTree(env, sourceKey, request) {
   return { id: trashId, originalKey: sourceKey, trashKey, kind };
 }
 
+const PATH_BATCH_CONCURRENCY = 4;
+
+async function mapPathResults(paths, worker, concurrency = PATH_BATCH_CONCURRENCY) {
+  const work = paths.map((path, index) => ({ path, index }));
+  const results = new Array(paths.length);
+  await mapWithConcurrency(work, concurrency, async ({ path, index }) => {
+    results[index] = await worker(path, index);
+  });
+  return results;
+}
+
 /**
  * Handle paste (copy/move) operation.
  * @param {Env} env
@@ -192,23 +203,74 @@ export async function handlePaste(env, request) {
   const normalizedPaths = assertPathList(paths);
   let destDir = normalizeDir(targetDir);
   if (destDir !== '') destDir += '/';
-  const failed = [];
-  let completed = 0;
+  const primaryTasks = [];
+  const aliases = [];
+  const firstByDest = new Map();
+  const immediateResults = new Array(normalizedPaths.length);
 
-  for (const srcKey of normalizedPaths) {
+  for (let index = 0; index < normalizedPaths.length; index++) {
+    const srcKey = normalizedPaths[index];
     try {
       const sourceName = normalizeName(srcKey.split('/').pop());
       const destKey = destDir + sourceName;
       assertUserKey(srcKey);
       assertUserKey(destKey);
-      if (srcKey === destKey) continue;
-      if (!(await keyExists(env, srcKey))) throw new Error('File or folder not found');
-      await assertTargetAvailable(env, destKey);
-      await copyTree(env, srcKey, destKey, action === 'move');
-      completed++;
+      if (srcKey === destKey) {
+        immediateResults[index] = { ok: true, skipped: true };
+        continue;
+      }
+      const firstIndex = firstByDest.get(destKey);
+      if (firstIndex != null) {
+        aliases.push({ index, srcKey, destKey, firstIndex, sameSource: normalizedPaths[firstIndex] === srcKey });
+        continue;
+      }
+      firstByDest.set(destKey, index);
+      primaryTasks.push({ srcKey, destKey, index });
     } catch (e) {
-      failed.push({ path: srcKey, message: e.message || 'Failed' });
+      immediateResults[index] = { ok: false, message: e.message || 'Failed' };
     }
+  }
+
+  const primaryResults = await mapPathResults(primaryTasks, async task => {
+    try {
+      if (!(await keyExists(env, task.srcKey))) throw new Error('File or folder not found');
+      await assertTargetAvailable(env, task.destKey);
+      await copyTree(env, task.srcKey, task.destKey, action === 'move');
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: e.message || 'Failed' };
+    }
+  });
+
+  const results = [...immediateResults];
+  for (let i = 0; i < primaryTasks.length; i++) {
+    results[primaryTasks[i].index] = primaryResults[i];
+  }
+  for (const alias of aliases) {
+    const prior = results[alias.firstIndex];
+    if (prior?.ok && prior?.skipped) {
+      results[alias.index] = { ok: true, skipped: true };
+      continue;
+    }
+    if (prior?.ok) {
+      results[alias.index] = {
+        ok: false,
+        message: alias.sameSource && action === 'move' ? 'File or folder not found' : 'Target already exists',
+      };
+      continue;
+    }
+    results[alias.index] = { ok: false, message: prior?.message || 'Failed' };
+  }
+
+  const failed = [];
+  let completed = 0;
+  for (let index = 0; index < normalizedPaths.length; index++) {
+    const result = results[index];
+    if (result?.ok) {
+      if (!result.skipped) completed++;
+      continue;
+    }
+    failed.push({ path: normalizedPaths[index], message: result?.message || 'Failed' });
   }
 
   await addLog(env, request, action.toUpperCase(), `Batch paste to ${targetDir}`);
@@ -246,16 +308,52 @@ export async function handleRename(env, request, r2Key) {
 export async function handleBatchDelete(env, request) {
   const { paths } = await request.json();
   const normalizedPaths = assertPathList(paths);
+  const firstByPath = new Map();
+  const uniquePaths = [];
+  const results = new Array(normalizedPaths.length);
+
+  for (let index = 0; index < normalizedPaths.length; index++) {
+    const path = normalizedPaths[index];
+    const firstIndex = firstByPath.get(path);
+    if (firstIndex != null) {
+      results[index] = { duplicateOf: firstIndex };
+      continue;
+    }
+    firstByPath.set(path, index);
+    uniquePaths.push(path);
+  }
+
+  const uniqueResults = await mapPathResults(uniquePaths, async path => {
+    try {
+      assertUserKey(path);
+      await softDeleteTree(env, path, request);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: e.message || 'Failed', code: e.code || undefined };
+    }
+  });
+
+  for (let i = 0; i < uniquePaths.length; i++) {
+    results[firstByPath.get(uniquePaths[i])] = uniqueResults[i];
+  }
+  for (let index = 0; index < results.length; index++) {
+    const result = results[index];
+    if (!result?.duplicateOf && result?.duplicateOf !== 0) continue;
+    const prior = results[result.duplicateOf];
+    results[index] = prior?.ok
+      ? { ok: false, message: 'File or folder not found' }
+      : { ok: false, message: prior?.message || 'Failed', code: prior?.code };
+  }
+
   const failed = [];
   let completed = 0;
-  for (const p of normalizedPaths) {
-    try {
-      assertUserKey(p);
-      await softDeleteTree(env, p, request);
+  for (let index = 0; index < normalizedPaths.length; index++) {
+    const result = results[index];
+    if (result?.ok) {
       completed++;
-    } catch (e) {
-      failed.push({ path: p, message: e.message || 'Failed', code: e.code || undefined });
+      continue;
     }
+    failed.push({ path: normalizedPaths[index], message: result?.message || 'Failed', code: result?.code || undefined });
   }
   await addLog(env, request, 'DELETE', `Move to trash ${completed}/${normalizedPaths.length} items`);
   return jsonResponse({ success: failed.length === 0, completed, failed }, failed.length && !completed ? 400 : 200);
@@ -322,7 +420,7 @@ export async function handleMkdir(env, request, r2Key) {
   await assertTargetAvailable(env, folderKey);
   await env.R2.put(key, new Uint8Array(0));
   await addLog(env, request, 'MKDIR', cleanName);
-  return jsonResponse({ success: true });
+  return jsonResponse({ success: true, key: folderKey, path: `/${folderKey}/` });
 }
 
 /**
@@ -538,21 +636,25 @@ export async function handleTrashDelete(env, request) {
   const row = await env.D1.prepare('SELECT * FROM trash WHERE id = ?').bind(id).first();
   if (!row) return jsonResponse({ success: false, message: 'Trash item not found' }, 404);
   await purgeTrashRecord(env, row, request);
-  return jsonResponse({ success: true });
+  return jsonResponse({ success: true, originalKey: row.original_key });
 }
 
 export async function handleTrashClear(env, request) {
   const rows = await trashRows(env);
   let deleted = 0;
   const errors = [];
-  for (const row of rows) {
+  const results = await mapPathResults(rows, async row => {
     try {
       await purgeTrashRecord(env, row, request);
-      deleted++;
+      return { ok: true };
     } catch (e) {
-      errors.push({ id: row.id, original: row.original_key, error: e.message });
+      return { ok: false, error: e.message };
     }
-  }
+  });
+  results.forEach((result, index) => {
+    if (result?.ok) deleted++;
+    else errors.push({ id: rows[index].id, original: rows[index].original_key, error: result?.error || 'Failed' });
+  });
   await addLog(env, request, 'TRASH_CLEAR', `${deleted}/${rows.length} items`);
   return jsonResponse({ success: true, deleted, total: rows.length, errors: errors.length ? errors : undefined });
 }

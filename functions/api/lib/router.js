@@ -120,11 +120,11 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 
   // Trash delete (purge)
   if (path === '/api/trash/delete' && method === 'DELETE') {
-    const body = await request.clone().json().catch(() => null);
     const res = await handleTrashDelete(env, request);
-    if (res.ok && body) {
+    const data = res.ok ? await res.clone().json().catch(() => null) : null;
+    if (res.ok && data?.originalKey) {
       try {
-        await notifyConfiguredWebhooks(env, context, urls => notifyFileDeleted(urls, [body.id], true));
+        await notifyConfiguredWebhooks(env, context, urls => notifyFileDeleted(urls, [data.originalKey], true));
       } catch (_) {}
     }
     return res;
@@ -132,12 +132,11 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 
   // Mkdir
   if (path.startsWith('/api/mkdir') && method === 'POST') {
-    const body = await request.clone().json().catch(() => null);
     const res = await handleMkdir(env, request, r2Key);
-    if (res.ok && body) {
+    const data = res.ok ? await res.clone().json().catch(() => null) : null;
+    if (res.ok && data?.path) {
       try {
-        const folderPath = '/' + r2Key + body.folderName + '/';
-        await notifyConfiguredWebhooks(env, context, urls => notifyFolderCreated(urls, folderPath));
+        await notifyConfiguredWebhooks(env, context, urls => notifyFolderCreated(urls, data.path));
       } catch (_) {}
     }
     return res;
@@ -147,7 +146,10 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
   if (path.startsWith('/api/files') && method === 'POST') {
     assertBodySize(request, true);
     const res = await handleUpload(env, request, r2Key);
-    if (res.ok) await notifyConfiguredWebhooks(env, context, urls => notifyFileUploaded(urls, '/' + r2Key));
+    const data = res.ok ? await res.clone().json().catch(() => null) : null;
+    if (res.ok && data?.key && !data?.skipped) {
+      await notifyConfiguredWebhooks(env, context, urls => notifyFileUploaded(urls, '/' + data.key));
+    }
     return res;
   }
 

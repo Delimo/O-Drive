@@ -187,19 +187,39 @@ export async function searchFileIndex(env, { q, scope, limit, cursor }, hiddenPa
   const offset = Math.max(0, Number(cursor || 0));
   const cleanScope = String(scope || '').replace(/^\/+|\/+$/g, '');
   const like = `%${String(q || '').toLowerCase()}%`;
-  const params = cleanScope ? [like, cleanScope, `${cleanScope}/%`, limit + 1, offset] : [like, limit + 1, offset];
   const sql = cleanScope
     ? `SELECT * FROM file_index WHERE lower(name) LIKE ? AND (path = ? OR path LIKE ?) ORDER BY path ASC LIMIT ? OFFSET ?`
     : `SELECT * FROM file_index WHERE lower(name) LIKE ? ORDER BY path ASC LIMIT ? OFFSET ?`;
   try {
-    const rows = await env.D1.prepare(sql).bind(...params).all();
-    const items = (rows.results || [])
-      .map(mapIndexRow)
-      .filter(f => auth.role === 'admin' || !hiddenPaths.some(hp => f.fullKey === hp || f.fullKey.startsWith(hp + '/')));
-    const page = items.slice(0, limit);
+    const batchSize = limit + 1;
+    const visible = [];
+    let rawOffset = offset;
+    let exhausted = false;
+
+    while (visible.length <= limit && !exhausted) {
+      const params = cleanScope
+        ? [like, cleanScope, `${cleanScope}/%`, batchSize, rawOffset]
+        : [like, batchSize, rawOffset];
+      const rows = await env.D1.prepare(sql).bind(...params).all();
+      const batch = rows.results || [];
+      if (!batch.length) break;
+
+      for (let i = 0; i < batch.length; i++) {
+        const item = mapIndexRow(batch[i]);
+        if (auth.role === 'admin' || !hiddenPaths.some(hp => item.fullKey === hp || item.fullKey.startsWith(hp + '/'))) {
+          visible.push({ item, nextCursor: rawOffset + i + 1 });
+          if (visible.length > limit) break;
+        }
+      }
+
+      rawOffset += batch.length;
+      exhausted = batch.length < batchSize;
+    }
+
+    const page = visible.slice(0, limit).map(entry => entry.item);
     return {
       files: page,
-      nextCursor: items.length > limit ? String(offset + limit) : '',
+      nextCursor: visible.length > limit ? String(visible[limit - 1].nextCursor) : '',
       scanned: page.length,
       scanLimitReached: false,
     };
