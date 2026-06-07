@@ -53,7 +53,7 @@ export async function onRequest(context) {
       }
     }
 
-    if (path === '/api/login' && method === 'POST') return await handleLogin(request, env);
+    if (path === '/api/login' && method === 'POST') return await handleLogin(request, env, context);
     if (path === '/api/logout') return handleLogout(request);
 
     const auth = await verifyAuth(request, env);
@@ -85,7 +85,7 @@ export async function onRequest(context) {
     }
 
     // Public routes (accessible by any authenticated user)
-    const publicResult = await resolvePublicRoute(env, request, url, path, method, hiddenPaths, auth, r2Key, protectedPaths);
+    const publicResult = await resolvePublicRoute(env, request, url, path, method, hiddenPaths, auth, r2Key, protectedPaths, context);
     if (publicResult) return publicResult;
 
     return jsonResponse({ success: false, message: 'Not Found' }, 404);

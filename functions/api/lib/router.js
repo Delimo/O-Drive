@@ -37,9 +37,10 @@ import {
   loadWebhookEndpoints,
 } from './admin.js';
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
-import { notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed } from './webhooks.js';
+import { notifyDownloadBurst, notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed } from './webhooks.js';
 import { checkQuota, formatBytes as formatQuotaBytes } from './storage-quota.js';
 import { assertBodySize, jsonResponse } from './common.js';
+import { checkDownloadBlocked, recordDownloadBurst } from './download-bursts.js';
 
 function waitForWebhook(context, promise) {
   if (!promise) return;
@@ -51,6 +52,14 @@ async function notifyConfiguredWebhooks(env, context, notifyFn) {
   try {
     const endpoints = await loadWebhookEndpoints(env);
     waitForWebhook(context, notifyFn(endpoints));
+  } catch (_) {}
+}
+
+async function monitorDownloadBurst(env, request, auth, r2Key, context) {
+  try {
+    const alert = await recordDownloadBurst(env, request, auth, r2Key);
+    if (!alert) return;
+    await notifyConfiguredWebhooks(env, context, endpoints => notifyDownloadBurst(endpoints, alert));
   } catch (_) {}
 }
 
@@ -183,12 +192,26 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 }
 
 /** Resolve public routes (accessible by any authenticated user including guests). */
-export async function resolvePublicRoute(env, request, url, path, method, hiddenPaths, auth, r2Key, protectedPaths) {
+export async function resolvePublicRoute(env, request, url, path, method, hiddenPaths, auth, r2Key, protectedPaths, context = {}) {
   if (path === '/api/access/unlock' && method === 'POST') return await handleProtectedUnlock(env, request, auth, protectedPaths);
   if (path === '/api/search') return await handleSearch(env, request, url, hiddenPaths, auth, protectedPaths);
   if (path.startsWith('/api/files') && method === 'GET') return await handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths);
   if (path.startsWith('/api/thumbnail/')) return await handleThumbnail(env, request, r2Key, { env });
-  if (path.startsWith('/api/download/') || path.startsWith('/api/preview/')) return await handleDownloadOrPreview(env, request, path, r2Key);
+  if (path.startsWith('/api/download/') || path.startsWith('/api/preview/')) {
+    if (path.startsWith('/api/download/')) {
+      const blocked = await checkDownloadBlocked(env, request, auth);
+      if (blocked.blocked) {
+        return jsonResponse(
+          { success: false, code: 'DOWNLOAD_BLOCKED', message: 'Download temporarily blocked', retryAfter: blocked.retryAfter },
+          429,
+          { 'Retry-After': String(blocked.retryAfter) },
+        );
+      }
+    }
+    const res = await handleDownloadOrPreview(env, request, path, r2Key);
+    if (res.ok && path.startsWith('/api/download/')) waitForWebhook(context, monitorDownloadBurst(env, request, auth, r2Key, context));
+    return res;
+  }
 
   return null; // Not a public route
 }

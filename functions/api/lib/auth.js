@@ -1,4 +1,5 @@
 import { jsonResponse, base64UrlToUint8Array, decodeBase64UrlJson, encodeBase64Url, ensureCoreTables } from './common.js';
+import { normalizeWebhookEndpoints, notifyLoginBurst } from './webhooks.js';
 
 function createCsrfToken() {
   const bytes = new Uint8Array(24);
@@ -9,6 +10,7 @@ function createCsrfToken() {
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
+const LOGIN_ALERT_COOLDOWN_MS = 30 * 60 * 1000;
 
 function isSecureRequest(request) {
   return request && new URL(request.url).protocol === 'https:';
@@ -88,10 +90,60 @@ async function recordLoginFailure(env, ip) {
     await env.D1.prepare(
       'INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt'
     ).bind(ip, Date.now()).run();
+    const row = await env.D1.prepare('SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?').bind(ip).first();
+    return Number(row?.attempts || 0);
   } catch (e) {}
+  return 0;
 }
 
-export async function handleLogin(request, env) {
+function waitForWebhook(context, promise) {
+  if (!promise) return;
+  if (typeof context?.waitUntil === 'function') context.waitUntil(promise.catch(() => {}));
+  else promise.catch(() => {});
+}
+
+async function loadWebhookEndpoints(env) {
+  const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
+  const items = row?.value ? JSON.parse(row.value) : [];
+  return normalizeWebhookEndpoints(items);
+}
+
+function positiveNumber(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+async function shouldSendLoginAlert(env, ip) {
+  const now = Date.now();
+  const cooldownMs = positiveNumber(env.LOGIN_ALERT_COOLDOWN_SECONDS, LOGIN_ALERT_COOLDOWN_MS / 1000) * 1000;
+  const key = `login:${ip}`;
+  try {
+    const row = await env.D1.prepare('SELECT last_alert FROM login_alerts WHERE key = ?').bind(key).first();
+    const lastAlert = Number(row?.last_alert || 0);
+    if (now - lastAlert < cooldownMs) return { ok: false, cooldownSeconds: Math.round(cooldownMs / 1000) };
+    await env.D1.prepare('INSERT OR REPLACE INTO login_alerts (key, last_alert) VALUES (?, ?)').bind(key, now).run();
+    return { ok: true, cooldownSeconds: Math.round(cooldownMs / 1000) };
+  } catch {
+    return { ok: false, cooldownSeconds: Math.round(cooldownMs / 1000) };
+  }
+}
+
+async function notifyLoginFailureBurst(env, request, username, ip, attempts, context) {
+  const alert = await shouldSendLoginAlert(env, ip);
+  if (!alert.ok) return;
+  const endpoints = await loadWebhookEndpoints(env);
+  await notifyLoginBurst(endpoints, {
+    ip,
+    username: String(username || ''),
+    attempts,
+    threshold: LOGIN_MAX_ATTEMPTS,
+    lockoutSeconds: Math.round(LOGIN_LOCKOUT_MS / 1000),
+    cooldownSeconds: alert.cooldownSeconds,
+    userAgent: request.headers.get('user-agent') || '',
+  });
+}
+
+export async function handleLogin(request, env, context = {}) {
   await ensureCoreTables(env);
   const { username, password } = await request.json();
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
@@ -113,7 +165,8 @@ export async function handleLogin(request, env) {
     return jsonResponse({ success: true, csrf }, 200, { 'Set-Cookie': `${cookieName(request)}=${header}.${payload}.${signature}; ${cookieAttributes(request)}` });
   }
 
-  await recordLoginFailure(env, ip);
+  const attempts = await recordLoginFailure(env, ip);
+  if (attempts >= LOGIN_MAX_ATTEMPTS) waitForWebhook(context, notifyLoginFailureBurst(env, request, username, ip, attempts, context));
   return jsonResponse({ success: false }, 401);
 }
 

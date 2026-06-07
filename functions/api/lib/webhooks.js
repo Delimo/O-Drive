@@ -25,6 +25,8 @@ const WEBHOOK_EVENTS = [
   'file.copied',
   'file.renamed',
   'folder.created',
+  'download.burst',
+  'login.burst',
 ];
 
 function endpointLabel(endpoint) {
@@ -41,6 +43,8 @@ function eventLabel(event) {
     'file.copied': '文件复制',
     'file.renamed': '文件重命名',
     'folder.created': '文件夹创建',
+    'download.burst': '大量下载提醒',
+    'login.burst': '登录异常提醒',
     'webhook.test': '测试通知',
   };
   return labels[event] || event;
@@ -58,6 +62,17 @@ function textPayload(payload) {
   if (data.newName) lines.push(`新名称：${data.newName}`);
   if (data.paths) lines.push(`对象：${Array.isArray(data.paths) ? data.paths.join(', ') : data.paths}`);
   if (data.targetDir) lines.push(`目标目录：${data.targetDir}`);
+  if (data.count) lines.push(`下载次数：${data.count}`);
+  if (data.attempts) lines.push(`尝试次数：${data.attempts}`);
+  if (data.threshold) lines.push(`提醒阈值：${data.threshold}`);
+  if (data.windowSeconds) lines.push(`时间窗口：${data.windowSeconds} 秒`);
+  if (data.lockoutSeconds) lines.push(`锁定时长：${data.lockoutSeconds} 秒`);
+  if (data.blockSeconds) lines.push(`禁止下载：${data.blockSeconds} 秒`);
+  if (data.blockedUntil) lines.push(`禁止至：${data.blockedUntil}`);
+  if (data.ip) lines.push(`来源 IP：${data.ip}`);
+  if (data.role) lines.push(`访问角色：${data.role}`);
+  if (data.username) lines.push(`用户名：${data.username}`);
+  if (data.samplePaths) lines.push(`下载样例：${Array.isArray(data.samplePaths) ? data.samplePaths.join(', ') : data.samplePaths}`);
   if (data.message) lines.push(`说明：${data.message}`);
   return lines.join('\n');
 }
@@ -270,4 +285,12 @@ export function notifyFolderCreated(envUrls, path) {
  */
 export function notifyFileRenamed(envUrls, oldPath, newName) {
   return notifyWebhook(envUrls, 'file.renamed', { oldPath, newName });
+}
+
+export function notifyDownloadBurst(envUrls, alert) {
+  return notifyWebhook(envUrls, 'download.burst', alert);
+}
+
+export function notifyLoginBurst(envUrls, alert) {
+  return notifyWebhook(envUrls, 'login.burst', alert);
 }

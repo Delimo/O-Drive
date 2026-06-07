@@ -11,6 +11,8 @@ const WEBHOOK_EVENT_OPTIONS = [
   ['file.copied', '复制'],
   ['file.renamed', '重命名'],
   ['folder.created', '新建文件夹'],
+  ['download.burst', '大量下载'],
+  ['login.burst', '登录异常'],
 ];
 const WEBHOOK_EVENT_KEYS = WEBHOOK_EVENT_OPTIONS.map(([key]) => key);
 export const ADMIN_TABS = ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'webhooks'];

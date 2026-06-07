@@ -34,6 +34,10 @@ const CORE_TABLE_SQL = [
     attempts INTEGER NOT NULL DEFAULT 0,
     last_attempt INTEGER NOT NULL DEFAULT 0
   )`,
+  `CREATE TABLE IF NOT EXISTS login_alerts (
+    key TEXT PRIMARY KEY,
+    last_alert INTEGER NOT NULL DEFAULT 0
+  )`,
   `CREATE TABLE IF NOT EXISTS kv_config (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -43,8 +47,19 @@ const CORE_TABLE_SQL = [
     request_count INTEGER NOT NULL DEFAULT 0,
     window_start INTEGER NOT NULL DEFAULT 0
   )`,
+  `CREATE TABLE IF NOT EXISTS download_bursts (
+    key TEXT PRIMARY KEY,
+    request_count INTEGER NOT NULL DEFAULT 0,
+    window_start INTEGER NOT NULL DEFAULT 0,
+    last_alert INTEGER NOT NULL DEFAULT 0,
+    blocked_until INTEGER NOT NULL DEFAULT 0,
+    sample_paths TEXT NOT NULL DEFAULT '[]'
+  )`,
 ];
 const initializedCoreTables = new WeakSet();
+const CORE_MIGRATION_SQL = [
+  `ALTER TABLE download_bursts ADD COLUMN blocked_until INTEGER NOT NULL DEFAULT 0`,
+];
 
 async function runStatement(statement) {
   if (typeof statement.bind === 'function') return statement.bind().run();
@@ -62,6 +77,11 @@ export async function ensureCoreTables(env) {
   if (initializedCoreTables.has(env)) return;
   for (const sql of CORE_TABLE_SQL) {
     await runStatement(env.D1.prepare(sql));
+  }
+  for (const sql of CORE_MIGRATION_SQL) {
+    try {
+      await runStatement(env.D1.prepare(sql));
+    } catch {}
   }
   initializedCoreTables.add(env);
 }

@@ -39,6 +39,8 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
   const protectedRows = [];
   const pathAttemptRows = [];
   const loginAttemptRows = [];
+  const loginAlertRows = [];
+  const downloadBurstRows = [];
   const settingsRows = new Map();
   const kvRows = new Map();
   const fileIndexRows = [];
@@ -256,6 +258,38 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
                 loginAttemptRows.push(row);
               }
             }
+            if (/INSERT OR REPLACE INTO login_alerts/i.test(sql)) {
+              const row = {
+                key: statement.bound?.[0],
+                last_alert: statement.bound?.[1],
+              };
+              const idx = loginAlertRows.findIndex(item => item.key === row.key);
+              if (idx >= 0) loginAlertRows[idx] = row;
+              else loginAlertRows.push(row);
+            }
+            if (/INSERT OR REPLACE INTO download_bursts/i.test(sql)) {
+              const row = {
+                key: statement.bound?.[0],
+                request_count: statement.bound?.[1],
+                window_start: statement.bound?.[2],
+                last_alert: statement.bound?.[3],
+                blocked_until: statement.bound?.[4],
+                sample_paths: statement.bound?.[5],
+              };
+              const idx = downloadBurstRows.findIndex(item => item.key === row.key);
+              if (idx >= 0) downloadBurstRows[idx] = row;
+              else downloadBurstRows.push(row);
+            }
+            if (/UPDATE download_bursts SET request_count = \?/i.test(sql)) {
+              const key = statement.bound?.[4];
+              const row = downloadBurstRows.find(item => item.key === key);
+              if (row) {
+                row.request_count = statement.bound?.[0];
+                row.last_alert = statement.bound?.[1];
+                row.blocked_until = statement.bound?.[2];
+                row.sample_paths = statement.bound?.[3];
+              }
+            }
             if (/INSERT OR REPLACE INTO settings/i.test(sql)) {
               settingsRows.set('trash_retention_days', statement.bound?.[0]);
             }
@@ -306,6 +340,13 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
             if (/DELETE FROM path_access_attempts$/i.test(sql.trim())) {
               pathAttemptRows.length = 0;
             }
+            if (/DELETE FROM download_bursts WHERE window_start < \? AND last_alert < \?/i.test(sql)) {
+              const [windowCutoff, alertCutoff] = statement.bound || [];
+              for (let i = downloadBurstRows.length - 1; i >= 0; i--) {
+                const row = downloadBurstRows[i];
+                if (Number(row.window_start || 0) < windowCutoff && Number(row.last_alert || 0) < alertCutoff) downloadBurstRows.splice(i, 1);
+              }
+            }
             return {};
           },
           async first() {
@@ -315,9 +356,21 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const ip = statement.bound?.[0];
               return loginAttemptRows.find(row => row.ip === ip) || null;
             }
+            if (/SELECT last_alert FROM login_alerts WHERE key = \?/i.test(sql)) {
+              return loginAlertRows.find(row => row.key === statement.bound?.[0]) || null;
+            }
             if (/SELECT attempts, last_attempt FROM path_access_attempts WHERE path = \? AND ip = \?/i.test(sql)) {
               const [path, ip] = statement.bound || [];
               return pathAttemptRows.find(row => row.path === path && row.ip === ip) || null;
+            }
+            if (/SELECT request_count, window_start, last_alert, sample_paths FROM download_bursts WHERE key = \?/i.test(sql)) {
+              return downloadBurstRows.find(row => row.key === statement.bound?.[0]) || null;
+            }
+            if (/SELECT request_count, window_start, last_alert, blocked_until, sample_paths FROM download_bursts WHERE key = \?/i.test(sql)) {
+              return downloadBurstRows.find(row => row.key === statement.bound?.[0]) || null;
+            }
+            if (/SELECT blocked_until FROM download_bursts WHERE key = \?/i.test(sql)) {
+              return downloadBurstRows.find(row => row.key === statement.bound?.[0]) || null;
             }
             if (/SELECT COUNT\(\*\) as count FROM trash/i.test(sql)) return { count: filteredTrashRows(statement.bound || []).length };
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
@@ -628,6 +681,69 @@ test('admin login locks after repeated failed attempts and clears after success'
       headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.52' },
     }), env);
     assert.equal(failed.status, 401);
+  }
+});
+
+test('admin login failure burst sends one webhook alert during cooldown', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+  env.LOGIN_ALERT_COOLDOWN_SECONDS = '1800';
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  const drainWaitUntil = async () => {
+    while (waitUntilPromises.length) {
+      const batch = waitUntilPromises.splice(0);
+      await Promise.all(batch);
+    }
+  };
+
+  try {
+    await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)')
+      .bind('webhooks', JSON.stringify([{ name: 'login-alert', url: 'https://hooks.example.test/login', events: ['login.burst'] }]))
+      .run();
+
+    for (let i = 0; i < 5; i++) {
+      const failed = await handleLogin(new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'bad' }),
+        headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.88', 'user-agent': 'login-test' },
+      }), env, {
+        waitUntil(promise) {
+          waitUntilPromises.push(promise);
+        },
+      });
+      assert.equal(failed.status, 401);
+      await drainWaitUntil();
+    }
+
+    const locked = await handleLogin(new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'pass' }),
+      headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.88', 'user-agent': 'login-test' },
+    }), env, {
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(locked.status, 429);
+    await drainWaitUntil();
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://hooks.example.test/login');
+    assert.equal(calls[0].body.event, 'login.burst');
+    assert.equal(calls[0].body.data.ip, '203.0.113.88');
+    assert.equal(calls[0].body.data.username, 'admin');
+    assert.equal(calls[0].body.data.attempts, 5);
+    assert.equal(calls[0].body.data.threshold, 5);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
 
@@ -1363,6 +1479,80 @@ test('webhook endpoints can subscribe to selected events only', async () => {
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, 'https://hooks.example.test/folders');
     assert.equal(calls[0].body.event, 'folder.created');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('download burst webhook alerts once during cooldown', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
+  });
+  env.ALLOW_GUEST = 'true';
+  env.DOWNLOAD_BURST_THRESHOLD = '3';
+  env.DOWNLOAD_BURST_WINDOW_SECONDS = '300';
+  env.DOWNLOAD_BURST_COOLDOWN_SECONDS = '1800';
+  env.DOWNLOAD_BURST_BLOCK_SECONDS = '1800';
+
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  const drainWaitUntil = async () => {
+    while (waitUntilPromises.length) {
+      const batch = waitUntilPromises.splice(0);
+      await Promise.all(batch);
+    }
+  };
+
+  try {
+    await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)')
+      .bind('webhooks', JSON.stringify([{ name: 'download-alert', url: 'https://hooks.example.test/downloads', events: ['download.burst'] }]))
+      .run();
+
+    for (let i = 0; i < 3; i++) {
+      const res = await onRequest({
+        env,
+        request: new Request('https://example.com/api/download/docs/readme.txt', {
+          headers: { 'cf-connecting-ip': '203.0.113.77', 'user-agent': 'burst-test' },
+        }),
+        waitUntil(promise) {
+          waitUntilPromises.push(promise);
+        },
+      });
+      assert.equal(res.status, 200);
+      await drainWaitUntil();
+    }
+
+    const blocked = await onRequest({
+      env,
+      request: new Request('https://example.com/api/download/docs/readme.txt', {
+        headers: { 'cf-connecting-ip': '203.0.113.77', 'user-agent': 'burst-test' },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(blocked.status, 429);
+    const blockedData = await blocked.json();
+    assert.equal(blockedData.code, 'DOWNLOAD_BLOCKED');
+    assert.ok(Number(blocked.headers.get('Retry-After')) > 0);
+    await drainWaitUntil();
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://hooks.example.test/downloads');
+    assert.equal(calls[0].body.event, 'download.burst');
+    assert.equal(calls[0].body.data.ip, '203.0.113.77');
+    assert.equal(calls[0].body.data.role, 'guest');
+    assert.equal(calls[0].body.data.count, 3);
+    assert.equal(calls[0].body.data.threshold, 3);
+    assert.equal(calls[0].body.data.blockSeconds, 1800);
+    assert.ok(calls[0].body.data.blockedUntil);
+    assert.deepEqual(calls[0].body.data.samplePaths, ['/docs/readme.txt']);
   } finally {
     globalThis.fetch = originalFetch;
   }
