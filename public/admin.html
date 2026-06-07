@@ -26,6 +26,7 @@
             <button id="btn-privacy" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["privacy"]' class="admin-tab-btn">隐藏管理</button>
             <button id="btn-protected" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["protected"]' class="admin-tab-btn">访问密码</button>
             <button id="btn-quota" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["quota"]' class="admin-tab-btn">存储配额</button>
+            <button id="btn-shares" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["shares"]' class="admin-tab-btn">分享链接</button>
             <button id="btn-webhooks" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["webhooks"]' class="admin-tab-btn">Webhook</button>
         </div>
 
@@ -98,6 +99,15 @@
                         <h2>操作日志</h2>
                         <p>记录管理员上传、删除、维护等关键操作，便于追踪变更来源。</p>
                     </div>
+                </div>
+                <div class="admin-log-filters">
+                    <input id="logFilterQuery" type="search" class="admin-input" placeholder="关键词：路径、详情、IP">
+                    <input id="logFilterAction" type="text" class="admin-input" placeholder="动作，如 UPLOAD">
+                    <input id="logFilterIp" type="text" class="admin-input" placeholder="IP">
+                    <input id="logFilterFrom" type="date" class="admin-input">
+                    <input id="logFilterTo" type="date" class="admin-input">
+                    <button class="btn btn-primary h-10 px-4" data-admin-action="apply-log-filters">筛选</button>
+                    <button class="btn h-10 px-4" data-admin-action="reset-log-filters">重置</button>
                 </div>
                 <div class="admin-table-card flex-1 relative">
                     <table class="w-full text-left border-collapse text-slate-900 text-sm">
@@ -192,6 +202,28 @@
                 </section>
             </div>
 
+            <div id="shares-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+                <div class="admin-section-head">
+                    <div>
+                        <h2>分享链接</h2>
+                        <p>管理已生成的文件分享。链接过期后会保留 7 天，期间可手动删除；超过 7 天会自动清理。</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn h-8 px-3" data-admin-action="refresh-shares">刷新</button>
+                        <button class="btn btn-danger-soft h-8 px-3" data-admin-action="cleanup-shares">清理过期</button>
+                    </div>
+                </div>
+                <div class="admin-table-card overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
+                    <table class="w-full text-left text-slate-900">
+                        <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
+                            <tr><th class="px-5 py-3 text-slate-500">文件</th><th class="px-5 py-3 text-slate-500">策略</th><th class="px-5 py-3 text-slate-500">状态</th><th class="px-5 py-3 text-right text-slate-500">操作</th></tr>
+                        </thead>
+                        <tbody id="sharesTbody" class="text-sm divide-y divide-border/40 text-slate-600"></tbody>
+                    </table>
+                </div>
+                <p id="sharesResult" class="text-xs text-slate-500 mt-3"></p>
+            </div>
+
             <div id="webhooks-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
                 <section class="admin-page-panel">
                     <div class="admin-section-head">
@@ -277,6 +309,7 @@
                             </div>
                             <div id="webhookList" class="webhook-list"></div>
                             <p id="webhookResult" class="webhook-result hidden"></p>
+                            <div id="webhookDeliveries" class="webhook-deliveries"></div>
                         </div>
                     </div>
                 </section>

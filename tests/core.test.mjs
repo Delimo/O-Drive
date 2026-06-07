@@ -9,6 +9,7 @@ import {
   handleMultipartComplete,
   handleMultipartAbort,
   handleRename,
+  handleUpload,
   handleOperationEstimate,
   handleTrashList,
   handleTrashRestore,
@@ -18,7 +19,7 @@ import {
   handleTrashRetention,
   handlePaste,
 } from '../functions/api/lib/file-mutations.js';
-import { handleAdminHealth, handleAdminStats } from '../functions/api/lib/admin.js';
+import { handleAdminHealth, handleAdminLogs, handleAdminStats } from '../functions/api/lib/admin.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
@@ -41,9 +42,11 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
   const loginAttemptRows = [];
   const loginAlertRows = [];
   const downloadBurstRows = [];
+  const webhookDeliveryRows = [];
   const settingsRows = new Map();
   const kvRows = new Map();
   const fileIndexRows = [];
+  const shareRows = [];
   const logs = [];
   const sizeOf = body => typeof body === 'string' ? body.length : body?.byteLength || 0;
   const listObjects = (prefix = '') => [...byKey.values()]
@@ -72,6 +75,39 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
     if (typeof bound[idx] === 'number') {
       const to = bound[idx++];
       rows = rows.filter(row => row.trashed_at <= to);
+    }
+    return rows;
+  };
+  const materializedLogs = () => logs.map((log, i) => ({
+    ...log,
+    timestamp: new Date(Date.now() - i * 1000).toISOString().replace('T', ' ').replace(/\.\d+Z$/, ''),
+  }));
+  const filteredLogs = (sql = '', bound = []) => {
+    let rows = materializedLogs();
+    let idx = 0;
+    const likeText = value => String(value || '').replace(/%/g, '').toLowerCase();
+    if (/\(action LIKE \? OR details LIKE \? OR ip LIKE \?\)/i.test(sql)) {
+      const q = likeText(bound[idx]);
+      idx += 3;
+      rows = rows.filter(row => String(row.action || '').toLowerCase().includes(q)
+        || String(row.details || '').toLowerCase().includes(q)
+        || String(row.ip || '').toLowerCase().includes(q));
+    }
+    if (/action = \?/i.test(sql)) {
+      const action = String(bound[idx++] || '').toUpperCase();
+      rows = rows.filter(row => String(row.action || '').toUpperCase() === action);
+    }
+    if (/ip LIKE \?/i.test(sql)) {
+      const ip = likeText(bound[idx++]);
+      rows = rows.filter(row => String(row.ip || '').toLowerCase().includes(ip));
+    }
+    if (/timestamp >= \?/i.test(sql)) {
+      const from = String(bound[idx++] || '');
+      rows = rows.filter(row => String(row.timestamp || '') >= from);
+    }
+    if (/timestamp <= \?/i.test(sql)) {
+      const to = String(bound[idx++] || '');
+      rows = rows.filter(row => String(row.timestamp || '') <= to);
     }
     return rows;
   };
@@ -229,6 +265,38 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               if (idx >= 0) fileIndexRows[idx] = row;
               else fileIndexRows.push(row);
             }
+            if (/INSERT INTO share_links/i.test(sql)) {
+              const row = {
+                token: statement.bound?.[0],
+                path: statement.bound?.[1],
+                name: statement.bound?.[2],
+                size: statement.bound?.[3],
+                content_type: statement.bound?.[4],
+                allow_preview: statement.bound?.[5],
+                allow_download: statement.bound?.[6],
+                expires_at: statement.bound?.[7],
+                max_downloads: statement.bound?.[8],
+                download_count: 0,
+                created_at: statement.bound?.[9],
+                last_accessed_at: 0,
+              };
+              const idx = shareRows.findIndex(item => item.token === row.token);
+              if (idx >= 0) shareRows[idx] = row;
+              else shareRows.push(row);
+            }
+            if (/INSERT INTO webhook_deliveries/i.test(sql)) {
+              webhookDeliveryRows.push({
+                id: webhookDeliveryRows.length + 1,
+                event: statement.bound?.[0],
+                endpoint: statement.bound?.[1],
+                url: statement.bound?.[2],
+                ok: statement.bound?.[3],
+                status: statement.bound?.[4],
+                error: statement.bound?.[5],
+                duration_ms: statement.bound?.[6],
+                created_at: statement.bound?.[7],
+              });
+            }
             if (/INSERT INTO path_access_attempts/i.test(sql)) {
               const row = {
                 path: statement.bound?.[0],
@@ -327,6 +395,22 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const idx = fileIndexRows.findIndex(row => row.path === path);
               if (idx >= 0) fileIndexRows.splice(idx, 1);
             }
+            if (/DELETE FROM share_links WHERE token = \?/i.test(sql)) {
+              const token = statement.bound?.[0];
+              const idx = shareRows.findIndex(row => row.token === token);
+              if (idx >= 0) shareRows.splice(idx, 1);
+            }
+            if (/UPDATE share_links SET last_accessed_at = \? WHERE token = \?/i.test(sql)) {
+              const row = shareRows.find(item => item.token === statement.bound?.[1]);
+              if (row) row.last_accessed_at = statement.bound?.[0];
+            }
+            if (/UPDATE share_links SET download_count = download_count \+ 1/i.test(sql)) {
+              const row = shareRows.find(item => item.token === statement.bound?.[1]);
+              if (row) {
+                row.download_count = Number(row.download_count || 0) + 1;
+                row.last_accessed_at = statement.bound?.[0];
+              }
+            }
             if (/DELETE FROM file_index WHERE path = \? OR path LIKE \?/i.test(sql)) {
               const path = statement.bound?.[0];
               const prefix = String(statement.bound?.[1] || '').replace(/%$/, '');
@@ -374,7 +458,8 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
             }
             if (/SELECT COUNT\(\*\) as count FROM trash/i.test(sql)) return { count: filteredTrashRows(statement.bound || []).length };
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
-            if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: logs.length };
+            if (/SELECT \* FROM share_links WHERE token = \?/i.test(sql)) return shareRows.find(row => row.token === statement.bound?.[0]) || null;
+            if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: filteredLogs(sql, statement.bound || []).length };
             if (/SELECT value FROM settings WHERE key = 'trash_retention_days'/i.test(sql)) {
               const value = settingsRows.get('trash_retention_days');
               return value == null ? null : { value };
@@ -411,6 +496,21 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
               const limit = statement.bound?.[statement.bound.length - 2] ?? rows.length;
               const offset = statement.bound?.[statement.bound.length - 1] ?? 0;
               return { results: rows.sort((a, b) => a.path.localeCompare(b.path)).slice(offset, offset + limit) };
+            }
+            if (/SELECT token FROM share_links WHERE/i.test(sql)) {
+              const now = statement.bound?.[0] ?? Date.now();
+              return {
+                results: shareRows
+                  .filter(row => (Number(row.expires_at || 0) > 0 && Number(row.expires_at || 0) <= now)
+                    || (Number(row.max_downloads || 0) > 0 && Number(row.download_count || 0) >= Number(row.max_downloads || 0)))
+                  .map(row => ({ token: row.token })),
+              };
+            }
+            if (/SELECT \* FROM share_links ORDER BY created_at DESC/i.test(sql)) {
+              return { results: [...shareRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)) };
+            }
+            if (/SELECT \* FROM webhook_deliveries ORDER BY created_at DESC LIMIT 20/i.test(sql)) {
+              return { results: [...webhookDeliveryRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, 20) };
             }
             if (/SELECT kind, COUNT\(\*\) as count, SUM\(size\) as size FROM file_index GROUP BY kind/i.test(sql)) {
               const byKind = {};
@@ -452,8 +552,12 @@ function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity } = {}) 
             if (/SELECT \* FROM trash\s+ORDER BY trashed_at DESC/i.test(sql)) {
               return { results: [...trashRows].sort((a, b) => b.trashed_at - a.trashed_at) };
             }
-            if (/SELECT \* FROM logs ORDER BY timestamp DESC/i.test(sql)) {
-              return { results: logs.map((log, i) => ({ ...log, timestamp: new Date(Date.now() - i * 1000).toISOString() })) };
+            if (/SELECT \* FROM logs/i.test(sql)) {
+              const bound = statement.bound || [];
+              const size = /LIMIT \? OFFSET \?/i.test(sql) ? bound[bound.length - 2] : undefined;
+              const offset = /LIMIT \? OFFSET \?/i.test(sql) ? bound[bound.length - 1] : 0;
+              const rows = filteredLogs(sql, /LIMIT \? OFFSET \?/i.test(sql) ? bound.slice(0, -2) : bound);
+              return { results: size == null ? rows : rows.slice(offset, offset + size) };
             }
             return { results: [] };
           },
@@ -1033,6 +1137,24 @@ test('multipart upload logs only final user-visible events', async () => {
   assert.deepEqual((logs.results || []).map(log => log.action), ['UPLOAD']);
 });
 
+test('admin logs can be filtered by query action ip and date range', async () => {
+  const env = makeEnv();
+  await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)')
+    .bind('UPLOAD', 'docs/readme.txt', '192.0.2.10')
+    .run();
+  await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)')
+    .bind('DELETE', 'private/old.txt', '198.51.100.20')
+    .run();
+
+  const res = await handleAdminLogs(env, new URL('https://example.com/api/admin/logs?q=readme&action=UPLOAD&ip=192.0.2&from=2000-01-01&to=2099-01-01'));
+  const data = await res.json();
+
+  assert.equal(data.totalPages, 1);
+  assert.equal(data.logs.length, 1);
+  assert.equal(data.logs[0].action, 'UPLOAD');
+  assert.equal(data.logs[0].details, 'docs/readme.txt');
+});
+
 test('user writes cannot target reserved system prefixes', async () => {
   const env = makeEnv();
   await assert.rejects(
@@ -1155,6 +1277,23 @@ test('rename refuses to overwrite existing targets', async () => {
       headers: { 'Content-Type': 'application/json' },
     }), 'docs/a.txt'),
     /Target already exists/,
+  );
+});
+
+test('rename refuses missing source paths', async () => {
+  const env = makeEnv();
+
+  await assert.rejects(
+    () => handleRename(env, new Request('https://example.com', {
+      method: 'PUT',
+      body: JSON.stringify({ newName: 'renamed.txt' }),
+      headers: { 'Content-Type': 'application/json' },
+    }), 'docs/missing.txt'),
+    err => {
+      assert.equal(err.status, 404);
+      assert.match(err.message, /not found/i);
+      return true;
+    },
   );
 });
 
@@ -1302,6 +1441,33 @@ test('multipart uploads can resolve name conflicts', async () => {
     headers: { 'Content-Type': 'application/json' },
   }));
   assert.equal((await skipped.json()).skipped, true);
+});
+
+test('skipped upload conflicts do not require remaining quota', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/report.pdf', body: 'old', size: 3, uploaded: new Date('2026-01-01') }],
+  });
+  await setStorageQuotaForTest(env.D1, 3);
+  await upsertFileIndex(env, 'docs/report.pdf', { size: 3, contentType: 'application/pdf', uploaded: new Date('2026-01-01') });
+
+  const form = new FormData();
+  form.append('file', new File(['new-content'], 'report.pdf', { type: 'application/pdf' }));
+  const upload = await handleUpload(env, new Request('https://example.com/api/files/docs?conflict=skip', {
+    method: 'POST',
+    body: form,
+  }), 'docs');
+  const uploadData = await upload.json();
+  assert.equal(upload.status, 200);
+  assert.equal(uploadData.skipped, true);
+
+  const multipart = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/docs', name: 'report.pdf', type: 'application/pdf', totalSize: 10, conflict: 'skip' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const multipartData = await multipart.json();
+  assert.equal(multipart.status, 200);
+  assert.equal(multipartData.skipped, true);
 });
 
 test('quota check syncs empty file index from R2 before accepting uploads', async () => {
@@ -1921,6 +2087,18 @@ test('admin can send generic webhook test messages', async () => {
     assert.equal(calls[0].url, 'https://example.com/webhook');
     assert.equal(calls[0].body.event, 'webhook.test');
     assert.match(calls[0].body.data.message, /O-Drive/);
+
+    const deliveries = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/webhook-deliveries', {
+        headers: { Cookie: cookie },
+      }),
+    });
+    assert.equal(deliveries.status, 200);
+    const deliveryData = await deliveries.json();
+    assert.equal(deliveryData.items.length, 1);
+    assert.equal(deliveryData.items[0].event, 'webhook.test');
+    assert.equal(deliveryData.items[0].ok, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -1975,7 +2153,10 @@ test('webhook msgtype supports text and markdown payloads', async () => {
     await Promise.all(waitUntilPromises);
 
     assert.equal(calls[0].body.msgtype, 'text');
-    assert.match(calls[0].body.text.content, /O-Drive 文件夹创建/);
+    assert.match(calls[0].body.text.content, /O-Drive 新建文件夹/);
+    assert.match(calls[0].body.text.content, /事件：新建文件夹/);
+    assert.match(calls[0].body.text.content, /时间：.+中国时间/);
+    assert.doesNotMatch(calls[0].body.text.content, /folder\.created/);
     assert.match(calls[0].body.text.content, /wechat-docs/);
 
     const markdown = await onRequest({
@@ -1989,6 +2170,8 @@ test('webhook msgtype supports text and markdown payloads', async () => {
     assert.equal(markdown.status, 200);
     assert.equal(calls[1].body.msgtype, 'markdown');
     assert.match(calls[1].body.markdown.content, /O-Drive 测试通知/);
+    assert.match(calls[1].body.markdown.content, /事件：测试通知/);
+    assert.doesNotMatch(calls[1].body.markdown.content, /webhook\.test/);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -2054,6 +2237,210 @@ test('clearing webhook settings removes persisted endpoint data', async () => {
     }),
   });
   assert.deepEqual(await listed.json(), { items: [], urls: [] });
+});
+
+test('admin can create public share links and expired shares are deleted', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const create = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ path: '/docs/readme.txt', expiresInDays: 7, maxDownloads: 1 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(create.status, 200);
+  const created = await create.json();
+  const token = created.item?.token;
+  assert.ok(token);
+
+  const info = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info`),
+  });
+  assert.equal(info.status, 200);
+  assert.equal((await info.json()).item.path, 'docs/readme.txt');
+
+  const download = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/download`),
+  });
+  assert.equal(download.status, 200);
+
+  const exhausted = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/download`),
+  });
+  assert.equal(exhausted.status, 410);
+  const exhaustedData = await exhausted.json();
+  assert.equal(exhaustedData.deleted, true);
+
+  const missing = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info`),
+  });
+  assert.equal(missing.status, 404);
+});
+
+test('admin can manually clean expired share records', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/old.txt', body: 'old', size: 3, uploaded: new Date('2026-01-01') }],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const create = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ path: 'docs/old.txt', expiresAt: Date.now() - 1000 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(create.status, 200);
+
+  const cleanup = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'cleanup-expired' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(cleanup.status, 200);
+  assert.equal((await cleanup.json()).deleted, 1);
+
+  const listed = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  assert.deepEqual((await listed.json()).items, []);
+});
+
+test('recently expired share records are retained until manual delete or retention passes', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/recently-expired.txt', body: 'old', size: 3, uploaded: new Date('2026-01-01') }],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const create = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ path: 'docs/recently-expired.txt', expiresAt: Date.now() - 1000 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(create.status, 200);
+  const token = (await create.json()).item.token;
+
+  const expired = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info`),
+  });
+  assert.equal(expired.status, 410);
+  const expiredData = await expired.json();
+  assert.equal(expiredData.deleted, false);
+  assert.ok(expiredData.autoDeleteAt > Date.now());
+
+  const listed = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const listedData = await listed.json();
+  assert.equal(listedData.items.length, 1);
+  assert.equal(listedData.items[0].expired, true);
+
+  const deleted = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/admin/shares?token=${encodeURIComponent(token)}`, {
+      method: 'DELETE',
+      headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(deleted.status, 200);
+  assert.deepEqual(await deleted.json(), { success: true });
+});
+
+test('admin share list auto-removes expired share records', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/expired.txt', body: 'old', size: 3, uploaded: new Date('2026-01-01') }],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const create = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ path: 'docs/expired.txt', expiresAt: Date.now() - 8 * 24 * 60 * 60 * 1000 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(create.status, 200);
+
+  const listed = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  assert.equal(listed.status, 200);
+  assert.deepEqual((await listed.json()).items, []);
 });
 
 test('webhook notifications ignore legacy env settings', async () => {

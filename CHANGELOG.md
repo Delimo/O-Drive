@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-06-07
+
+### Added
+
+- 新增公开文件分享功能，管理员可为单个文件创建分享链接。
+- 分享链接支持设置有效期、最大下载次数、是否允许在线预览和是否允许下载。
+- 新增公开分享页 `/share.html?token=...`，提供文件信息、下载入口和在线预览。
+- 管理后台新增“分享链接”页，可查看、复制、删除和手动清理分享记录。
+- 新增 Webhook 最近发送记录，后台可查看事件、目标、HTTP 状态、耗时和成功/失败状态。
+- 操作日志新增筛选能力，支持关键词、动作、IP 和日期范围。
+- Webhook `text` / `markdown` 消息改为面向普通用户的中文事件描述，并使用中国时间展示。
+- 新增分享链接、日志筛选、Webhook 发送记录和过期分享保留期相关测试。
+
+### Changed
+
+- 分享链接过期后立即停止访问，但记录会保留 7 天；7 天内可手动删除，超过 7 天后自动清理。
+- 达到最大下载次数的分享会立即失效并清理。
+- 分享记录只保存 D1 元数据，不复制 R2 文件，删除分享不会留下额外文件副本。
+- 管理端分享页、公开分享页和 Webhook 发送记录区域补齐响应式 UI，统一为 O-Drive 现有浅色卡片风格。
+- Webhook 文本消息不再显示 `file.deleted`、`webhook.test` 等内部事件名；JSON 格式仍保留机器可读事件字段。
+- 管理后台日志动作补充分享相关中文标签。
+- 公开分享 API 在登录校验前处理，分享访问不需要登录。
+- 上传冲突选择 `skip` 时，不再因为剩余配额不足而错误拒绝跳过。
+- 重命名缺失源文件时返回 404，避免误报成功。
+
+### Verified
+
+- `node --check functions/api/lib/shares.js` 通过。
+- `node --check functions/api/lib/webhooks.js` 通过。
+- `node --check functions/api/lib/admin.js` 通过。
+- `node --check functions/api/lib/router.js` 通过。
+- `node --check public/js/share-app.js` 通过。
+- `node --check public/js/admin-actions.js` 通过。
+- `node --test tests/*.test.mjs` 通过，59 个测试全绿。
+- 使用本地 mock 服务检查公开分享页、管理端分享页和 Webhook 页面在桌面与移动视口下无横向溢出、无控制台错误。
+
 ## 2026-06-06
 
 ### Added

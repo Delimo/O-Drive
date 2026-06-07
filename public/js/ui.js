@@ -124,6 +124,9 @@ export const UI = {
     const adminDirectLinkButton = state.userRole === 'admin' && meta.sizeFormatted
       ? `<button class="btn" data-action="copy-direct-link" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>复制直链</button>`
       : '';
+    const adminShareButton = state.userRole === 'admin' && meta.sizeFormatted
+      ? `<button class="btn" data-action="create-share" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>创建分享</button>`
+      : '';
     title.textContent = meta.name;
     empty.classList.add('hidden');
     body.innerHTML = `
@@ -132,6 +135,7 @@ export const UI = {
         ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" data-action="open-preview" data-args='${escapeHtml(JSON.stringify([meta.path, meta.name, meta.protected ? true : false]))}'>预览</button>` : ''}
         ${meta.sizeFormatted ? `<button class="btn" data-action="download-file" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>下载</button>` : ''}
         ${adminDirectLinkButton}
+        ${adminShareButton}
         <button class="btn" data-action="copy-path" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>复制路径</button>
       </div>
       <div class="space-y-3 text-sm">

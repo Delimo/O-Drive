@@ -15,7 +15,7 @@ const WEBHOOK_EVENT_OPTIONS = [
   ['login.burst', '登录异常'],
 ];
 const WEBHOOK_EVENT_KEYS = WEBHOOK_EVENT_OPTIONS.map(([key]) => key);
-export const ADMIN_TABS = ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'webhooks'];
+export const ADMIN_TABS = ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'shares', 'webhooks'];
 
 export function getInitialAdminTab() {
   const tab = (window.location.hash || '').replace(/^#/, '');
@@ -42,6 +42,9 @@ function describeLogAction(action = '') {
     QUOTA: '存储配额',
     WEBHOOKS: 'Webhook 配置',
     WEBHOOK_TEST: 'Webhook 测试',
+    SHARE_CREATE: '创建分享',
+    SHARE_DELETE: '删除分享',
+    SHARE_CLEANUP: '清理分享',
     TRASH: '回收站',
     RESTORE: '恢复文件',
     PURGE: '彻底删除',
@@ -194,6 +197,36 @@ function setWebhookRowStatus(index, text = '', tone = 'muted') {
   status.classList.toggle('is-muted', tone === 'muted');
 }
 
+async function renderWebhookDeliveries() {
+  const box = document.getElementById('webhookDeliveries');
+  if (!box) return;
+  const { res, data } = await api.adminWebhookDeliveries();
+  if (!res.ok) {
+    box.innerHTML = '';
+    return;
+  }
+  const items = data.items || [];
+  if (!items.length) {
+    box.innerHTML = '<div class="webhook-empty">暂无发送记录。</div>';
+    return;
+  }
+  box.innerHTML = [
+    '<div class="webhook-block-title">最近发送</div>',
+    ...items.map(item => {
+      const ok = Number(item.ok || 0) === 1;
+      const time = item.created_at ? new Date(Number(item.created_at)).toLocaleString('zh-CN', { hour12: false }) : '-';
+      const status = item.status ? `HTTP ${item.status}` : (item.error || '-');
+      return `
+        <div class="webhook-delivery-row ${ok ? 'is-ok' : 'is-bad'}">
+          <em>${ok ? '成功' : '失败'}</em>
+          <strong title="${escapeHtml(item.url || '')}">${escapeHtml(item.event || '')} · ${escapeHtml(item.endpoint || item.url || '')}</strong>
+          <span>${escapeHtml(status)} · ${escapeHtml(String(item.duration_ms || 0))}ms · ${escapeHtml(time)}</span>
+        </div>
+      `;
+    }),
+  ].join('');
+}
+
 function readWebhookForm() {
   const events = selectedWebhookEvents();
   const endpoint = {
@@ -209,6 +242,22 @@ function readWebhookForm() {
     enabled: true,
   };
   return endpoint;
+}
+
+function shareLink(token) {
+  return new URL(`/share.html?token=${encodeURIComponent(token)}`, window.location.origin).href;
+}
+
+function shareTime(value) {
+  return value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '长期有效';
+}
+
+function setSharesResult(text = '', tone = 'muted') {
+  const result = document.getElementById('sharesResult');
+  if (!result) return;
+  result.textContent = text;
+  result.classList.toggle('text-rose-600', tone === 'error');
+  result.classList.toggle('text-emerald-700', tone === 'success');
 }
 
 export const AdminActions = {
@@ -230,6 +279,7 @@ export const AdminActions = {
     if (tabId === 'logs') return this.loadLogs();
     if (tabId === 'privacy') return this.loadHidden();
     if (tabId === 'quota') return this.loadQuota();
+    if (tabId === 'shares') return this.loadShares();
     if (tabId === 'webhooks') return this.loadWebhooks();
     return this.loadProtected();
   },
@@ -474,7 +524,19 @@ export const AdminActions = {
   },
 
   async loadLogs() {
-    const { res, data } = await api.adminLogs(adminState.currentPage, LOG_PAGE_SIZE);
+    const filters = adminState.logFilters || {};
+    const inputMap = {
+      logFilterQuery: filters.q || '',
+      logFilterAction: filters.action || '',
+      logFilterIp: filters.ip || '',
+      logFilterFrom: filters.from || '',
+      logFilterTo: filters.to || '',
+    };
+    Object.entries(inputMap).forEach(([id, value]) => {
+      const input = document.getElementById(id);
+      if (input && input.value !== value) input.value = value;
+    });
+    const { res, data } = await api.adminLogs(adminState.currentPage, LOG_PAGE_SIZE, adminState.logFilters || {});
     if (res.status !== 200) return window.location.href = '/';
     adminState.totalPages = data.totalPages || 1;
     document.getElementById('totalPages').textContent = adminState.totalPages;
@@ -501,6 +563,28 @@ export const AdminActions = {
       adminState.currentPage = next;
       this.loadLogs();
     }
+  },
+
+  applyLogFilters() {
+    adminState.logFilters = {
+      q: document.getElementById('logFilterQuery')?.value.trim() || '',
+      action: document.getElementById('logFilterAction')?.value.trim().toUpperCase() || '',
+      ip: document.getElementById('logFilterIp')?.value.trim() || '',
+      from: document.getElementById('logFilterFrom')?.value || '',
+      to: document.getElementById('logFilterTo')?.value || '',
+    };
+    adminState.currentPage = 1;
+    return this.loadLogs();
+  },
+
+  resetLogFilters() {
+    adminState.logFilters = { q: '', action: '', ip: '', from: '', to: '' };
+    ['logFilterQuery', 'logFilterAction', 'logFilterIp', 'logFilterFrom', 'logFilterTo'].forEach(id => {
+      const input = document.getElementById(id);
+      if (input) input.value = '';
+    });
+    adminState.currentPage = 1;
+    return this.loadLogs();
   },
 
   async loadHidden() {
@@ -605,6 +689,94 @@ export const AdminActions = {
     await this.loadQuota();
   },
 
+  async loadShares() {
+    const tbody = document.getElementById('sharesTbody');
+    if (!tbody) return;
+    setSharesResult();
+    tbody.innerHTML = '<tr><td colspan="4"><div class="admin-empty-state">正在加载...</div></td></tr>';
+    const { res, data } = await api.adminShares();
+    if (!res.ok) {
+      tbody.innerHTML = '<tr><td colspan="4"><div class="admin-empty-state">分享链接加载失败</div></td></tr>';
+      return;
+    }
+    const rows = data.items || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4"><div class="admin-empty-state">暂无分享链接</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(item => {
+      const expired = item.expired || item.exhausted;
+      const status = item.exhausted ? '已达次数' : item.expired ? '已过期' : '有效';
+      const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', { hour12: false }) : '-';
+      const lastAccessedAt = item.lastAccessedAt ? new Date(item.lastAccessedAt).toLocaleString('zh-CN', { hour12: false }) : '尚未访问';
+      const cleanupAt = item.autoDeleteAt ? new Date(item.autoDeleteAt).toLocaleString('zh-CN', { hour12: false }) : '';
+      const statusHint = item.exhausted
+        ? '已自动清理下载入口'
+        : item.expired
+          ? `自动清理：${cleanupAt || '超过 7 天后'}`
+          : `访问：${lastAccessedAt}`;
+      const policy = [
+        `<span>过期 ${escapeHtml(shareTime(item.expiresAt))}</span>`,
+        `<span>下载 ${escapeHtml(String(item.downloadCount || 0))}/${item.maxDownloads ? escapeHtml(String(item.maxDownloads)) : '不限'}</span>`,
+      ].join('');
+      return `
+          <tr class="admin-share-row hover:bg-slate-50 transition-colors">
+            <td data-label="文件" class="admin-share-file px-5 py-4">
+              <div class="admin-share-name">${escapeHtml(item.name || item.path)}</div>
+              <div class="admin-share-path">${escapeHtml(item.path)}</div>
+            </td>
+            <td data-label="策略" class="admin-share-policy px-5 py-4">
+              <div class="admin-share-chips">${policy}</div>
+              <div class="admin-share-subtle">创建：${escapeHtml(createdAt)}</div>
+            </td>
+            <td data-label="状态" class="admin-share-status px-5 py-4">
+              <span class="admin-status-badge ${expired ? 'is-hidden' : 'is-visible'}">${status}</span>
+              <small>${escapeHtml(statusHint)}</small>
+            </td>
+            <td data-label="操作" class="admin-share-actions px-5 py-4 text-right">
+              <div class="admin-share-buttons">
+                <button class="btn h-8 px-3" data-admin-action="copy-share" data-args='${escapeHtml(JSON.stringify([item.token]))}'>复制链接</button>
+                <button class="admin-danger-btn" data-admin-action="delete-share" data-args='${escapeHtml(JSON.stringify([item.token]))}'>删除</button>
+              </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  async copyShare(token) {
+    if (!token) return;
+    const link = shareLink(token);
+    try {
+      await navigator.clipboard.writeText(link);
+      setSharesResult('分享链接已复制', 'success');
+    } catch (_) {
+      setSharesResult(link, 'success');
+    }
+  },
+
+  async deleteShare(token) {
+    if (!token || !(await adminConfirm('删除分享链接？', '删除后该分享会立即失效，且不会留下分享记录。'))) return;
+    const { res, data } = await api.deleteShare(token);
+    if (!res.ok || data?.success === false) {
+      setSharesResult(data?.message || '删除失败', 'error');
+      return;
+    }
+    setSharesResult('分享链接已删除', 'success');
+    await this.loadShares();
+  },
+
+  async cleanupShares() {
+    if (!(await adminConfirm('清理过期分享？', '这是手动清理，会立即删除已过期或已达到下载次数限制的分享记录。'))) return;
+    const { res, data } = await api.cleanupExpiredShares();
+    if (!res.ok || data?.success === false) {
+      setSharesResult(data?.message || '清理失败', 'error');
+      return;
+    }
+    setSharesResult(`已清理 ${data.deleted || 0} 条分享记录`, 'success');
+    await this.loadShares();
+  },
+
   async loadWebhooks() {
     const list = document.getElementById('webhookList');
     setWebhookResult();
@@ -623,6 +795,7 @@ export const AdminActions = {
       adminState.webhookEditingIndex = -1;
       setWebhookFormMode();
       list.innerHTML = '<div class="webhook-empty">暂未配置 Webhook。</div>';
+      await renderWebhookDeliveries();
       return;
     }
     list.innerHTML = items.map((item, i) => `
@@ -652,6 +825,7 @@ export const AdminActions = {
       </div>
     `).join('');
     setWebhookFormMode(items[adminState.webhookEditingIndex]);
+    await renderWebhookDeliveries();
   },
 
   async addWebhook() {
@@ -737,9 +911,11 @@ export const AdminActions = {
     const { res, data: testData } = await api.testAdminWebhook(endpoint);
     if (!res.ok || testData?.success === false) {
       setWebhookRowStatus(index, testData?.message || '测试发送失败，请检查 URL、平台类型或签名配置。', 'error');
+      await renderWebhookDeliveries();
       return;
     }
     setWebhookRowStatus(index, `${testData.name || 'Webhook'} 测试发送成功`, 'success');
+    await renderWebhookDeliveries();
   },
 };
 

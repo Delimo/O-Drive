@@ -3,4 +3,5 @@ export const adminState = {
   totalPages: 1,
   activeTab: 'overview',
   webhookEditingIndex: -1,
+  logFilters: { q: '', action: '', ip: '', from: '', to: '' },
 };

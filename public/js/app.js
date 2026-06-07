@@ -72,6 +72,7 @@ document.addEventListener('click', event => {
     case 'save-trash-retention': return Actions.saveTrashRetention();
     case 'copy-path': return Actions.copyPath(args[0]);
     case 'copy-direct-link': return Actions.copyDirectLink(args[0]);
+    case 'create-share': return Actions.createShare(args[0]);
     case 'navigate': return Actions.navigateTo(args[0]);
     case 'open-preview': return Actions.openPreview(args[0], args[1], Boolean(args[2]));
     case 'download-file': return Actions.downloadFile(args[0]);

@@ -292,6 +292,11 @@ export async function handleRename(env, request, r2Key) {
   const newKey = parentDir + cleanName;
   assertUserKey(r2Key);
   assertUserKey(newKey);
+  if (!(await keyExists(env, r2Key))) {
+    const err = new Error('File or folder not found');
+    err.status = 404;
+    throw err;
+  }
   if (r2Key === newKey) return jsonResponse({ success: true });
   if (r2Key !== newKey) await assertTargetAvailable(env, newKey);
   await copyTree(env, r2Key, newKey, true);
@@ -433,6 +438,12 @@ export async function handleMkdir(env, request, r2Key) {
 export async function handleUpload(env, request, r2Key) {
   const file = (await request.formData()).get('file');
   if (!file || typeof file.stream !== 'function') return jsonResponse({ success: false, message: 'Missing file' }, 400);
+  const cleanName = normalizeName((file?.name || '').split(/[\/\\]/).pop());
+  const key = (r2Key ? normalizeUserKey(r2Key) + '/' : '') + cleanName;
+  const conflict = new URL(request.url).searchParams.get('conflict') || 'error';
+  assertUserKey(key);
+  const resolved = await resolveUploadConflict(env, key, conflict);
+  if (resolved.skipped) return jsonResponse({ success: true, skipped: true, key });
   const quota = await checkQuota(env, Number(file.size || 0));
   if (!quota.allowed) {
     return jsonResponse(
@@ -440,12 +451,6 @@ export async function handleUpload(env, request, r2Key) {
       507,
     );
   }
-  const cleanName = normalizeName((file?.name || '').split(/[\/\\]/).pop());
-  const key = (r2Key ? normalizeUserKey(r2Key) + '/' : '') + cleanName;
-  const conflict = new URL(request.url).searchParams.get('conflict') || 'error';
-  assertUserKey(key);
-  const resolved = await resolveUploadConflict(env, key, conflict);
-  if (resolved.skipped) return jsonResponse({ success: true, skipped: true, key });
   await env.R2.put(resolved.key, file.stream(), { httpMetadata: { contentType: file.type } });
   await upsertFileIndex(env, resolved.key, { size: file.size, contentType: file.type, uploaded: Date.now() });
   await addLog(env, request, resolved.conflict ? 'UPLOAD_CONFLICT' : 'UPLOAD', resolved.key);
@@ -465,11 +470,21 @@ function uploadKey(targetDir, name) {
  * @returns {Promise<Response>}
  */
 export async function handleMultipartCreate(env, request) {
-  const { targetDir, name, type, conflict = 'error' } = await request.json();
+  const { targetDir, name, type, totalSize, size, conflict = 'error' } = await request.json();
   const key = uploadKey(targetDir, name);
   assertUserKey(key);
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped) return jsonResponse({ key, skipped: true });
+  const incomingBytes = Number(totalSize || size || 0);
+  if (incomingBytes > 0) {
+    const quota = await checkQuota(env, incomingBytes);
+    if (!quota.allowed) {
+      return jsonResponse(
+        { success: false, code: 'QUOTA_EXCEEDED', message: `Storage quota exceeded. ${formatQuotaBytes(quota.remaining)} remaining of ${formatQuotaBytes(quota.quota)}` },
+        507,
+      );
+    }
+  }
   const upload = await env.R2.createMultipartUpload(resolved.key, {
     httpMetadata: { contentType: type || 'application/octet-stream' },
   });

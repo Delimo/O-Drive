@@ -209,6 +209,32 @@ export const FileOpsActions = {
       .catch(() => Message.error('复制失败'));
   },
 
+  async createShare(path) {
+    if (state.userRole !== 'admin' || !path) return;
+    const days = Number(prompt('分享链接多少天后过期？填 0 表示不过期。', '7') || 0);
+    if (!Number.isFinite(days) || days < 0) return Message.error('过期天数无效');
+    const maxDownloads = Number(prompt('最多允许下载多少次？填 0 表示不限次数。', '0') || 0);
+    if (!Number.isFinite(maxDownloads) || maxDownloads < 0) return Message.error('下载次数无效');
+    const { res, data } = await api.createShare({
+      path,
+      expiresInDays: days,
+      maxDownloads,
+      allowPreview: true,
+      allowDownload: true,
+    });
+    if (!res.ok || !data?.item?.token) {
+      Message.error(data?.message || '创建分享失败');
+      return;
+    }
+    const link = new URL(`/share.html?token=${encodeURIComponent(data.item.token)}`, window.location.origin).href;
+    try {
+      await navigator.clipboard.writeText(link);
+      Message.success('分享链接已创建并复制');
+    } catch (_) {
+      Message.success(`分享链接已创建：${link}`);
+    }
+  },
+
   openFilters() {
     const f = state.filters || {};
     document.getElementById('filterKind').value = f.kind || 'all';

@@ -100,7 +100,15 @@ export const api = {
   previewUrl(path) { return apiFileUrl('/api/preview', path); },
   thumbnailUrl(path) { return apiFileUrl('/api/thumbnail', path); },
   download(path) { return apiFileUrl('/api/download', path); },
-  adminLogs(page, size) { return requestJson(`/api/admin/logs?page=${page}&size=${size}`); },
+  adminLogs(page, size, filters = {}) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (filters.q) params.set('q', filters.q);
+    if (filters.action) params.set('action', filters.action);
+    if (filters.ip) params.set('ip', filters.ip);
+    if (filters.from) params.set('from', filters.from);
+    if (filters.to) params.set('to', filters.to);
+    return requestJson(`/api/admin/logs?${params.toString()}`);
+  },
   adminStats() { return requestJson('/api/admin/stats'); },
   maintenance() { return requestJson('/api/admin/maintenance'); },
   maintenanceAction(action) {
@@ -135,6 +143,17 @@ export const api = {
   },
   testAdminWebhook(endpoint) {
     return requestJson('/api/admin/settings/webhooks', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ endpoint }) });
+  },
+  adminWebhookDeliveries() { return requestJson('/api/admin/webhook-deliveries'); },
+  adminShares() { return requestJson('/api/admin/shares'); },
+  createShare(payload) {
+    return requestJson('/api/admin/shares', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
+  },
+  deleteShare(token) {
+    return requestJson(`/api/admin/shares?token=${encodeURIComponent(token)}`, { method: 'DELETE', headers: csrfHeaders() });
+  },
+  cleanupExpiredShares() {
+    return requestJson('/api/admin/shares', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ action: 'cleanup-expired' }) });
   },
   csrfHeaders,
 };

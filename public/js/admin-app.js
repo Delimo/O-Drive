@@ -20,6 +20,8 @@ document.addEventListener('click', event => {
   switch (action) {
     case 'switch-tab': return AdminActions.switchTab(args[0]);
     case 'change-page': return AdminActions.changePage(Number(args[0] || 0));
+    case 'apply-log-filters': return AdminActions.applyLogFilters();
+    case 'reset-log-filters': return AdminActions.resetLogFilters();
     case 'add-hidden': return AdminActions.addHidden();
     case 'remove-hidden': return AdminActions.removeHidden(args[0]);
     case 'add-protected': return AdminActions.addProtected();
@@ -29,6 +31,10 @@ document.addEventListener('click', event => {
     case 'maintenance-action': return AdminActions.runMaintenanceAction(args[0]);
     case 'set-quota': return AdminActions.setQuota();
     case 'fill-quota': return AdminActions.fillQuota(Number(args[0] || 0));
+    case 'refresh-shares': return AdminActions.loadShares();
+    case 'copy-share': return AdminActions.copyShare(args[0]);
+    case 'delete-share': return AdminActions.deleteShare(args[0]);
+    case 'cleanup-shares': return AdminActions.cleanupShares();
     case 'add-webhook': return AdminActions.addWebhook();
     case 'edit-webhook': return AdminActions.editWebhook(Number(args[0] || 0));
     case 'remove-webhook': return AdminActions.removeWebhook(Number(args[0] || 0));

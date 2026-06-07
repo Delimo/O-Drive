@@ -55,6 +55,17 @@ const CORE_TABLE_SQL = [
     blocked_until INTEGER NOT NULL DEFAULT 0,
     sample_paths TEXT NOT NULL DEFAULT '[]'
   )`,
+  `CREATE TABLE IF NOT EXISTS webhook_deliveries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    url TEXT NOT NULL,
+    ok INTEGER NOT NULL DEFAULT 0,
+    status INTEGER NOT NULL DEFAULT 0,
+    error TEXT DEFAULT '',
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  )`,
 ];
 const initializedCoreTables = new WeakSet();
 const CORE_MIGRATION_SQL = [

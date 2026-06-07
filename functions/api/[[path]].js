@@ -4,6 +4,7 @@ import { loadProtectedPaths, checkProtectedAccess } from './lib/protected-paths.
 import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin } from './lib/request-context.js';
 import { checkRateLimit, getClientIp } from './lib/rate-limiter.js';
 import { resolveAdminRoute, resolvePublicRoute } from './lib/router.js';
+import { handlePublicShare } from './lib/shares.js';
 
 const csrfProtectedRoutes = [
   ['/api/admin/settings/hidden', ['POST', 'DELETE']],
@@ -20,6 +21,7 @@ const csrfProtectedRoutes = [
   ['/api/admin/settings/trash-retention', ['PUT']],
   ['/api/admin/settings/quota', ['PUT']],
   ['/api/admin/settings/webhooks', ['PUT', 'POST']],
+  ['/api/admin/shares', ['POST', 'DELETE']],
   ['/api/mkdir', ['POST']],
   ['/api/upload-multipart/create', ['POST']],
   ['/api/upload-multipart/part', ['PUT']],
@@ -55,6 +57,10 @@ export async function onRequest(context) {
 
     if (path === '/api/login' && method === 'POST') return await handleLogin(request, env, context);
     if (path === '/api/logout') return handleLogout(request);
+    if (path.startsWith('/api/share/')) {
+      const shareResult = await handlePublicShare(env, request, path);
+      if (shareResult) return shareResult;
+    }
 
     const auth = await verifyAuth(request, env);
     if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);

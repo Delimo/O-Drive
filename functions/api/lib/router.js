@@ -34,11 +34,12 @@ import {
   handleAdminMaintenanceAction,
   handleAdminQuota,
   handleAdminWebhooks,
+  handleAdminWebhookDeliveries,
   loadWebhookEndpoints,
 } from './admin.js';
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
-import { notifyDownloadBurst, notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed } from './webhooks.js';
-import { checkQuota, formatBytes as formatQuotaBytes } from './storage-quota.js';
+import { handleAdminShares } from './shares.js';
+import { notifyDownloadBurst, notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed, notifyWebhookWithLog } from './webhooks.js';
 import { assertBodySize, jsonResponse } from './common.js';
 import { checkDownloadBlocked, recordDownloadBurst } from './download-bursts.js';
 
@@ -55,11 +56,18 @@ async function notifyConfiguredWebhooks(env, context, notifyFn) {
   } catch (_) {}
 }
 
+async function notifyConfiguredWebhookEvent(env, context, event, data) {
+  try {
+    const endpoints = await loadWebhookEndpoints(env);
+    waitForWebhook(context, notifyWebhookWithLog(env, endpoints, event, data));
+  } catch (_) {}
+}
+
 async function monitorDownloadBurst(env, request, auth, r2Key, context) {
   try {
     const alert = await recordDownloadBurst(env, request, auth, r2Key);
     if (!alert) return;
-    await notifyConfiguredWebhooks(env, context, endpoints => notifyDownloadBurst(endpoints, alert));
+    await notifyConfiguredWebhookEvent(env, context, 'download.burst', alert);
   } catch (_) {}
 }
 
@@ -75,6 +83,8 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
   if (path === '/api/admin/settings/trash-retention') return await handleTrashRetention(env, request, method);
   if (path === '/api/admin/settings/quota') return await handleAdminQuota(env, request, method);
   if (path === '/api/admin/settings/webhooks') return await handleAdminWebhooks(env, request, method);
+  if (path === '/api/admin/webhook-deliveries') return await handleAdminWebhookDeliveries(env);
+  if (path === '/api/admin/shares') return await handleAdminShares(env, request, method, url);
 
   // Paste
   if (path === '/api/paste' && method === 'POST') {
@@ -82,7 +92,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const res = await handlePaste(env, request);
     if (res.ok && body) {
       try {
-        await notifyConfiguredWebhooks(env, context, urls => notifyFileMoved(urls, body.action, body.paths, body.targetDir));
+        await notifyConfiguredWebhookEvent(env, context, body.action === 'move' ? 'file.moved' : 'file.copied', { paths: body.paths, targetDir: body.targetDir });
       } catch (_) {}
     }
     return res;
@@ -94,7 +104,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const res = await handleRename(env, request, r2Key);
     if (res.ok && body) {
       try {
-        await notifyConfiguredWebhooks(env, context, urls => notifyFileRenamed(urls, '/' + r2Key, body.newName));
+        await notifyConfiguredWebhookEvent(env, context, 'file.renamed', { oldPath: '/' + r2Key, newName: body.newName });
       } catch (_) {}
     }
     return res;
@@ -106,7 +116,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const res = await handleBatchDelete(env, request);
     if (res.ok && body) {
       try {
-        await notifyConfiguredWebhooks(env, context, urls => notifyFileDeleted(urls, body.paths, false));
+        await notifyConfiguredWebhookEvent(env, context, 'file.deleted', { paths: body.paths });
       } catch (_) {}
     }
     return res;
@@ -124,7 +134,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const data = res.ok ? await res.clone().json().catch(() => null) : null;
     if (res.ok && data?.originalKey) {
       try {
-        await notifyConfiguredWebhooks(env, context, urls => notifyFileDeleted(urls, [data.originalKey], true));
+        await notifyConfiguredWebhookEvent(env, context, 'file.purged', { paths: [data.originalKey] });
       } catch (_) {}
     }
     return res;
@@ -136,7 +146,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const data = res.ok ? await res.clone().json().catch(() => null) : null;
     if (res.ok && data?.path) {
       try {
-        await notifyConfiguredWebhooks(env, context, urls => notifyFolderCreated(urls, data.path));
+        await notifyConfiguredWebhookEvent(env, context, 'folder.created', { path: data.path });
       } catch (_) {}
     }
     return res;
@@ -148,26 +158,13 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const res = await handleUpload(env, request, r2Key);
     const data = res.ok ? await res.clone().json().catch(() => null) : null;
     if (res.ok && data?.key && !data?.skipped) {
-      await notifyConfiguredWebhooks(env, context, urls => notifyFileUploaded(urls, '/' + data.key));
+      await notifyConfiguredWebhookEvent(env, context, 'file.uploaded', { path: '/' + data.key, uploader: 'admin' });
     }
     return res;
   }
 
   // Multipart
   if (path === '/api/upload-multipart/create' && method === 'POST') {
-    try {
-      const body = await request.clone().json();
-      const totalSize = Number(body.totalSize || body.size || 0);
-      if (totalSize > 0) {
-        const quota = await checkQuota(env, totalSize);
-        if (!quota.allowed) {
-          return jsonResponse(
-            { success: false, code: 'QUOTA_EXCEEDED', message: `Storage quota exceeded. ${formatQuotaBytes(quota.remaining)} remaining of ${formatQuotaBytes(quota.quota)}` },
-            507,
-          );
-        }
-      }
-    } catch (_) {}
     return await handleMultipartCreate(env, request);
   }
 
@@ -181,7 +178,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const res = await handleMultipartComplete(env, request);
     if (res.ok && body) {
       try {
-        if (body.key) await notifyConfiguredWebhooks(env, context, urls => notifyFileUploaded(urls, '/' + body.key));
+        if (body.key) await notifyConfiguredWebhookEvent(env, context, 'file.uploaded', { path: '/' + body.key, uploader: 'admin' });
       } catch (_) {}
     }
     return res;

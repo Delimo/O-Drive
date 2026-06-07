@@ -5,6 +5,7 @@
  *
  * Configured from the admin Webhook settings stored in D1.
  */
+import { ensureCoreTables } from './common.js';
 
 /**
  * @typedef {object} WebhookPayload
@@ -36,13 +37,13 @@ function endpointLabel(endpoint) {
 
 function eventLabel(event) {
   const labels = {
-    'file.uploaded': '文件上传',
-    'file.deleted': '文件删除',
-    'file.purged': '文件彻底删除',
-    'file.moved': '文件移动',
-    'file.copied': '文件复制',
-    'file.renamed': '文件重命名',
-    'folder.created': '文件夹创建',
+    'file.uploaded': '上传',
+    'file.deleted': '删除',
+    'file.purged': '彻底删除',
+    'file.moved': '移动',
+    'file.copied': '复制',
+    'file.renamed': '重命名',
+    'folder.created': '新建文件夹',
     'download.burst': '大量下载提醒',
     'login.burst': '登录异常提醒',
     'webhook.test': '测试通知',
@@ -50,12 +51,19 @@ function eventLabel(event) {
   return labels[event] || event;
 }
 
+function formatChinaTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || '');
+  return `${date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })}（中国时间）`;
+}
+
 function textPayload(payload) {
   const data = payload.data || {};
+  const label = eventLabel(payload.event);
   const lines = [
-    `O-Drive ${eventLabel(payload.event)}`,
-    `事件：${payload.event}`,
-    `时间：${payload.timestamp}`,
+    `O-Drive ${label}`,
+    `事件：${label}`,
+    `时间：${formatChinaTime(payload.timestamp)}`,
   ];
   if (data.path) lines.push(`路径：${data.path}`);
   if (data.oldPath) lines.push(`原路径：${data.oldPath}`);
@@ -68,7 +76,7 @@ function textPayload(payload) {
   if (data.windowSeconds) lines.push(`时间窗口：${data.windowSeconds} 秒`);
   if (data.lockoutSeconds) lines.push(`锁定时长：${data.lockoutSeconds} 秒`);
   if (data.blockSeconds) lines.push(`禁止下载：${data.blockSeconds} 秒`);
-  if (data.blockedUntil) lines.push(`禁止至：${data.blockedUntil}`);
+  if (data.blockedUntil) lines.push(`禁止至：${formatChinaTime(data.blockedUntil)}`);
   if (data.ip) lines.push(`来源 IP：${data.ip}`);
   if (data.role) lines.push(`访问角色：${data.role}`);
   if (data.username) lines.push(`用户名：${data.username}`);
@@ -199,6 +207,9 @@ export function normalizeWebhookEndpoints(input) {
  * @returns {Promise<boolean>}
  */
 async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
+  const started = Date.now();
+  let lastStatus = 0;
+  let lastError = '';
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
@@ -206,17 +217,41 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
       const url = endpoint.url;
       const res = await fetch(url, buildRequestInit(endpoint, payload, controller));
       clearTimeout(timer);
-      if (res.ok) return true;
+      lastStatus = res.status;
+      if (res.ok) return { ok: true, status: res.status, error: '', durationMs: Date.now() - started };
       // Non-retryable client errors
-      if (res.status >= 400 && res.status < 500 && res.status !== 429) return false;
-    } catch (_) {
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+        return { ok: false, status: res.status, error: `HTTP ${res.status}`, durationMs: Date.now() - started };
+      }
+      lastError = `HTTP ${res.status}`;
+    } catch (err) {
       // Network error or timeout — retry
+      lastError = err?.name === 'AbortError' ? 'Timeout' : (err?.message || 'Network error');
     }
     if (attempt < retries) {
       await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
     }
   }
-  return false;
+  return { ok: false, status: lastStatus, error: lastError, durationMs: Date.now() - started };
+}
+
+async function recordDelivery(env, endpoint, event, result) {
+  if (!env?.D1) return;
+  try {
+    await ensureCoreTables(env);
+    await env.D1.prepare(
+      'INSERT INTO webhook_deliveries (event, endpoint, url, ok, status, error, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(
+      event,
+      endpoint.name || endpointLabel(endpoint),
+      endpoint.url,
+      result.ok ? 1 : 0,
+      Number(result.status || 0),
+      result.error || '',
+      Number(result.durationMs || 0),
+      Date.now(),
+    ).run();
+  } catch (_) {}
 }
 
 /**
@@ -237,10 +272,32 @@ export async function notifyWebhook(envUrls, event, data = {}) {
     data,
   };
 
-  return Promise.all(endpoints.map(endpoint => sendOne(endpoint, payload).catch(() => false)));
+  const results = await Promise.all(endpoints.map(endpoint => sendOne(endpoint, payload).catch(() => ({ ok: false }))));
+  return results.map(result => Boolean(result.ok));
 }
 
-export async function testWebhookEndpoint(endpoint) {
+export async function notifyWebhookWithLog(env, envUrls, event, data = {}) {
+  const endpoints = normalizeWebhookEndpoints(envUrls).filter(endpoint => endpoint.enabled && endpointMatchesEvent(endpoint, event));
+  if (!endpoints.length) return [];
+
+  const payload = {
+    event,
+    timestamp: new Date().toISOString(),
+    data,
+  };
+
+  const results = await Promise.all(endpoints.map(endpoint => sendOne(endpoint, payload).then(async result => {
+    await recordDelivery(env, endpoint, event, result);
+    return result;
+  }).catch(async err => {
+    const result = { ok: false, status: 0, error: err?.message || 'Webhook failed', durationMs: 0 };
+    await recordDelivery(env, endpoint, event, result);
+    return result;
+  })));
+  return results.map(result => Boolean(result.ok));
+}
+
+export async function testWebhookEndpoint(endpoint, env = null) {
   const normalized = normalizeWebhookEndpoints([endpoint])[0];
   if (!normalized) return { success: false, message: 'Invalid webhook URL' };
   const payload = {
@@ -248,8 +305,16 @@ export async function testWebhookEndpoint(endpoint) {
     timestamp: new Date().toISOString(),
     data: { message: `这是一条来自 O-Drive 的 ${endpointLabel(normalized)} 测试通知。` },
   };
-  const success = await sendOne(normalized, payload, 0);
-  return { success, msgtype: normalized.msgtype, name: endpointLabel(normalized), message: success ? '测试发送成功' : '测试发送失败' };
+  const result = await sendOne(normalized, payload, 0);
+  await recordDelivery(env, normalized, 'webhook.test', result);
+  return {
+    success: result.ok,
+    status: result.status,
+    durationMs: result.durationMs,
+    msgtype: normalized.msgtype,
+    name: endpointLabel(normalized),
+    message: result.ok ? '测试发送成功' : '测试发送失败',
+  };
 }
 
 /**
