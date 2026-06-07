@@ -704,11 +704,24 @@ body.admin-page {
 .admin-page .webhook-result {
   margin: 0;
   min-width: 0;
-  color: #047857;
   font-size: 12px;
   font-weight: 800;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.admin-page .webhook-row-status {
+  width: min(320px, 100%);
+  padding: 7px 10px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #047857;
+  text-align: right;
+}
+
+.admin-page .webhook-result {
+  color: #047857;
 }
 
 .admin-page .webhook-row-status.is-error,
@@ -716,9 +729,19 @@ body.admin-page {
   color: #b91c1c;
 }
 
+.admin-page .webhook-row-status.is-error {
+  border-color: rgba(185, 28, 28, 0.16);
+  background: #fff5f5;
+}
+
 .admin-page .webhook-row-status.is-muted,
 .admin-page .webhook-result.is-muted {
   color: var(--text-muted);
+}
+
+.admin-page .webhook-row-status.is-muted {
+  border-color: var(--border);
+  background: var(--surface-soft);
 }
 
 .admin-page .webhook-meta {
@@ -748,14 +771,22 @@ body.admin-page {
 }
 
 .admin-page .webhook-row-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-page .webhook-row-buttons {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.admin-page .webhook-row-actions .btn,
-.admin-page .webhook-row-actions .admin-danger-btn {
+.admin-page .webhook-row-buttons .btn,
+.admin-page .webhook-row-buttons .admin-danger-btn {
   height: 34px;
   min-width: 74px;
   padding: 0 12px;
@@ -795,7 +826,16 @@ body.admin-page {
   }
 
   .admin-page .webhook-row-actions {
-    flex-wrap: wrap;
+    justify-items: stretch;
+  }
+
+  .admin-page .webhook-row-buttons {
+    justify-content: flex-start;
+  }
+
+  .admin-page .webhook-row-status {
+    width: 100%;
+    text-align: left;
   }
 }
 
@@ -1385,9 +1425,18 @@ body.admin-page {
   }
 
   .admin-page .webhook-row-actions {
-    justify-content: flex-end;
+    justify-items: stretch;
     padding-top: 10px;
     border-top: 1px solid var(--border);
+  }
+
+  .admin-page .webhook-row-buttons {
+    justify-content: flex-start;
+  }
+
+  .admin-page .webhook-row-status {
+    width: 100%;
+    text-align: left;
   }
 
   .admin-page .webhook-url {

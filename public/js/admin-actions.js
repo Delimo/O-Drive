@@ -182,6 +182,12 @@ function setWebhookRowStatus(index, text = '', tone = 'muted') {
     setWebhookResult(text, tone);
     return;
   }
+  document.querySelectorAll('.webhook-row-status').forEach(item => {
+    if (item === status) return;
+    item.textContent = '';
+    item.classList.add('hidden');
+    item.classList.remove('is-error', 'is-muted');
+  });
   status.textContent = text;
   status.classList.toggle('hidden', !text);
   status.classList.toggle('is-error', tone === 'error');
@@ -239,7 +245,6 @@ export const AdminActions = {
     `;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
     this.renderStorageWarnings(data);
-    this.renderIndexStatus(data.index);
 
     const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
     const breakdown = Object.entries(data.breakdown || {});
@@ -635,12 +640,14 @@ export const AdminActions = {
             ${Object.keys(item.headers || {}).length ? '<span>headers</span>' : ''}
             ${item.body ? '<span>body</span>' : ''}
           </div>
-          <p class="webhook-row-status hidden" data-webhook-status="${i}"></p>
         </div>
         <div class="webhook-row-actions">
-          <button class="btn h-8 px-3" data-admin-action="edit-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>编辑</button>
-          <button class="btn h-8 px-3" data-admin-action="test-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>测试发送</button>
-          <button class="admin-danger-btn" data-admin-action="remove-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>删除</button>
+          <div class="webhook-row-buttons">
+            <button class="btn h-8 px-3" data-admin-action="edit-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>编辑</button>
+            <button class="btn h-8 px-3" data-admin-action="test-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>测试发送</button>
+            <button class="admin-danger-btn" data-admin-action="remove-webhook" data-args='${escapeHtml(JSON.stringify([i]))}'>删除</button>
+          </div>
+          <p class="webhook-row-status hidden" data-webhook-status="${i}" role="status" aria-live="polite"></p>
         </div>
       </div>
     `).join('');
