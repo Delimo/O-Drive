@@ -1,4 +1,4 @@
-import { ensureCoreTables, jsonResponse } from './lib/common.js';
+import { ensureCoreTables, jsonResponse, assertBodySize } from './lib/common.js';
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
 import { loadProtectedPaths, checkProtectedAccess } from './lib/protected-paths.js';
 import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin } from './lib/request-context.js';
@@ -34,6 +34,15 @@ function needsCsrf(path, method) {
   return csrfProtectedRoutes.some(([prefix, methods]) => path.startsWith(prefix) && methods.includes(method));
 }
 
+function hasBody(method) {
+  return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+}
+
+function isUploadBody(path, method) {
+  return (path.startsWith('/api/files') && method === 'POST')
+    || (path === '/api/upload-multipart/part' && method === 'PUT');
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -54,6 +63,8 @@ export async function onRequest(context) {
         );
       }
     }
+
+    if (hasBody(method)) assertBodySize(request, isUploadBody(path, method));
 
     if (path === '/api/login' && method === 'POST') return await handleLogin(request, env, context);
     if (path === '/api/logout') return handleLogout(request);

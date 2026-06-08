@@ -378,6 +378,29 @@ test('guest access is disabled unless ALLOW_GUEST is true', async () => {
   assert.deepEqual(await verifyAuth(new Request('https://example.com/api/auth/role'), openEnv), { role: 'guest' });
 });
 
+test('route rejects oversized non-upload request bodies early', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const res = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: '{}',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': String(512 * 1024 + 1),
+      },
+    }),
+  });
+  const data = await res.json();
+
+  assert.equal(res.status, 413);
+  assert.equal(data.success, false);
+  assert.match(data.message, /Request body too large/);
+});
+
 test('route smoke: admin can login, upload, list, and search', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
