@@ -1,0 +1,594 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>控制面板 - O-Drive</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="/main.css">
+    <link rel="stylesheet" href="/explorer.css">
+    <link rel="stylesheet" href="/admin.css?v=20260608-storage-compact">
+    <link rel="stylesheet" href="/design.css">
+</head>
+<body class="admin-page flex flex-col bg-background text-slate-900">
+    <main class="container">
+        <header class="header-card mt-4">
+            <div class="flex items-center gap-3">
+                <span class="brand-mark brand-mark-header" aria-hidden="true">⚙️</span>
+                <h1 class="font-bold text-slate-900 tracking-tight text-lg">管理控制台</h1>
+            </div>
+            <a href="/" class="btn text-slate-900">返回云盘</a>
+        </header>
+
+        <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-full shadow-sm mt-4" role="tablist" aria-label="后台管理">
+            <button id="btn-overview" role="tab" aria-selected="true" data-admin-action="switch-tab" data-args='["overview"]' class="admin-tab-btn is-active">概览</button>
+            <button id="btn-health" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["health"]' class="admin-tab-btn">系统状态</button>
+            <button id="btn-logs" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["logs"]' class="admin-tab-btn">操作日志</button>
+            <button id="btn-access" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["access"]' class="admin-tab-btn">访问控制</button>
+            <button id="btn-quota" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["quota"]' class="admin-tab-btn">存储配额</button>
+            <button id="btn-shares" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["shares"]' class="admin-tab-btn">分享链接</button>
+            <button id="btn-webhooks" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["webhooks"]' class="admin-tab-btn">Webhook</button>
+        </div>
+
+        <div class="explorer-card mt-4 mb-4">
+            <div id="overview-tab" class="overview-tab flex-1 flex flex-col p-6 text-slate-900">
+                <div class="overview-stats-grid grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+                    <div class="stat-card bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="stat-label text-xs text-slate-500">文件数</div><div id="statFileCount" class="stat-value text-3xl font-bold leading-none">0</div>
+                    </div>
+                    <div class="stat-card bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="stat-label text-xs text-slate-500">占用空间</div><div id="statTotalSize" class="stat-value text-3xl font-bold leading-none">0 B</div>
+                    </div>
+                    <div class="stat-card bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="stat-label text-xs text-slate-500">回收站</div><div id="statTrash" class="stat-trash text-3xl font-bold leading-none">0 项</div>
+                    </div>
+                    <div class="stat-card bg-surface-soft border border-border rounded-xl p-4 min-h-[104px] flex flex-col justify-between">
+                        <div class="stat-label text-xs text-slate-500">日志数</div><div id="statLogs" class="stat-value text-3xl font-bold leading-none">0</div>
+                    </div>
+                </div>
+                <div id="storageWarnings" class="storage-warnings hidden mb-5"></div>
+                <div class="overview-panels-grid grid grid-cols-1 xl:grid-cols-3 gap-5 flex-1 min-h-0">
+                    <section class="overview-attention-panel overview-focus-panel bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
+                        <div class="overview-focus-pane">
+                            <div class="overview-focus-head">
+                                <h2 class="font-bold">待关注事项</h2>
+                                <span class="text-xs text-slate-500">按影响排序</span>
+                            </div>
+                            <div id="overviewAttention" class="attention-grid grid gap-3"></div>
+                        </div>
+                        <div class="overview-focus-pane overview-task-pane">
+                            <div class="overview-focus-head">
+                                <h2 class="font-bold">后台任务</h2>
+                                <button class="btn h-8 px-3" data-admin-action="refresh-tasks">刷新</button>
+                            </div>
+                            <div class="task-summary-grid task-summary-compact">
+                                <div class="task-summary-card"><span>运行中</span><strong id="taskRunningCount">0</strong></div>
+                                <div class="task-summary-card"><span>已完成</span><strong id="taskCompletedCount">0</strong></div>
+                                <div class="task-summary-card"><span>失败/部分</span><strong id="taskFailedCount">0</strong></div>
+                            </div>
+                            <div id="taskList" class="task-list task-list-compact"></div>
+                        </div>
+                    </section>
+                    <section class="bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold">类型分布</h2>
+                        </div>
+                        <div id="statsBreakdown" class="breakdown-grid grid gap-2"></div>
+                    </section>
+                    <section class="bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold">最近新增</h2>
+                            <span class="text-xs text-slate-500">仅显示最新 7 项</span>
+                        </div>
+                        <div id="statsLatest" class="latest-grid grid gap-3"></div>
+                    </section>
+                </div>
+            </div>
+
+            <div id="health-tab" class="hidden health-tab flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+                <section class="admin-page-panel health-workbench">
+                    <div class="admin-section-head health-workbench-head">
+                        <div>
+                            <h2>系统状态</h2>
+                            <p>检查部署绑定、管理员变量、索引状态和维护入口。</p>
+                        </div>
+                        <button class="btn h-8 px-3" data-admin-action="refresh-health">刷新</button>
+                    </div>
+                    <div class="health-workbench-body">
+                        <div class="health-status-panel">
+                            <div class="health-panel-head">
+                                <div>
+                                    <h3>环境检查</h3>
+                                    <p>关键绑定和登录配置</p>
+                                </div>
+                            </div>
+                            <div id="healthGrid" class="health-grid"></div>
+                        </div>
+                        <div class="health-maintenance-panel">
+                            <div class="health-panel-head">
+                                <div>
+                                    <h3>维护中心</h3>
+                                    <p>索引、缓存和记录清理</p>
+                                </div>
+                                <button class="btn h-8 px-3" data-admin-action="refresh-maintenance">刷新</button>
+                            </div>
+                            <div id="healthMaintenanceGrid" class="health-grid"></div>
+                            <div class="maintenance-actions">
+                                <button class="btn btn-primary h-11" data-admin-action="maintenance-action" data-args='["rebuild-index"]'>重建文件索引</button>
+                                <button class="btn h-11" data-admin-action="maintenance-action" data-args='["cleanup-access-attempts"]'>清理访问失败记录</button>
+                                <button class="btn btn-danger-soft h-11" data-admin-action="maintenance-action" data-args='["cleanup-thumbnails"]'>清理缩略图缓存</button>
+                            </div>
+                            <p id="healthMaintenanceResult" class="maintenance-result hidden text-xs text-slate-500"></p>
+                        </div>
+                    </div>
+                    <div class="health-advice-panel">
+                        <div>
+                            <h3>运行建议</h3>
+                            <p>如果索引状态正常，日常只需要关注访问失败记录、回收站数量和缩略图缓存。</p>
+                        </div>
+                        <div class="health-advice-grid">
+                            <span>文件列表异常时，优先重建文件索引。</span>
+                            <span>密码错误记录过多时，清理后可解除失败计数。</span>
+                            <span>缩略图占用偏高时，清理缓存不会影响原文件。</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="logs-tab" class="hidden flex-1 flex flex-col overflow-hidden p-6 text-slate-900">
+                <section class="admin-page-panel log-workbench">
+                    <div class="admin-section-head log-workbench-head">
+                        <div>
+                            <h2>操作日志</h2>
+                            <p>记录管理员上传、删除、维护等关键操作，便于追踪变更来源。</p>
+                        </div>
+                        <div class="admin-head-actions log-cleanup-actions">
+                            <button class="btn btn-danger-soft h-9 px-3" data-admin-action="maintenance-action" data-args='["cleanup-logs"]'>清理旧日志</button>
+                            <span id="logMaintenanceResult" class="maintenance-result hidden text-xs text-slate-500"></span>
+                        </div>
+                    </div>
+                    <div class="log-filter-panel">
+                        <input id="logFilterQuery" type="search" class="admin-input" placeholder="关键词：路径、详情、IP">
+                        <input id="logFilterAction" type="text" class="admin-input" placeholder="动作，如 UPLOAD">
+                        <input id="logFilterIp" type="text" class="admin-input" placeholder="IP">
+                        <input id="logFilterFrom" type="date" class="admin-input">
+                        <input id="logFilterTo" type="date" class="admin-input">
+                        <button class="btn btn-primary h-10 px-4" data-admin-action="apply-log-filters">筛选</button>
+                        <button class="btn h-10 px-4" data-admin-action="reset-log-filters">重置</button>
+                    </div>
+                    <div class="log-list-head">
+                        <span>时间</span>
+                        <span>操作与详情</span>
+                        <span>IP</span>
+                    </div>
+                    <div id="logList" class="log-list"></div>
+                    <div class="admin-pagination">
+                        <div class="text-slate-500 text-xs">共 <span id="totalPages" class="text-slate-600 font-bold">0</span> 页</div>
+                        <div class="flex gap-2 text-slate-900">
+                            <button id="logPrevButton" data-admin-action="change-page" data-args='[-1]' class="btn" disabled>上一页</button>
+                            <span class="px-4 py-2 font-bold text-primary font-mono bg-background border border-border rounded-lg">第 <span id="currentPage">1</span> 页</span>
+                            <button id="logNextButton" data-admin-action="change-page" data-args='[1]' class="btn" disabled>下一页</button>
+                        </div>
+                    </div>
+                    <table class="hidden"><tbody id="logTbody"></tbody></table>
+                </section>
+            </div>
+
+            <div id="access-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+                <section class="admin-page-panel access-workbench">
+                    <div class="admin-section-head access-workbench-head">
+                        <div>
+                            <h2>访问控制</h2>
+                            <p>按路径管理访客可见性和访问密码，管理员始终可以查看和维护。</p>
+                        </div>
+                        <button class="btn h-9 px-3" data-admin-action="refresh-access-rules">刷新</button>
+                    </div>
+                    <div class="access-summary-grid">
+                        <div class="access-summary-card">
+                            <span>隐藏路径</span>
+                            <strong id="accessHiddenCount">0</strong>
+                        </div>
+                        <div class="access-summary-card">
+                            <span>密码保护</span>
+                            <strong id="accessProtectedCount">0</strong>
+                        </div>
+                        <div class="access-summary-card">
+                            <span>双重保护</span>
+                            <strong id="accessPrivateCount">0</strong>
+                        </div>
+                    </div>
+                    <div class="access-workbench-body">
+                        <div class="access-editor-panel">
+                            <div class="access-panel-title">
+                                <h3>规则编辑</h3>
+                                <p>路径可以是目录，也可以是具体文件。</p>
+                            </div>
+                            <div class="access-preset-row">
+                                <button class="access-preset-btn" data-admin-action="set-access-preset" data-args='["hide"]'>仅隐藏</button>
+                                <button class="access-preset-btn" data-admin-action="set-access-preset" data-args='["password"]'>仅密码</button>
+                                <button class="access-preset-btn" data-admin-action="set-access-preset" data-args='["private"]'>隐藏+密码</button>
+                            </div>
+                            <div class="access-fields">
+                                <label class="access-field">
+                                    <span>路径</span>
+                                    <input type="text" id="protectedPathInput" placeholder="/客户资料/" class="admin-input">
+                                </label>
+                                <label class="access-field">
+                                    <span>访问密码</span>
+                                    <input type="password" id="protectedPasswordInput" placeholder="至少 4 位，可不填" class="admin-input">
+                                </label>
+                                <label class="access-field">
+                                    <span>备注</span>
+                                    <input type="text" id="protectedNoteInput" placeholder="可选" class="admin-input">
+                                </label>
+                            </div>
+                            <div class="access-editor-options">
+                                <div class="access-mode-grid">
+                                    <label class="access-mode-card">
+                                        <input id="accessHideInput" type="checkbox">
+                                        <span>
+                                            <strong>隐藏路径</strong>
+                                            <small>从访客文件列表移除</small>
+                                        </span>
+                                    </label>
+                                    <label class="access-mode-card">
+                                        <input id="protectedShowNameInput" type="checkbox" checked>
+                                        <span>
+                                            <strong>名称可见</strong>
+                                            <small>受密码保护时仍显示名称</small>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="access-submit-row">
+                                <button class="btn btn-primary h-11 px-8" data-admin-action="save-access-rule">保存规则</button>
+                            </div>
+                        </div>
+                        <div class="access-list-panel">
+                            <div class="access-list-head">
+                                <div>
+                                    <h3>规则列表</h3>
+                                    <p id="accessRuleCount">0 条规则</p>
+                                </div>
+                            </div>
+                            <div id="accessRuleList" class="access-rule-list"></div>
+                            <table class="hidden">
+                                <tbody id="accessTbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <div id="quota-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
+                <section class="admin-page-panel storage-console">
+                    <div class="admin-section-head storage-console-head">
+                        <div>
+                            <h2>存储空间</h2>
+                            <p>管理全局配额、R2 安全容量、S3 空间和文件夹绑定。</p>
+                        </div>
+                    </div>
+                    <div class="storage-subtabs" role="tablist" aria-label="存储设置">
+                        <button class="storage-subtab-btn" data-admin-action="switch-storage-view" data-args='["overview"]'>总览与 R2</button>
+                        <button class="storage-subtab-btn is-active" data-admin-action="switch-storage-view" data-args='["s3"]'>S3 空间</button>
+                        <button class="storage-subtab-btn" data-admin-action="switch-storage-view" data-args='["bindings"]'>文件夹绑定</button>
+                    </div>
+                    <div class="storage-view" data-storage-view="overview">
+                        <div class="storage-overview-grid">
+                            <section class="storage-panel">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>总配额</h3>
+                                        <p>可填容量或字节数，0 表示不限制。</p>
+                                    </div>
+                                </div>
+                                <div class="storage-metric-grid">
+                                    <div class="storage-metric-card"><span>当前配额</span><strong id="quotaLimitValue">-</strong></div>
+                                    <div class="storage-metric-card"><span>已使用</span><strong id="quotaUsedValue">-</strong></div>
+                                    <div class="storage-metric-card"><span>剩余空间</span><strong id="quotaRemainingValue">-</strong></div>
+                                </div>
+                                <div class="storage-input-row">
+                                    <input type="text" id="quotaInput" placeholder="容量或字节数；0 表示不限制" class="admin-input">
+                                    <button class="btn btn-primary" data-admin-action="set-quota">保存</button>
+                                </div>
+                                <p id="quotaResult" class="quota-result"></p>
+                                <div class="quota-usage-card">
+                                    <div class="quota-usage-head">
+                                        <span>使用比例</span>
+                                        <strong id="quotaPercentValue">0%</strong>
+                                    </div>
+                                    <div class="quota-usage-track"><span id="quotaUsageBar"></span></div>
+                                </div>
+                                <div id="quotaInfo" class="quota-info-grid"></div>
+                            </section>
+                            <section class="storage-panel">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>R2 与溢出</h3>
+                                        <p>R2 到达阈值后，新文件会自动写入可用的 S3 溢出空间。</p>
+                                    </div>
+                                </div>
+                                <div class="storage-form-grid two">
+                                    <label class="storage-field">
+                                        <span>R2 容量上限</span>
+                                        <div class="storage-unit-input">
+                                            <input type="number" id="r2QuotaBytesInput" value="10" placeholder="10" min="0" step="0.01" inputmode="decimal" class="admin-input storage-unit-number">
+                                            <span class="storage-unit-suffix">GB</span>
+                                        </div>
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>溢出阈值</span>
+                                        <div class="storage-unit-input storage-unit-input-compact">
+                                            <input type="number" id="overflowThresholdInput" value="85" placeholder="85" min="1" max="99" inputmode="numeric" class="admin-input storage-unit-number">
+                                            <span class="storage-unit-suffix">%</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <label class="access-mode-card">
+                                    <input id="overflowEnabledInput" type="checkbox" checked>
+                                    <span><strong>启用 R2 高水位溢出</strong><small>超过阈值后上传提示会告知用户文件已进入 S3</small></span>
+                                </label>
+                                <div class="storage-actions">
+                                    <button class="btn" data-admin-action="save-storage-policy">保存 R2 设置</button>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                    <div class="storage-view is-active" data-storage-view="s3">
+                        <div class="storage-s3-grid">
+                            <section class="storage-panel storage-panel-primary">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>S3 空间</h3>
+                                        <p>S3 兼容存储，可用于文件夹绑定或 R2 溢出。</p>
+                                    </div>
+                                    <div class="storage-head-actions">
+                                        <button class="btn btn-primary" data-admin-action="add-storage-space">保存</button>
+                                        <button class="btn" data-admin-action="test-storage-space">测试</button>
+                                    </div>
+                                </div>
+                                <div class="storage-form-grid two">
+                                    <label class="storage-field">
+                                        <span>名称</span>
+                                        <input type="text" id="storageNameInput" placeholder="S3-主存储" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>ID</span>
+                                        <input type="text" id="storageIdInput" placeholder="s3-main" class="admin-input">
+                                    </label>
+                                </div>
+                                <div class="storage-form-grid two">
+                                    <label class="storage-field wide">
+                                        <span>Endpoint</span>
+                                        <input type="url" id="storageEndpointInput" placeholder="https://s3.example.com" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>Bucket</span>
+                                        <input type="text" id="storageBucketInput" placeholder="bucket-name" class="admin-input">
+                                    </label>
+                                </div>
+                                <div class="storage-form-grid two">
+                                    <label class="storage-field">
+                                        <span>Access Key ID</span>
+                                        <input type="text" id="storageAccessKeyInput" placeholder="Access Key ID" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>Secret Access Key</span>
+                                        <input type="password" id="storageSecretKeyInput" placeholder="Secret Access Key" class="admin-input">
+                                    </label>
+                                </div>
+                                <div class="storage-form-grid three">
+                                    <label class="storage-field">
+                                        <span>Region</span>
+                                        <input type="text" id="storageRegionInput" placeholder="auto" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>前缀</span>
+                                        <input type="text" id="storagePrefixInput" placeholder="可选" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>容量上限</span>
+                                        <input type="text" id="storageQuotaInput" placeholder="容量上限，可留空" class="admin-input">
+                                    </label>
+                                </div>
+                                <div class="access-mode-grid">
+                                    <label class="access-mode-card">
+                                        <input id="storageEnabledInput" type="checkbox" checked>
+                                        <span><strong>启用</strong></span>
+                                    </label>
+                                    <label class="access-mode-card">
+                                        <input id="storageOverflowInput" type="checkbox" checked>
+                                        <span><strong>作为溢出空间</strong></span>
+                                    </label>
+                                </div>
+                                <p id="storageResult" class="quota-result"></p>
+                            </section>
+                            <section class="storage-panel">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>已配置 S3</h3>
+                                        <p>已保存的空间会显示容量、状态和连接测试入口。</p>
+                                    </div>
+                                </div>
+                                <div id="storageSpaceList" class="access-rule-list"></div>
+                            </section>
+                        </div>
+                    </div>
+                    <div class="storage-view" data-storage-view="bindings">
+                        <section class="storage-panel storage-binding-workbench">
+                            <div class="storage-panel-head">
+                                <div>
+                                    <h3>文件夹绑定</h3>
+                                    <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
+                                </div>
+                            </div>
+                            <div class="storage-input-row bind">
+                                <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
+                                <select id="bindingStorageInput" class="admin-input"></select>
+                                <button class="btn btn-primary" data-admin-action="add-storage-binding">绑定</button>
+                            </div>
+                            <div id="storageBindingList" class="access-rule-list"></div>
+                        </section>
+                    </div>
+                </section>
+            </div>
+
+            <div id="shares-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+                <section class="admin-page-panel share-workbench">
+                    <div class="admin-section-head share-workbench-head">
+                        <div>
+                            <h2>分享链接</h2>
+                            <p>管理已生成的文件分享。链接过期后会保留 7 天，期间可手动删除；超过 7 天会自动清理。</p>
+                        </div>
+                        <div class="admin-head-actions share-head-actions">
+                            <button class="btn h-8 px-3" data-admin-action="refresh-shares">刷新</button>
+                            <button class="btn btn-danger-soft h-8 px-3" data-admin-action="cleanup-shares">清理过期</button>
+                        </div>
+                    </div>
+                    <div class="share-summary-grid">
+                        <div class="share-summary-card"><span>全部链接</span><strong id="shareTotalCount">0</strong></div>
+                        <div class="share-summary-card"><span>有效</span><strong id="shareActiveCount">0</strong></div>
+                        <div class="share-summary-card"><span>已失效</span><strong id="shareExpiredCount">0</strong></div>
+                        <div class="share-summary-card"><span>有密码</span><strong id="sharePasswordCount">0</strong></div>
+                    </div>
+                    <div class="share-filter-panel">
+                        <input id="shareFilterQuery" type="search" class="admin-input" placeholder="搜索文件名或路径">
+                        <select id="shareFilterStatus" class="admin-input">
+                            <option value="all">全部状态</option>
+                            <option value="active">有效</option>
+                            <option value="expired">已过期</option>
+                            <option value="exhausted">已达次数</option>
+                        </select>
+                        <button class="btn h-10 px-4" data-admin-action="apply-share-filters">筛选</button>
+                        <button class="btn h-10 px-4" data-admin-action="reset-share-filters">重置</button>
+                    </div>
+                    <div id="shareList" class="share-list"></div>
+                    <table class="hidden"><tbody id="sharesTbody"></tbody></table>
+                    <p id="sharesResult" class="hidden text-xs text-slate-500"></p>
+                </section>
+            </div>
+
+            <div id="webhooks-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
+                <section class="admin-page-panel webhook-workbench">
+                    <div class="admin-section-head webhook-workbench-head">
+                        <div>
+                            <h2>Webhook 通知</h2>
+                            <p>管理文件操作、异常行为和分享链接到期的外部通知通道。</p>
+                        </div>
+                        <div class="admin-head-actions webhook-head-actions">
+                            <span class="webhook-head-pill">文件事件</span>
+                            <span class="webhook-head-pill">异常提醒</span>
+                            <span class="webhook-head-pill">分享到期</span>
+                        </div>
+                    </div>
+                    <div id="webhookSettingsBody" class="webhook-settings-body">
+                        <div class="webhook-editor-column">
+                            <div class="webhook-editor-head">
+                                <div>
+                                    <h3>通知配置</h3>
+                                    <p>当前编辑内容会保存为一条 Webhook 规则。</p>
+                                </div>
+                            </div>
+                            <div class="webhook-form-block">
+                                <div class="webhook-block-title">发送目标</div>
+                                <div class="webhook-grid webhook-target-grid">
+                                    <label class="webhook-field webhook-name-field">
+                                        <span>名称</span>
+                                        <input type="text" id="webhookNameInput" placeholder="可选" class="admin-input">
+                                    </label>
+                                    <label class="webhook-field webhook-url-field">
+                                        <span>URL *</span>
+                                        <input type="url" id="webhookUrlInput" class="admin-input">
+                                    </label>
+                                    <label class="webhook-field webhook-msgtype-field">
+                                        <span>消息格式</span>
+                                        <select id="webhookMsgTypeInput" class="admin-input">
+                                            <option value="json">json</option>
+                                            <option value="text">text</option>
+                                            <option value="markdown">markdown</option>
+                                        </select>
+                                    </label>
+                                    <label class="webhook-field webhook-method-field">
+                                        <span>Method</span>
+                                        <select id="webhookMethodInput" class="admin-input">
+                                            <option value="POST">POST</option>
+                                            <option value="PUT">PUT</option>
+                                            <option value="PATCH">PATCH</option>
+                                            <option value="DELETE">DELETE</option>
+                                            <option value="GET">GET</option>
+                                        </select>
+                                    </label>
+                                    <label class="webhook-field webhook-content-type-field">
+                                        <span>Content-Type</span>
+                                        <input type="text" id="webhookContentTypeInput" class="admin-input" value="application/json">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="webhook-form-block webhook-request-block">
+                                <div class="webhook-block-title">请求内容</div>
+                                <div class="webhook-grid webhook-request-grid">
+                                    <label class="webhook-field webhook-headers-field">
+                                        <span>Headers</span>
+                                        <textarea id="webhookHeadersInput" class="admin-input webhook-textarea" placeholder='{"X-Token": "..."}'></textarea>
+                                    </label>
+                                    <label class="webhook-field webhook-body-field">
+                                        <span>Body</span>
+                                        <textarea id="webhookBodyInput" class="admin-input webhook-textarea" placeholder='{"event":"{event}","path":"{{data.path}}"}'></textarea>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="webhook-form-block webhook-event-field">
+                                <div class="webhook-block-title">触发事件</div>
+                                <div class="webhook-event-grid">
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.uploaded" checked><span><strong>上传</strong><small>文件写入完成</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.deleted" checked><span><strong>删除</strong><small>移入回收站</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.purged" checked><span><strong>彻底删除</strong><small>回收站永久清除</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.moved" checked><span><strong>移动</strong><small>路径位置变更</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.copied" checked><span><strong>复制</strong><small>生成副本</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.renamed" checked><span><strong>重命名</strong><small>名称变更</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="folder.created" checked><span><strong>新建文件夹</strong><small>目录创建</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="download.burst" checked><span><strong>下载异常提醒</strong><small>短时间下载过多</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="login.burst" checked><span><strong>登录异常</strong><small>连续失败登录</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="share.expired" checked><span><strong>分享链接到期</strong><small>分享失效或耗尽</small></span></label>
+                                </div>
+                            </div>
+                            <div class="webhook-save-row">
+                                <p id="webhookFormHint" class="webhook-form-hint hidden"></p>
+                                <div class="webhook-save-actions">
+                                    <button id="webhookSaveButton" class="btn btn-primary h-10 px-5" data-admin-action="add-webhook">保存</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="webhook-list-panel">
+                            <div class="webhook-list-head">
+                                <div>
+                                    <h3>已配置 Webhook</h3>
+                                    <span id="webhookListCount" class="webhook-list-count">0 个</span>
+                                </div>
+                                <button class="btn h-9 px-3" data-admin-action="refresh-webhooks">刷新</button>
+                            </div>
+                            <div id="webhookList" class="webhook-list"></div>
+                            <p id="webhookResult" class="webhook-result hidden"></p>
+                        </div>
+                        <div class="webhook-delivery-panel">
+                            <div class="webhook-list-head">
+                                <div>
+                                    <h3>最近投递</h3>
+                                    <span class="webhook-list-count">显示 20 条，保留 200 条/30 天</span>
+                                </div>
+                                <button class="btn h-9 px-3" data-admin-action="refresh-webhook-deliveries">刷新</button>
+                            </div>
+                            <div id="webhookDeliveriesList" class="webhook-deliveries-list"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="text-slate-500 text-[11px] opacity-60">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
+        </footer>
+    </main>
+
+    <script type="module" src="/js/admin-app.js?v=20260608-storage-compact"></script>
+</body>
+</html>

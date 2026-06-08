@@ -1,0 +1,30 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: upgrade-insecure-requests; default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; worker-src 'none'
+  Cache-Control: no-store
+
+/js/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/*.css
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/admin.css
+  Cache-Control: no-store
+
+/js/admin-app.js
+  Cache-Control: no-store
+
+/js/admin-actions.js
+  Cache-Control: no-store
+
+/js/api.js
+  Cache-Control: no-store
+
+/*.html
+  Cache-Control: no-store
+
+/api/*
+  Cache-Control: no-store
