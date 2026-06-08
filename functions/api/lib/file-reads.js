@@ -1,6 +1,6 @@
 ﻿import { jsonResponse, formatBytes, isHiddenKey, isReservedKey, listR2Objects } from './common.js';
 import { checkProtectedAccess, markProtection } from './protected-paths.js';
-import { searchFileIndex } from './file-index.js';
+import { indexedFileKind, searchFileIndex } from './file-index.js';
 
 function mapEntry(o) {
   return {
@@ -18,8 +18,9 @@ export async function handleSearch(env, request, url, hiddenPaths, auth, protect
   const scope = (url.searchParams.get('scope') || '/').replace(/^\//, '');
   const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || '50')));
   const scanLimit = Math.max(limit, Math.min(1000, Number(url.searchParams.get('scanLimit') || '1000')));
+  const filters = parseSearchFilters(url);
   let cursor = url.searchParams.get('cursor') || undefined;
-  const indexed = await searchFileIndex(env, { q, scope, limit, cursor }, hiddenPaths, auth);
+  const indexed = await searchFileIndex(env, { q, scope, limit, cursor, filters }, hiddenPaths, auth);
   if (indexed) {
     const files = await markProtection(indexed.files, request, env, auth, protectedPaths);
     return jsonResponse({ ...indexed, files });
@@ -35,7 +36,7 @@ export async function handleSearch(env, request, url, hiddenPaths, auth, protect
     scanned += objects.length;
     const pageMatches = objects
       .map(mapEntry)
-      .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
+      .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isReservedKey(f.fullKey) && matchesSearchFilters(f, filters) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
     matches.push(...pageMatches);
     cursor = listed.truncated ? listed.cursor : undefined;
     nextCursor = cursor || '';
@@ -43,6 +44,46 @@ export async function handleSearch(env, request, url, hiddenPaths, auth, protect
 
   const visibleMatches = await markProtection(matches.slice(0, limit), request, env, auth, protectedPaths);
   return jsonResponse({ files: visibleMatches, nextCursor, scanned, scanLimitReached: Boolean(cursor && scanned >= scanLimit) });
+}
+
+function numberParam(url, name, scale = 1) {
+  const raw = url.searchParams.get(name);
+  if (raw == null || raw === '') return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? value * scale : undefined;
+}
+
+function dateParam(url, name, endOfDay = false) {
+  const raw = url.searchParams.get(name);
+  if (!raw) return undefined;
+  const date = new Date(`${raw}T${endOfDay ? '23:59:59.999' : '00:00:00'}`);
+  const value = date.getTime();
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function parseSearchFilters(url) {
+  const kind = String(url.searchParams.get('kind') || 'all');
+  return {
+    kind: ['all', 'file', 'image', 'video', 'audio', 'text', 'pdf', 'archive', 'exe', 'other'].includes(kind) ? kind : 'all',
+    minSize: numberParam(url, 'minSize', 1024),
+    maxSize: numberParam(url, 'maxSize', 1024),
+    fromTime: dateParam(url, 'modifiedAfter'),
+    toTime: dateParam(url, 'modifiedBefore', true),
+  };
+}
+
+function matchesSearchFilters(file, filters = {}) {
+  if (filters.kind && filters.kind !== 'all') {
+    const kind = indexedFileKind(file.fullKey);
+    if (filters.kind !== 'file' && kind !== filters.kind) return false;
+  }
+  const size = Number(file.rawSize || 0);
+  if (Number.isFinite(filters.minSize) && size < filters.minSize) return false;
+  if (Number.isFinite(filters.maxSize) && size > filters.maxSize) return false;
+  const time = Number(file.time || 0);
+  if (Number.isFinite(filters.fromTime) && time < filters.fromTime) return false;
+  if (Number.isFinite(filters.toTime) && time > filters.toTime) return false;
+  return true;
 }
 
 export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths = []) {

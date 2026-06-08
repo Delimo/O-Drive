@@ -28,10 +28,21 @@ export const api = {
   listFiles(path) {
     return requestJson(apiFileUrl('/api/files', path));
   },
-  searchFiles(q, scope, cursor = '') {
+  searchFiles(q, scope, cursor = '', filters = {}) {
     const params = new URLSearchParams({ q, scope, limit: '50' });
     if (cursor) params.set('cursor', cursor);
+    if (filters.kind && filters.kind !== 'all') params.set('kind', filters.kind);
+    if (filters.minSize) params.set('minSize', filters.minSize);
+    if (filters.maxSize) params.set('maxSize', filters.maxSize);
+    if (filters.modifiedAfter) params.set('modifiedAfter', filters.modifiedAfter);
+    if (filters.modifiedBefore) params.set('modifiedBefore', filters.modifiedBefore);
     return requestJson(`/api/search?${params.toString()}`);
+  },
+  createTask(type, payload) {
+    return requestJson('/api/tasks', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ type, payload }) });
+  },
+  fileTask(id) {
+    return requestJson(`/api/tasks?id=${encodeURIComponent(id)}`);
   },
   batchDelete(paths) {
     return requestJson('/api/batch-delete', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ paths }) });

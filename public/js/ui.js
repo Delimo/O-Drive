@@ -1,6 +1,7 @@
 ﻿import { state } from './state.js';
 import { api } from './api.js';
 import { escapeHtml, Utils } from './utils.js';
+import { actionArgs, clearElement, setHtml } from './dom-helpers.js';
 import { getOrderedEntries } from './file-view-model.js';
 import { describeItem, matchesFilters } from './filters.js';
 import { Message } from './message.js';
@@ -19,13 +20,13 @@ export const UI = {
     const desktop = document.getElementById('authButtons');
     if (desktop) {
       desktop.hidden = false;
-      desktop.innerHTML = html;
+      setHtml(desktop, html);
     }
 
     const mobile = document.getElementById('authButtonsMobile');
     if (mobile) {
       mobile.hidden = false;
-      mobile.innerHTML = html;
+      setHtml(mobile, html);
     }
 
     document.querySelectorAll('.admin-only').forEach(el => {
@@ -51,7 +52,7 @@ export const UI = {
 
   closePreview() {
     const content = document.getElementById('previewContent');
-    if (content) content.innerHTML = '';
+    clearElement(content);
     state.currentPreviewText = '';
     this.closeModal('previewModal');
   },
@@ -120,7 +121,7 @@ export const UI = {
 
     if (!item) {
       title.textContent = '文件详情';
-      body.innerHTML = '';
+      clearElement(body);
       empty.classList.remove('hidden');
       this.closeDrawer('detailsPanel');
       return;
@@ -128,18 +129,18 @@ export const UI = {
 
     const meta = describeItem(item);
     const adminDirectLinkButton = state.userRole === 'admin' && meta.sizeFormatted
-      ? `<button class="btn" data-action="copy-direct-link" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>复制直链</button>`
+      ? `<button class="btn" data-action="copy-direct-link" data-args='${actionArgs([meta.path])}'>复制直链</button>`
       : '';
     const adminShareButton = state.userRole === 'admin' && meta.sizeFormatted
-      ? `<button class="btn" data-action="create-share" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>创建分享</button>`
+      ? `<button class="btn" data-action="create-share" data-args='${actionArgs([meta.path])}'>创建分享</button>`
       : '';
     title.textContent = meta.name;
     empty.classList.add('hidden');
     body.innerHTML = `
       <div class="details-actions">
-        ${!meta.sizeFormatted ? `<button class="btn btn-primary" data-action="navigate" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>打开文件夹</button>` : ''}
-        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" data-action="open-preview" data-args='${escapeHtml(JSON.stringify([meta.path, meta.name, meta.protected ? true : false]))}'>预览</button>` : ''}
-        ${meta.sizeFormatted ? `<button class="btn" data-action="download-file" data-args='${escapeHtml(JSON.stringify([meta.path]))}'>下载</button>` : ''}
+        ${!meta.sizeFormatted ? `<button class="btn btn-primary" data-action="navigate" data-args='${actionArgs([meta.path])}'>打开文件夹</button>` : ''}
+        ${meta.sizeFormatted && Utils.isPreviewable(meta.name) ? `<button class="btn btn-primary" data-action="open-preview" data-args='${actionArgs([meta.path, meta.name, meta.protected ? true : false])}'>预览</button>` : ''}
+        ${meta.sizeFormatted ? `<button class="btn" data-action="download-file" data-args='${actionArgs([meta.path])}'>下载</button>` : ''}
         ${adminDirectLinkButton}
         ${adminShareButton}
       </div>
@@ -196,12 +197,12 @@ export const UI = {
     this.renderBreadcrumb();
     const desktopAuth = document.getElementById('authButtons');
     if (desktopAuth) {
-      desktopAuth.replaceChildren();
+      clearElement(desktopAuth);
       desktopAuth.hidden = true;
     }
     const mobileAuth = document.getElementById('authButtonsMobile');
     if (mobileAuth) {
-      mobileAuth.replaceChildren();
+      clearElement(mobileAuth);
       mobileAuth.hidden = true;
     }
 

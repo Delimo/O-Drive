@@ -39,6 +39,7 @@ import {
 } from './admin.js';
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
 import { handleAdminShares } from './shares.js';
+import { createFileTask, getFileTask } from './tasks.js';
 import { notifyDownloadBurst, notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed, notifyWebhookWithLog } from './webhooks.js';
 import { assertBodySize, jsonResponse, recordSystemWarning } from './common.js';
 import { checkDownloadBlocked, recordDownloadBurst } from './download-bursts.js';
@@ -91,6 +92,8 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
   if (path === '/api/admin/settings/webhooks') return await handleAdminWebhooks(env, request, method);
   if (path === '/api/admin/webhook-deliveries') return await handleAdminWebhookDeliveries(env);
   if (path === '/api/admin/shares') return await handleAdminShares(env, request, method, url);
+  if (path === '/api/tasks' && method === 'POST') return await createFileTask(env, request, context);
+  if (path === '/api/tasks' && method === 'GET') return await getFileTask(env, url);
 
   // Paste
   if (path === '/api/paste' && method === 'POST') {

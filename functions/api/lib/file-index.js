@@ -18,6 +18,7 @@ export function indexedFileKind(key) {
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif'].includes(ext)) return 'image';
   if (['mp4', 'webm', 'mov', 'mkv'].includes(ext)) return 'video';
   if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(ext)) return 'audio';
+  if (ext === 'pdf') return 'pdf';
   if (['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'].includes(ext)) return 'text';
   if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'archive';
   if (['exe', 'msi', 'app', 'deb', 'dmg'].includes(ext)) return 'exe';
@@ -181,15 +182,58 @@ export function mapIndexRow(row) {
   };
 }
 
-export async function searchFileIndex(env, { q, scope, limit, cursor }, hiddenPaths, auth) {
+function searchFilterClauses(filters = {}) {
+  const clauses = [];
+  const params = [];
+  const kind = String(filters.kind || 'all');
+  if (kind && kind !== 'all') {
+    if (kind === 'file') clauses.push('kind IS NOT NULL');
+    else {
+      clauses.push('kind = ?');
+      params.push(kind);
+    }
+  }
+  if (Number.isFinite(filters.minSize)) {
+    clauses.push('size >= ?');
+    params.push(filters.minSize);
+  }
+  if (Number.isFinite(filters.maxSize)) {
+    clauses.push('size <= ?');
+    params.push(filters.maxSize);
+  }
+  if (Number.isFinite(filters.fromTime)) {
+    clauses.push('uploaded_at >= ?');
+    params.push(filters.fromTime);
+  }
+  if (Number.isFinite(filters.toTime)) {
+    clauses.push('uploaded_at <= ?');
+    params.push(filters.toTime);
+  }
+  return { clauses, params };
+}
+
+function rowMatchesSearchFilters(row, filters = {}) {
+  const kind = String(filters.kind || 'all');
+  if (kind && kind !== 'all' && kind !== 'file' && row.kind !== kind) return false;
+  const size = Number(row.size || 0);
+  if (Number.isFinite(filters.minSize) && size < filters.minSize) return false;
+  if (Number.isFinite(filters.maxSize) && size > filters.maxSize) return false;
+  const uploadedAt = Number(row.uploaded_at || row.updated_at || 0);
+  if (Number.isFinite(filters.fromTime) && uploadedAt < filters.fromTime) return false;
+  if (Number.isFinite(filters.toTime) && uploadedAt > filters.toTime) return false;
+  return true;
+}
+
+export async function searchFileIndex(env, { q, scope, limit, cursor, filters = {} }, hiddenPaths, auth) {
   const count = await indexedFileCount(env);
   if (!count) return null;
   const offset = Math.max(0, Number(cursor || 0));
   const cleanScope = String(scope || '').replace(/^\/+|\/+$/g, '');
   const like = `%${String(q || '').toLowerCase()}%`;
-  const sql = cleanScope
-    ? `SELECT * FROM file_index WHERE lower(name) LIKE ? AND (path = ? OR path LIKE ?) ORDER BY path ASC LIMIT ? OFFSET ?`
-    : `SELECT * FROM file_index WHERE lower(name) LIKE ? ORDER BY path ASC LIMIT ? OFFSET ?`;
+  const filterSql = searchFilterClauses(filters);
+  const scopeClause = cleanScope ? ' AND (path = ? OR path LIKE ?)' : '';
+  const extraClauses = filterSql.clauses.length ? ` AND ${filterSql.clauses.join(' AND ')}` : '';
+  const sql = `SELECT * FROM file_index WHERE lower(name) LIKE ?${scopeClause}${extraClauses} ORDER BY path ASC LIMIT ? OFFSET ?`;
   try {
     const batchSize = limit + 1;
     const visible = [];
@@ -198,13 +242,14 @@ export async function searchFileIndex(env, { q, scope, limit, cursor }, hiddenPa
 
     while (visible.length <= limit && !exhausted) {
       const params = cleanScope
-        ? [like, cleanScope, `${cleanScope}/%`, batchSize, rawOffset]
-        : [like, batchSize, rawOffset];
+        ? [like, cleanScope, `${cleanScope}/%`, ...filterSql.params, batchSize, rawOffset]
+        : [like, ...filterSql.params, batchSize, rawOffset];
       const rows = await env.D1.prepare(sql).bind(...params).all();
       const batch = rows.results || [];
       if (!batch.length) break;
 
       for (let i = 0; i < batch.length; i++) {
+        if (!rowMatchesSearchFilters(batch[i], filters)) continue;
         const item = mapIndexRow(batch[i]);
         if (auth.role === 'admin' || !hiddenPaths.some(hp => item.fullKey === hp || item.fullKey.startsWith(hp + '/'))) {
           visible.push({ item, nextCursor: rawOffset + i + 1 });

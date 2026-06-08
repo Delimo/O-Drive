@@ -10,6 +10,12 @@ export const CORE_TABLE_SQL = [
     action TEXT NOT NULL,
     details TEXT,
     ip TEXT,
+    actor TEXT DEFAULT '',
+    status TEXT DEFAULT '',
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    target_path TEXT DEFAULT '',
+    error_code TEXT DEFAULT '',
+    metadata TEXT DEFAULT '',
     timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE IF NOT EXISTS login_attempts (
@@ -55,10 +61,30 @@ export const CORE_TABLE_SQL = [
     message TEXT NOT NULL,
     created_at INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS file_tasks (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    total INTEGER NOT NULL DEFAULT 0,
+    completed INTEGER NOT NULL DEFAULT 0,
+    failed INTEGER NOT NULL DEFAULT 0,
+    payload TEXT NOT NULL DEFAULT '{}',
+    result TEXT NOT NULL DEFAULT '{}',
+    error TEXT DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    finished_at INTEGER NOT NULL DEFAULT 0
+  )`,
 ];
 
 export const CORE_MIGRATION_SQL = [
   `ALTER TABLE download_bursts ADD COLUMN blocked_until INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE logs ADD COLUMN actor TEXT DEFAULT ''`,
+  `ALTER TABLE logs ADD COLUMN status TEXT DEFAULT ''`,
+  `ALTER TABLE logs ADD COLUMN duration_ms INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE logs ADD COLUMN target_path TEXT DEFAULT ''`,
+  `ALTER TABLE logs ADD COLUMN error_code TEXT DEFAULT ''`,
+  `ALTER TABLE logs ADD COLUMN metadata TEXT DEFAULT ''`,
 ];
 
 export const SHARE_TABLE_SQL = `
@@ -75,6 +101,7 @@ export const SHARE_TABLE_SQL = `
     download_count INTEGER NOT NULL DEFAULT 0,
     password_salt TEXT DEFAULT '',
     password_hash TEXT DEFAULT '',
+    expired_notified_at INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     last_accessed_at INTEGER NOT NULL DEFAULT 0
   )
@@ -83,6 +110,7 @@ export const SHARE_TABLE_SQL = `
 export const SHARE_MIGRATION_SQL = [
   `ALTER TABLE share_links ADD COLUMN password_salt TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN password_hash TEXT DEFAULT ''`,
+  `ALTER TABLE share_links ADD COLUMN expired_notified_at INTEGER NOT NULL DEFAULT 0`,
 ];
 
 export const PROTECTED_PATH_TABLE_SQL = `

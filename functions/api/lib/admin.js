@@ -29,6 +29,8 @@ export async function handleAdminLogs(env, url) {
   const q = String(url.searchParams.get('q') || '').trim();
   const action = String(url.searchParams.get('action') || '').trim().toUpperCase();
   const ip = String(url.searchParams.get('ip') || '').trim();
+  const status = String(url.searchParams.get('status') || '').trim();
+  const targetPath = String(url.searchParams.get('targetPath') || '').trim();
   const from = String(url.searchParams.get('from') || '').trim();
   const to = String(url.searchParams.get('to') || '').trim();
   if (q) {
@@ -42,6 +44,14 @@ export async function handleAdminLogs(env, url) {
   if (ip) {
     filters.push('ip LIKE ?');
     params.push(`%${ip}%`);
+  }
+  if (status) {
+    filters.push('status = ?');
+    params.push(status);
+  }
+  if (targetPath) {
+    filters.push('target_path LIKE ?');
+    params.push(`%${targetPath}%`);
   }
   if (from) {
     filters.push('timestamp >= ?');

@@ -21,6 +21,10 @@ export { ensureCoreTables } from './schema.js';
 export const jsonResponse = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
+export function apiError(code, message, status = 400, extra = {}, headers = {}) {
+  return jsonResponse({ success: false, code, message, ...extra }, status, headers);
+}
+
 /**
  * Format a byte count into a human-readable string.
  * @param {number} bytes
@@ -118,7 +122,28 @@ export function isTrashKey(key) {
 export async function addLog(env, request, action, details) {
   await ensureCoreTables(env);
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-  try { await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, details, ip).run(); } catch (e) {}
+  const detailText = typeof details === 'object' && details !== null
+    ? String(details.details || details.message || details.targetPath || '')
+    : String(details || '');
+  const meta = typeof details === 'object' && details !== null ? details : {};
+  try {
+    await env.D1.prepare(
+      `INSERT INTO logs (action, details, ip, actor, status, duration_ms, target_path, error_code, metadata)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      action,
+      detailText,
+      ip,
+      String(meta.actor || meta.role || ''),
+      String(meta.status || ''),
+      Number(meta.durationMs || meta.duration_ms || 0),
+      String(meta.targetPath || meta.path || ''),
+      String(meta.errorCode || meta.code || ''),
+      meta.metadata ? JSON.stringify(meta.metadata).slice(0, 4000) : '',
+    ).run();
+  } catch (e) {
+    try { await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, detailText, ip).run(); } catch (_) {}
+  }
 }
 
 export async function recordSystemWarning(env, source, message) {

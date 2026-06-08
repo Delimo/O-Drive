@@ -35,6 +35,42 @@ async function operationEstimateText(paths = []) {
   }
 }
 
+async function operationEstimate(paths = []) {
+  try {
+    const { res, data } = await api.operationEstimate(paths);
+    return res.ok && data?.success ? data : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function shouldUseTask(estimate) {
+  return Boolean(estimate?.large || estimate?.shouldBatch || Number(estimate?.totalObjects || 0) >= 200);
+}
+
+async function startAndWatchTask(type, payload, doneMessage, onDone) {
+  const created = await api.createTask(type, payload);
+  if (!created.res.ok || !created.data?.item?.id) {
+    Message.error(readableError(created.res, created.data, '任务创建失败'));
+    return false;
+  }
+  const id = created.data.item.id;
+  Message.show('任务已创建，正在后台处理...');
+  for (let i = 0; i < 120; i++) {
+    await new Promise(resolve => setTimeout(resolve, i < 10 ? 800 : 1500));
+    const { res, data } = await api.fileTask(id);
+    if (!res.ok) continue;
+    const item = data?.item;
+    if (!item || !['completed', 'partial', 'failed'].includes(item.status)) continue;
+    if (item.status === 'completed') Message.success(doneMessage);
+    else Message.error(`任务结束：完成 ${item.completed || 0} 项，失败 ${item.failed || 0} 项`);
+    if (onDone) await onDone(item);
+    return item.status !== 'failed';
+  }
+  Message.show('任务仍在后台处理，可稍后刷新查看结果');
+  return true;
+}
+
 function readableError(res, data, fallback = '操作失败') {
   const message = data?.failed?.[0]?.message || data?.message || '';
   if (res?.status === 401) return '登录状态已失效，请重新登录后再试。';
@@ -85,13 +121,23 @@ export const FileOpsActions = {
 
   async executePaste() {
     if (!state.clipboard) return;
-    const estimate = await operationEstimateText(state.clipboard.paths);
+    const estimateData = await operationEstimate(state.clipboard.paths);
+    const estimate = estimateData ? await operationEstimateText(state.clipboard.paths) : '';
     const pasteConfirmed = estimate ? await confirmDanger(
       `确认${state.clipboard.action === 'move' ? '移动' : '复制'} ${state.clipboard.paths.length} 项到当前目录？`,
       state.clipboard.paths,
       estimate
     ) : true;
     if (!pasteConfirmed) return;
+    if (shouldUseTask(estimateData)) {
+      const payload = { ...state.clipboard, targetDir: state.currentPath };
+      const ok = await startAndWatchTask('paste', payload, '后台任务已完成', async () => {
+        state.clipboard = null;
+        await this.loadFiles();
+      });
+      if (ok) state.clipboard = null;
+      return;
+    }
     Message.show('正在处理...');
     const { res, data } = await api.paste({ ...state.clipboard, targetDir: state.currentPath });
     if (res.ok && data?.success !== false) {
@@ -108,7 +154,8 @@ export const FileOpsActions = {
   },
 
   async batchDelete() {
-    const estimate = await operationEstimateText(state.selectedPaths);
+    const estimateData = await operationEstimate(state.selectedPaths);
+    const estimate = estimateData ? await operationEstimateText(state.selectedPaths) : '';
     const confirmed = await confirmDanger(
       `确认将选中的 ${state.selectedPaths.length} 项移入回收站？`,
       state.selectedPaths,
@@ -116,6 +163,15 @@ export const FileOpsActions = {
       { danger: true }
     );
     if (!confirmed) return;
+    if (shouldUseTask(estimateData)) {
+      const paths = [...state.selectedPaths];
+      state.selectedPaths = [];
+      UI.updateBatchUI();
+      await startAndWatchTask('delete', { paths }, '后台删除任务已完成', async () => {
+        await this.loadFiles();
+      });
+      return;
+    }
     const { res, data } = await api.batchDelete(state.selectedPaths);
     if (res.ok && data?.success !== false) {
       Message.success('已移入回收站');
@@ -135,9 +191,9 @@ export const FileOpsActions = {
     const q = activeInput?.value.trim() || '';
     if (!q) return this.clearSearch();
     state.isSearching = true;
-    state.search = { query: q, scope: state.currentPath, nextCursor: '', loadingMore: false };
+    state.search = { query: q, scope: state.currentPath, nextCursor: '', loadingMore: false, filters: { ...state.filters } };
 
-    const { res, data } = await api.searchFiles(q, state.currentPath);
+    const { res, data } = await api.searchFiles(q, state.currentPath, '', state.search.filters);
     if (!res.ok) {
       if (data?.code === 'password_required') return PreviewActions.handlePasswordRequired(data, () => this.handleSearch());
       Message.error(readableError(res, data, '搜索失败'));
@@ -153,7 +209,7 @@ export const FileOpsActions = {
     if (!state.isSearching || !state.search?.nextCursor || state.search.loadingMore) return;
     state.search.loadingMore = true;
     UI.updateFileList();
-    const { res, data } = await api.searchFiles(state.search.query, state.search.scope, state.search.nextCursor);
+    const { res, data } = await api.searchFiles(state.search.query, state.search.scope, state.search.nextCursor, state.search.filters);
     state.search.loadingMore = false;
     if (!res.ok) {
       Message.error(data?.message || '加载更多失败');
@@ -276,13 +332,15 @@ export const FileOpsActions = {
       modifiedBefore: document.getElementById('filterBefore').value,
     };
     UI.closeModal('filterModal');
-    UI.updateFileList();
+    if (state.isSearching && state.search?.query) this.handleSearch();
+    else UI.updateFileList();
   },
 
   resetFilters() {
     state.filters = { kind: 'all', minSize: '', maxSize: '', modifiedAfter: '', modifiedBefore: '' };
     UI.closeModal('filterModal');
-    UI.updateFileList();
+    if (state.isSearching && state.search?.query) this.handleSearch();
+    else UI.updateFileList();
   },
 
   async openTrash() {

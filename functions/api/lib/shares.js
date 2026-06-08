@@ -2,6 +2,7 @@ import { addLog, encodeBase64Url, formatBytes, isReservedKey, jsonResponse, norm
 import { handleDownloadOrPreview } from './file-reads.js';
 import { signHmac } from './secrets.js';
 import { ensureShareTable } from './schema.js';
+import { normalizeWebhookEndpoints, notifyWebhookWithLog } from './webhooks.js';
 
 const EXPIRED_SHARE_AUTO_DELETE_MS = 7 * 24 * 60 * 60 * 1000;
 const SHARE_ACCESS_TTL_SECONDS = 12 * 60 * 60;
@@ -131,6 +132,7 @@ function mapShare(row) {
     allowPreview: Number(row.allow_preview ?? 1) === 1,
     allowDownload: Number(row.allow_download ?? 1) === 1,
     hasPassword: Boolean(row.password_hash),
+    expiredNotifiedAt: Number(row.expired_notified_at || 0),
     expiresAt,
     expired: Boolean(expiresAt && expiresAt <= Date.now()),
     autoDeleteAt,
@@ -157,28 +159,61 @@ async function deleteShare(env, token) {
   await env.D1.prepare('DELETE FROM share_links WHERE token = ?').bind(token).run();
 }
 
+async function loadWebhookEndpoints(env) {
+  let items = [];
+  try {
+    const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
+    if (row?.value) items = JSON.parse(row.value);
+  } catch (_) {}
+  return normalizeWebhookEndpoints(items);
+}
+
+async function notifyShareExpiredOnce(env, row, reason = 'expired') {
+  if (!row || Number(row.expired_notified_at || 0) > 0) return false;
+  const item = mapShare(row);
+  const endpoints = await loadWebhookEndpoints(env);
+  await notifyWebhookWithLog(env, endpoints, 'share.expired', {
+    token: item.token,
+    path: item.path,
+    name: item.name,
+    expiresAt: item.expiresAt,
+    maxDownloads: item.maxDownloads,
+    downloadCount: item.downloadCount,
+    reason,
+  });
+  await env.D1.prepare('UPDATE share_links SET expired_notified_at = ? WHERE token = ?')
+    .bind(Date.now(), row.token)
+    .run();
+  return true;
+}
+
 async function cleanupExpiredShares(env, { now = Date.now(), manual = false } = {}) {
   await ensureShareTable(env);
   const expiryCutoff = manual ? now : now - EXPIRED_SHARE_AUTO_DELETE_MS;
+  const exhaustedCutoff = now;
   const rows = await env.D1.prepare(
-    'SELECT token FROM share_links WHERE (expires_at > 0 AND expires_at <= ?) OR (max_downloads > 0 AND download_count >= max_downloads)'
-  ).bind(expiryCutoff).all();
-  const tokens = (rows.results || []).map(row => row.token).filter(Boolean);
-  for (const token of tokens) {
-    await env.D1.prepare('DELETE FROM share_links WHERE token = ?').bind(token).run();
+    'SELECT * FROM share_links WHERE (expires_at > 0 AND expires_at <= ?) OR (max_downloads > 0 AND download_count >= max_downloads AND created_at <= ?)'
+  ).bind(expiryCutoff, exhaustedCutoff).all();
+  const expiredRows = rows.results || [];
+  for (const row of expiredRows) {
+    await notifyShareExpiredOnce(env, row, Number(row.max_downloads || 0) && Number(row.download_count || 0) >= Number(row.max_downloads || 0) ? 'exhausted' : 'expired');
+    await env.D1.prepare('DELETE FROM share_links WHERE token = ?').bind(row.token).run();
   }
-  return tokens.length;
+  return expiredRows.length;
 }
 
 async function expiredResponse(env, token, message = 'Share link expired') {
   const row = await getShare(env, token);
   const autoDeleteAt = row ? Number(row.expires_at || 0) + EXPIRED_SHARE_AUTO_DELETE_MS : 0;
   const shouldDelete = row ? canAutoDeleteExpiredShare(row) : true;
+  if (row) await notifyShareExpiredOnce(env, row, 'expired');
   if (shouldDelete) await deleteShare(env, token);
   return jsonResponse({ success: false, code: 'SHARE_EXPIRED', message, deleted: shouldDelete, autoDeleteAt }, 410);
 }
 
 async function exhaustedResponse(env, token) {
+  const row = await getShare(env, token);
+  if (row) await notifyShareExpiredOnce(env, row, 'exhausted');
   await deleteShare(env, token);
   return jsonResponse({ success: false, code: 'SHARE_EXHAUSTED', message: 'Share download limit reached', deleted: true }, 410);
 }
@@ -216,8 +251,8 @@ export async function handleAdminShares(env, request, method, url) {
     const contentType = meta.httpMetadata?.contentType || meta.contentType || '';
     await env.D1.prepare(
       `INSERT INTO share_links
-       (token, path, name, size, content_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, created_at, last_accessed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 0)`
+       (token, path, name, size, content_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, expired_notified_at, created_at, last_accessed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, 0)`
     ).bind(token, path, name, Number(meta.size || 0), contentType, allowPreview, allowDownload, expiresAt, maxDownloads, passwordSalt, passwordHash, Date.now()).run();
     await addLog(env, request, 'SHARE_CREATE', path);
     return jsonResponse({ success: true, item: mapShare({ token, path, name, size: Number(meta.size || 0), content_type: contentType, allow_preview: allowPreview, allow_download: allowDownload, expires_at: expiresAt, max_downloads: maxDownloads, download_count: 0, password_hash: passwordHash, created_at: Date.now(), last_accessed_at: 0 }) });

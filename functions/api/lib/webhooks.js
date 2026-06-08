@@ -28,6 +28,7 @@ const WEBHOOK_EVENTS = [
   'folder.created',
   'download.burst',
   'login.burst',
+  'share.expired',
 ];
 
 function endpointLabel(endpoint) {
@@ -46,6 +47,7 @@ function eventLabel(event) {
     'folder.created': '新建文件夹',
     'download.burst': '大量下载提醒',
     'login.burst': '登录异常提醒',
+    'share.expired': '分享链接到期',
     'webhook.test': '测试通知',
   };
   return labels[event] || event;
@@ -82,6 +84,9 @@ function textPayload(payload) {
   if (data.username) lines.push(`用户名：${data.username}`);
   if (data.samplePaths) lines.push(`下载样例：${Array.isArray(data.samplePaths) ? data.samplePaths.join(', ') : data.samplePaths}`);
   if (data.message) lines.push(`说明：${data.message}`);
+  if (data.token) lines.push(`分享 Token：${data.token}`);
+  if (data.expiresAt) lines.push(`到期时间：${formatChinaTime(data.expiresAt)}`);
+  if (data.name) lines.push(`名称：${data.name}`);
   return lines.join('\n');
 }
 
@@ -358,4 +363,8 @@ export function notifyDownloadBurst(envUrls, alert) {
 
 export function notifyLoginBurst(envUrls, alert) {
   return notifyWebhook(envUrls, 'login.burst', alert);
+}
+
+export function notifyShareExpired(envUrls, share) {
+  return notifyWebhook(envUrls, 'share.expired', share);
 }

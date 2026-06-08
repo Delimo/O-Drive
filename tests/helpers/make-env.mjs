@@ -8,6 +8,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const downloadBurstRows = [];
   const webhookDeliveryRows = [];
   const systemWarningRows = [];
+  const taskRows = [];
   const settingsRows = new Map();
   const kvRows = new Map();
   const fileIndexRows = [];
@@ -244,7 +245,8 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 download_count: 0,
                 password_salt: statement.bound?.[9] || '',
                 password_hash: statement.bound?.[10] || '',
-                created_at: statement.bound?.[11] ?? statement.bound?.[9],
+                expired_notified_at: 0,
+                created_at: statement.bound?.[12] ?? statement.bound?.[11] ?? statement.bound?.[9],
                 last_accessed_at: 0,
               };
               const idx = shareRows.findIndex(item => item.token === row.token);
@@ -270,6 +272,22 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 source: statement.bound?.[0],
                 message: statement.bound?.[1],
                 created_at: statement.bound?.[2],
+              });
+            }
+            if (/INSERT INTO file_tasks/i.test(sql)) {
+              taskRows.push({
+                id: statement.bound?.[0],
+                type: statement.bound?.[1],
+                status: statement.bound?.[2],
+                total: statement.bound?.[3],
+                completed: 0,
+                failed: 0,
+                payload: statement.bound?.[4],
+                result: '{}',
+                error: '',
+                created_at: statement.bound?.[5],
+                updated_at: statement.bound?.[6],
+                finished_at: 0,
               });
             }
             if (/INSERT INTO path_access_attempts/i.test(sql)) {
@@ -379,6 +397,24 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) row.last_accessed_at = statement.bound?.[0];
             }
+            if (/UPDATE share_links SET expired_notified_at = \? WHERE token = \?/i.test(sql)) {
+              const row = shareRows.find(item => item.token === statement.bound?.[1]);
+              if (row) row.expired_notified_at = statement.bound?.[0];
+            }
+            if (/UPDATE file_tasks SET status = \?/i.test(sql)) {
+              const id = statement.bound?.[8];
+              const row = taskRows.find(item => item.id === id);
+              if (row) {
+                row.status = statement.bound?.[0];
+                row.total = statement.bound?.[1];
+                row.completed = statement.bound?.[2];
+                row.failed = statement.bound?.[3];
+                row.result = statement.bound?.[4];
+                row.error = statement.bound?.[5];
+                row.updated_at = statement.bound?.[6];
+                row.finished_at = statement.bound?.[7];
+              }
+            }
             if (/UPDATE share_links SET download_count = download_count \+ 1/i.test(sql)) {
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) {
@@ -434,6 +470,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT COUNT\(\*\) as count FROM trash/i.test(sql)) return { count: filteredTrashRows(statement.bound || []).length };
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT \* FROM share_links WHERE token = \?/i.test(sql)) return shareRows.find(row => row.token === statement.bound?.[0]) || null;
+            if (/SELECT \* FROM file_tasks WHERE id = \?/i.test(sql)) return taskRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: filteredLogs(sql, statement.bound || []).length };
             if (/SELECT value FROM settings WHERE key = 'trash_retention_days'/i.test(sql)) {
               const value = settingsRows.get('trash_retention_days');
@@ -479,13 +516,12 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                   .map(([key]) => ({ key })),
               };
             }
-            if (/SELECT token FROM share_links WHERE/i.test(sql)) {
-              const now = statement.bound?.[0] ?? Date.now();
+            if (/SELECT \* FROM share_links WHERE/i.test(sql)) {
+              const expiryCutoff = statement.bound?.[0] ?? Date.now();
               return {
                 results: shareRows
-                  .filter(row => (Number(row.expires_at || 0) > 0 && Number(row.expires_at || 0) <= now)
+                  .filter(row => (Number(row.expires_at || 0) > 0 && Number(row.expires_at || 0) <= expiryCutoff)
                     || (Number(row.max_downloads || 0) > 0 && Number(row.download_count || 0) >= Number(row.max_downloads || 0)))
-                  .map(row => ({ token: row.token })),
               };
             }
             if (/SELECT \* FROM share_links ORDER BY created_at DESC/i.test(sql)) {

@@ -144,6 +144,24 @@ test('search uses D1 file index when available', async () => {
   assert.equal(data.scanLimitReached, false);
 });
 
+test('search filters indexed results by kind size and modified dates', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'docs/photo.jpg', { size: 2048, contentType: 'image/jpeg', uploaded: new Date('2026-01-04') });
+  await upsertFileIndex(env, 'docs/photo.txt', { size: 512, contentType: 'text/plain', uploaded: new Date('2025-01-04') });
+
+  const res = await handleSearch(
+    env,
+    new Request('https://example.com/api/search?q=photo&scope=/docs&kind=image&minSize=1&modifiedAfter=2026-01-01'),
+    new URL('https://example.com/api/search?q=photo&scope=/docs&kind=image&minSize=1&modifiedAfter=2026-01-01'),
+    [],
+    { role: 'guest' },
+    [],
+  );
+  const data = await res.json();
+
+  assert.deepEqual(data.files.map(file => file.fullKey), ['docs/photo.jpg']);
+});
+
 test('indexed search keeps scanning past hidden rows for guest pagination', async () => {
   const env = makeEnv();
   await upsertFileIndex(env, 'hidden/alpha-1.txt', { size: 1, uploaded: Date.now() });
@@ -479,6 +497,52 @@ test('route smoke: folder upload can target nested paths', async () => {
 
   assert.equal(upload.status, 200);
   assert.ok(await env.R2.get('projects/folder-a/inside.txt'));
+});
+
+test('admin file task runs paste work in the background task table', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'source.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const waitUntilPromises = [];
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const created = await onRequest({
+    env,
+    request: new Request('https://example.com/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'paste', payload: { action: 'copy', paths: ['source.txt'], targetDir: '/copies/' } }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+    waitUntil(promise) {
+      waitUntilPromises.push(promise);
+    },
+  });
+  assert.equal(created.status, 202);
+  const createdData = await created.json();
+  assert.ok(createdData.item.id);
+  await Promise.all(waitUntilPromises);
+
+  const status = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/tasks?id=${createdData.item.id}`, {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const statusData = await status.json();
+  assert.equal(statusData.item.status, 'completed');
+  assert.ok(await env.R2.get('copies/source.txt'));
 });
 
 test('protected paths require password and unlock with signed cookie', async () => {
@@ -2026,6 +2090,58 @@ test('recently expired share records are retained until manual delete or retenti
   });
   assert.equal(deleted.status, 200);
   assert.deepEqual(await deleted.json(), { success: true });
+});
+
+test('expired share access sends one webhook notification', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/notify-expired.txt', body: 'old', size: 3, uploaded: new Date('2026-01-01') }],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)')
+      .bind('webhooks', JSON.stringify([{ name: 'share-expired', url: 'https://hooks.example.test/share', events: ['share.expired'] }]))
+      .run();
+
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const create = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/shares', {
+        method: 'POST',
+        body: JSON.stringify({ path: 'docs/notify-expired.txt', expiresAt: Date.now() - 1000 }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    const token = (await create.json()).item.token;
+
+    const first = await onRequest({ env, request: new Request(`https://example.com/api/share/${token}/info`) });
+    const second = await onRequest({ env, request: new Request(`https://example.com/api/share/${token}/info`) });
+
+    assert.equal(first.status, 410);
+    assert.equal(second.status, 410);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.event, 'share.expired');
+    assert.equal(calls[0].body.data.token, token);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('admin share list auto-removes expired share records', async () => {
