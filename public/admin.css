@@ -54,13 +54,17 @@ body.admin-page {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 36px 24px 24px;
+  padding: 24px;
   overflow-y: auto;
   gap: 12px;
 }
 
 .admin-page #health-tab.hidden {
   display: none !important;
+}
+
+.admin-page #health-tab .admin-page-panel:last-child {
+  flex: 1 1 auto;
 }
 
 .admin-page .overview-stats-grid {
@@ -369,6 +373,7 @@ body.admin-page {
   gap: 18px;
   width: 100%;
   min-width: 0;
+  min-height: 0;
 }
 
 .admin-page .webhook-form-block {
@@ -482,16 +487,16 @@ body.admin-page {
 
 .admin-page .webhook-event-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 8px;
 }
 
 .admin-page .webhook-event-option {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  min-height: 70px;
-  padding: 12px;
+  gap: 8px;
+  min-height: 54px;
+  padding: 9px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
@@ -516,14 +521,14 @@ body.admin-page {
 
 .admin-page .webhook-event-option strong {
   color: var(--text-main);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   line-height: 1.2;
 }
 
 .admin-page .webhook-event-option small {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.35;
 }
@@ -1742,8 +1747,13 @@ body.admin-page {
   .admin-page .webhook-row-actions {
     justify-items: stretch;
     padding-top: 10px;
-    border-top: 1px solid var(--border);
-  }
+  border-top: 1px solid var(--border);
+}
+
+.admin-page #webhooks-tab .admin-page-panel {
+  min-height: 0;
+  overflow-y: auto;
+}
 
   .admin-page .webhook-row-buttons {
     justify-content: flex-start;
