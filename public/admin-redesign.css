@@ -1,0 +1,728 @@
+body.admin-page {
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% -8%, rgba(96, 165, 250, 0.16), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+}
+
+.admin-page .admin-console {
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  padding: 18px;
+  box-sizing: border-box;
+}
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr);
+  gap: 18px;
+  width: 100%;
+  height: calc(100vh - 56px);
+  min-height: 0;
+}
+
+.admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px;
+  border: 1px solid rgba(203, 213, 225, 0.88);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.admin-page .admin-sidebar-head {
+  display: grid;
+  gap: 18px;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-sidebar-brand h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.admin-sidebar-brand p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-page .admin-sidebar-return {
+  width: 100%;
+  height: 42px;
+}
+
+.admin-page .tab-shell {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 24px !important;
+  padding: 0 !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.admin-page .admin-tab-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 14px 0 42px;
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.admin-page .admin-tab-btn::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  width: 10px;
+  height: 10px;
+  border-radius: 4px;
+  background: #cbd5e1;
+}
+
+.admin-page .admin-tab-btn:hover {
+  border-color: rgba(191, 219, 254, 0.75) !important;
+  background: #f8fbff !important;
+  color: #1d4ed8 !important;
+  transform: none;
+  box-shadow: none !important;
+}
+
+.admin-page .admin-tab-btn.is-active {
+  border-color: #bfdbfe !important;
+  background: linear-gradient(135deg, #eff6ff, #f0fdfa) !important;
+  color: #0f172a !important;
+  box-shadow: inset 3px 0 0 #2563eb !important;
+}
+
+.admin-page .admin-tab-btn.is-active::before {
+  background: linear-gradient(135deg, #2563eb, #14b8a6);
+}
+
+.admin-sidebar-footer {
+  display: grid;
+  gap: 5px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.admin-sidebar-footer span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.admin-sidebar-footer strong {
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 72px;
+  padding: 0 4px 14px;
+}
+
+.admin-topbar-kicker {
+  margin: 0 0 5px;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-topbar h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 950;
+  line-height: 1.05;
+}
+
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-live-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+}
+
+.admin-page .admin-workspace > .explorer-card {
+  display: flex;
+  min-height: 0;
+  margin: 0 !important;
+  overflow: hidden;
+  border: 1px solid rgba(203, 213, 225, 0.88) !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: blur(18px);
+}
+
+.admin-page #overview-tab,
+.admin-page #health-tab,
+.admin-page #logs-tab,
+.admin-page #access-tab,
+.admin-page #quota-tab,
+.admin-page #shares-tab,
+.admin-page #webhooks-tab {
+  min-width: 0;
+  min-height: 0;
+  padding: 22px !important;
+  color: #0f172a;
+}
+
+.admin-page #overview-tab {
+  overflow: auto;
+}
+
+.admin-page #health-tab,
+.admin-page #logs-tab,
+.admin-page #access-tab,
+.admin-page #quota-tab,
+.admin-page #shares-tab,
+.admin-page #webhooks-tab {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+}
+
+.admin-page .overview-stats-grid {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.admin-page .stat-card {
+  min-height: 128px;
+  padding: 18px 20px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 20px !important;
+  background:
+    linear-gradient(135deg, #ffffff, #f8fbff) !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05) !important;
+}
+
+.admin-page .stat-card::before {
+  inset: auto 20px 18px 20px;
+  width: auto;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #14b8a6) !important;
+}
+
+.admin-page .stat-label {
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 900;
+}
+
+.admin-page .stat-label::after {
+  display: none;
+}
+
+.admin-page .stat-value,
+.admin-page .stat-trash-count {
+  color: #0f172a !important;
+  font-size: 34px !important;
+  font-weight: 950;
+}
+
+.admin-page .stat-trash-size {
+  color: #64748b !important;
+}
+
+.admin-page .overview-panels-grid {
+  gap: 18px;
+}
+
+.admin-page .overview-panels-grid > section,
+.admin-page .admin-page-panel,
+.admin-page .health-status-panel,
+.admin-page .health-maintenance-panel,
+.admin-page .health-advice-panel,
+.admin-page .log-filter-panel,
+.admin-page .share-filter-panel,
+.admin-page .storage-panel,
+.admin-page .quota-editor-panel,
+.admin-page .quota-status-panel,
+.admin-page .access-editor-panel,
+.admin-page .access-list-panel,
+.admin-page .webhook-editor-column,
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel,
+.admin-page .admin-table-card {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04) !important;
+}
+
+.admin-page .admin-page-panel {
+  padding: 20px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.admin-page .admin-section-head,
+.admin-page .health-workbench-head,
+.admin-page .log-workbench-head,
+.admin-page .share-workbench-head,
+.admin-page .task-workbench-head,
+.admin-page .quota-workbench-head,
+.admin-page .access-workbench-head,
+.admin-page .storage-console-head,
+.admin-page .webhook-workbench-head {
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.admin-page .admin-section-head h2,
+.admin-page .health-panel-head h3,
+.admin-page .storage-panel-head h3,
+.admin-page .quota-panel-title h3,
+.admin-page .access-panel-title h3,
+.admin-page .access-list-head h3,
+.admin-page .webhook-editor-head h3,
+.admin-page .webhook-list-head h3,
+.admin-page .overview-panels-grid h2 {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.admin-page .admin-section-head p,
+.admin-page .health-panel-head p,
+.admin-page .storage-panel-head p,
+.admin-page .quota-panel-title p,
+.admin-page .access-panel-title p,
+.admin-page .access-list-head p,
+.admin-page .webhook-editor-head p {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.admin-page .btn,
+.admin-page .admin-danger-btn,
+.admin-page .access-preset-btn,
+.admin-page .storage-subtab-btn {
+  height: 40px;
+  border: 1px solid #dbe4ef !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.admin-page .btn:hover,
+.admin-page .access-preset-btn:hover,
+.admin-page .storage-subtab-btn:hover {
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.08) !important;
+}
+
+.admin-page .btn-primary,
+.admin-page .storage-subtab-btn.is-active {
+  border-color: #2563eb !important;
+  background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22) !important;
+}
+
+.admin-page .btn-danger-soft,
+.admin-page .admin-danger-btn {
+  border-color: #fecaca !important;
+  background: #fff7f7 !important;
+  color: #b91c1c !important;
+}
+
+.admin-page .btn-danger-soft:hover,
+.admin-page .admin-danger-btn:hover {
+  border-color: #fca5a5 !important;
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.admin-page .admin-input,
+.admin-page .filter-input,
+.admin-page textarea.admin-input {
+  border: 1px solid #dbe4ef !important;
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.admin-page .admin-input:focus,
+.admin-page .filter-input:focus,
+.admin-page textarea.admin-input:focus {
+  border-color: #93c5fd !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.24) !important;
+}
+
+.admin-page .health-item,
+.admin-page .storage-warning,
+.admin-page .storage-metric-card,
+.admin-page .quota-summary-card,
+.admin-page .access-summary-card,
+.admin-page .share-summary-card,
+.admin-page .task-summary-card,
+.admin-page .attention-item,
+.admin-page .quota-note-card,
+.admin-page .quota-usage-card,
+.admin-page .index-status-panel,
+.admin-page .access-mode-card,
+.admin-page .webhook-event-option {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+.admin-page .attention-item:hover,
+.admin-page .health-item:hover,
+.admin-page .access-mode-card:hover,
+.admin-page .webhook-event-option:hover {
+  border-color: #bfdbfe !important;
+  background: #f8fbff !important;
+}
+
+.admin-page .admin-status-badge,
+.admin-page .admin-action-badge,
+.admin-page .status-pill,
+.admin-page .webhook-type-badge,
+.admin-page .webhook-head-pill,
+.admin-page .webhook-list-count,
+.admin-page .index-status-badge {
+  min-height: 26px;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 999px !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-page .admin-status-badge.is-hidden,
+.admin-page .status-pill.is-bad,
+.admin-page .admin-action-badge.is-delete {
+  border-color: #fecaca !important;
+  background: #fff7f7 !important;
+  color: #b91c1c !important;
+}
+
+.admin-page .status-pill.is-ok,
+.admin-page .admin-action-badge.is-upload,
+.admin-page .index-status-badge.is-ok {
+  border-color: #a7f3d0 !important;
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+}
+
+.admin-page .breakdown-item,
+.admin-page .latest-item,
+.admin-page .task-row,
+.admin-page .log-card,
+.admin-page .share-card,
+.admin-page .access-rule-card,
+.admin-page .webhook-row,
+.admin-page .webhook-delivery-row {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+.admin-page .log-card,
+.admin-page .share-card,
+.admin-page .access-rule-card,
+.admin-page .webhook-row,
+.admin-page .webhook-delivery-row,
+.admin-page .task-row {
+  margin-bottom: 8px;
+}
+
+.admin-page .log-card:hover,
+.admin-page .share-card:hover,
+.admin-page .access-rule-card:hover,
+.admin-page .webhook-row:hover,
+.admin-page .webhook-delivery-row:hover,
+.admin-page .task-row:hover,
+.admin-page .latest-item:hover,
+.admin-page .breakdown-item:hover {
+  border-color: #bfdbfe !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.07) !important;
+}
+
+.admin-page .breakdown-track,
+.admin-page .quota-usage-track,
+.admin-page .task-progress {
+  background: #e2e8f0 !important;
+}
+
+.admin-page .breakdown-bar,
+.admin-page .quota-usage-track span,
+.admin-page .task-progress span {
+  background: linear-gradient(90deg, #2563eb, #14b8a6) !important;
+}
+
+.admin-page .log-filter-panel,
+.admin-page .share-filter-panel {
+  padding: 14px;
+  gap: 10px;
+}
+
+.admin-page .log-list-head {
+  padding: 0 16px 8px;
+  color: #64748b;
+}
+
+.admin-page .log-card {
+  grid-template-columns: 170px minmax(0, 1fr) 170px;
+  padding: 14px 16px;
+}
+
+.admin-page .share-card {
+  padding: 16px;
+}
+
+.admin-page .access-editor-panel,
+.admin-page .quota-editor-panel,
+.admin-page .webhook-editor-column {
+  background: linear-gradient(180deg, #ffffff, #fbfdff) !important;
+}
+
+.admin-page .access-mode-card:has(input:checked),
+.admin-page .webhook-event-option:has(input:checked) {
+  border-color: #93c5fd !important;
+  background: #eff6ff !important;
+}
+
+.admin-page .storage-subtabs {
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.admin-page .admin-pagination {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.admin-page .log-empty,
+.admin-page .share-empty,
+.admin-page .task-empty,
+.admin-page .webhook-empty,
+.admin-page .access-empty,
+.admin-page .quota-empty,
+.admin-page .admin-empty-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.admin-page .footer {
+  height: 20px;
+  padding: 10px 0 0;
+}
+
+@media (max-width: 1180px) {
+  body.admin-page {
+    overflow-y: auto;
+  }
+
+  .admin-page .admin-console {
+    height: auto;
+    min-height: 100vh;
+    padding: 12px;
+  }
+
+  .admin-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .admin-sidebar {
+    position: sticky;
+    top: 8px;
+    z-index: 40;
+    padding: 12px;
+  }
+
+  .admin-page .admin-sidebar-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .admin-page .admin-sidebar-return {
+    width: auto;
+  }
+
+  .admin-page .tab-shell {
+    grid-template-columns: repeat(7, max-content);
+    margin-top: 12px !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px !important;
+  }
+
+  .admin-page .admin-tab-btn {
+    width: auto;
+    min-width: 120px;
+  }
+
+  .admin-sidebar-footer {
+    display: none;
+  }
+
+  .admin-workspace {
+    min-height: 0;
+  }
+
+  .admin-page .admin-workspace > .explorer-card {
+    min-height: 720px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-page .admin-console {
+    padding: 10px;
+  }
+
+  .admin-sidebar,
+  .admin-page .admin-workspace > .explorer-card {
+    border-radius: 18px !important;
+  }
+
+  .admin-page .admin-sidebar-head {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .admin-page .admin-sidebar-return {
+    display: none;
+  }
+
+  .admin-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 0;
+    padding: 4px 2px 12px;
+  }
+
+  .admin-topbar h2 {
+    font-size: 24px;
+  }
+
+  .admin-topbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-page .tab-shell {
+    grid-template-columns: repeat(7, minmax(112px, 1fr));
+  }
+
+  .admin-page #overview-tab,
+  .admin-page #health-tab,
+  .admin-page #logs-tab,
+  .admin-page #access-tab,
+  .admin-page #quota-tab,
+  .admin-page #shares-tab,
+  .admin-page #webhooks-tab {
+    padding: 14px !important;
+  }
+
+  .admin-page .overview-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .stat-card {
+    min-height: 104px;
+  }
+
+  .admin-page .log-card {
+    grid-template-columns: 1fr;
+  }
+}
