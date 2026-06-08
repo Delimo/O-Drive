@@ -130,6 +130,7 @@ function setSharesResult(text = '', tone = 'muted') {
   const result = document.getElementById('sharesResult');
   if (!result) return;
   result.textContent = text;
+  result.classList.toggle('hidden', !text);
   result.classList.toggle('text-rose-600', tone === 'error');
   result.classList.toggle('text-emerald-700', tone === 'success');
 }
@@ -645,8 +646,8 @@ export const AdminActions = {
       setSharesResult(data?.message || '删除失败', 'error');
       return;
     }
-    setSharesResult('分享链接已删除', 'success');
     await this.loadShares();
+    setSharesResult('分享链接已删除', 'success');
   },
 
   async cleanupShares() {
@@ -656,8 +657,8 @@ export const AdminActions = {
       setSharesResult(data?.message || '清理失败', 'error');
       return;
     }
-    setSharesResult(`已清理 ${data.deleted || 0} 条分享记录`, 'success');
     await this.loadShares();
+    setSharesResult(`已清理 ${data.deleted || 0} 条分享记录`, 'success');
   },
 
   async loadWebhooks() {
