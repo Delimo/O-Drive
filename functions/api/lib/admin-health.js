@@ -28,7 +28,7 @@ async function checkR2(env) {
 
 async function latestSystemWarnings(env) {
   try {
-    const rows = await env.D1.prepare('SELECT * FROM system_warnings ORDER BY created_at DESC, id DESC LIMIT 10').all();
+    const rows = await env.D1.prepare('SELECT * FROM system_warnings WHERE acknowledged_at = 0 ORDER BY created_at DESC, id DESC LIMIT 10').all();
     return rows.results || [];
   } catch (_) {
     return [];

@@ -199,6 +199,59 @@ body.admin-page {
   gap: 12px;
 }
 
+.admin-page .maintenance-action-btn {
+  justify-content: center;
+  min-width: 0;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.admin-page .maintenance-action-btn:not(.is-primary):not(.is-danger) {
+  background: #fff;
+}
+
+.admin-page .maintenance-action-btn.is-primary {
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.14);
+}
+
+.admin-page .health-item .warning-chip-list {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  -webkit-line-clamp: initial !important;
+  overflow: visible;
+}
+
+.admin-page .warning-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 7px;
+  border-radius: 7px;
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.admin-page .warning-chip.is-error {
+  border-color: rgba(185, 28, 28, 0.18);
+  background: #fff5f5;
+  color: #b91c1c;
+}
+
+.admin-page .warning-chip.is-info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .admin-page .maintenance-result {
   margin: 0;
   padding: 0;

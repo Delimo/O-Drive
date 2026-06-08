@@ -167,13 +167,14 @@ export async function cleanupLogs(env, now = Date.now()) {
   return Math.max(0, Number(beforeCount?.count || 0) - Number(afterCount?.count || 0));
 }
 
-export async function recordSystemWarning(env, source, message) {
+export async function recordSystemWarning(env, source, message, level = 'warning') {
   if (!env?.D1) return;
   try {
     await ensureCoreTables(env);
     const createdAt = Date.now();
-    await env.D1.prepare('INSERT INTO system_warnings (source, message, created_at) VALUES (?, ?, ?)')
-      .bind(String(source || 'system'), String(message || 'Unknown warning').slice(0, 1000), createdAt)
+    const cleanLevel = ['error', 'warning', 'info'].includes(level) ? level : 'warning';
+    await env.D1.prepare('INSERT INTO system_warnings (source, message, level, acknowledged_at, created_at) VALUES (?, ?, ?, 0, ?)')
+      .bind(String(source || 'system'), String(message || 'Unknown warning').slice(0, 1000), cleanLevel, createdAt)
       .run();
     await cleanupSystemWarnings(env, createdAt);
   } catch (_) {}

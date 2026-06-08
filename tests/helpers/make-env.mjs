@@ -264,6 +264,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 expired_notified_at: 0,
                 created_at: statement.bound?.[12] ?? statement.bound?.[11] ?? statement.bound?.[9],
                 last_accessed_at: 0,
+                last_access_ip: '',
               };
               const idx = shareRows.findIndex(item => item.token === row.token);
               if (idx >= 0) shareRows[idx] = row;
@@ -287,7 +288,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 id: systemWarningNextId++,
                 source: statement.bound?.[0],
                 message: statement.bound?.[1],
-                created_at: statement.bound?.[2],
+                level: statement.bound?.length >= 4 ? statement.bound?.[2] : 'warning',
+                acknowledged_at: 0,
+                created_at: statement.bound?.length >= 4 ? statement.bound?.[3] : statement.bound?.[2],
               });
             }
             if (/INSERT INTO file_tasks/i.test(sql)) {
@@ -416,6 +419,13 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) row.last_accessed_at = statement.bound?.[0];
             }
+            if (/UPDATE share_links SET last_accessed_at = \?, last_access_ip = \? WHERE token = \?/i.test(sql)) {
+              const row = shareRows.find(item => item.token === statement.bound?.[2]);
+              if (row) {
+                row.last_accessed_at = statement.bound?.[0];
+                row.last_access_ip = statement.bound?.[1] || '';
+              }
+            }
             if (/UPDATE share_links SET expired_notified_at = \? WHERE token = \?/i.test(sql)) {
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) row.expired_notified_at = statement.bound?.[0];
@@ -435,10 +445,11 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               }
             }
             if (/UPDATE share_links SET download_count = download_count \+ 1/i.test(sql)) {
-              const row = shareRows.find(item => item.token === statement.bound?.[1]);
+              const row = shareRows.find(item => item.token === (statement.bound?.[2] ?? statement.bound?.[1]));
               if (row) {
                 row.download_count = Number(row.download_count || 0) + 1;
                 row.last_accessed_at = statement.bound?.[0];
+                if (statement.bound?.length >= 3) row.last_access_ip = statement.bound?.[1] || '';
               }
             }
             if (/DELETE FROM file_index WHERE path = \? OR path LIKE \?/i.test(sql)) {
@@ -513,11 +524,22 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/^DELETE FROM system_warnings$/i.test(sql.trim())) {
               systemWarningRows.length = 0;
             }
+            if (/UPDATE system_warnings SET acknowledged_at = \? WHERE acknowledged_at = 0/i.test(sql)) {
+              const now = Number(statement.bound?.[0] || Date.now());
+              for (const row of systemWarningRows) {
+                if (!Number(row.acknowledged_at || 0)) row.acknowledged_at = now;
+              }
+            }
             if (/DELETE FROM file_tasks WHERE status NOT IN \('queued', 'running'\) AND finished_at > 0 AND finished_at < \?/i.test(sql)) {
               const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = taskRows.length - 1; i >= 0; i--) {
                 const row = taskRows[i];
                 if (!['queued', 'running'].includes(row.status) && Number(row.finished_at || 0) > 0 && Number(row.finished_at || 0) < cutoff) taskRows.splice(i, 1);
+              }
+            }
+            if (/^DELETE FROM file_tasks WHERE status NOT IN \('queued', 'running'\)$/i.test(sql.trim())) {
+              for (let i = taskRows.length - 1; i >= 0; i--) {
+                if (!['queued', 'running'].includes(taskRows[i].status)) taskRows.splice(i, 1);
               }
             }
             if (/DELETE FROM file_tasks\s+WHERE status NOT IN \('queued', 'running'\)\s+AND id NOT IN/i.test(sql)) {
@@ -560,9 +582,16 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT \* FROM share_links WHERE token = \?/i.test(sql)) return shareRows.find(row => row.token === statement.bound?.[0]) || null;
             if (/SELECT \* FROM file_tasks WHERE id = \?/i.test(sql)) return taskRows.find(row => row.id === statement.bound?.[0]) || null;
+            if (/SELECT COUNT\(\*\) as count FROM file_tasks WHERE status NOT IN \('queued', 'running'\)/i.test(sql)) {
+              return { count: taskRows.filter(row => !['queued', 'running'].includes(row.status)).length };
+            }
+            if (/SELECT COUNT\(\*\) as count FROM file_tasks/i.test(sql)) return { count: taskRows.length };
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: filteredLogs(sql, statement.bound || []).length };
             if (/SELECT COUNT\(\*\) as count FROM webhook_deliveries WHERE ok = 0/i.test(sql)) {
               return { count: webhookDeliveryRows.filter(row => Number(row.ok || 0) === 0).length };
+            }
+            if (/SELECT COUNT\(\*\) as count FROM system_warnings WHERE acknowledged_at = 0/i.test(sql)) {
+              return { count: systemWarningRows.filter(row => !Number(row.acknowledged_at || 0)).length };
             }
             if (/SELECT COUNT\(\*\) as count FROM system_warnings/i.test(sql)) return { count: systemWarningRows.length };
             if (/SELECT value FROM settings WHERE key = 'trash_retention_days'/i.test(sql)) {
@@ -644,6 +673,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM file_tasks ORDER BY created_at DESC LIMIT \?/i.test(sql)) {
               const limit = Number(statement.bound?.[0] || 20);
               return { results: [...taskRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, limit) };
+            }
+            if (/SELECT \* FROM system_warnings WHERE acknowledged_at = 0 ORDER BY created_at DESC/i.test(sql)) {
+              return {
+                results: [...systemWarningRows]
+                  .filter(row => !Number(row.acknowledged_at || 0))
+                  .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0))
+                  .slice(0, 10)
+              };
             }
             if (/SELECT \* FROM system_warnings ORDER BY created_at DESC/i.test(sql)) {
               return {

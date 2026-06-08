@@ -31,7 +31,14 @@ async function ensureTaskTable(env) {
   ).run();
 }
 
-async function cleanupFileTasks(env, now = Date.now()) {
+export async function cleanupFileTasks(env, now = Date.now(), { force = false } = {}) {
+  await ensureTaskTable(env);
+  if (force) {
+    const before = await env.D1.prepare("SELECT COUNT(*) as count FROM file_tasks WHERE status NOT IN ('queued', 'running')").first().catch(() => ({ count: 0 }));
+    await env.D1.prepare("DELETE FROM file_tasks WHERE status NOT IN ('queued', 'running')").run();
+    return Number(before?.count || 0);
+  }
+  const before = await env.D1.prepare("SELECT COUNT(*) as count FROM file_tasks WHERE status NOT IN ('queued', 'running')").first().catch(() => ({ count: 0 }));
   const cutoff = now - TASK_RETENTION_MS;
   await env.D1.prepare(
     "DELETE FROM file_tasks WHERE status NOT IN ('queued', 'running') AND finished_at > 0 AND finished_at < ?"
@@ -46,6 +53,8 @@ async function cleanupFileTasks(env, now = Date.now()) {
          LIMIT ?
        )`
   ).bind(TASK_RETENTION_ROWS).run();
+  const after = await env.D1.prepare("SELECT COUNT(*) as count FROM file_tasks WHERE status NOT IN ('queued', 'running')").first().catch(() => ({ count: 0 }));
+  return Math.max(0, Number(before?.count || 0) - Number(after?.count || 0));
 }
 
 function mapTask(row) {

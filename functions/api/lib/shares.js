@@ -141,6 +141,7 @@ function mapShare(row) {
     exhausted: Boolean(maxDownloads && downloadCount >= maxDownloads),
     createdAt: Number(row.created_at || 0),
     lastAccessedAt: Number(row.last_accessed_at || 0),
+    lastAccessIp: row.last_access_ip || '',
   };
 }
 
@@ -251,11 +252,11 @@ export async function handleAdminShares(env, request, method, url) {
     const contentType = meta.httpMetadata?.contentType || meta.contentType || '';
     await env.D1.prepare(
       `INSERT INTO share_links
-       (token, path, name, size, content_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, expired_notified_at, created_at, last_accessed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, 0)`
+       (token, path, name, size, content_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, expired_notified_at, created_at, last_accessed_at, last_access_ip)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, 0, '')`
     ).bind(token, path, name, Number(meta.size || 0), contentType, allowPreview, allowDownload, expiresAt, maxDownloads, passwordSalt, passwordHash, Date.now()).run();
     await addLog(env, request, 'SHARE_CREATE', path);
-    return jsonResponse({ success: true, item: mapShare({ token, path, name, size: Number(meta.size || 0), content_type: contentType, allow_preview: allowPreview, allow_download: allowDownload, expires_at: expiresAt, max_downloads: maxDownloads, download_count: 0, password_hash: passwordHash, created_at: Date.now(), last_accessed_at: 0 }) });
+    return jsonResponse({ success: true, item: mapShare({ token, path, name, size: Number(meta.size || 0), content_type: contentType, allow_preview: allowPreview, allow_download: allowDownload, expires_at: expiresAt, max_downloads: maxDownloads, download_count: 0, password_hash: passwordHash, created_at: Date.now(), last_accessed_at: 0, last_access_ip: '' }) });
   }
 
   if (method === 'DELETE') {
@@ -298,15 +299,16 @@ export async function handlePublicShare(env, request, path) {
   }
   if (!(await hasShareAccess(env, request, token, row))) return sharePasswordRequiredResponse({ token, hasPassword: true });
 
-  await env.D1.prepare('UPDATE share_links SET last_accessed_at = ? WHERE token = ?').bind(Date.now(), token).run();
+  const accessIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+  await env.D1.prepare('UPDATE share_links SET last_accessed_at = ?, last_access_ip = ? WHERE token = ?').bind(Date.now(), accessIp, token).run();
   if (action === 'info') return jsonResponse({ success: true, item });
   if (action === 'preview' && !item.allowPreview) return jsonResponse({ success: false, message: 'Preview disabled' }, 403);
   if (action === 'download' && !item.allowDownload) return jsonResponse({ success: false, message: 'Download disabled' }, 403);
 
   const res = await handleDownloadOrPreview(env, request, action === 'download' ? `/api/download/${item.path}` : `/api/preview/${item.path}`, item.path);
   if (res.ok && action === 'download') {
-    await env.D1.prepare('UPDATE share_links SET download_count = download_count + 1, last_accessed_at = ? WHERE token = ?')
-      .bind(Date.now(), token)
+    await env.D1.prepare('UPDATE share_links SET download_count = download_count + 1, last_accessed_at = ?, last_access_ip = ? WHERE token = ?')
+      .bind(Date.now(), accessIp, token)
       .run();
   }
   return res;

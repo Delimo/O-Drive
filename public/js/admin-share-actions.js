@@ -111,6 +111,9 @@ export function createAdminShareActions({ adminConfirm }) {
       list.innerHTML = rows.map(item => {
         const status = shareStatus(item);
         const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', { hour12: false }) : '-';
+        const auditText = item.lastAccessedAt
+          ? `最近访问 ${new Date(item.lastAccessedAt).toLocaleString('zh-CN', { hour12: false })}${item.lastAccessIp ? ` · ${item.lastAccessIp}` : ''}`
+          : '最近访问 暂无';
         return `
           <div class="share-card">
             <div class="share-card-main">
@@ -118,7 +121,7 @@ export function createAdminShareActions({ adminConfirm }) {
                 <strong>${escapeHtml(item.name || item.path)}</strong>
                 <span>${escapeHtml(item.path)}</span>
               </div>
-              <div class="admin-share-chips">${sharePolicy(item)}</div>
+              <div class="admin-share-chips">${sharePolicy(item)}<span class="admin-share-audit">${escapeHtml(auditText)}</span></div>
               <div class="share-card-meta">创建：${escapeHtml(createdAt)}</div>
             </div>
             <div class="share-card-side">

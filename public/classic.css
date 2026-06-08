@@ -1039,6 +1039,64 @@ body.admin-page {
   background: #f8fbff !important;
 }
 
+.admin-page .webhook-editor-column {
+  padding-bottom: 0 !important;
+}
+
+.admin-page .webhook-save-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 0 calc(var(--admin-panel-pad) * -1);
+  padding: 14px var(--admin-panel-pad) var(--admin-panel-pad) !important;
+  border-top: 1px solid var(--admin-line) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), #ffffff 42%) !important;
+}
+
+.admin-page .explorer-card:has(#quota-tab:not(.hidden)),
+.admin-page .explorer-card:has(#shares-tab:not(.hidden)) {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.admin-page #quota-tab,
+.admin-page #shares-tab {
+  flex: 0 0 auto;
+  overflow: visible !important;
+}
+
+.admin-page .storage-console {
+  flex: 0 0 auto !important;
+}
+
+.admin-page .storage-view.is-active {
+  min-height: 0 !important;
+}
+
+.admin-page .storage-s3-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.admin-page #quota-tab .storage-panel,
+.admin-page #quota-tab .access-list-panel,
+.admin-page #quota-tab .admin-table-card,
+.admin-page #shares-tab .share-list {
+  min-height: 0 !important;
+}
+
+.admin-page #quota-tab .access-empty,
+.admin-page #quota-tab .quota-empty,
+.admin-page #quota-tab .admin-empty-state,
+.admin-page #shares-tab .share-empty {
+  min-height: 72px !important;
+  padding: 16px !important;
+}
+
+.admin-page #storageResult:empty,
+.admin-page #sharesResult.hidden {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
   body.admin-page {
     --admin-outer-pad: 14px;
@@ -1114,5 +1172,15 @@ body.admin-page {
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
+  }
+
+  .admin-page .webhook-save-row {
+    margin: 0 calc(var(--admin-panel-pad) * -1);
+    padding: 12px var(--admin-panel-pad) var(--admin-panel-pad) !important;
+  }
+
+  .admin-page .explorer-card:has(#quota-tab:not(.hidden)),
+  .admin-page .explorer-card:has(#shares-tab:not(.hidden)) {
+    flex: none;
   }
 }

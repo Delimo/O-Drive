@@ -59,6 +59,8 @@ export const CORE_TABLE_SQL = [
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source TEXT NOT NULL,
     message TEXT NOT NULL,
+    level TEXT NOT NULL DEFAULT 'warning',
+    acknowledged_at INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS trash (
@@ -96,6 +98,8 @@ export const CORE_MIGRATION_SQL = [
   `ALTER TABLE logs ADD COLUMN error_code TEXT DEFAULT ''`,
   `ALTER TABLE logs ADD COLUMN metadata TEXT DEFAULT ''`,
   `ALTER TABLE trash ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'`,
+  `ALTER TABLE system_warnings ADD COLUMN level TEXT NOT NULL DEFAULT 'warning'`,
+  `ALTER TABLE system_warnings ADD COLUMN acknowledged_at INTEGER NOT NULL DEFAULT 0`,
   `CREATE INDEX IF NOT EXISTS idx_trash_trashed_at ON trash(trashed_at)`,
   `CREATE INDEX IF NOT EXISTS idx_trash_original_key ON trash(original_key)`,
 ];
@@ -116,7 +120,8 @@ export const SHARE_TABLE_SQL = `
     password_hash TEXT DEFAULT '',
     expired_notified_at INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
-    last_accessed_at INTEGER NOT NULL DEFAULT 0
+    last_accessed_at INTEGER NOT NULL DEFAULT 0,
+    last_access_ip TEXT DEFAULT ''
   )
 `;
 
@@ -124,6 +129,7 @@ export const SHARE_MIGRATION_SQL = [
   `ALTER TABLE share_links ADD COLUMN password_salt TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN password_hash TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN expired_notified_at INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE share_links ADD COLUMN last_access_ip TEXT DEFAULT ''`,
 ];
 
 export const PROTECTED_PATH_TABLE_SQL = `

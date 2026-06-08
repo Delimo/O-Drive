@@ -438,6 +438,8 @@ export class UploadQueue {
   }
 
   async startBackgroundUpload(tasks, options = {}) {
+    const totalSize = tasks.reduce((sum, task) => sum + Number(task.file?.size || 0), 0);
+    if (tasks.length === 1 && totalSize < MULTIPART_THRESHOLD) return false;
     const worker = await getUploadWorker();
     if (!worker) return false;
     this.bindWorkerEvents();

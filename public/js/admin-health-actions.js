@@ -56,6 +56,28 @@ function maintenanceItem(label, value, detail = '') {
   `;
 }
 
+function warningLevelLabel(level = 'warning') {
+  if (level === 'error') return '错误';
+  if (level === 'info') return '信息';
+  return '警告';
+}
+
+function renderWarningText(warnings = []) {
+  return warnings.map(item => `
+    <span class="warning-chip is-${escapeHtml(item.level || 'warning')}">${escapeHtml(warningLevelLabel(item.level))}</span>
+    <span>${escapeHtml(`${item.source}: ${item.message}`)}</span>
+  `).join('');
+}
+
+function friendlyErrorMessage(res, data, fallback = '操作失败') {
+  const message = String(data?.message || '');
+  if (/csrf/i.test(message)) return '登录安全校验已过期，请刷新页面后重试。';
+  if (res?.status === 401) return '登录已过期，请重新登录后再试。';
+  if (res?.status === 403) return '当前账号没有执行该操作的权限，或安全校验已过期。';
+  if (res?.status === 429) return '请求过于频繁，请稍后再试。';
+  return message || fallback;
+}
+
 export function createAdminHealthActions({ adminConfirm }) {
   return {
     async loadHealth() {
@@ -75,7 +97,7 @@ export function createAdminHealthActions({ adminConfirm }) {
           <div class="health-item health-item-wide is-bad">
             <div>
               <strong>系统提醒</strong>
-              <span>${escapeHtml(warnings.map(item => `${item.source}: ${item.message}`).join('；'))}</span>
+              <span class="warning-chip-list">${renderWarningText(warnings)}</span>
             </div>
             <em>${warnings.length} 条</em>
           </div>
@@ -112,6 +134,7 @@ export function createAdminHealthActions({ adminConfirm }) {
         ? `索引占用 ${data.indexTotalSizeFormatted || '0 B'}，R2 抽样已达上限`
         : `R2 当前抽样 ${data.r2SampleCount || 0} 个可见文件`;
       const html = [
+        maintenanceItem('后台任务记录', data.taskCount || 0, '保留运行中任务和最近完成任务'),
         maintenanceItem('文件索引记录', data.indexCount || 0, indexDetail),
         maintenanceItem('索引最后更新', latestIndexUpdate, data.indexFresh ? '索引与当前抽样一致' : '建议重建文件索引'),
         maintenanceItem('访问失败记录', data.accessAttemptCount || 0, '受保护路径的密码错误记录'),
@@ -129,12 +152,14 @@ export function createAdminHealthActions({ adminConfirm }) {
         'cleanup-thumbnails': ['清理缩略图缓存？', '缩略图会在后续预览时重新生成。'],
         'cleanup-logs': ['清理旧操作日志？', '将保留最近 2000 条和最近 90 天内的操作日志。'],
       };
+      names['cleanup-warnings'] = ['清理系统提醒？', '这会移除当前记录的系统提醒，修复后的历史提醒不会继续显示。'];
+      names['cleanup-tasks'] = ['清理已完成任务？', '这会移除已完成、失败或部分完成的后台任务记录，运行中的任务会保留。'];
       const confirmText = names[action];
       if (confirmText && !(await adminConfirm(confirmText[0], confirmText[1]))) return;
       setMaintenanceResult('正在执行...');
       const { res, data } = await api.maintenanceAction(action);
       if (!res.ok || data?.success === false) {
-        setMaintenanceResult(data?.message || '维护操作失败');
+        setMaintenanceResult(friendlyErrorMessage(res, data, '维护操作失败'));
         return;
       }
       const summary = data.synced != null

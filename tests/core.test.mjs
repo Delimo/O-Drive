@@ -2304,7 +2304,7 @@ test('admin can create public share links and expired shares are deleted', async
     env,
     request: new Request('https://example.com/api/admin/shares', {
       method: 'POST',
-      body: JSON.stringify({ path: '/docs/readme.txt', expiresInDays: 7, maxDownloads: 1 }),
+      body: JSON.stringify({ path: '/docs/readme.txt', expiresInDays: 7, maxDownloads: 2 }),
       headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
     }),
   });
@@ -2322,16 +2322,33 @@ test('admin can create public share links and expired shares are deleted', async
 
   const download = await onRequest({
     env,
-    request: new Request(`https://example.com/api/share/${token}/download`),
+    request: new Request(`https://example.com/api/share/${token}/download`, {
+      headers: { 'cf-connecting-ip': '203.0.113.9' },
+    }),
   });
   assert.equal(download.status, 200);
+
+  const shares = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const shareRows = await shares.json();
+  assert.equal(shareRows.items[0].lastAccessIp, '203.0.113.9');
 
   const exhausted = await onRequest({
     env,
     request: new Request(`https://example.com/api/share/${token}/download`),
   });
-  assert.equal(exhausted.status, 410);
-  const exhaustedData = await exhausted.json();
+  assert.equal(exhausted.status, 200);
+
+  const exhaustedAgain = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/download`),
+  });
+  assert.equal(exhaustedAgain.status, 410);
+  const exhaustedData = await exhaustedAgain.json();
   assert.equal(exhaustedData.deleted, true);
 
   const missing = await onRequest({

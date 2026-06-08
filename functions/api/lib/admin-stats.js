@@ -23,6 +23,9 @@ export async function handleAdminStats(env) {
     const indexed = await getIndexedStats(env);
     if (indexed) {
       const dbStats = await adminDbStats(env);
+      if (dbStats.trash) dbStats.trash.percentOfFiles = Number(indexed.files?.totalSize || 0) > 0
+        ? Math.round((Number(dbStats.trash.size || 0) / Number(indexed.files.totalSize || 0)) * 100)
+        : 0;
       const index = await overviewIndexStatus(env);
       return jsonResponse({ ...indexed, ...dbStats, index, attention: await overviewAttention(env, indexed, dbStats, index) });
     }
@@ -57,6 +60,7 @@ export async function handleAdminStats(env) {
     }));
 
   const dbStats = await adminDbStats(env);
+  if (dbStats.trash) dbStats.trash.percentOfFiles = totalSize > 0 ? Math.round((Number(dbStats.trash.size || 0) / totalSize) * 100) : 0;
   const index = await overviewIndexStatus(env, listed);
   const stats = {
     files: {
@@ -130,6 +134,7 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
       body: index.sampleTruncated ? 'R2 抽样已达上限，建议在维护中心重建索引。' : '索引数量与当前抽样不一致，文件列表或统计可能不准确。',
       tab: 'health',
     });
+    Object.assign(items[items.length - 1], { action: 'maintenance-action', actionArgs: ['rebuild-index'] });
   }
   try {
     const quota = await getStorageQuota(env.D1);
@@ -184,7 +189,7 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
     }
   } catch (_) {}
   try {
-    const warnings = await env.D1.prepare('SELECT COUNT(*) as count FROM system_warnings').first();
+    const warnings = await env.D1.prepare('SELECT COUNT(*) as count FROM system_warnings WHERE acknowledged_at = 0').first();
     const count = Number(warnings?.count || 0);
     if (count > 0) {
       items.push({
@@ -195,6 +200,13 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
       });
     }
   } catch (_) {}
+
+  for (const item of items) {
+    if (item.tab === 'health' && item.level === 'warning' && !item.action) {
+      item.action = 'maintenance-action';
+      item.actionArgs = ['cleanup-warnings'];
+    }
+  }
 
   if (!items.length) {
     items.push({

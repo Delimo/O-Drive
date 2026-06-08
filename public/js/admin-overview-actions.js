@@ -1,6 +1,12 @@
 import { api } from './api.js';
 import { escapeHtml } from './utils.js';
 
+function attentionAttrs(item) {
+  const action = item.action || 'switch-tab';
+  const args = item.actionArgs || [item.tab || 'health'];
+  return `data-admin-action="${escapeHtml(action)}" data-args='${escapeHtml(JSON.stringify(args))}'`;
+}
+
 export function createAdminOverviewActions() {
   return {
     async loadStats() {
@@ -10,7 +16,7 @@ export function createAdminOverviewActions() {
       document.getElementById('statTotalSize').textContent = data.files?.totalSizeFormatted || '0 B';
       document.getElementById('statTrash').innerHTML = `
         <span class="stat-trash-count">${data.trash?.count || 0} <span class="text-sm font-semibold text-slate-500">项</span></span>
-        <span class="stat-trash-size text-sm font-semibold text-slate-500">${escapeHtml(data.trash?.sizeFormatted || '0 B')}</span>
+        <span class="stat-trash-size text-sm font-semibold text-slate-500">${escapeHtml(data.trash?.sizeFormatted || '0 B')} · ${escapeHtml(String(data.trash?.percentOfFiles || 0))}%</span>
       `;
       document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
       this.renderStorageWarnings(data);
@@ -56,7 +62,7 @@ export function createAdminOverviewActions() {
         tab: 'health',
       }];
       box.innerHTML = rows.map(item => `
-        <button class="attention-item is-${escapeHtml(item.level || 'info')}" data-admin-action="switch-tab" data-args='${escapeHtml(JSON.stringify([item.tab || 'health']))}'>
+        <button class="attention-item is-${escapeHtml(item.level || 'info')}" ${attentionAttrs(item)}>
           <span class="attention-dot"></span>
           <span>
             <strong>${escapeHtml(item.title || '待关注事项')}</strong>
