@@ -1,7 +1,5 @@
 ﻿import { addLog, jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects, recordSystemWarning } from './common.js';
-import { fileIndexStatus, getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
-import { cleanupLogs } from './common.js';
-import { mapWithConcurrency } from './r2-tree.js';
+import { fileIndexStatus, getIndexedStats, indexedFileCount, indexedFileKind, syncFileIndexFromR2 } from './file-index.js';
 import { getStorageQuota, setStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
 import { tokenSecretStatus } from './secrets.js';
 import { normalizeWebhookEndpoints, testWebhookEndpoint } from './webhooks.js';
@@ -73,7 +71,11 @@ export async function handleAdminLogs(env, url) {
 export async function handleAdminStats(env) {
   if (await indexedFileCount(env)) {
     const indexed = await getIndexedStats(env);
-    if (indexed) return jsonResponse({ ...indexed, ...(await adminDbStats(env)), index: await overviewIndexStatus(env) });
+    if (indexed) {
+      const dbStats = await adminDbStats(env);
+      const index = await overviewIndexStatus(env);
+      return jsonResponse({ ...indexed, ...dbStats, index, attention: await overviewAttention(env, indexed, dbStats, index) });
+    }
   }
   const listed = await listR2Objects(env.R2, {}, { maxObjects: 20000 });
   await syncFileIndexFromR2(env, { maxObjects: 20000 });
@@ -104,7 +106,9 @@ export async function handleAdminStats(env) {
       uploaded: obj.uploaded?.getTime?.() || 0,
     }));
 
-  return jsonResponse({
+  const dbStats = await adminDbStats(env);
+  const index = await overviewIndexStatus(env, listed);
+  const stats = {
     files: {
       count: objects.length,
       totalSize,
@@ -117,9 +121,10 @@ export async function handleAdminStats(env) {
       { ...value, sizeFormatted: formatBytes(value.size) },
     ])),
     latest,
-    ...(await adminDbStats(env)),
-    index: await overviewIndexStatus(env, listed),
-  });
+    ...dbStats,
+    index,
+  };
+  return jsonResponse({ ...stats, attention: await overviewAttention(env, stats, dbStats, index) });
 }
 
 async function adminDbStats(env) {
@@ -157,6 +162,83 @@ async function overviewIndexStatus(env, listed = null) {
     sampleTruncated: Boolean(sample.truncated),
     recommendation: fresh ? '索引可用' : '建议重建索引',
   };
+}
+
+async function overviewAttention(env, stats, dbStats = {}, index = {}) {
+  const items = [];
+  const fileCount = Number(stats.files?.count || 0);
+  const totalSize = Number(stats.files?.totalSize || 0);
+  const trashCount = Number(dbStats.trash?.count || 0);
+  const trashSize = Number(dbStats.trash?.size || 0);
+  const logsCount = Number(dbStats.logs?.count || 0);
+
+  if (!index.fresh) {
+    items.push({
+      level: 'warning',
+      title: '文件索引需要关注',
+      body: index.sampleTruncated ? 'R2 抽样已达上限，建议在维护中心重建索引。' : '索引数量与当前抽样不一致，文件列表或统计可能不准确。',
+      tab: 'health',
+    });
+  }
+  if (trashCount >= 100 || trashSize > Math.max(totalSize * 0.2, 1024 * 1024 * 1024)) {
+    items.push({
+      level: 'warning',
+      title: '回收站占用偏高',
+      body: `当前 ${trashCount} 项，占用 ${dbStats.trash?.sizeFormatted || '0 B'}，可以检查是否需要清理。`,
+      tab: 'overview',
+    });
+  }
+  if (logsCount >= 1800) {
+    items.push({
+      level: 'info',
+      title: '操作日志接近保留上限',
+      body: `当前 ${logsCount} 条，系统会自动保留最近 2000 条/90 天。`,
+      tab: 'logs',
+    });
+  }
+  if (fileCount >= 15000 || stats.files?.truncated) {
+    items.push({
+      level: 'info',
+      title: '文件数量较多',
+      body: stats.files?.truncated ? '概览统计已达到扫描上限，实际文件数可能更多。' : `当前已统计 ${fileCount} 个文件，批量操作可能耗时较长。`,
+      tab: 'overview',
+    });
+  }
+
+  try {
+    const failed = await env.D1.prepare('SELECT COUNT(*) as count FROM webhook_deliveries WHERE ok = 0').first();
+    const count = Number(failed?.count || 0);
+    if (count > 0) {
+      items.push({
+        level: 'warning',
+        title: 'Webhook 最近有失败投递',
+        body: `最近保留的投递记录中有 ${count} 条失败，建议检查目标地址或认证信息。`,
+        tab: 'webhooks',
+      });
+    }
+  } catch (_) {}
+  try {
+    const warnings = await env.D1.prepare('SELECT COUNT(*) as count FROM system_warnings').first();
+    const count = Number(warnings?.count || 0);
+    if (count > 0) {
+      items.push({
+        level: 'warning',
+        title: '系统提醒待查看',
+        body: `当前记录了 ${count} 条系统提醒，可以在系统状态页查看来源。`,
+        tab: 'health',
+      });
+    }
+  } catch (_) {}
+
+  if (!items.length) {
+    items.push({
+      level: 'ok',
+      title: '暂无需要处理的事项',
+      body: '索引、日志和清理策略处于正常范围。',
+      tab: 'health',
+    });
+  }
+  return items.slice(0, 6);
 }
 
 async function checkDb(env) {
@@ -212,76 +294,6 @@ export async function handleAdminHealth(env) {
     env: envStatus,
     warnings,
   });
-}
-
-async function countRows(env, table) {
-  try {
-    const row = await env.D1.prepare(`SELECT COUNT(*) as count FROM ${table}`).first();
-    return Number(row?.count || 0);
-  } catch (_) {
-    return 0;
-  }
-}
-
-async function deletePrefix(env, prefix, limit = 5000) {
-  const listed = await listR2Objects(env.R2, { prefix }, { maxObjects: limit });
-  await mapWithConcurrency(listed.objects || [], 8, item => env.R2.delete(item.key));
-  return { deleted: (listed.objects || []).length, truncated: Boolean(listed.truncated) };
-}
-
-export async function handleAdminMaintenance(env) {
-  const [index, accessAttemptCount, trashCount, logsCount, thumbs, r2Sample] = await Promise.all([
-    fileIndexStatus(env),
-    countRows(env, 'path_access_attempts'),
-    countRows(env, 'trash'),
-    countRows(env, 'logs'),
-    listR2Objects(env.R2, { prefix: '.thumbs/' }, { maxObjects: 1 }).catch(() => ({ objects: [], truncated: false })),
-    listR2Objects(env.R2, {}, { maxObjects: 1000 }).catch(() => ({ objects: [], truncated: false })),
-  ]);
-  const visibleSampleCount = (r2Sample.objects || []).filter(obj => !isReservedKey(obj.key) && !obj.key.endsWith('/.folder')).length;
-  return jsonResponse({
-    indexCount: index.count,
-    indexTotalSize: index.totalSize,
-    indexTotalSizeFormatted: formatBytes(index.totalSize),
-    indexLatestUpdatedAt: index.latestUpdatedAt,
-    indexFresh: index.count > 0 && !r2Sample.truncated ? index.count === visibleSampleCount : index.count > 0,
-    r2SampleCount: visibleSampleCount,
-    r2SampleTruncated: Boolean(r2Sample.truncated),
-    accessAttemptCount,
-    trashCount,
-    logsCount,
-    thumbnailsPresent: Boolean((thumbs.objects || []).length || thumbs.truncated),
-  });
-}
-
-export async function handleAdminMaintenanceAction(env, request) {
-  const { action } = await request.json().catch(() => ({}));
-  if (action === 'rebuild-index') {
-    const result = await rebuildFileIndex(env);
-    await addLog(env, request, 'MAINTENANCE', `重建文件索引，同步 ${result.synced || 0} 个文件${result.truncated ? '，已达扫描上限' : ''}`);
-    return jsonResponse({ success: true, action, ...result });
-  }
-  if (action === 'cleanup-access-attempts') {
-    let deleted = 0;
-    try {
-      const row = await env.D1.prepare('SELECT COUNT(*) as count FROM path_access_attempts').first();
-      deleted = Number(row?.count || 0);
-      await env.D1.prepare('DELETE FROM path_access_attempts').run();
-    } catch (_) {}
-    await addLog(env, request, 'MAINTENANCE', `清理访问失败记录 ${deleted} 项`);
-    return jsonResponse({ success: true, action, deleted });
-  }
-  if (action === 'cleanup-thumbnails') {
-    const result = await deletePrefix(env, '.thumbs/');
-    await addLog(env, request, 'MAINTENANCE', `清理缩略图缓存 ${result.deleted || 0} 项${result.truncated ? '，已达扫描上限' : ''}`);
-    return jsonResponse({ success: true, action, ...result });
-  }
-  if (action === 'cleanup-logs') {
-    const deleted = await cleanupLogs(env);
-    await addLog(env, request, 'MAINTENANCE', `清理旧操作日志 ${deleted} 条`);
-    return jsonResponse({ success: true, action, deleted });
-  }
-  return jsonResponse({ success: false, message: 'Invalid maintenance action' }, 400);
 }
 
 export async function handleAdminQuota(env, request, method) {

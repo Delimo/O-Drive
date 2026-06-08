@@ -47,7 +47,14 @@
                     </div>
                 </div>
                 <div id="storageWarnings" class="storage-warnings hidden mb-5"></div>
-                <div class="overview-panels-grid grid grid-cols-1 xl:grid-cols-2 gap-5 flex-1 min-h-0">
+                <div class="overview-panels-grid grid grid-cols-1 xl:grid-cols-3 gap-5 flex-1 min-h-0">
+                    <section class="overview-attention-panel bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold">待关注事项</h2>
+                            <span class="text-xs text-slate-500">按影响排序</span>
+                        </div>
+                        <div id="overviewAttention" class="attention-grid grid gap-3"></div>
+                    </section>
                     <section class="bg-surface-soft border border-border rounded-2xl p-5 flex flex-col">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="font-bold">类型分布</h2>
@@ -121,7 +128,7 @@
                             <h2>操作日志</h2>
                             <p>记录管理员上传、删除、维护等关键操作，便于追踪变更来源。</p>
                         </div>
-                        <div class="log-cleanup-actions">
+                        <div class="admin-head-actions log-cleanup-actions">
                             <button class="btn btn-danger-soft h-9 px-3" data-admin-action="maintenance-action" data-args='["cleanup-logs"]'>清理旧日志</button>
                             <span id="logMaintenanceResult" class="maintenance-result hidden text-xs text-slate-500"></span>
                         </div>
@@ -295,7 +302,7 @@
                             <h2>分享链接</h2>
                             <p>管理已生成的文件分享。链接过期后会保留 7 天，期间可手动删除；超过 7 天会自动清理。</p>
                         </div>
-                        <div class="share-head-actions">
+                        <div class="admin-head-actions share-head-actions">
                             <button class="btn h-8 px-3" data-admin-action="refresh-shares">刷新</button>
                             <button class="btn btn-danger-soft h-8 px-3" data-admin-action="cleanup-shares">清理过期</button>
                         </div>
@@ -330,7 +337,7 @@
                             <h2>Webhook 通知</h2>
                             <p>管理文件操作、异常行为和分享链接到期的外部通知通道。</p>
                         </div>
-                        <div class="webhook-head-actions">
+                        <div class="admin-head-actions webhook-head-actions">
                             <span class="webhook-head-pill">文件事件</span>
                             <span class="webhook-head-pill">异常提醒</span>
                             <span class="webhook-head-pill">分享到期</span>

@@ -220,6 +220,44 @@ test('hidden path loading ignores non-hidden settings rows', async () => {
   assert.deepEqual(await loadHiddenPaths(env), ['secret']);
 });
 
+test('admin can permanently remove hidden path rules', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const create = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/hidden', {
+      method: 'POST',
+      body: JSON.stringify({ targetPath: 'secret' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(create.status, 200);
+  assert.deepEqual(await loadHiddenPaths(env), ['secret']);
+
+  const remove = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/hidden?path=secret', {
+      method: 'DELETE',
+      headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(remove.status, 200);
+  assert.deepEqual(await loadHiddenPaths(env), []);
+});
+
 test('admin login issues csrf token and write requests must echo it', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -1119,12 +1157,14 @@ test('admin stats summarize visible stored files', async () => {
   assert.equal(data.breakdown.image.count, 1);
   assert.equal(data.breakdown.text.count, 1);
   assert.deepEqual(data.latest.map(item => item.key), ['photos/a.jpg', 'docs/readme.md']);
+  assert.equal(data.attention.at(-1).title, '暂无需要处理的事项');
 });
 
 test('admin stats can summarize from file index', async () => {
   const env = makeEnv();
   await upsertFileIndex(env, 'photos/a.jpg', { size: 5, contentType: 'image/jpeg', uploaded: new Date('2026-01-03') });
   await upsertFileIndex(env, 'docs/readme.md', { size: 4, contentType: 'text/markdown', uploaded: new Date('2026-01-02') });
+  await recordSystemWarning(env, 'test.warning', 'attention');
 
   const res = await handleAdminStats(env);
   const data = await res.json();
@@ -1134,6 +1174,7 @@ test('admin stats can summarize from file index', async () => {
   assert.equal(data.breakdown.image.count, 1);
   assert.equal(data.breakdown.text.count, 1);
   assert.deepEqual(data.latest.map(item => item.key), ['photos/a.jpg', 'docs/readme.md']);
+  assert.ok(data.attention.some(item => item.title === '系统提醒待查看'));
 });
 
 test('admin maintenance reports counts and runs cleanup actions', async () => {

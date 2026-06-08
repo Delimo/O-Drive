@@ -30,13 +30,12 @@ import {
   handleAdminLogs,
   handleHiddenSettings,
   handleAdminStats,
-  handleAdminMaintenance,
-  handleAdminMaintenanceAction,
   handleAdminQuota,
   handleAdminWebhooks,
   handleAdminWebhookDeliveries,
   loadWebhookEndpoints,
 } from './admin.js';
+import { handleAdminMaintenance, handleAdminMaintenanceAction } from './admin-maintenance.js';
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
 import { handleAdminShares } from './shares.js';
 import { createFileTask, getFileTask } from './tasks.js';

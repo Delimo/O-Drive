@@ -374,6 +374,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/INSERT OR IGNORE INTO settings/i.test(sql)) {
               settingsRows.set(statement.bound?.[0], 'hidden');
             }
+            if (/DELETE FROM settings WHERE key = \?/i.test(sql)) {
+              settingsRows.delete(statement.bound?.[0]);
+            }
             if (/DELETE FROM trash WHERE id = \?/i.test(sql)) {
               const id = statement.bound?.[0];
               const idx = trashRows.findIndex(row => row.id === id);
@@ -553,6 +556,10 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM share_links WHERE token = \?/i.test(sql)) return shareRows.find(row => row.token === statement.bound?.[0]) || null;
             if (/SELECT \* FROM file_tasks WHERE id = \?/i.test(sql)) return taskRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: filteredLogs(sql, statement.bound || []).length };
+            if (/SELECT COUNT\(\*\) as count FROM webhook_deliveries WHERE ok = 0/i.test(sql)) {
+              return { count: webhookDeliveryRows.filter(row => Number(row.ok || 0) === 0).length };
+            }
+            if (/SELECT COUNT\(\*\) as count FROM system_warnings/i.test(sql)) return { count: systemWarningRows.length };
             if (/SELECT value FROM settings WHERE key = 'trash_retention_days'/i.test(sql)) {
               const value = settingsRows.get('trash_retention_days');
               return value == null ? null : { value };

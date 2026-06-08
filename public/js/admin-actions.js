@@ -193,6 +193,7 @@ export const AdminActions = {
     `;
     document.getElementById('statLogs').textContent = String(data.logs?.count || 0);
     this.renderStorageWarnings(data);
+    this.renderOverviewAttention(data.attention || []);
 
     const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
     const breakdown = Object.entries(data.breakdown || {});
@@ -222,6 +223,26 @@ export const AdminActions = {
         </div>
       </div>
     `).join('') || '<div class="text-slate-500 text-sm">暂无文件</div>';
+  },
+
+  renderOverviewAttention(items = []) {
+    const box = document.getElementById('overviewAttention');
+    if (!box) return;
+    const rows = Array.isArray(items) && items.length ? items : [{
+      level: 'ok',
+      title: '暂无需要处理的事项',
+      body: '索引、日志和清理策略处于正常范围。',
+      tab: 'health',
+    }];
+    box.innerHTML = rows.map(item => `
+      <button class="attention-item is-${escapeHtml(item.level || 'info')}" data-admin-action="switch-tab" data-args='${escapeHtml(JSON.stringify([item.tab || 'health']))}'>
+        <span class="attention-dot"></span>
+        <span>
+          <strong>${escapeHtml(item.title || '待关注事项')}</strong>
+          <small>${escapeHtml(item.body || '')}</small>
+        </span>
+      </button>
+    `).join('');
   },
 
   renderIndexStatus(index = {}) {
