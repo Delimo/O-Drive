@@ -542,6 +542,16 @@ body.share-page {
   gap: 10px;
 }
 
+@media (min-width: 1025px) {
+  .desktop-shell > .toolbar-card {
+    padding: 10px 30px !important;
+  }
+
+  .admin-page .tab-shell {
+    padding: 10px 30px !important;
+  }
+}
+
 .toolbar-card #breadcrumb,
 .mobile-breadcrumb {
   color: #1d4ed8;
