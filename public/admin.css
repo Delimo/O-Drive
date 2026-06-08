@@ -200,8 +200,84 @@ body.admin-page {
 }
 
 .admin-page .maintenance-result {
-  margin: 14px 0 0;
+  margin: 0;
   padding: 0;
+}
+
+.admin-page .health-workbench,
+.admin-page .log-workbench,
+.admin-page .share-workbench,
+.admin-page .task-workbench {
+  flex: 1 1 auto;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.admin-page .health-workbench-head,
+.admin-page .log-workbench-head,
+.admin-page .share-workbench-head,
+.admin-page .task-workbench-head {
+  flex-shrink: 0;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-page .health-workbench-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-page .health-status-panel,
+.admin-page .health-maintenance-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.admin-page .health-maintenance-panel {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.admin-page .health-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-page .health-panel-head h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.admin-page .health-panel-head p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-page .health-status-panel .health-grid,
+.admin-page .health-maintenance-panel .health-grid {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .admin-page .admin-section-head {
@@ -987,6 +1063,21 @@ body.admin-page {
   overflow-y: auto;
 }
 
+.admin-page .task-row {
+  position: relative;
+  background: #fff;
+}
+
+.admin-page .task-row-count {
+  position: absolute;
+  top: 52px;
+  right: 12px;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .admin-page .task-progress {
   height: 8px;
   overflow: hidden;
@@ -1363,6 +1454,26 @@ body.admin-page {
   overflow: hidden;
 }
 
+.admin-page .log-filter-panel,
+.admin-page .share-filter-panel {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.admin-page .log-filter-panel {
+  grid-template-columns: minmax(180px, 1.4fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(130px, 0.7fr) minmax(130px, 0.7fr) auto auto;
+}
+
+.admin-page .share-filter-panel {
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.35fr) auto auto;
+}
+
 .admin-page .admin-log-filters {
   display: grid;
   grid-template-columns: minmax(180px, 1.4fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(130px, 0.7fr) minmax(130px, 0.7fr) auto auto;
@@ -1377,6 +1488,202 @@ body.admin-page {
   gap: 10px;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.admin-page .log-list,
+.admin-page .share-list,
+.admin-page .task-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.admin-page .log-card {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 210px;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-page .log-card-time,
+.admin-page .log-card-ip {
+  min-width: 0;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .log-card-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.admin-page .log-card-main strong {
+  min-width: 0;
+  color: var(--text-main);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .log-empty,
+.admin-page .share-empty,
+.admin-page .task-empty {
+  display: flex;
+  min-height: 190px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.admin-page .share-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-page .share-summary-grid,
+.admin-page .task-summary-grid {
+  display: grid;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.admin-page .share-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-page .task-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-page .share-summary-card,
+.admin-page .task-summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-page .share-summary-card span,
+.admin-page .task-summary-card span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-page .share-summary-card strong,
+.admin-page .task-summary-card strong {
+  color: var(--primary-strong);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.admin-page .share-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, auto);
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-page .share-card-main,
+.admin-page .share-card-title,
+.admin-page .share-card-side,
+.admin-page .share-card-status {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-page .share-card-main {
+  gap: 10px;
+}
+
+.admin-page .share-card-title {
+  gap: 5px;
+}
+
+.admin-page .share-card-title strong {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .share-card-title span {
+  min-width: 0;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .share-card-meta {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-page .share-card-side {
+  justify-items: end;
+  gap: 12px;
+}
+
+.admin-page .share-card-status {
+  justify-items: end;
+  gap: 7px;
+}
+
+.admin-page .share-card-status small {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.admin-page .share-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .admin-page #shares-tab .admin-table-card {
@@ -1933,6 +2240,37 @@ body.admin-page {
 }
 
 @media (max-width: 1180px) {
+  .admin-page #health-tab,
+  .admin-page #logs-tab,
+  .admin-page #shares-tab,
+  .admin-page #tasks-tab {
+    overflow-y: auto;
+  }
+
+  .admin-page #health-tab .admin-page-panel,
+  .admin-page #logs-tab .admin-page-panel,
+  .admin-page #shares-tab .admin-page-panel,
+  .admin-page #tasks-tab .admin-page-panel {
+    overflow: visible;
+  }
+
+  .admin-page .health-workbench-body {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .admin-page .health-status-panel,
+  .admin-page .health-maintenance-panel,
+  .admin-page .log-list,
+  .admin-page .share-list,
+  .admin-page .task-list {
+    overflow: visible;
+  }
+
+  .admin-page .log-filter-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .admin-page #access-tab {
     overflow-y: auto;
   }
@@ -1996,6 +2334,13 @@ body.admin-page {
     grid-template-columns: 1fr;
   }
 
+  .admin-page .log-filter-panel,
+  .admin-page .share-filter-panel,
+  .admin-page .share-summary-grid,
+  .admin-page .task-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
   body.admin-page {
     height: auto;
     min-height: 100vh;
@@ -2053,6 +2398,7 @@ body.admin-page {
   .admin-page #health-tab,
   .admin-page #logs-tab,
   .admin-page #access-tab,
+  .admin-page #tasks-tab,
   .admin-page #shares-tab,
   .admin-page #webhooks-tab {
     overflow: visible;
@@ -2077,6 +2423,19 @@ body.admin-page {
 
   .admin-page .health-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-page .health-workbench,
+  .admin-page .log-workbench,
+  .admin-page .share-workbench,
+  .admin-page .task-workbench {
+    height: auto;
+    overflow: visible;
+  }
+
+  .admin-page .health-status-panel,
+  .admin-page .health-maintenance-panel {
+    padding: 14px;
   }
 
   .admin-page .maintenance-actions {
@@ -2182,6 +2541,30 @@ body.admin-page {
   .admin-page .access-rule-actions,
   .admin-page .access-submit-row {
     justify-content: flex-start;
+  }
+
+  .admin-page .log-card,
+  .admin-page .share-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .log-card-main {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .share-card-side,
+  .admin-page .share-card-status {
+    justify-items: start;
+  }
+
+  .admin-page .share-card-status small {
+    text-align: left;
+  }
+
+  .admin-page .share-card-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .admin-page .admin-form-panel {

@@ -64,67 +64,73 @@
                 </div>
             </div>
 
-            <div id="health-tab" class="hidden health-tab flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
-                <section class="admin-page-panel">
-                    <div class="admin-section-head">
+            <div id="health-tab" class="hidden health-tab flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+                <section class="admin-page-panel health-workbench">
+                    <div class="admin-section-head health-workbench-head">
                         <div>
-                            <h2>环境检查</h2>
-                            <p>检查部署绑定、管理员变量和访客访问状态。</p>
+                            <h2>系统状态</h2>
+                            <p>检查部署绑定、管理员变量、索引状态和维护入口。</p>
                         </div>
                         <button class="btn h-8 px-3" data-admin-action="refresh-health">刷新</button>
                     </div>
-                    <div id="healthGrid" class="health-grid"></div>
-                </section>
-                <section class="admin-page-panel">
-                    <div class="admin-section-head">
-                        <div>
-                            <h2>快捷维护</h2>
-                            <p>基础状态确认后，可直接处理索引、访问失败记录和缩略图缓存。</p>
+                    <div class="health-workbench-body">
+                        <div class="health-status-panel">
+                            <div class="health-panel-head">
+                                <div>
+                                    <h3>环境检查</h3>
+                                    <p>关键绑定和登录配置</p>
+                                </div>
+                            </div>
+                            <div id="healthGrid" class="health-grid"></div>
                         </div>
-                        <button class="btn h-8 px-3" data-admin-action="refresh-maintenance">刷新</button>
+                        <div class="health-maintenance-panel">
+                            <div class="health-panel-head">
+                                <div>
+                                    <h3>维护中心</h3>
+                                    <p>索引、缓存和记录清理</p>
+                                </div>
+                                <button class="btn h-8 px-3" data-admin-action="refresh-maintenance">刷新</button>
+                            </div>
+                            <div id="healthMaintenanceGrid" class="health-grid"></div>
+                            <div class="maintenance-actions">
+                                <button class="btn btn-primary h-11" data-admin-action="maintenance-action" data-args='["rebuild-index"]'>重建文件索引</button>
+                                <button class="btn h-11" data-admin-action="maintenance-action" data-args='["cleanup-access-attempts"]'>清理访问失败记录</button>
+                                <button class="btn btn-danger-soft h-11" data-admin-action="maintenance-action" data-args='["cleanup-thumbnails"]'>清理缩略图缓存</button>
+                            </div>
+                            <p id="healthMaintenanceResult" class="maintenance-result hidden text-xs text-slate-500"></p>
+                        </div>
                     </div>
-                    <div id="healthMaintenanceGrid" class="health-grid mb-5"></div>
-                    <div class="maintenance-actions">
-                        <button class="btn btn-primary h-11" data-admin-action="maintenance-action" data-args='["rebuild-index"]'>重建文件索引</button>
-                        <button class="btn h-11" data-admin-action="maintenance-action" data-args='["cleanup-access-attempts"]'>清理访问失败记录</button>
-                        <button class="btn btn-danger-soft h-11" data-admin-action="maintenance-action" data-args='["cleanup-thumbnails"]'>清理缩略图缓存</button>
-                    </div>
-                    <p id="healthMaintenanceResult" class="maintenance-result hidden text-xs text-slate-500 mt-4"></p>
                 </section>
             </div>
 
             <div id="logs-tab" class="hidden flex-1 flex flex-col overflow-hidden p-6 text-slate-900">
-                <div class="admin-section-head">
-                    <div>
-                        <h2>操作日志</h2>
-                        <p>记录管理员上传、删除、维护等关键操作，便于追踪变更来源。</p>
+                <section class="admin-page-panel log-workbench">
+                    <div class="admin-section-head log-workbench-head">
+                        <div>
+                            <h2>操作日志</h2>
+                            <p>记录管理员上传、删除、维护等关键操作，便于追踪变更来源。</p>
+                        </div>
                     </div>
-                </div>
-                <div class="admin-log-filters">
-                    <input id="logFilterQuery" type="search" class="admin-input" placeholder="关键词：路径、详情、IP">
-                    <input id="logFilterAction" type="text" class="admin-input" placeholder="动作，如 UPLOAD">
-                    <input id="logFilterIp" type="text" class="admin-input" placeholder="IP">
-                    <input id="logFilterFrom" type="date" class="admin-input">
-                    <input id="logFilterTo" type="date" class="admin-input">
-                    <button class="btn btn-primary h-10 px-4" data-admin-action="apply-log-filters">筛选</button>
-                    <button class="btn h-10 px-4" data-admin-action="reset-log-filters">重置</button>
-                </div>
-                <div class="admin-table-card flex-1 relative">
-                    <table class="w-full text-left border-collapse text-slate-900 text-sm">
-                        <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border z-10">
-                            <tr><th class="px-5 py-3 w-44">时间</th><th class="px-5 py-3 w-28">动作</th><th class="px-5 py-3">详情</th><th class="px-5 py-3 w-40 text-left">IP</th></tr>
-                        </thead>
-                        <tbody id="logTbody" class="text-xs divide-y divide-border/40"></tbody>
-                    </table>
-                </div>
-                <div class="admin-pagination">
-                    <div class="text-slate-500 text-xs">共 <span id="totalPages" class="text-slate-600 font-bold">0</span> 页</div>
-                    <div class="flex gap-2 text-slate-900">
-                        <button id="logPrevButton" data-admin-action="change-page" data-args='[-1]' class="btn" disabled>上一页</button>
-                        <span class="px-4 py-2 font-bold text-primary font-mono bg-background border border-border rounded-lg">第 <span id="currentPage">1</span> 页</span>
-                        <button id="logNextButton" data-admin-action="change-page" data-args='[1]' class="btn" disabled>下一页</button>
+                    <div class="log-filter-panel">
+                        <input id="logFilterQuery" type="search" class="admin-input" placeholder="关键词：路径、详情、IP">
+                        <input id="logFilterAction" type="text" class="admin-input" placeholder="动作，如 UPLOAD">
+                        <input id="logFilterIp" type="text" class="admin-input" placeholder="IP">
+                        <input id="logFilterFrom" type="date" class="admin-input">
+                        <input id="logFilterTo" type="date" class="admin-input">
+                        <button class="btn btn-primary h-10 px-4" data-admin-action="apply-log-filters">筛选</button>
+                        <button class="btn h-10 px-4" data-admin-action="reset-log-filters">重置</button>
                     </div>
-                </div>
+                    <div id="logList" class="log-list"></div>
+                    <div class="admin-pagination">
+                        <div class="text-slate-500 text-xs">共 <span id="totalPages" class="text-slate-600 font-bold">0</span> 页</div>
+                        <div class="flex gap-2 text-slate-900">
+                            <button id="logPrevButton" data-admin-action="change-page" data-args='[-1]' class="btn" disabled>上一页</button>
+                            <span class="px-4 py-2 font-bold text-primary font-mono bg-background border border-border rounded-lg">第 <span id="currentPage">1</span> 页</span>
+                            <button id="logNextButton" data-admin-action="change-page" data-args='[1]' class="btn" disabled>下一页</button>
+                        </div>
+                    </div>
+                    <table class="hidden"><tbody id="logTbody"></tbody></table>
+                </section>
             </div>
 
             <div id="access-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
@@ -239,36 +245,38 @@
             </div>
 
             <div id="shares-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
-                <div class="admin-section-head">
-                    <div>
-                        <h2>分享链接</h2>
-                        <p>管理已生成的文件分享。链接过期后会保留 7 天，期间可手动删除；超过 7 天会自动清理。</p>
+                <section class="admin-page-panel share-workbench">
+                    <div class="admin-section-head share-workbench-head">
+                        <div>
+                            <h2>分享链接</h2>
+                            <p>管理已生成的文件分享。链接过期后会保留 7 天，期间可手动删除；超过 7 天会自动清理。</p>
+                        </div>
+                        <div class="share-head-actions">
+                            <button class="btn h-8 px-3" data-admin-action="refresh-shares">刷新</button>
+                            <button class="btn btn-danger-soft h-8 px-3" data-admin-action="cleanup-shares">清理过期</button>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <button class="btn h-8 px-3" data-admin-action="refresh-shares">刷新</button>
-                        <button class="btn btn-danger-soft h-8 px-3" data-admin-action="cleanup-shares">清理过期</button>
+                    <div class="share-summary-grid">
+                        <div class="share-summary-card"><span>全部链接</span><strong id="shareTotalCount">0</strong></div>
+                        <div class="share-summary-card"><span>有效</span><strong id="shareActiveCount">0</strong></div>
+                        <div class="share-summary-card"><span>已失效</span><strong id="shareExpiredCount">0</strong></div>
+                        <div class="share-summary-card"><span>有密码</span><strong id="sharePasswordCount">0</strong></div>
                     </div>
-                </div>
-                <div class="share-admin-filters">
-                    <input id="shareFilterQuery" type="search" class="admin-input" placeholder="搜索文件名或路径">
-                    <select id="shareFilterStatus" class="admin-input">
-                        <option value="all">全部状态</option>
-                        <option value="active">有效</option>
-                        <option value="expired">已过期</option>
-                        <option value="exhausted">已达次数</option>
-                    </select>
-                    <button class="btn h-10 px-4" data-admin-action="apply-share-filters">筛选</button>
-                    <button class="btn h-10 px-4" data-admin-action="reset-share-filters">重置</button>
-                </div>
-                <div class="admin-table-card overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
-                    <table class="w-full text-left text-slate-900">
-                        <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr><th class="px-5 py-3 text-slate-500">文件</th><th class="px-5 py-3 text-slate-500">策略</th><th class="px-5 py-3 text-slate-500">状态</th><th class="px-5 py-3 text-right text-slate-500">操作</th></tr>
-                        </thead>
-                        <tbody id="sharesTbody" class="text-sm divide-y divide-border/40 text-slate-600"></tbody>
-                    </table>
-                </div>
-                <p id="sharesResult" class="hidden text-xs text-slate-500 mt-3"></p>
+                    <div class="share-filter-panel">
+                        <input id="shareFilterQuery" type="search" class="admin-input" placeholder="搜索文件名或路径">
+                        <select id="shareFilterStatus" class="admin-input">
+                            <option value="all">全部状态</option>
+                            <option value="active">有效</option>
+                            <option value="expired">已过期</option>
+                            <option value="exhausted">已达次数</option>
+                        </select>
+                        <button class="btn h-10 px-4" data-admin-action="apply-share-filters">筛选</button>
+                        <button class="btn h-10 px-4" data-admin-action="reset-share-filters">重置</button>
+                    </div>
+                    <div id="shareList" class="share-list"></div>
+                    <table class="hidden"><tbody id="sharesTbody"></tbody></table>
+                    <p id="sharesResult" class="hidden text-xs text-slate-500"></p>
+                </section>
             </div>
 
             <div id="webhooks-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
@@ -389,12 +397,17 @@
 
             <div id="tasks-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
                 <section class="admin-page-panel task-workbench">
-                    <div class="admin-section-head">
+                    <div class="admin-section-head task-workbench-head">
                         <div>
                             <h2>任务中心</h2>
                             <p>查看复制、移动、删除等后台任务的执行状态和失败原因。</p>
                         </div>
                         <button class="btn h-9 px-3" data-admin-action="refresh-tasks">刷新</button>
+                    </div>
+                    <div class="task-summary-grid">
+                        <div class="task-summary-card"><span>运行中</span><strong id="taskRunningCount">0</strong></div>
+                        <div class="task-summary-card"><span>已完成</span><strong id="taskCompletedCount">0</strong></div>
+                        <div class="task-summary-card"><span>失败/部分</span><strong id="taskFailedCount">0</strong></div>
                     </div>
                     <div id="taskList" class="task-list"></div>
                 </section>

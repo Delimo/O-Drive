@@ -434,19 +434,33 @@ export const AdminActions = {
     document.getElementById('totalPages').textContent = adminState.totalPages;
     document.getElementById('currentPage').textContent = adminState.currentPage;
     setLogPaginationState();
-    document.getElementById('logTbody').innerHTML = (data.logs || []).map(l => {
+    const rows = data.logs || [];
+    const html = rows.map(l => {
       const time = new Date(l.timestamp).toLocaleString('zh-CN', { hour12: false });
       const actionClass = logActionClass(l.action);
       const actionLabel = describeLogAction(l.action);
       return `
-        <tr class="admin-log-row hover:bg-slate-50 transition-colors">
-          <td data-label="时间" class="admin-log-time px-5 py-4 text-slate-500 font-mono">${escapeHtml(time)}</td>
-          <td data-label="动作" class="admin-log-action px-5 py-4 font-bold"><span class="admin-action-badge ${actionClass}" title="${escapeHtml(l.action || '')}">${escapeHtml(actionLabel)}</span></td>
-          <td data-label="详情" class="admin-log-details px-5 py-4 text-slate-600 font-mono">${escapeHtml(l.details || '')}</td>
-          <td data-label="IP" class="admin-log-ip px-5 py-4 text-slate-500 font-mono text-sm text-left">${escapeHtml(l.ip || '')}</td>
-        </tr>
+        <div class="log-card">
+          <div class="log-card-time">${escapeHtml(time)}</div>
+          <div class="log-card-main">
+            <span class="admin-action-badge ${actionClass}" title="${escapeHtml(l.action || '')}">${escapeHtml(actionLabel)}</span>
+            <strong>${escapeHtml(l.details || '无详情')}</strong>
+          </div>
+          <div class="log-card-ip">${escapeHtml(l.ip || '-')}</div>
+        </div>
       `;
-    }).join('') || '<tr><td colspan="4"><div class="admin-empty-state">暂无操作日志</div></td></tr>';
+    }).join('') || '<div class="log-empty">暂无操作日志</div>';
+    const list = document.getElementById('logList');
+    if (list) list.innerHTML = html;
+    const tbody = document.getElementById('logTbody');
+    if (tbody) tbody.innerHTML = rows.map(l => `
+      <tr>
+        <td>${escapeHtml(new Date(l.timestamp).toLocaleString('zh-CN', { hour12: false }))}</td>
+        <td>${escapeHtml(describeLogAction(l.action))}</td>
+        <td>${escapeHtml(l.details || '')}</td>
+        <td>${escapeHtml(l.ip || '')}</td>
+      </tr>
+    `).join('');
   },
 
   changePage(dir) {
@@ -725,15 +739,24 @@ export const AdminActions = {
   async loadTasks() {
     const list = document.getElementById('taskList');
     if (!list) return;
-    list.innerHTML = '<div class="webhook-empty">正在加载任务...</div>';
+    list.innerHTML = '<div class="task-empty">正在加载任务...</div>';
+    const runningCount = document.getElementById('taskRunningCount');
+    const completedCount = document.getElementById('taskCompletedCount');
+    const failedCount = document.getElementById('taskFailedCount');
+    [runningCount, completedCount, failedCount].forEach(el => {
+      if (el) el.textContent = '0';
+    });
     const { res, data } = await api.fileTasks(30);
     if (!res.ok) {
-      list.innerHTML = '<div class="webhook-empty">任务加载失败。</div>';
+      list.innerHTML = '<div class="task-empty">任务加载失败。</div>';
       return;
     }
     const items = Array.isArray(data?.items) ? data.items : [];
+    if (runningCount) runningCount.textContent = String(items.filter(item => ['running', 'queued'].includes(item.status)).length);
+    if (completedCount) completedCount.textContent = String(items.filter(item => item.status === 'completed').length);
+    if (failedCount) failedCount.textContent = String(items.filter(item => ['failed', 'partial'].includes(item.status)).length);
     if (!items.length) {
-      list.innerHTML = '<div class="webhook-empty">暂无后台任务。</div>';
+      list.innerHTML = '<div class="task-empty">暂无后台任务。</div>';
       return;
     }
     list.innerHTML = items.map(item => {
@@ -750,6 +773,7 @@ export const AdminActions = {
             <span class="status-pill ${statusClass(item.status)}">${escapeHtml(statusLabel(item.status))}</span>
           </div>
           <div class="task-progress"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>
+          <div class="task-row-count">${Math.max(0, Math.min(100, pct))}%</div>
           <div class="task-row-meta">
             <span>完成 ${completed}/${total || '-'}</span>
             ${failed ? `<span>失败 ${failed}</span>` : ''}

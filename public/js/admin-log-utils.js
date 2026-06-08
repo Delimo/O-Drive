@@ -2,8 +2,8 @@ export function describeLogAction(action = '') {
   const normalized = String(action || '').toUpperCase();
   const labels = {
     UPLOAD: '上传文件',
-    UPLOAD_START: '上传开始',
-    UPLOAD_ABORT: '上传取消',
+    UPLOAD_START: '开始上传',
+    UPLOAD_ABORT: '取消上传',
     DELETE: '删除',
     RENAME: '重命名',
     MOVE: '移动',
