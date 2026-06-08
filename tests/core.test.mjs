@@ -543,6 +543,17 @@ test('admin file task runs paste work in the background task table', async () =>
   const statusData = await status.json();
   assert.equal(statusData.item.status, 'completed');
   assert.ok(await env.R2.get('copies/source.txt'));
+
+  const list = await onRequest({
+    env,
+    request: new Request('https://example.com/api/tasks', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const listData = await list.json();
+  assert.equal(list.status, 200);
+  assert.equal(listData.items.length, 1);
+  assert.equal(listData.items[0].id, createdData.item.id);
 });
 
 test('protected paths require password and unlock with signed cookie', async () => {

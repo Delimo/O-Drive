@@ -44,6 +44,9 @@ export const api = {
   fileTask(id) {
     return requestJson(`/api/tasks?id=${encodeURIComponent(id)}`);
   },
+  fileTasks(limit = 20) {
+    return requestJson(`/api/tasks?limit=${encodeURIComponent(limit)}`);
+  },
   batchDelete(paths) {
     return requestJson('/api/batch-delete', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ paths }) });
   },
@@ -155,6 +158,7 @@ export const api = {
   testAdminWebhook(endpoint) {
     return requestJson('/api/admin/settings/webhooks', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ endpoint }) });
   },
+  adminWebhookDeliveries() { return requestJson('/api/admin/webhook-deliveries'); },
   adminShares() { return requestJson('/api/admin/shares'); },
   createShare(payload) {
     return requestJson('/api/admin/shares', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });

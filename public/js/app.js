@@ -20,6 +20,8 @@ document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
   if (!target) {
     UI.closeUploadMenu();
+    document.getElementById('searchSuggestions')?.classList.add('hidden');
+    document.getElementById('mobileSearchSuggestions')?.classList.add('hidden');
     return;
   }
   if (target.id === 'previewModal' && event.target !== target) return;
@@ -55,6 +57,8 @@ document.addEventListener('click', event => {
     case 'execute-paste': return Actions.executePaste();
     case 'clear-clipboard': return Actions.clearClipboard();
     case 'open-filters': return Actions.openFilters();
+    case 'quick-filter': return Actions.quickFilter(args[0]);
+    case 'use-recent-search': return Actions.useRecentSearch(args[0]);
     case 'open-trash': return Actions.openTrash();
     case 'submit-mkdir': return Actions.submitMkdir();
     case 'submit-unlock': return Actions.submitUnlock();
@@ -120,6 +124,12 @@ document.addEventListener('keydown', event => {
     case 'mkdir': return Actions.submitMkdir();
     case 'unlock': return Actions.submitUnlock();
     case 'share': return Actions.submitShare();
+  }
+});
+
+document.addEventListener('focusin', event => {
+  if (event.target?.id === 'searchInput' || event.target?.id === 'mobileSearchInput') {
+    Actions.renderSearchSuggestions?.();
   }
 });
 

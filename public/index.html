@@ -26,6 +26,7 @@
                     <input type="search" id="mobileSearchInput" placeholder="搜索文件..." data-enter-action="search">
                 </div>
                 <button class="btn btn-primary mobile-search-btn" data-action="search">搜索</button>
+                <div id="mobileSearchSuggestions" class="search-suggestions hidden"></div>
             </div>
             <div class="mobile-breadcrumb-card">
                 <div id="mobileBreadcrumb" class="mobile-breadcrumb"></div>
@@ -42,6 +43,7 @@
                 <div class="search-bar hidden md:block">
                     <span class="search-icon">🔍</span>
                     <input type="search" id="searchInput" placeholder="搜索文件..." data-enter-action="search">
+                    <div id="searchSuggestions" class="search-suggestions hidden"></div>
                 </div>
                 <div id="authButtons"></div>
             </div>
@@ -263,6 +265,13 @@
                 <button class="text-2xl opacity-40 hover:opacity-100" data-action="close-modal" data-args='["filterModal"]'>&times;</button>
             </div>
             <div class="p-5 space-y-4">
+                <div class="filter-quick-row">
+                    <button class="filter-quick-btn" data-action="quick-filter" data-args='["image"]'>图片</button>
+                    <button class="filter-quick-btn" data-action="quick-filter" data-args='["video"]'>视频</button>
+                    <button class="filter-quick-btn" data-action="quick-filter" data-args='["audio"]'>音频</button>
+                    <button class="filter-quick-btn" data-action="quick-filter" data-args='["text"]'>文本</button>
+                    <button class="filter-quick-btn" data-action="quick-filter" data-args='["archive"]'>压缩包</button>
+                </div>
                 <div class="filter-grid">
                     <label class="filter-field"><span>类型</span><select id="filterKind" class="filter-input"><option value="all">全部</option><option value="folder">文件夹</option><option value="file">文件</option><option value="image">图片</option><option value="video">视频</option><option value="audio">音频</option><option value="text">文本</option><option value="pdf">PDF</option><option value="archive">压缩包</option></select></label>
                     <label class="filter-field"><span>最小大小(KB)</span><input id="filterMinSize" type="number" min="0" class="filter-input"></label>

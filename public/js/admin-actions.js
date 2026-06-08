@@ -2,6 +2,7 @@
 import { api } from './api.js';
 import { escapeHtml } from './utils.js';
 import { describeLogAction, logActionClass } from './admin-log-utils.js';
+import { createAdminShareActions } from './admin-share-actions.js';
 import {
   WEBHOOK_EVENT_KEYS,
   headersToText,
@@ -13,7 +14,7 @@ import {
 } from './admin-webhook-utils.js';
 
 const LOG_PAGE_SIZE = 10;
-export const ADMIN_TABS = ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'shares', 'webhooks'];
+export const ADMIN_TABS = ['overview', 'health', 'logs', 'privacy', 'protected', 'quota', 'shares', 'webhooks', 'tasks'];
 
 export function getInitialAdminTab() {
   const tab = (window.location.hash || '').replace(/^#/, '');
@@ -120,21 +121,27 @@ function readWebhookForm() {
   return endpoint;
 }
 
-function shareLink(token) {
-  return new URL(`/share.html?token=${encodeURIComponent(token)}`, window.location.origin).href;
+function adminTime(value) {
+  const num = Number(value || 0);
+  return num ? new Date(num).toLocaleString('zh-CN', { hour12: false }) : '-';
 }
 
-function shareTime(value) {
-  return value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '长期有效';
+function statusLabel(status = '') {
+  const map = {
+    completed: '已完成',
+    partial: '部分完成',
+    failed: '失败',
+    running: '运行中',
+    queued: '排队中',
+  };
+  return map[status] || status || '-';
 }
 
-function setSharesResult(text = '', tone = 'muted') {
-  const result = document.getElementById('sharesResult');
-  if (!result) return;
-  result.textContent = text;
-  result.classList.toggle('hidden', !text);
-  result.classList.toggle('text-rose-600', tone === 'error');
-  result.classList.toggle('text-emerald-700', tone === 'success');
+function statusClass(status = '') {
+  if (['completed', 'success', 'ok'].includes(status)) return 'is-ok';
+  if (['failed', 'error', 'partial'].includes(status)) return 'is-bad';
+  if (['running', 'queued'].includes(status)) return 'is-running';
+  return '';
 }
 
 function summarizeD1Tables(tables = []) {
@@ -167,7 +174,8 @@ export const AdminActions = {
     if (tabId === 'privacy') return this.loadHidden();
     if (tabId === 'quota') return this.loadQuota();
     if (tabId === 'shares') return this.loadShares();
-    if (tabId === 'webhooks') return this.loadWebhooks();
+    if (tabId === 'webhooks') return Promise.all([this.loadWebhooks(), this.loadWebhookDeliveries()]);
+    if (tabId === 'tasks') return this.loadTasks();
     return this.loadProtected();
   },
 
@@ -572,97 +580,6 @@ export const AdminActions = {
     await this.loadQuota();
   },
 
-  async loadShares() {
-    const tbody = document.getElementById('sharesTbody');
-    if (!tbody) return;
-    setSharesResult();
-    tbody.innerHTML = '<tr><td colspan="4"><div class="admin-empty-state">正在加载...</div></td></tr>';
-    const { res, data } = await api.adminShares();
-    if (!res.ok) {
-      tbody.innerHTML = '<tr><td colspan="4"><div class="admin-empty-state">分享链接加载失败</div></td></tr>';
-      return;
-    }
-    const rows = data.items || [];
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="4"><div class="admin-empty-state">暂无分享链接</div></td></tr>';
-      return;
-    }
-    tbody.innerHTML = rows.map(item => {
-      const expired = item.expired || item.exhausted;
-      const status = item.exhausted ? '已达次数' : item.expired ? '已过期' : '有效';
-      const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', { hour12: false }) : '-';
-      const lastAccessedAt = item.lastAccessedAt ? new Date(item.lastAccessedAt).toLocaleString('zh-CN', { hour12: false }) : '尚未访问';
-      const cleanupAt = item.autoDeleteAt ? new Date(item.autoDeleteAt).toLocaleString('zh-CN', { hour12: false }) : '';
-      const statusHint = item.exhausted
-        ? '已自动清理下载入口'
-        : item.expired
-          ? `自动清理：${cleanupAt || '超过 7 天后'}`
-          : `访问：${lastAccessedAt}`;
-      const policy = [
-        `<span>过期 ${escapeHtml(shareTime(item.expiresAt))}</span>`,
-        `<span>下载 ${escapeHtml(String(item.downloadCount || 0))}/${item.maxDownloads ? escapeHtml(String(item.maxDownloads)) : '不限'}</span>`,
-        item.allowPreview ? '<span>可预览</span>' : '<span>不可预览</span>',
-        item.allowDownload ? '<span>可下载</span>' : '<span>不可下载</span>',
-        item.hasPassword ? '<span>有密码</span>' : '<span>无密码</span>',
-      ].join('');
-      return `
-          <tr class="admin-share-row hover:bg-slate-50 transition-colors">
-            <td data-label="文件" class="admin-share-file px-5 py-4">
-              <div class="admin-share-name">${escapeHtml(item.name || item.path)}</div>
-              <div class="admin-share-path">${escapeHtml(item.path)}</div>
-            </td>
-            <td data-label="策略" class="admin-share-policy px-5 py-4">
-              <div class="admin-share-chips">${policy}</div>
-              <div class="admin-share-subtle">创建：${escapeHtml(createdAt)}</div>
-            </td>
-            <td data-label="状态" class="admin-share-status px-5 py-4">
-              <span class="admin-status-badge ${expired ? 'is-hidden' : 'is-visible'}">${status}</span>
-              <small>${escapeHtml(statusHint)}</small>
-            </td>
-            <td data-label="操作" class="admin-share-actions px-5 py-4 text-right">
-              <div class="admin-share-buttons">
-                <button class="btn h-8 px-3" data-admin-action="copy-share" data-args='${escapeHtml(JSON.stringify([item.token]))}'>复制链接</button>
-                <button class="admin-danger-btn" data-admin-action="delete-share" data-args='${escapeHtml(JSON.stringify([item.token]))}'>删除</button>
-              </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  },
-
-  async copyShare(token) {
-    if (!token) return;
-    const link = shareLink(token);
-    try {
-      await navigator.clipboard.writeText(link);
-      setSharesResult('分享链接已复制', 'success');
-    } catch (_) {
-      setSharesResult(link, 'success');
-    }
-  },
-
-  async deleteShare(token) {
-    if (!token || !(await adminConfirm('删除分享链接？', '删除后该分享会立即失效，且不会留下分享记录。'))) return;
-    const { res, data } = await api.deleteShare(token);
-    if (!res.ok || data?.success === false) {
-      setSharesResult(data?.message || '删除失败', 'error');
-      return;
-    }
-    await this.loadShares();
-    setSharesResult('分享链接已删除', 'success');
-  },
-
-  async cleanupShares() {
-    if (!(await adminConfirm('清理过期分享？', '这是手动清理，会立即删除已过期或已达到下载次数限制的分享记录。'))) return;
-    const { res, data } = await api.cleanupExpiredShares();
-    if (!res.ok || data?.success === false) {
-      setSharesResult(data?.message || '清理失败', 'error');
-      return;
-    }
-    await this.loadShares();
-    setSharesResult(`已清理 ${data.deleted || 0} 条分享记录`, 'success');
-  },
-
   async loadWebhooks() {
     const list = document.getElementById('webhookList');
     setWebhookResult();
@@ -710,6 +627,83 @@ export const AdminActions = {
       </div>
     `).join('');
     setWebhookFormMode(items[adminState.webhookEditingIndex]);
+  },
+
+  async loadWebhookDeliveries() {
+    const list = document.getElementById('webhookDeliveriesList');
+    if (!list) return;
+    list.innerHTML = '<div class="webhook-empty">正在加载投递记录...</div>';
+    const { res, data } = await api.adminWebhookDeliveries();
+    if (!res.ok) {
+      list.innerHTML = '<div class="webhook-empty">投递记录加载失败。</div>';
+      return;
+    }
+    const items = Array.isArray(data?.items) ? data.items : [];
+    if (!items.length) {
+      list.innerHTML = '<div class="webhook-empty">暂无投递记录。</div>';
+      return;
+    }
+    list.innerHTML = items.map(item => {
+      const status = Number(item.status || item.status_code || 0);
+      const ok = status >= 200 && status < 300;
+      const event = item.event || item.event_type || 'webhook';
+      const target = item.url || item.endpoint || item.name || 'Webhook';
+      const error = item.error || item.error_message || '';
+      return `
+        <div class="webhook-delivery-row">
+          <div class="webhook-delivery-head">
+            <strong>${escapeHtml(event)}</strong>
+            <span class="status-pill ${ok ? 'is-ok' : 'is-bad'}">${status || (ok ? 'OK' : '失败')}</span>
+          </div>
+          <div class="webhook-delivery-meta">
+            <span>${escapeHtml(target)}</span>
+            <span>${escapeHtml(adminTime(item.created_at || item.createdAt))}</span>
+            ${item.duration_ms || item.durationMs ? `<span>${escapeHtml(String(item.duration_ms || item.durationMs))}ms</span>` : ''}
+          </div>
+          ${error ? `<div class="webhook-delivery-meta"><span>${escapeHtml(error)}</span></div>` : ''}
+        </div>
+      `;
+    }).join('');
+  },
+
+  async loadTasks() {
+    const list = document.getElementById('taskList');
+    if (!list) return;
+    list.innerHTML = '<div class="webhook-empty">正在加载任务...</div>';
+    const { res, data } = await api.fileTasks(30);
+    if (!res.ok) {
+      list.innerHTML = '<div class="webhook-empty">任务加载失败。</div>';
+      return;
+    }
+    const items = Array.isArray(data?.items) ? data.items : [];
+    if (!items.length) {
+      list.innerHTML = '<div class="webhook-empty">暂无后台任务。</div>';
+      return;
+    }
+    list.innerHTML = items.map(item => {
+      const total = Math.max(Number(item.total || 0), 0);
+      const completed = Math.max(Number(item.completed || 0), 0);
+      const failed = Math.max(Number(item.failed || 0), 0);
+      const done = Math.min(total || completed + failed || 1, completed + failed);
+      const pct = total ? Math.round((done / total) * 100) : (item.status === 'completed' ? 100 : 0);
+      const typeLabel = item.type === 'paste' ? '复制/移动' : item.type === 'delete' ? '删除' : item.type;
+      return `
+        <div class="task-row">
+          <div class="task-row-head">
+            <strong>${escapeHtml(typeLabel || '任务')}</strong>
+            <span class="status-pill ${statusClass(item.status)}">${escapeHtml(statusLabel(item.status))}</span>
+          </div>
+          <div class="task-progress"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>
+          <div class="task-row-meta">
+            <span>完成 ${completed}/${total || '-'}</span>
+            ${failed ? `<span>失败 ${failed}</span>` : ''}
+            <span>创建 ${escapeHtml(adminTime(item.createdAt))}</span>
+            ${item.finishedAt ? `<span>结束 ${escapeHtml(adminTime(item.finishedAt))}</span>` : ''}
+          </div>
+          ${item.error ? `<div class="task-row-meta"><span>${escapeHtml(item.error)}</span></div>` : ''}
+        </div>
+      `;
+    }).join('');
   },
 
   async addWebhook() {
@@ -800,6 +794,8 @@ export const AdminActions = {
     setWebhookRowStatus(index, '测试发送成功', 'success');
   },
 };
+
+Object.assign(AdminActions, createAdminShareActions({ adminConfirm }));
 
 function formatBytesLocal(bytes) {
   if (!bytes || bytes <= 0) return '0 B';

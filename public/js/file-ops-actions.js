@@ -5,6 +5,25 @@ import { getSelectableKeys } from './file-view-model.js';
 import { UploadQueue } from './uploader.js';
 import { PreviewActions } from './preview-actions.js';
 import { describeItem } from './filters.js';
+import { escapeHtml } from './utils.js';
+
+const RECENT_SEARCH_KEY = 'o-drive-recent-searches';
+
+function recentSearches() {
+  try {
+    const items = JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY) || '[]');
+    return Array.isArray(items) ? items.filter(Boolean).slice(0, 6) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function rememberSearch(query) {
+  const q = String(query || '').trim();
+  if (!q) return;
+  const next = [q, ...recentSearches().filter(item => item !== q)].slice(0, 6);
+  localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(next));
+}
 
 function formatPathList(paths = [], limit = 8) {
   const lines = paths.slice(0, limit).map(path => `- ${path}`);
@@ -190,6 +209,7 @@ export const FileOpsActions = {
     const activeInput = mobileInput && mobileInput.offsetParent ? mobileInput : desktopInput;
     const q = activeInput?.value.trim() || '';
     if (!q) return this.clearSearch();
+    rememberSearch(q);
     state.isSearching = true;
     state.search = { query: q, scope: state.currentPath, nextCursor: '', loadingMore: false, filters: { ...state.filters } };
 
@@ -232,6 +252,31 @@ export const FileOpsActions = {
     const mobileInput = document.getElementById('mobileSearchInput');
     if (mobileInput) mobileInput.value = '';
     this.loadFiles();
+  },
+
+  renderSearchSuggestions() {
+    const items = recentSearches();
+    const markup = items.length
+      ? items.map(item => `<button class="search-suggestion-item" data-action="use-recent-search" data-args='${escapeHtml(JSON.stringify([item]))}'>${escapeHtml(item)}</button>`).join('')
+      : '<span class="search-suggestion-empty">暂无最近搜索</span>';
+    ['searchSuggestions', 'mobileSearchSuggestions'].forEach(id => {
+      const box = document.getElementById(id);
+      if (!box) return;
+      box.innerHTML = markup;
+      box.classList.remove('hidden');
+    });
+  },
+
+  useRecentSearch(query) {
+    const q = String(query || '').trim();
+    if (!q) return;
+    const desktopInput = document.getElementById('searchInput');
+    const mobileInput = document.getElementById('mobileSearchInput');
+    if (desktopInput) desktopInput.value = q;
+    if (mobileInput) mobileInput.value = q;
+    document.getElementById('searchSuggestions')?.classList.add('hidden');
+    document.getElementById('mobileSearchSuggestions')?.classList.add('hidden');
+    return this.handleSearch();
   },
 
   clearSelection() {
@@ -334,6 +379,12 @@ export const FileOpsActions = {
     UI.closeModal('filterModal');
     if (state.isSearching && state.search?.query) this.handleSearch();
     else UI.updateFileList();
+  },
+
+  quickFilter(kind) {
+    const select = document.getElementById('filterKind');
+    if (select) select.value = kind || 'all';
+    return this.applyFilters();
   },
 
   resetFilters() {

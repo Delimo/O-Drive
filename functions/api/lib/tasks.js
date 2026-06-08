@@ -171,7 +171,11 @@ export async function createFileTask(env, request, context = {}) {
 export async function getFileTask(env, url) {
   await ensureTaskTable(env);
   const id = url.searchParams.get('id') || '';
-  if (!id) return apiError('MISSING_TASK_ID', 'Missing task id', 400);
+  if (!id) {
+    const limit = Math.min(Math.max(Number(url.searchParams.get('limit') || 20), 1), 50);
+    const rows = await env.D1.prepare('SELECT * FROM file_tasks ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+    return jsonResponse({ success: true, items: (rows.results || []).map(mapTask) });
+  }
   const row = await env.D1.prepare('SELECT * FROM file_tasks WHERE id = ?').bind(id).first();
   if (!row) return apiError('TASK_NOT_FOUND', 'Task not found', 404);
   return jsonResponse({ success: true, item: mapTask(row) });

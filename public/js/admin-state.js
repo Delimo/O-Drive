@@ -4,4 +4,5 @@ export const adminState = {
   activeTab: 'overview',
   webhookEditingIndex: -1,
   logFilters: { q: '', action: '', ip: '', from: '', to: '' },
+  shareFilters: { q: '', status: 'all' },
 };

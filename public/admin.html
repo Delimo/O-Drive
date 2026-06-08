@@ -28,6 +28,7 @@
             <button id="btn-quota" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["quota"]' class="admin-tab-btn">存储配额</button>
             <button id="btn-shares" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["shares"]' class="admin-tab-btn">分享链接</button>
             <button id="btn-webhooks" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["webhooks"]' class="admin-tab-btn">Webhook</button>
+            <button id="btn-tasks" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["tasks"]' class="admin-tab-btn">任务中心</button>
         </div>
 
         <div class="explorer-card mt-4 mb-4">
@@ -213,6 +214,17 @@
                         <button class="btn btn-danger-soft h-8 px-3" data-admin-action="cleanup-shares">清理过期</button>
                     </div>
                 </div>
+                <div class="share-admin-filters">
+                    <input id="shareFilterQuery" type="search" class="admin-input" placeholder="搜索文件名或路径">
+                    <select id="shareFilterStatus" class="admin-input">
+                        <option value="all">全部状态</option>
+                        <option value="active">有效</option>
+                        <option value="expired">已过期</option>
+                        <option value="exhausted">已达次数</option>
+                    </select>
+                    <button class="btn h-10 px-4" data-admin-action="apply-share-filters">筛选</button>
+                    <button class="btn h-10 px-4" data-admin-action="reset-share-filters">重置</button>
+                </div>
                 <div class="admin-table-card overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
                     <table class="w-full text-left text-slate-900">
                         <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
@@ -326,7 +338,30 @@
                             <div id="webhookList" class="webhook-list"></div>
                             <p id="webhookResult" class="webhook-result hidden"></p>
                         </div>
+                        <div class="webhook-delivery-panel">
+                            <div class="webhook-list-head">
+                                <div>
+                                    <h3>最近投递</h3>
+                                    <span class="webhook-list-count">最近 20 条</span>
+                                </div>
+                                <button class="btn h-9 px-3" data-admin-action="refresh-webhook-deliveries">刷新</button>
+                            </div>
+                            <div id="webhookDeliveriesList" class="webhook-deliveries-list"></div>
+                        </div>
                     </div>
+                </section>
+            </div>
+
+            <div id="tasks-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+                <section class="admin-page-panel task-workbench">
+                    <div class="admin-section-head">
+                        <div>
+                            <h2>任务中心</h2>
+                            <p>查看复制、移动、删除等后台任务的执行状态和失败原因。</p>
+                        </div>
+                        <button class="btn h-9 px-3" data-admin-action="refresh-tasks">刷新</button>
+                    </div>
+                    <div id="taskList" class="task-list"></div>
                 </section>
             </div>
         </div>

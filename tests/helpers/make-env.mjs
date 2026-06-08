@@ -530,6 +530,10 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM webhook_deliveries ORDER BY created_at DESC LIMIT 20/i.test(sql)) {
               return { results: [...webhookDeliveryRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, 20) };
             }
+            if (/SELECT \* FROM file_tasks ORDER BY created_at DESC LIMIT \?/i.test(sql)) {
+              const limit = Number(statement.bound?.[0] || 20);
+              return { results: [...taskRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, limit) };
+            }
             if (/SELECT \* FROM system_warnings ORDER BY created_at DESC LIMIT 10/i.test(sql)) {
               return { results: [...systemWarningRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, 10) };
             }

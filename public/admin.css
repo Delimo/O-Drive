@@ -417,7 +417,8 @@ body.admin-page {
 
 .admin-page .webhook-settings-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.48fr);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.5fr);
+  grid-template-rows: minmax(0, 1fr) minmax(180px, 0.58fr);
   gap: 18px;
   flex: 1 1 auto;
   width: 100%;
@@ -427,7 +428,8 @@ body.admin-page {
 }
 
 .admin-page .webhook-editor-column,
-.admin-page .webhook-list-panel {
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel {
   min-width: 0;
   min-height: 0;
   border: 1px solid var(--border);
@@ -437,6 +439,7 @@ body.admin-page {
 }
 
 .admin-page .webhook-editor-column {
+  grid-row: 1 / -1;
   display: grid;
   grid-template-rows: auto auto auto auto auto;
   gap: 14px;
@@ -632,12 +635,17 @@ body.admin-page {
   overflow-wrap: anywhere;
 }
 
-.admin-page .webhook-list-panel {
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
   padding: 16px;
   overflow: hidden;
+}
+
+.admin-page .webhook-delivery-panel {
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .admin-page .webhook-list-head {
@@ -679,6 +687,99 @@ body.admin-page {
   overflow-y: auto;
   padding-right: 2px;
   padding-bottom: 4px;
+}
+
+.admin-page .webhook-deliveries-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.admin-page .webhook-delivery-row,
+.admin-page .task-row {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.admin-page .webhook-delivery-head,
+.admin-page .task-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-page .webhook-delivery-head strong,
+.admin-page .task-row-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.admin-page .webhook-delivery-meta,
+.admin-page .task-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-page .webhook-delivery-meta span,
+.admin-page .task-row-meta span {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-page .status-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-page .status-pill.is-ok {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.admin-page .status-pill.is-bad {
+  border-color: rgba(185, 28, 28, 0.16);
+  background: #fff5f5;
+  color: #b91c1c;
+}
+
+.admin-page .status-pill.is-running {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: var(--primary-strong);
 }
 
 .admin-page .webhook-empty {
@@ -882,6 +983,35 @@ body.admin-page {
   background: var(--surface-soft);
 }
 
+.admin-page .task-workbench {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-page .task-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.admin-page .task-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.admin-page .task-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-page .webhook-row-status {
     transition: none;
@@ -1000,6 +1130,14 @@ body.admin-page {
   gap: 10px;
   align-items: center;
   margin-bottom: 14px;
+}
+
+.admin-page .share-admin-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.35fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .admin-page #shares-tab .admin-table-card {
@@ -1566,17 +1704,20 @@ body.admin-page {
 
   .admin-page #webhooks-tab .webhook-settings-body {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
     gap: 14px;
     overflow: visible;
   }
 
   .admin-page #webhooks-tab .webhook-editor-column,
-  .admin-page #webhooks-tab .webhook-list-panel {
+  .admin-page #webhooks-tab .webhook-list-panel,
+  .admin-page #webhooks-tab .webhook-delivery-panel {
     height: auto;
     overflow: visible;
   }
 
-  .admin-page #webhooks-tab .webhook-list {
+  .admin-page #webhooks-tab .webhook-list,
+  .admin-page #webhooks-tab .webhook-deliveries-list {
     overflow: visible;
   }
 }
@@ -1603,6 +1744,10 @@ body.admin-page {
 
 @media (max-width: 768px) {
   .admin-page .admin-log-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .share-admin-filters {
     grid-template-columns: 1fr;
   }
 

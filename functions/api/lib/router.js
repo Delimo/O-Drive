@@ -68,6 +68,11 @@ async function notifyConfiguredWebhookEvent(env, context, event, data) {
   }
 }
 
+async function notifyAfterOk(env, context, res, event, data) {
+  if (!res?.ok || !data) return;
+  await notifyConfiguredWebhookEvent(env, context, event, data);
+}
+
 async function monitorDownloadBurst(env, request, auth, r2Key, context) {
   try {
     const alert = await recordDownloadBurst(env, request, auth, r2Key);
@@ -100,9 +105,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const body = await request.clone().json().catch(() => null);
     const res = await handlePaste(env, request);
     if (res.ok && body) {
-      try {
-        await notifyConfiguredWebhookEvent(env, context, body.action === 'move' ? 'file.moved' : 'file.copied', { paths: body.paths, targetDir: body.targetDir });
-      } catch (_) {}
+      await notifyAfterOk(env, context, res, body.action === 'move' ? 'file.moved' : 'file.copied', { paths: body.paths, targetDir: body.targetDir });
     }
     return res;
   }
@@ -112,9 +115,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const body = await request.clone().json().catch(() => null);
     const res = await handleRename(env, request, r2Key);
     if (res.ok && body) {
-      try {
-        await notifyConfiguredWebhookEvent(env, context, 'file.renamed', { oldPath: '/' + r2Key, newName: body.newName });
-      } catch (_) {}
+      await notifyAfterOk(env, context, res, 'file.renamed', { oldPath: '/' + r2Key, newName: body.newName });
     }
     return res;
   }
@@ -124,9 +125,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const body = await request.clone().json().catch(() => null);
     const res = await handleBatchDelete(env, request);
     if (res.ok && body) {
-      try {
-        await notifyConfiguredWebhookEvent(env, context, 'file.deleted', { paths: body.paths });
-      } catch (_) {}
+      await notifyAfterOk(env, context, res, 'file.deleted', { paths: body.paths });
     }
     return res;
   }
@@ -142,9 +141,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const res = await handleTrashDelete(env, request);
     const data = res.ok ? await res.clone().json().catch(() => null) : null;
     if (res.ok && data?.originalKey) {
-      try {
-        await notifyConfiguredWebhookEvent(env, context, 'file.purged', { paths: [data.originalKey] });
-      } catch (_) {}
+      await notifyAfterOk(env, context, res, 'file.purged', { paths: [data.originalKey] });
     }
     return res;
   }
@@ -154,9 +151,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const res = await handleMkdir(env, request, r2Key);
     const data = res.ok ? await res.clone().json().catch(() => null) : null;
     if (res.ok && data?.path) {
-      try {
-        await notifyConfiguredWebhookEvent(env, context, 'folder.created', { path: data.path });
-      } catch (_) {}
+      await notifyAfterOk(env, context, res, 'folder.created', { path: data.path });
     }
     return res;
   }
@@ -167,7 +162,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const res = await handleUpload(env, request, r2Key);
     const data = res.ok ? await res.clone().json().catch(() => null) : null;
     if (res.ok && data?.key && !data?.skipped) {
-      await notifyConfiguredWebhookEvent(env, context, 'file.uploaded', { path: '/' + data.key, uploader: 'admin' });
+      await notifyAfterOk(env, context, res, 'file.uploaded', { path: '/' + data.key, uploader: 'admin' });
     }
     return res;
   }
@@ -186,9 +181,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
     const body = await request.clone().json().catch(() => null);
     const res = await handleMultipartComplete(env, request);
     if (res.ok && body) {
-      try {
-        if (body.key) await notifyConfiguredWebhookEvent(env, context, 'file.uploaded', { path: '/' + body.key, uploader: 'admin' });
-      } catch (_) {}
+      if (body.key) await notifyAfterOk(env, context, res, 'file.uploaded', { path: '/' + body.key, uploader: 'admin' });
     }
     return res;
   }

@@ -32,6 +32,8 @@ document.addEventListener('click', event => {
     case 'set-quota': return AdminActions.setQuota();
     case 'fill-quota': return AdminActions.fillQuota(Number(args[0] || 0));
     case 'refresh-shares': return AdminActions.loadShares();
+    case 'apply-share-filters': return AdminActions.applyShareFilters();
+    case 'reset-share-filters': return AdminActions.resetShareFilters();
     case 'copy-share': return AdminActions.copyShare(args[0]);
     case 'delete-share': return AdminActions.deleteShare(args[0]);
     case 'cleanup-shares': return AdminActions.cleanupShares();
@@ -40,6 +42,8 @@ document.addEventListener('click', event => {
     case 'remove-webhook': return AdminActions.removeWebhook(Number(args[0] || 0));
     case 'test-webhook': return AdminActions.testWebhook(Number(args[0] || 0));
     case 'refresh-webhooks': return AdminActions.loadWebhooks();
+    case 'refresh-webhook-deliveries': return AdminActions.loadWebhookDeliveries();
+    case 'refresh-tasks': return AdminActions.loadTasks();
   }
 });
 
