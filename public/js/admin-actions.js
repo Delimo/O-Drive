@@ -134,6 +134,15 @@ function setSharesResult(text = '', tone = 'muted') {
   result.classList.toggle('text-emerald-700', tone === 'success');
 }
 
+function summarizeD1Tables(tables = []) {
+  if (!Array.isArray(tables) || !tables.length) {
+    return '所需表会在功能首次使用时自动创建';
+  }
+  const coreTables = ['settings', 'logs', 'file_index', 'trash', 'share_links', 'path_passwords', 'webhook_deliveries'];
+  const readyCount = coreTables.filter(name => tables.includes(name)).length;
+  return `已存在 ${tables.length} 张表，核心表 ${readyCount}/${coreTables.length} 已就绪`;
+}
+
 export const AdminActions = {
   switchTab(id, options = {}) {
     const tabId = ADMIN_TABS.includes(id) ? id : 'overview';
@@ -257,9 +266,7 @@ export const AdminActions = {
       return;
     }
 
-    const tableList = Array.isArray(data.db?.tables) && data.db.tables.length
-      ? `已存在表：${data.db.tables.join(', ')}`
-      : '所需表会在功能首次使用时自动创建';
+    const tableList = summarizeD1Tables(data.db?.tables);
 
     const warnings = Array.isArray(data.warnings) ? data.warnings : [];
     const warningsHtml = warnings.length
