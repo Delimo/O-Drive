@@ -8,6 +8,7 @@ export const WEBHOOK_EVENT_OPTIONS = [
   ['folder.created', '新建文件夹'],
   ['download.burst', '大量下载'],
   ['login.burst', '登录异常'],
+  ['share.expired', '分享链接到期'],
 ];
 
 export const WEBHOOK_EVENT_KEYS = WEBHOOK_EVENT_OPTIONS.map(([key]) => key);
