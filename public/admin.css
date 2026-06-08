@@ -443,8 +443,36 @@ body.admin-page {
   align-items: center;
 }
 
+.admin-page .quota-global-form {
+  grid-template-columns: minmax(0, 1fr) 118px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.admin-page .quota-global-form .admin-input {
+  height: 46px;
+  border-color: transparent;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.admin-page .storage-inline-section {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
 .admin-page .quota-form-row .admin-input {
   height: 42px;
+}
+
+.admin-page .quota-preset-grid,
+.admin-page [data-admin-action="fill-quota"] {
+  display: none !important;
 }
 
 .admin-page .quota-save-btn {
@@ -458,7 +486,179 @@ body.admin-page {
 .admin-page .quota-workbench {
   flex: 1 1 auto;
   gap: 14px;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.admin-page #quota-tab {
+  overflow-y: auto;
+}
+
+.admin-page #quota-tab .admin-page-panel {
+  overflow: visible;
+}
+
+.admin-page .storage-console {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: visible;
+}
+
+.admin-page .storage-console-head {
+  flex-shrink: 0;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-page .storage-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-page .storage-metric-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-page .storage-metric-card span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-page .storage-metric-card strong {
+  min-width: 0;
+  color: var(--primary-strong);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .storage-main-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.86fr) minmax(460px, 1.14fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+
+.admin-page .storage-stack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.admin-page .storage-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-page .storage-panel-primary {
+  border-color: rgba(59, 130, 246, 0.24);
+  background: #f8fbff;
+}
+
+.admin-page .storage-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-page .storage-panel-head h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.admin-page .storage-panel-head p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.admin-page .storage-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-page .storage-input-row.bind {
+  grid-template-columns: minmax(140px, 1fr) minmax(150px, 0.8fr) 82px;
+}
+
+.admin-page .storage-input-row .btn,
+.admin-page .storage-actions .btn {
+  height: 42px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.admin-page .storage-form-grid {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-page .storage-form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-page .storage-form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-page .storage-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-page .storage-field span {
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.admin-page .storage-field .admin-input,
+.admin-page .storage-input-row .admin-input {
+  width: 100%;
+  height: 42px;
+}
+
+.admin-page .storage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .admin-page .quota-workbench-head {
@@ -510,7 +710,7 @@ body.admin-page {
   gap: 18px;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .admin-page .quota-editor-panel,
@@ -525,7 +725,7 @@ body.admin-page {
   border-radius: 14px;
   background: #fff;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .admin-page .quota-status-panel {
@@ -546,17 +746,6 @@ body.admin-page {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.45;
-}
-
-.admin-page .quota-preset-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.admin-page .quota-preset-grid .btn {
-  width: 100%;
-  min-width: 0;
 }
 
 .admin-page .quota-result {
@@ -2716,6 +2905,10 @@ body.admin-page {
     overflow: visible;
   }
 
+  .admin-page .storage-main-grid {
+    grid-template-columns: 1fr;
+  }
+
   .admin-page .access-editor-panel,
   .admin-page .access-list-panel,
   .admin-page .access-rule-list,
@@ -2778,6 +2971,7 @@ body.admin-page {
   .admin-page .log-filter-panel,
   .admin-page .share-filter-panel,
   .admin-page .share-summary-grid,
+  .admin-page .storage-metric-grid,
   .admin-page .quota-summary-grid,
   .admin-page .task-summary-grid {
     grid-template-columns: 1fr;
@@ -2984,8 +3178,24 @@ body.admin-page {
     overflow: visible;
   }
 
-  .admin-page .quota-preset-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .admin-page .storage-console {
+    gap: 12px;
+  }
+
+  .admin-page .storage-panel {
+    padding: 14px;
+  }
+
+  .admin-page .storage-input-row,
+  .admin-page .storage-input-row.bind,
+  .admin-page .storage-form-grid.two,
+  .admin-page .storage-form-grid.three {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .storage-actions .btn,
+  .admin-page .storage-input-row .btn {
+    width: 100%;
   }
 
   .admin-page .access-list-head,

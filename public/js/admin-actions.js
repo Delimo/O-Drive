@@ -36,6 +36,15 @@ function setMaintenanceResult(text = '') {
   });
 }
 
+function removeLegacyQuotaShortcuts() {
+  document.querySelectorAll('[data-admin-action="fill-quota"]').forEach(button => {
+    const group = button.closest('.quota-preset-grid');
+    if (group) group.remove();
+    else button.remove();
+  });
+  document.querySelectorAll('.quota-preset-grid').forEach(group => group.remove());
+}
+
 function setWebhookForm(item = {}) {
   const values = {
     webhookUrlInput: item.url || '',
@@ -158,6 +167,7 @@ function summarizeD1Tables(tables = []) {
 
 export const AdminActions = {
   switchTab(id, options = {}) {
+    removeLegacyQuotaShortcuts();
     const tabId = ADMIN_TABS.includes(id) ? id : 'overview';
     ADMIN_TABS.forEach(tab => {
       document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', tabId !== tab);
@@ -175,7 +185,7 @@ export const AdminActions = {
     if (tabId === 'health') return Promise.all([this.loadHealth(), this.loadMaintenance()]);
     if (tabId === 'logs') return this.loadLogs();
     if (tabId === 'access') return this.loadAccessRules();
-    if (tabId === 'quota') return this.loadQuota();
+    if (tabId === 'quota') return Promise.all([this.loadQuota(), this.loadStorage()]);
     if (tabId === 'shares') return this.loadShares();
     if (tabId === 'webhooks') return Promise.all([this.loadWebhooks(), this.loadWebhookDeliveries()]);
     return this.loadStats();
@@ -629,6 +639,7 @@ export const AdminActions = {
   },
 
   async loadQuota() {
+    removeLegacyQuotaShortcuts();
     const info = document.getElementById('quotaInfo');
     const result = document.getElementById('quotaResult');
     if (result) result.textContent = '';
@@ -659,7 +670,171 @@ export const AdminActions = {
       </div>
     `;
     const input = document.getElementById('quotaInput');
-    if (input && data.quota > 0) input.value = data.quota;
+    if (input) input.value = data.quota > 0 ? (data.quotaFormatted || formatBytesLocal(data.quota)) : '0';
+  },
+
+  async loadStorage() {
+    const result = document.getElementById('storageResult');
+    const spaceList = document.getElementById('storageSpaceList');
+    const bindingList = document.getElementById('storageBindingList');
+    const bindingSelect = document.getElementById('bindingStorageInput');
+    if (result) result.textContent = '';
+    if (!spaceList || !bindingList || !bindingSelect) return;
+    const { res, data } = await api.adminStorage();
+    if (!res.ok) {
+      if (result) result.textContent = '加载存储配置失败';
+      return;
+    }
+    adminState.storageConfig = data;
+    const r2Quota = document.getElementById('r2QuotaBytesInput');
+    const threshold = document.getElementById('overflowThresholdInput');
+    const enabled = document.getElementById('overflowEnabledInput');
+    if (r2Quota) r2Quota.value = data.r2?.quotaFormatted || '10 GB';
+    if (threshold) threshold.value = data.overflowThresholdPercent || 85;
+    if (enabled) enabled.checked = Boolean(data.overflowEnabled);
+    bindingSelect.innerHTML = [
+      '<option value="r2">Cloudflare R2</option>',
+      ...(data.spaces || []).map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name || item.id)}</option>`),
+    ].join('');
+    spaceList.innerHTML = (data.spaces || []).map(item => `
+      <div class="access-rule-card">
+        <div class="access-rule-main">
+          <strong>${escapeHtml(item.name || item.id)}</strong>
+          <span>${escapeHtml(item.bucket || '-')} · ${escapeHtml(item.endpoint || '-')}</span>
+        </div>
+        <div class="access-rule-states">
+          <span class="admin-status-badge ${item.enabled ? 'is-visible' : 'is-hidden'}">${item.enabled ? '启用' : '停用'}</span>
+          ${item.overflowTarget ? '<span class="admin-status-badge is-visible">溢出目标</span>' : ''}
+          <span class="access-rule-note">${escapeHtml(item.usedFormatted || '0 B')} / ${escapeHtml(item.quotaFormatted || '未设置')}</span>
+          ${item.hasSecret ? '<span class="access-rule-note">密钥已保存</span>' : '<span class="access-rule-note">缺少密钥</span>'}
+        </div>
+        <div class="access-rule-actions">
+          <button class="btn h-8 px-3" data-admin-action="test-storage-space" data-args='${escapeHtml(JSON.stringify([item.id]))}'>测试</button>
+          <button class="admin-danger-btn" data-admin-action="remove-storage-space" data-args='${escapeHtml(JSON.stringify([item.id]))}'>删除</button>
+        </div>
+      </div>
+    `).join('') || '<div class="access-empty">暂无 S3 空间</div>';
+    bindingList.innerHTML = (data.bindings || []).map(item => `
+      <div class="access-rule-card">
+        <div class="access-rule-main">
+          <strong>/${escapeHtml(item.path)}</strong>
+          <span>存储空间：${escapeHtml(this.storageName(item.storageId))}</span>
+        </div>
+        <div class="access-rule-actions">
+          <button class="admin-danger-btn" data-admin-action="remove-storage-binding" data-args='${escapeHtml(JSON.stringify([item.path]))}'>删除</button>
+        </div>
+      </div>
+    `).join('') || '<div class="access-empty">暂无路径绑定，根目录默认使用 R2</div>';
+  },
+
+  storageName(id) {
+    if (id === 'r2') return 'Cloudflare R2';
+    const item = (adminState.storageConfig?.spaces || []).find(space => space.id === id);
+    return item?.name || id || '-';
+  },
+
+  readStorageBaseConfig() {
+    const current = adminState.storageConfig || { spaces: [], bindings: [] };
+    return {
+      ...current,
+      r2QuotaBytes: document.getElementById('r2QuotaBytesInput')?.value || current.r2?.quotaBytes || '10GB',
+      overflowThresholdPercent: Number(document.getElementById('overflowThresholdInput')?.value || current.overflowThresholdPercent || 85),
+      overflowEnabled: Boolean(document.getElementById('overflowEnabledInput')?.checked),
+      spaces: [...(current.spaces || [])],
+      bindings: [...(current.bindings || [])],
+    };
+  },
+
+  async saveStorageConfig(config, message = '存储配置已保存') {
+    const result = document.getElementById('storageResult');
+    if (result) result.textContent = '正在保存...';
+    const { res, data } = await api.setAdminStorage(config);
+    if (!res.ok || data?.success === false) {
+      if (result) result.textContent = data?.message || '保存失败';
+      return false;
+    }
+    if (result) result.textContent = message;
+    await this.loadStorage();
+    return true;
+  },
+
+  readStorageSpaceForm() {
+    return {
+      id: document.getElementById('storageIdInput')?.value.trim(),
+      name: document.getElementById('storageNameInput')?.value.trim(),
+      endpoint: document.getElementById('storageEndpointInput')?.value.trim(),
+      bucket: document.getElementById('storageBucketInput')?.value.trim(),
+      accessKeyId: document.getElementById('storageAccessKeyInput')?.value.trim(),
+      secretAccessKey: document.getElementById('storageSecretKeyInput')?.value,
+      region: document.getElementById('storageRegionInput')?.value.trim() || 'auto',
+      prefix: document.getElementById('storagePrefixInput')?.value.trim(),
+      quotaBytes: document.getElementById('storageQuotaInput')?.value.trim(),
+      enabled: Boolean(document.getElementById('storageEnabledInput')?.checked),
+      overflowTarget: Boolean(document.getElementById('storageOverflowInput')?.checked),
+    };
+  },
+
+  async addStorageSpace() {
+    const config = this.readStorageBaseConfig();
+    const item = this.readStorageSpaceForm();
+    if (!item.id || !item.name || !item.endpoint || !item.bucket) {
+      const result = document.getElementById('storageResult');
+      if (result) result.textContent = '请填写名称、ID、Endpoint 和 Bucket';
+      return;
+    }
+    const idx = config.spaces.findIndex(space => space.id === item.id);
+    if (idx >= 0) config.spaces[idx] = { ...config.spaces[idx], ...item };
+    else config.spaces.push(item);
+    await this.saveStorageConfig(config, 'S3 空间已保存');
+  },
+
+  async testStorageSpace(id = '') {
+    const result = document.getElementById('storageResult');
+    const saved = id ? (adminState.storageConfig?.spaces || []).find(item => item.id === id) : null;
+    const space = saved || this.readStorageSpaceForm();
+    if (!space?.id && !space?.name) {
+      if (result) result.textContent = '请先填写或选择一个 S3 空间';
+      return;
+    }
+    if (result) result.textContent = '正在测试 S3 连接...';
+    const { res, data } = await api.testAdminStorage(space);
+    if (!res.ok || data?.success === false) {
+      if (result) result.textContent = data?.message || '连接测试失败';
+      return;
+    }
+    if (result) result.textContent = `${data.message || '连接成功'}，耗时 ${data.durationMs || 0}ms`;
+  },
+
+  async saveStoragePolicy() {
+    const config = this.readStorageBaseConfig();
+    await this.saveStorageConfig(config, 'R2 溢出设置已保存');
+  },
+
+  async removeStorageSpace(id) {
+    const config = this.readStorageBaseConfig();
+    if (!(await adminConfirm('删除 S3 空间？', `空间 ${id} 的路径绑定也会移除。`))) return;
+    config.spaces = config.spaces.filter(item => item.id !== id);
+    config.bindings = config.bindings.filter(item => item.storageId !== id);
+    await this.saveStorageConfig(config, 'S3 空间已删除');
+  },
+
+  async addStorageBinding() {
+    const config = this.readStorageBaseConfig();
+    const path = (document.getElementById('bindingPathInput')?.value || '').trim().replace(/^\/+|\/+$/g, '');
+    const storageId = document.getElementById('bindingStorageInput')?.value || 'r2';
+    if (!path) {
+      const result = document.getElementById('storageResult');
+      if (result) result.textContent = '请输入要绑定的路径';
+      return;
+    }
+    config.bindings = [...config.bindings.filter(item => item.path !== path), { path, storageId }];
+    await this.saveStorageConfig(config, `/${path} 已绑定到 ${this.storageName(storageId)}`);
+  },
+
+  async removeStorageBinding(path) {
+    const config = this.readStorageBaseConfig();
+    config.bindings = config.bindings.filter(item => item.path !== path);
+    await this.saveStorageConfig(config, `/${path} 已取消绑定`);
   },
 
   fillQuota(bytes) {
@@ -670,8 +845,9 @@ export const AdminActions = {
   async setQuota() {
     const input = document.getElementById('quotaInput');
     const result = document.getElementById('quotaResult');
-    const bytes = Number(input?.value || 0);
-    if (bytes < 0) { if (result) result.textContent = '配额不能为负数'; return; }
+    const parsed = parseCapacityLocal(input?.value || 0);
+    if (!parsed.ok) { if (result) result.textContent = '请输入有效容量，例如 0、9.5GB 或 100GB'; return; }
+    const bytes = parsed.bytes;
     const confirmTitle = bytes > 0 ? '保存存储配额？' : '取消存储配额限制？';
     const confirmBody = bytes > 0 ? `新的配额为 ${formatBytesLocal(bytes)}。` : '取消后上传不再受总量配额限制。';
     if (!(await adminConfirm(confirmTitle, confirmBody))) return;
@@ -917,4 +1093,37 @@ function formatBytesLocal(bytes) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 2 : 0) + ' ' + units[i];
+}
+
+function parseCapacityLocal(value) {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value < 0) return { ok: false, bytes: 0 };
+    return { ok: true, bytes: Math.floor(value) };
+  }
+  const raw = String(value ?? '').trim();
+  if (!raw) return { ok: true, bytes: 0 };
+  const match = raw.match(/^(\d+(?:\.\d+)?)\s*([kmgtp]?i?b?|b)?$/i);
+  if (!match) return { ok: false, bytes: 0 };
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount < 0) return { ok: false, bytes: 0 };
+  const unit = String(match[2] || 'b').toLowerCase();
+  const powers = {
+    b: 0,
+    k: 1,
+    kb: 1,
+    kib: 1,
+    m: 2,
+    mb: 2,
+    mib: 2,
+    g: 3,
+    gb: 3,
+    gib: 3,
+    t: 4,
+    tb: 4,
+    tib: 4,
+    p: 5,
+    pb: 5,
+    pib: 5,
+  };
+  return { ok: true, bytes: Math.floor(amount * (1024 ** (powers[unit] ?? 0))) };
 }

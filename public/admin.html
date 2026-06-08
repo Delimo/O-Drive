@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/main.css">
     <link rel="stylesheet" href="/explorer.css">
-    <link rel="stylesheet" href="/admin.css">
+    <link rel="stylesheet" href="/admin.css?v=20260608-storage-s3">
 </head>
 <body class="admin-page flex flex-col bg-background text-slate-900">
     <main class="container">
@@ -258,51 +258,159 @@
                     </div>
                 </section>
             </div>
-            <div id="quota-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
-                <section class="admin-page-panel quota-workbench">
-                    <div class="admin-section-head quota-workbench-head">
+            <div id="quota-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
+                <section class="admin-page-panel storage-console">
+                    <div class="admin-section-head storage-console-head">
                         <div>
-                            <h2>存储配额</h2>
-                            <p>设置总存储上限，超出后将拒绝新文件上传。设为 0 表示不限制。</p>
+                            <h2>存储空间</h2>
+                            <p>管理全局配额、R2 安全容量、S3 空间和文件夹绑定。</p>
                         </div>
                     </div>
-                    <div class="quota-summary-grid">
-                        <div class="quota-summary-card"><span>当前配额</span><strong id="quotaLimitValue">-</strong></div>
-                        <div class="quota-summary-card"><span>已使用</span><strong id="quotaUsedValue">-</strong></div>
-                        <div class="quota-summary-card"><span>剩余空间</span><strong id="quotaRemainingValue">-</strong></div>
+                    <div class="storage-metric-grid">
+                        <div class="storage-metric-card"><span>当前配额</span><strong id="quotaLimitValue">-</strong></div>
+                        <div class="storage-metric-card"><span>已使用</span><strong id="quotaUsedValue">-</strong></div>
+                        <div class="storage-metric-card"><span>剩余空间</span><strong id="quotaRemainingValue">-</strong></div>
                     </div>
-                    <div class="quota-workbench-body">
-                        <div class="quota-editor-panel">
-                            <div class="quota-panel-title">
-                                <h3>配额设置</h3>
-                                <p>输入字节数，或使用下方快捷容量。</p>
-                            </div>
-                            <div class="quota-form-row">
-                                <input type="number" id="quotaInput" placeholder="10737418240 = 10 GB" min="0" class="admin-input">
-                                <button class="btn btn-primary quota-save-btn" data-admin-action="set-quota">保存</button>
-                            </div>
-                            <div class="quota-preset-grid">
-                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[5368709120]'>5 GB</button>
-                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[10737418240]'>10 GB</button>
-                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[53687091200]'>50 GB</button>
-                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[107374182400]'>100 GB</button>
-                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[0]'>不限制</button>
-                            </div>
-                            <p id="quotaResult" class="quota-result"></p>
-                        </div>
-                        <div class="quota-status-panel">
-                            <div class="quota-panel-title">
-                                <h3>使用情况</h3>
-                                <p>概览数据在上方展示，这里只保留容量趋势。</p>
-                            </div>
-                            <div class="quota-usage-card">
-                                <div class="quota-usage-head">
-                                    <span>使用比例</span>
-                                    <strong id="quotaPercentValue">0%</strong>
+                    <div class="storage-main-grid">
+                        <div class="storage-stack">
+                            <section class="storage-panel">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>总配额</h3>
+                                        <p>可填 0、9.5GB、100GB；0 表示不限制。</p>
+                                    </div>
                                 </div>
-                                <div class="quota-usage-track"><span id="quotaUsageBar"></span></div>
-                            </div>
-                            <div id="quotaInfo" class="quota-info-grid"></div>
+                                <div class="storage-input-row">
+                                    <input type="text" id="quotaInput" placeholder="例如 9.5GB；0 表示不限制" class="admin-input">
+                                    <button class="btn btn-primary" data-admin-action="set-quota">保存</button>
+                                </div>
+                                <p id="quotaResult" class="quota-result"></p>
+                                <div class="quota-usage-card">
+                                    <div class="quota-usage-head">
+                                        <span>使用比例</span>
+                                        <strong id="quotaPercentValue">0%</strong>
+                                    </div>
+                                    <div class="quota-usage-track"><span id="quotaUsageBar"></span></div>
+                                </div>
+                                <div id="quotaInfo" class="quota-info-grid"></div>
+                            </section>
+                            <section class="storage-panel">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>R2 与溢出</h3>
+                                        <p>R2 到达阈值后，新文件会自动写入可用的 S3 溢出空间。</p>
+                                    </div>
+                                </div>
+                                <div class="storage-form-grid two">
+                                    <label class="storage-field">
+                                        <span>R2 容量上限</span>
+                                        <input type="text" id="r2QuotaBytesInput" placeholder="例如 9.5GB" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>溢出阈值</span>
+                                        <input type="number" id="overflowThresholdInput" placeholder="默认 85" min="1" max="99" class="admin-input">
+                                    </label>
+                                </div>
+                                <label class="access-mode-card">
+                                    <input id="overflowEnabledInput" type="checkbox" checked>
+                                    <span><strong>启用 R2 高水位溢出</strong><small>超过阈值后上传提示会告知用户文件已进入 S3</small></span>
+                                </label>
+                                <div class="storage-actions">
+                                    <button class="btn" data-admin-action="save-storage-policy">保存 R2 设置</button>
+                                </div>
+                            </section>
+                            <section class="storage-panel">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>文件夹绑定</h3>
+                                        <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
+                                    </div>
+                                </div>
+                                <div class="storage-input-row bind">
+                                    <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
+                                    <select id="bindingStorageInput" class="admin-input"></select>
+                                    <button class="btn btn-primary" data-admin-action="add-storage-binding">绑定</button>
+                                </div>
+                                <div id="storageBindingList" class="access-rule-list"></div>
+                            </section>
+                        </div>
+                        <div class="storage-stack">
+                            <section class="storage-panel storage-panel-primary">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>S3 空间</h3>
+                                        <p>填写 S3 兼容存储，可用于文件夹绑定或 R2 溢出。</p>
+                                    </div>
+                                </div>
+                                <div class="storage-form-grid two">
+                                    <label class="storage-field">
+                                        <span>名称</span>
+                                        <input type="text" id="storageNameInput" placeholder="S3-主存储" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>ID</span>
+                                        <input type="text" id="storageIdInput" placeholder="s3-main" class="admin-input">
+                                    </label>
+                                </div>
+                                <div class="storage-form-grid two">
+                                    <label class="storage-field wide">
+                                        <span>Endpoint</span>
+                                        <input type="url" id="storageEndpointInput" placeholder="https://s3.example.com" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>Bucket</span>
+                                        <input type="text" id="storageBucketInput" placeholder="bucket-name" class="admin-input">
+                                    </label>
+                                </div>
+                                <div class="storage-form-grid two">
+                                    <label class="storage-field">
+                                        <span>Access Key ID</span>
+                                        <input type="text" id="storageAccessKeyInput" placeholder="Access Key ID" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>Secret Access Key</span>
+                                        <input type="password" id="storageSecretKeyInput" placeholder="Secret Access Key" class="admin-input">
+                                    </label>
+                                </div>
+                                <div class="storage-form-grid three">
+                                    <label class="storage-field">
+                                        <span>Region</span>
+                                        <input type="text" id="storageRegionInput" placeholder="auto" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>前缀</span>
+                                        <input type="text" id="storagePrefixInput" placeholder="可选" class="admin-input">
+                                    </label>
+                                    <label class="storage-field">
+                                        <span>容量上限</span>
+                                        <input type="text" id="storageQuotaInput" placeholder="如 100GB" class="admin-input">
+                                    </label>
+                                </div>
+                                <div class="access-mode-grid">
+                                    <label class="access-mode-card">
+                                        <input id="storageEnabledInput" type="checkbox" checked>
+                                        <span><strong>启用</strong><small>允许写入和读取</small></span>
+                                    </label>
+                                    <label class="access-mode-card">
+                                        <input id="storageOverflowInput" type="checkbox" checked>
+                                        <span><strong>作为溢出空间</strong><small>R2 超过阈值后自动使用</small></span>
+                                    </label>
+                                </div>
+                                <div class="storage-actions">
+                                    <button class="btn btn-primary" data-admin-action="add-storage-space">保存 S3 空间</button>
+                                    <button class="btn" data-admin-action="test-storage-space">测试连接</button>
+                                </div>
+                                <p id="storageResult" class="quota-result"></p>
+                            </section>
+                            <section class="storage-panel">
+                                <div class="storage-panel-head">
+                                    <div>
+                                        <h3>已配置 S3</h3>
+                                        <p>已保存的空间会显示容量、状态和连接测试入口。</p>
+                                    </div>
+                                </div>
+                                <div id="storageSpaceList" class="access-rule-list"></div>
+                            </section>
                         </div>
                     </div>
                 </section>
@@ -465,6 +573,6 @@
         </footer>
     </main>
 
-    <script type="module" src="/js/admin-app.js"></script>
+    <script type="module" src="/js/admin-app.js?v=20260608-storage-s3"></script>
 </body>
 </html>

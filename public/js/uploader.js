@@ -72,6 +72,7 @@ function rememberMultipart(task) {
   store[taskFingerprint(task)] = {
     key: task.key,
     uploadId: task.uploadId,
+    storageId: task.storageId || '',
     parts: task.parts || [],
     updatedAt: Date.now(),
   };
@@ -104,6 +105,9 @@ async function uploadSmall(task) {
       if (xhr.status === 200) {
         task.skipped = Boolean(data?.skipped);
         task.renamed = Boolean(data?.renamed);
+        task.storageId = data?.storageId || task.storageId || '';
+        task.warning = data?.warning || task.warning || '';
+        task.overflowed = Boolean(data?.overflowed);
         resolve();
       } else {
         reject(new Error(data?.message || `HTTP ${xhr.status}`));
@@ -137,6 +141,7 @@ async function uploadPartWithRetry(task, partNumber, chunk) {
       const { res, data } = await api.multipartPart({
         key: task.key,
         uploadId: task.uploadId,
+        storageId: task.storageId,
         partNumber,
         chunk,
         signal: controller.signal,
@@ -159,6 +164,7 @@ async function uploadMultipart(task) {
   if (saved?.key && saved?.uploadId && Array.isArray(saved.parts)) {
     task.key = saved.key;
     task.uploadId = saved.uploadId;
+    task.storageId = saved.storageId || '';
     task.parts = saved.parts;
     task.item.querySelector('.status').textContent = '继续未完成的上传';
   } else {
@@ -176,13 +182,16 @@ async function uploadMultipart(task) {
     }
     task.key = create.data.key;
     task.uploadId = create.data.uploadId;
+    task.storageId = create.data.storageId || '';
+    task.warning = create.data.warning || '';
+    task.overflowed = Boolean(create.data?.overflowed);
     task.parts = [];
     task.renamed = Boolean(create.data?.renamed);
     rememberMultipart(task);
   }
   if (task.cancelled) {
     if (task.key && task.uploadId) {
-      try { await api.multipartAbort({ key: task.key, uploadId: task.uploadId }); } catch (_) {}
+      try { await api.multipartAbort({ key: task.key, uploadId: task.uploadId, storageId: task.storageId }); } catch (_) {}
       forgetMultipart(task);
     }
     throw new Error(CANCEL_MESSAGE);
@@ -213,6 +222,7 @@ async function uploadMultipart(task) {
     const complete = await api.multipartComplete({
       key: task.key,
       uploadId: task.uploadId,
+      storageId: task.storageId,
       parts: task.parts,
     }, { signal: controller.signal });
     if (!complete.res.ok) throw new Error(complete.data?.message || '无法完成分片上传');
@@ -237,7 +247,7 @@ async function abortTask(task) {
   if (task.key && task.uploadId) {
     (async () => {
       try {
-        await api.multipartAbort({ key: task.key, uploadId: task.uploadId });
+        await api.multipartAbort({ key: task.key, uploadId: task.uploadId, storageId: task.storageId });
       } catch (_) {}
       forgetMultipart(task);
     })();
@@ -324,7 +334,7 @@ export class UploadQueue {
 
   markSuccess(task) {
     task.state = 'success';
-    const label = task.skipped ? '已跳过' : task.renamed ? '已自动重命名' : '完成';
+    const label = task.warning || (task.skipped ? '已跳过' : task.renamed ? '已自动重命名' : '完成');
     updateProgress(task, task.file.size, task.file.size, label);
     task.item.querySelector('.progress-fill').className = 'progress-fill h-full bg-emerald-500 w-full';
     task.item.querySelector('.pause-btn')?.remove();
@@ -386,11 +396,14 @@ export class UploadQueue {
         xhr: null,
         key: null,
         uploadId: null,
+        storageId: '',
         partController: null,
         completeController: null,
         parts: [],
         skipped: false,
         renamed: false,
+        warning: '',
+        overflowed: false,
       };
       this.tasksById.set(taskId, task);
       list.prepend(task.item);
@@ -409,11 +422,14 @@ export class UploadQueue {
     task.error = '';
     task.key = null;
     task.uploadId = null;
+    task.storageId = '';
     task.partController = null;
     task.completeController = null;
     task.parts = [];
     task.skipped = false;
     task.renamed = false;
+    task.warning = '';
+    task.overflowed = false;
     task.state = 'queued';
     task.item.className = 'upload-item p-4 border-b border-border bg-white';
     task.item.innerHTML = createUploadItem(task.file, task.id).innerHTML;

@@ -5,4 +5,5 @@ export const adminState = {
   webhookEditingIndex: -1,
   logFilters: { q: '', action: '', ip: '', from: '', to: '' },
   shareFilters: { q: '', status: 'all' },
+  storageConfig: null,
 };

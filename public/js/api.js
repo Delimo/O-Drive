@@ -82,8 +82,10 @@ export const api = {
   multipartCreate(payload) {
     return requestJson('/api/upload-multipart/create', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
   },
-  multipartPart({ key, uploadId, partNumber, chunk, signal }) {
-    return requestJson(`/api/upload-multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
+  multipartPart({ key, uploadId, storageId, partNumber, chunk, signal }) {
+    const params = new URLSearchParams({ key, uploadId, partNumber: String(partNumber) });
+    if (storageId) params.set('storageId', storageId);
+    return requestJson(`/api/upload-multipart/part?${params.toString()}`, {
       method: 'PUT',
       headers: csrfHeaders(),
       body: chunk,
@@ -150,6 +152,13 @@ export const api = {
   adminQuota() { return requestJson('/api/admin/settings/quota'); },
   setAdminQuota(bytes) {
     return requestJson('/api/admin/settings/quota', { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ bytes }) });
+  },
+  adminStorage() { return requestJson('/api/admin/settings/storage'); },
+  setAdminStorage(payload) {
+    return requestJson('/api/admin/settings/storage', { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify(payload) });
+  },
+  testAdminStorage(space) {
+    return requestJson('/api/admin/settings/storage/test', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ space }) });
   },
   adminWebhooks() { return requestJson('/api/admin/settings/webhooks'); },
   setAdminWebhooks(items) {
