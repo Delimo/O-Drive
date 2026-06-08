@@ -188,6 +188,8 @@ export const UI = {
     this.renderDetailsPanel(null);
     this.updateBatchUI();
     this.renderBreadcrumb();
+    document.getElementById('authButtons')?.replaceChildren();
+    document.getElementById('authButtonsMobile')?.replaceChildren();
 
     const list = document.getElementById('fileList');
     if (!list) return;
