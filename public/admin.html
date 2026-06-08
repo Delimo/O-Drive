@@ -100,6 +100,17 @@
                             <p id="healthMaintenanceResult" class="maintenance-result hidden text-xs text-slate-500"></p>
                         </div>
                     </div>
+                    <div class="health-advice-panel">
+                        <div>
+                            <h3>运行建议</h3>
+                            <p>如果索引状态正常，日常只需要关注访问失败记录、回收站数量和缩略图缓存。</p>
+                        </div>
+                        <div class="health-advice-grid">
+                            <span>文件列表异常时，优先重建文件索引。</span>
+                            <span>密码错误记录过多时，清理后可解除失败计数。</span>
+                            <span>缩略图占用偏高时，清理缓存不会影响原文件。</span>
+                        </div>
+                    </div>
                 </section>
             </div>
 
@@ -119,6 +130,11 @@
                         <input id="logFilterTo" type="date" class="admin-input">
                         <button class="btn btn-primary h-10 px-4" data-admin-action="apply-log-filters">筛选</button>
                         <button class="btn h-10 px-4" data-admin-action="reset-log-filters">重置</button>
+                    </div>
+                    <div class="log-list-head">
+                        <span>时间</span>
+                        <span>操作与详情</span>
+                        <span>IP</span>
                     </div>
                     <div id="logList" class="log-list"></div>
                     <div class="admin-pagination">
@@ -181,28 +197,30 @@
                                     <input type="text" id="protectedNoteInput" placeholder="可选" class="admin-input">
                                 </label>
                             </div>
-                            <div class="access-mode-grid">
-                                <label class="access-mode-card">
-                                    <input id="accessHideInput" type="checkbox">
-                                    <span>
-                                        <strong>隐藏路径</strong>
-                                        <small>从访客文件列表移除</small>
-                                    </span>
-                                </label>
-                                <label class="access-mode-card">
-                                    <input id="protectedShowNameInput" type="checkbox" checked>
-                                    <span>
-                                        <strong>名称可见</strong>
-                                        <small>受密码保护时仍显示名称</small>
-                                    </span>
-                                </label>
+                            <div class="access-editor-options">
+                                <div class="access-mode-grid">
+                                    <label class="access-mode-card">
+                                        <input id="accessHideInput" type="checkbox">
+                                        <span>
+                                            <strong>隐藏路径</strong>
+                                            <small>从访客文件列表移除</small>
+                                        </span>
+                                    </label>
+                                    <label class="access-mode-card">
+                                        <input id="protectedShowNameInput" type="checkbox" checked>
+                                        <span>
+                                            <strong>名称可见</strong>
+                                            <small>受密码保护时仍显示名称</small>
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="access-examples">
+                                    <div><strong>/客户资料/</strong><span>整目录规则</span></div>
+                                    <div><strong>/合同/报价.pdf</strong><span>单文件规则</span></div>
+                                </div>
                             </div>
                             <div class="access-submit-row">
                                 <button class="btn btn-primary h-11 px-8" data-admin-action="save-access-rule">保存规则</button>
-                            </div>
-                            <div class="access-examples">
-                                <div><strong>/客户资料/</strong><span>整目录规则</span></div>
-                                <div><strong>/合同/报价.pdf</strong><span>单文件规则</span></div>
                             </div>
                         </div>
                         <div class="access-list-panel">
@@ -220,27 +238,53 @@
                     </div>
                 </section>
             </div>
-            <div id="quota-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
-                <section class="admin-page-panel">
-                    <div class="admin-section-head">
+            <div id="quota-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+                <section class="admin-page-panel quota-workbench">
+                    <div class="admin-section-head quota-workbench-head">
                         <div>
                             <h2>存储配额</h2>
                             <p>设置总存储上限，超出后将拒绝新文件上传。设为 0 表示不限制。</p>
                         </div>
                     </div>
-                    <div id="quotaInfo" class="health-grid mb-5"></div>
-                    <div class="quota-form-row">
-                        <input type="number" id="quotaInput" placeholder="输入配额字节数，如 10737418240 = 10 GB" min="0" class="admin-input">
-                        <button class="btn btn-primary quota-save-btn" data-admin-action="set-quota">保存</button>
+                    <div class="quota-summary-grid">
+                        <div class="quota-summary-card"><span>当前配额</span><strong id="quotaLimitValue">-</strong></div>
+                        <div class="quota-summary-card"><span>已使用</span><strong id="quotaUsedValue">-</strong></div>
+                        <div class="quota-summary-card"><span>剩余空间</span><strong id="quotaRemainingValue">-</strong></div>
                     </div>
-                    <div class="flex gap-2 flex-wrap mt-2">
-                        <button class="btn h-8 px-3" data-admin-action="fill-quota" data-args='[5368709120]'>5 GB</button>
-                        <button class="btn h-8 px-3" data-admin-action="fill-quota" data-args='[10737418240]'>10 GB</button>
-                        <button class="btn h-8 px-3" data-admin-action="fill-quota" data-args='[53687091200]'>50 GB</button>
-                        <button class="btn h-8 px-3" data-admin-action="fill-quota" data-args='[107374182400]'>100 GB</button>
-                        <button class="btn h-8 px-3" data-admin-action="fill-quota" data-args='[0]'>不限制</button>
+                    <div class="quota-workbench-body">
+                        <div class="quota-editor-panel">
+                            <div class="quota-panel-title">
+                                <h3>配额设置</h3>
+                                <p>输入字节数，或使用下方快捷容量。</p>
+                            </div>
+                            <div class="quota-form-row">
+                                <input type="number" id="quotaInput" placeholder="10737418240 = 10 GB" min="0" class="admin-input">
+                                <button class="btn btn-primary quota-save-btn" data-admin-action="set-quota">保存</button>
+                            </div>
+                            <div class="quota-preset-grid">
+                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[5368709120]'>5 GB</button>
+                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[10737418240]'>10 GB</button>
+                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[53687091200]'>50 GB</button>
+                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[107374182400]'>100 GB</button>
+                                <button class="btn h-10 px-3" data-admin-action="fill-quota" data-args='[0]'>不限制</button>
+                            </div>
+                            <p id="quotaResult" class="quota-result"></p>
+                        </div>
+                        <div class="quota-status-panel">
+                            <div class="quota-panel-title">
+                                <h3>使用情况</h3>
+                                <p>当前存储占用和剩余容量。</p>
+                            </div>
+                            <div id="quotaInfo" class="quota-info-grid"></div>
+                            <div class="quota-usage-card">
+                                <div class="quota-usage-head">
+                                    <span>使用比例</span>
+                                    <strong id="quotaPercentValue">0%</strong>
+                                </div>
+                                <div class="quota-usage-track"><span id="quotaUsageBar"></span></div>
+                            </div>
+                        </div>
                     </div>
-                    <p id="quotaResult" class="text-xs text-slate-500 mt-4"></p>
                 </section>
             </div>
 

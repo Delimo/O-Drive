@@ -609,15 +609,25 @@ export const AdminActions = {
     const result = document.getElementById('quotaResult');
     if (result) result.textContent = '';
     if (!info) return;
-    info.innerHTML = '<div class="text-sm text-slate-500">正在加载...</div>';
+    info.innerHTML = '<div class="quota-empty">正在加载...</div>';
     const { res, data } = await api.adminQuota();
     if (!res.ok) {
-      info.innerHTML = '<div class="text-sm text-rose-600 font-bold">加载配额信息失败。</div>';
+      info.innerHTML = '<div class="quota-empty is-error">加载配额信息失败。</div>';
       return;
     }
     const quotaLabel = data.quota > 0 ? data.quotaFormatted : '无限制';
     const usedPercent = data.quota > 0 ? Math.round((data.used / data.quota) * 100) : 0;
     const remainingLabel = data.quota > 0 ? `${formatBytesLocal(data.remaining)} 剩余` : '无限制';
+    const quotaLimit = document.getElementById('quotaLimitValue');
+    const quotaUsed = document.getElementById('quotaUsedValue');
+    const quotaRemaining = document.getElementById('quotaRemainingValue');
+    const quotaPercent = document.getElementById('quotaPercentValue');
+    const usageBar = document.getElementById('quotaUsageBar');
+    if (quotaLimit) quotaLimit.textContent = quotaLabel;
+    if (quotaUsed) quotaUsed.textContent = data.usedFormatted || '0 B';
+    if (quotaRemaining) quotaRemaining.textContent = remainingLabel;
+    if (quotaPercent) quotaPercent.textContent = `${usedPercent}%`;
+    if (usageBar) usageBar.style.width = `${Math.max(0, Math.min(100, usedPercent))}%`;
     info.innerHTML = [
       this.maintenanceItem('存储配额', quotaLabel, data.quota > 0 ? `已用 ${usedPercent}%` : '未设置上限'),
       this.maintenanceItem('已使用', data.usedFormatted, `${usedPercent}%`),
