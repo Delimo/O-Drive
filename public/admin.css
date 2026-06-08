@@ -21,7 +21,7 @@ body.admin-page {
 
 .admin-page .explorer-card {
   overflow: hidden;
-  flex: 0 1 auto;
+  flex: 1;
   min-height: 0;
 }
 
