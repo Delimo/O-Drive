@@ -25,22 +25,6 @@ body.admin-page {
   min-height: 0;
 }
 
-body.admin-page[data-admin-tab="quota"] {
-  height: auto;
-  min-height: 100vh;
-  overflow-y: auto;
-}
-
-body.admin-page[data-admin-tab="quota"] .container {
-  min-height: 100vh;
-}
-
-body.admin-page[data-admin-tab="quota"] .explorer-card {
-  flex: none;
-  min-height: auto;
-  overflow: visible;
-}
-
 .admin-page .tab-shell {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -506,10 +490,13 @@ body.admin-page[data-admin-tab="quota"] .explorer-card {
 }
 
 .admin-page #quota-tab {
-  overflow: visible;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .admin-page #quota-tab .admin-page-panel {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: visible;
 }
 
@@ -532,7 +519,7 @@ body.admin-page[data-admin-tab="quota"] .explorer-card {
 .admin-page .storage-metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .admin-page .storage-metric-card {
@@ -541,8 +528,8 @@ body.admin-page[data-admin-tab="quota"] .explorer-card {
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
-  min-height: 48px;
-  padding: 9px 13px;
+  min-height: 46px;
+  padding: 9px 10px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
@@ -557,7 +544,7 @@ body.admin-page[data-admin-tab="quota"] .explorer-card {
 .admin-page .storage-metric-card strong {
   min-width: 0;
   color: var(--primary-strong);
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1;
   text-align: right;
@@ -566,8 +553,8 @@ body.admin-page[data-admin-tab="quota"] .explorer-card {
 
 .admin-page .storage-main-grid {
   display: grid;
-  grid-template-columns: minmax(340px, 0.82fr) minmax(460px, 1.18fr);
-  gap: 12px;
+  grid-template-columns: minmax(390px, 0.9fr) minmax(520px, 1.1fr);
+  gap: 14px;
   align-items: start;
   min-width: 0;
 }
@@ -583,7 +570,7 @@ body.admin-page[data-admin-tab="quota"] .explorer-card {
   align-content: start;
   gap: 10px;
   min-width: 0;
-  padding: 13px;
+  padding: 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
@@ -601,6 +588,26 @@ body.admin-page[data-admin-tab="quota"] .explorer-card {
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
+}
+
+.admin-page .storage-panel-head > div:first-child {
+  min-width: 0;
+}
+
+.admin-page .storage-head-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.admin-page .storage-head-actions .btn {
+  height: 36px;
+  min-width: 64px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .admin-page .storage-panel-head h3 {
@@ -719,6 +726,10 @@ body.admin-page[data-admin-tab="quota"] .explorer-card {
 .admin-page .storage-console .access-empty {
   min-height: 74px;
   padding: 14px;
+}
+
+.admin-page .storage-console .quota-info-grid {
+  min-height: 0;
 }
 
 .admin-page .quota-workbench-head {

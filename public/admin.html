@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/main.css">
     <link rel="stylesheet" href="/explorer.css">
-    <link rel="stylesheet" href="/admin.css?v=20260608-storage-s3">
+    <link rel="stylesheet" href="/admin.css?v=20260608-storage-page2">
 </head>
 <body class="admin-page flex flex-col bg-background text-slate-900">
     <main class="container">
@@ -266,11 +266,6 @@
                             <p>管理全局配额、R2 安全容量、S3 空间和文件夹绑定。</p>
                         </div>
                     </div>
-                    <div class="storage-metric-grid">
-                        <div class="storage-metric-card"><span>当前配额</span><strong id="quotaLimitValue">-</strong></div>
-                        <div class="storage-metric-card"><span>已使用</span><strong id="quotaUsedValue">-</strong></div>
-                        <div class="storage-metric-card"><span>剩余空间</span><strong id="quotaRemainingValue">-</strong></div>
-                    </div>
                     <div class="storage-main-grid">
                         <div class="storage-stack">
                             <section class="storage-panel">
@@ -279,6 +274,11 @@
                                         <h3>总配额</h3>
                                         <p>可填容量或字节数，0 表示不限制。</p>
                                     </div>
+                                </div>
+                                <div class="storage-metric-grid">
+                                    <div class="storage-metric-card"><span>当前配额</span><strong id="quotaLimitValue">-</strong></div>
+                                    <div class="storage-metric-card"><span>已使用</span><strong id="quotaUsedValue">-</strong></div>
+                                    <div class="storage-metric-card"><span>剩余空间</span><strong id="quotaRemainingValue">-</strong></div>
                                 </div>
                                 <div class="storage-input-row">
                                     <input type="text" id="quotaInput" placeholder="容量或字节数；0 表示不限制" class="admin-input">
@@ -341,6 +341,10 @@
                                         <h3>S3 空间</h3>
                                         <p>填写 S3 兼容存储，可用于文件夹绑定或 R2 溢出。</p>
                                     </div>
+                                    <div class="storage-head-actions">
+                                        <button class="btn btn-primary" data-admin-action="add-storage-space">保存</button>
+                                        <button class="btn" data-admin-action="test-storage-space">测试</button>
+                                    </div>
                                 </div>
                                 <div class="storage-form-grid two">
                                     <label class="storage-field">
@@ -395,10 +399,6 @@
                                         <input id="storageOverflowInput" type="checkbox" checked>
                                         <span><strong>作为溢出空间</strong><small>R2 超过阈值后自动使用</small></span>
                                     </label>
-                                </div>
-                                <div class="storage-actions">
-                                    <button class="btn btn-primary" data-admin-action="add-storage-space">保存 S3 空间</button>
-                                    <button class="btn" data-admin-action="test-storage-space">测试连接</button>
                                 </div>
                                 <p id="storageResult" class="quota-result"></p>
                             </section>
@@ -573,6 +573,6 @@
         </footer>
     </main>
 
-    <script type="module" src="/js/admin-app.js?v=20260608-storage-s3"></script>
+    <script type="module" src="/js/admin-app.js?v=20260608-storage-page2"></script>
 </body>
 </html>

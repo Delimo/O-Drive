@@ -1,5 +1,5 @@
-import { AdminActions, getInitialAdminTab } from './admin-actions.js?v=20260608-storage-s3';
-import { api } from './api.js?v=20260608-storage-s3';
+import { AdminActions, getInitialAdminTab } from './admin-actions.js?v=20260608-storage-page2';
+import { api } from './api.js?v=20260608-storage-page2';
 
 window.AdminActions = AdminActions;
 
