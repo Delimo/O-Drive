@@ -1,4 +1,4 @@
-import { addLog, cleanupLogs, formatBytes, isReservedKey, jsonResponse, listR2Objects } from './common.js';
+import { addLog, cleanupLogs, ensureCoreTables, formatBytes, isReservedKey, jsonResponse, listR2Objects } from './common.js';
 import { fileIndexStatus, rebuildFileIndex } from './file-index.js';
 import { mapWithConcurrency } from './r2-tree.js';
 
@@ -18,6 +18,7 @@ async function deletePrefix(env, prefix, limit = 5000) {
 }
 
 export async function getMaintenanceSnapshot(env) {
+  await ensureCoreTables(env);
   const [index, accessAttemptCount, trashCount, logsCount, thumbs, r2Sample] = await Promise.all([
     fileIndexStatus(env),
     countRows(env, 'path_access_attempts'),
@@ -49,6 +50,7 @@ export async function handleAdminMaintenance(env) {
 
 export async function handleAdminMaintenanceAction(env, request) {
   const { action } = await request.json().catch(() => ({}));
+  await ensureCoreTables(env);
   if (action === 'rebuild-index') {
     const result = await rebuildFileIndex(env);
     await addLog(env, request, 'MAINTENANCE', `重建文件索引，同步 ${result.synced || 0} 个文件${result.truncated ? '，已达扫描上限' : ''}`);
@@ -72,6 +74,13 @@ export async function handleAdminMaintenanceAction(env, request) {
   if (action === 'cleanup-logs') {
     const deleted = await cleanupLogs(env);
     await addLog(env, request, 'MAINTENANCE', `清理旧操作日志 ${deleted} 条`);
+    return jsonResponse({ success: true, action, deleted });
+  }
+  if (action === 'cleanup-warnings') {
+    const row = await env.D1.prepare('SELECT COUNT(*) as count FROM system_warnings').first().catch(() => ({ count: 0 }));
+    const deleted = Number(row?.count || 0);
+    await env.D1.prepare('DELETE FROM system_warnings').run();
+    await addLog(env, request, 'MAINTENANCE', `清理系统提醒 ${deleted} 条`);
     return jsonResponse({ success: true, action, deleted });
   }
   return jsonResponse({ success: false, message: 'Invalid maintenance action' }, 400);

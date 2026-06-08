@@ -1,4 +1,4 @@
-import { jsonResponse } from './common.js';
+import { ensureCoreTables, jsonResponse } from './common.js';
 import { tokenSecretStatus } from './secrets.js';
 
 async function checkDb(env) {
@@ -36,6 +36,7 @@ async function latestSystemWarnings(env) {
 }
 
 export async function handleAdminHealth(env) {
+  await ensureCoreTables(env);
   const [db, r2, warnings] = await Promise.all([checkDb(env), checkR2(env), latestSystemWarnings(env)]);
   const tokenSecret = tokenSecretStatus(env);
   const envStatus = {

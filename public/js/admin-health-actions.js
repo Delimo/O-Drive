@@ -141,6 +141,7 @@ export function createAdminHealthActions({ adminConfirm }) {
         ? `已同步 ${data.synced} 个文件${data.truncated ? '（已达扫描上限）' : ''}`
         : `已清理 ${data.deleted || 0} 项${data.truncated ? '（已达扫描上限）' : ''}`;
       setMaintenanceResult(summary);
+      if (action === 'cleanup-warnings') await this.loadHealth();
       await this.loadMaintenance();
       if (adminState.activeTab === 'overview') await this.loadStats();
       if (adminState.activeTab === 'logs') await this.loadLogs();

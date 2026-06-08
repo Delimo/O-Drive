@@ -6,6 +6,7 @@ const PART_SIZE = 8 * 1024 * 1024;
 const MULTIPART_THRESHOLD = 16 * 1024 * 1024;
 const FILE_CONCURRENCY = 2;
 const PART_RETRIES = 3;
+const SUCCESS_CLEAR_DELAY = 3000;
 const CANCEL_MESSAGE = '已取消';
 const RESUME_KEY = 'odrive.multipartUploads.v1';
 const UPLOAD_WORKER_URL = '/upload-worker.js';
@@ -377,8 +378,24 @@ export class UploadQueue {
     const settled = success + failed + cancelled;
     clearTimeout(this.closeTimer);
     if (total > 0 && settled === total && failed === 0) {
-      this.closeTimer = setTimeout(() => UI.closeUploadManager(), 900);
+      this.closeTimer = setTimeout(() => UI.closeUploadManager(), SUCCESS_CLEAR_DELAY);
     }
+  }
+
+  removeTask(task) {
+    if (!task || task.state !== 'success') return;
+    clearTimeout(task.clearTimer);
+    this.queue = this.queue.filter(item => item !== task);
+    this.tasks = this.tasks.filter(item => item !== task);
+    this.tasksById.delete(task.id);
+    task.item.remove();
+    this.renderSummary();
+    if (this.tasks.length === 0) UI.closeUploadManager();
+  }
+
+  scheduleSuccessClear(task) {
+    clearTimeout(task.clearTimer);
+    task.clearTimer = setTimeout(() => this.removeTask(task), SUCCESS_CLEAR_DELAY);
   }
 
   markSuccess(task) {
@@ -390,6 +407,7 @@ export class UploadQueue {
     task.item.querySelector('.cancel-btn')?.remove();
     task.item.querySelector('.retry-btn')?.remove();
     task.item.classList.add('is-success');
+    this.scheduleSuccessClear(task);
   }
 
   markFailed(task, message) {
@@ -456,6 +474,7 @@ export class UploadQueue {
     const list = document.getElementById('uploadList');
     if (!manager || !list) return;
     this.bindListEvents(list);
+    clearTimeout(this.closeTimer);
     manager.classList.remove('hidden');
     manager.classList.add('flex');
 
@@ -485,6 +504,7 @@ export class UploadQueue {
         renamed: false,
         warning: '',
         overflowed: false,
+        clearTimer: null,
       };
       this.tasksById.set(taskId, task);
       list.prepend(task.item);
@@ -526,6 +546,8 @@ export class UploadQueue {
     task.renamed = false;
     task.warning = '';
     task.overflowed = false;
+    clearTimeout(task.clearTimer);
+    task.clearTimer = null;
     task.state = 'queued';
     task.item.className = 'upload-item p-4 border-b border-border bg-white';
     task.item.innerHTML = createUploadItem(task.file, task.id).innerHTML;

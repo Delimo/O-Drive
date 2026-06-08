@@ -1,4 +1,4 @@
-import { formatBytes, isReservedKey, jsonResponse, listR2Objects, recordSystemWarning } from './common.js';
+import { ensureCoreTables, formatBytes, isReservedKey, jsonResponse, listR2Objects, recordSystemWarning } from './common.js';
 import { fileIndexStatus, getIndexedStats, indexedFileCount, indexedFileKind, syncFileIndexFromR2 } from './file-index.js';
 import { getStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
 
@@ -80,6 +80,7 @@ export async function handleAdminStats(env) {
 async function adminDbStats(env) {
   let trash = { count: 0, size: 0, sizeFormatted: '0 B' };
   let logs = { count: 0 };
+  await ensureCoreTables(env);
   try {
     const trashCount = await env.D1.prepare('SELECT COUNT(*) as count FROM trash').first();
     const trashRows = await env.D1.prepare('SELECT * FROM trash ORDER BY trashed_at DESC').all();

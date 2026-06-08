@@ -1541,6 +1541,31 @@ test('system warnings are capped to recent rows', async () => {
   assert.equal(data.warnings.length, 10);
   assert.equal(data.warnings[0].message, 'warning-104');
   assert.equal(data.warnings.at(-1).message, 'warning-95');
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+  const cleanup = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/maintenance', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'cleanup-warnings' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  const cleanupData = await cleanup.json();
+  assert.equal(cleanup.status, 200);
+  assert.equal(cleanupData.deleted, 100);
+
+  const cleanedHealth = await handleAdminHealth(env);
+  assert.deepEqual((await cleanedHealth.json()).warnings, []);
 });
 
 test('webhook settings saved in D1 are used for file operation notifications', async () => {

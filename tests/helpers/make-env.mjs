@@ -510,6 +510,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 if (!keep.has(systemWarningRows[i].id)) systemWarningRows.splice(i, 1);
               }
             }
+            if (/^DELETE FROM system_warnings$/i.test(sql.trim())) {
+              systemWarningRows.length = 0;
+            }
             if (/DELETE FROM file_tasks WHERE status NOT IN \('queued', 'running'\) AND finished_at > 0 AND finished_at < \?/i.test(sql)) {
               const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = taskRows.length - 1; i >= 0; i--) {
