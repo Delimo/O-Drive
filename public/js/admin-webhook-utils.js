@@ -6,7 +6,7 @@ export const WEBHOOK_EVENT_OPTIONS = [
   ['file.copied', '复制'],
   ['file.renamed', '重命名'],
   ['folder.created', '新建文件夹'],
-  ['download.burst', '大量下载'],
+  ['download.burst', '下载异常提醒'],
   ['login.burst', '登录异常'],
   ['share.expired', '分享链接到期'],
 ];

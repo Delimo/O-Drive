@@ -45,7 +45,7 @@ function eventLabel(event) {
     'file.copied': '复制',
     'file.renamed': '重命名',
     'folder.created': '新建文件夹',
-    'download.burst': '大量下载提醒',
+    'download.burst': '下载异常提醒',
     'login.burst': '登录异常提醒',
     'share.expired': '分享链接到期',
     'webhook.test': '测试通知',

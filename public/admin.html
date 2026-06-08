@@ -284,16 +284,16 @@
                         <div class="webhook-form-block webhook-event-field">
                             <div class="webhook-block-title">触发事件</div>
                             <div class="webhook-event-grid">
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.uploaded" checked><span>上传</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.deleted" checked><span>删除</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.purged" checked><span>彻底删除</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.moved" checked><span>移动</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.copied" checked><span>复制</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.renamed" checked><span>重命名</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="folder.created" checked><span>新建文件夹</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="download.burst" checked><span>大量下载</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="login.burst" checked><span>登录异常</span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="share.expired" checked><span>分享链接到期</span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.uploaded" checked><span><strong>上传</strong><small>文件写入完成</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.deleted" checked><span><strong>删除</strong><small>移入回收站</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.purged" checked><span><strong>彻底删除</strong><small>回收站永久清除</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.moved" checked><span><strong>移动</strong><small>路径位置变更</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.copied" checked><span><strong>复制</strong><small>生成副本</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.renamed" checked><span><strong>重命名</strong><small>名称变更</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="folder.created" checked><span><strong>新建文件夹</strong><small>目录创建</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="download.burst" checked><span><strong>下载异常提醒</strong><small>短时间下载过多</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="login.burst" checked><span><strong>登录异常</strong><small>连续失败登录</small></span></label>
+                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="share.expired" checked><span><strong>分享链接到期</strong><small>分享失效或耗尽</small></span></label>
                             </div>
                         </div>
                         <div class="webhook-save-row">
