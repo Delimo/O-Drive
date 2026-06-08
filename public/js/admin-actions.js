@@ -244,25 +244,7 @@ export const AdminActions = {
       ['访客访问', true, guestEnabled ? 'ALLOW_GUEST=true，访客可浏览' : '默认关闭；只有 ALLOW_GUEST=true 才开启'],
     ];
 
-    return `
-      <div class="health-item health-credentials-item ${usernameOk && passwordOk && tokenSecretOk ? 'is-ok' : 'is-bad'}">
-        <div class="health-credentials-head">
-          <strong>登录与访问</strong>
-          <span>管理员凭据和访客访问状态</span>
-        </div>
-        <div class="health-credentials-list">
-          ${rows.map(([label, ok, detail]) => `
-            <div class="health-credential-row ${ok ? 'is-ok' : 'is-bad'}">
-              <div>
-                <strong>${escapeHtml(label)}</strong>
-                <span>${escapeHtml(detail)}</span>
-              </div>
-              <em>${ok ? '正常' : '异常'}</em>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
+    return rows.map(([label, ok, detail]) => this.healthItem(label, ok, detail)).join('');
   },
 
   async loadHealth() {
