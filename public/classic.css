@@ -790,3 +790,329 @@ body.share-page {
     font-size: 13px !important;
   }
 }
+
+/* Admin consistency pass: align every management tab to one spacing rhythm. */
+body.admin-page {
+  --admin-outer-pad: 24px;
+  --admin-page-gap: 16px;
+  --admin-panel-pad: 18px;
+  --admin-panel-gap: 14px;
+  --admin-item-pad: 12px 14px;
+  --admin-panel-radius: 12px;
+  --admin-item-radius: 10px;
+  --admin-line: #e7edf5;
+}
+
+.admin-page #overview-tab,
+.admin-page #health-tab,
+.admin-page #logs-tab,
+.admin-page #access-tab,
+.admin-page #quota-tab,
+.admin-page #shares-tab,
+.admin-page #webhooks-tab {
+  box-sizing: border-box;
+  padding: var(--admin-outer-pad) !important;
+}
+
+.admin-page #overview-tab,
+.admin-page #logs-tab,
+.admin-page #access-tab,
+.admin-page #quota-tab,
+.admin-page #shares-tab,
+.admin-page #webhooks-tab {
+  min-height: 0;
+}
+
+.admin-page .admin-page-panel {
+  gap: var(--admin-page-gap) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.admin-page .admin-section-head,
+.admin-page .health-workbench-head,
+.admin-page .log-workbench-head,
+.admin-page .share-workbench-head,
+.admin-page .task-workbench-head,
+.admin-page .quota-workbench-head,
+.admin-page .access-workbench-head,
+.admin-page .storage-console-head,
+.admin-page .webhook-workbench-head {
+  margin: 0 !important;
+  padding-bottom: 16px !important;
+  border-bottom: 1px solid var(--admin-line) !important;
+}
+
+.admin-page .admin-section-head h2,
+.admin-page .overview-focus-head h2,
+.admin-page .health-panel-head h3,
+.admin-page .storage-panel-head h3,
+.admin-page .quota-panel-title h3,
+.admin-page .access-panel-title h3,
+.admin-page .access-list-head h3,
+.admin-page .webhook-editor-head h3,
+.admin-page .webhook-list-head h3 {
+  line-height: 1.2 !important;
+  letter-spacing: 0 !important;
+}
+
+.admin-page .overview-stats-grid {
+  gap: var(--admin-page-gap) !important;
+  margin-bottom: var(--admin-page-gap) !important;
+}
+
+.admin-page .overview-panels-grid,
+.admin-page .health-workbench-body,
+.admin-page .access-workbench-body,
+.admin-page .quota-workbench-body,
+.admin-page .webhook-settings-body,
+.admin-page .storage-main-grid,
+.admin-page .storage-overview-grid,
+.admin-page .storage-s3-grid {
+  gap: var(--admin-page-gap) !important;
+}
+
+.admin-page .overview-panels-grid > section,
+.admin-page .health-status-panel,
+.admin-page .health-maintenance-panel,
+.admin-page .health-advice-panel,
+.admin-page .log-filter-panel,
+.admin-page .share-filter-panel,
+.admin-page .storage-panel,
+.admin-page .quota-editor-panel,
+.admin-page .quota-status-panel,
+.admin-page .access-editor-panel,
+.admin-page .access-list-panel,
+.admin-page .webhook-editor-column,
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel,
+.admin-page .admin-table-card {
+  gap: var(--admin-panel-gap) !important;
+  padding: var(--admin-panel-pad) !important;
+  border: 1px solid var(--admin-line) !important;
+  border-radius: var(--admin-panel-radius) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  box-sizing: border-box;
+}
+
+.admin-page .log-filter-panel,
+.admin-page .share-filter-panel {
+  align-items: center;
+  padding: 14px !important;
+}
+
+.admin-page .health-panel-head,
+.admin-page .storage-panel-head,
+.admin-page .access-list-head,
+.admin-page .webhook-list-head {
+  padding-bottom: 14px !important;
+  border-bottom: 1px solid var(--admin-line) !important;
+}
+
+.admin-page .share-summary-grid,
+.admin-page .task-summary-grid,
+.admin-page .storage-metric-grid,
+.admin-page .quota-summary-grid,
+.admin-page .access-summary-grid,
+.admin-page .health-grid,
+.admin-page .storage-warnings,
+.admin-page .breakdown-grid,
+.admin-page .latest-grid,
+.admin-page .attention-grid {
+  gap: 10px !important;
+}
+
+.admin-page .stat-card,
+.admin-page .share-summary-card,
+.admin-page .task-summary-card,
+.admin-page .storage-metric-card,
+.admin-page .quota-summary-card,
+.admin-page .access-summary-card {
+  min-height: 64px;
+  padding: 14px 16px !important;
+  border: 1px solid var(--admin-line) !important;
+  border-radius: var(--admin-item-radius) !important;
+  background: #f8fbff !important;
+  box-shadow: none !important;
+}
+
+.admin-page .stat-card {
+  min-height: 124px;
+  padding: 20px 22px 18px 24px !important;
+}
+
+.admin-page .health-item,
+.admin-page .storage-warning,
+.admin-page .quota-note-card,
+.admin-page .quota-usage-card,
+.admin-page .index-status-panel,
+.admin-page .access-mode-card,
+.admin-page .webhook-event-option,
+.admin-page .attention-item {
+  padding: var(--admin-item-pad) !important;
+  border: 1px solid var(--admin-line) !important;
+  border-radius: var(--admin-item-radius) !important;
+  background: #f8fbff !important;
+  box-shadow: none !important;
+}
+
+.admin-page #logs-tab .log-list-head {
+  margin: 0 0 -1px;
+  padding: 12px 18px;
+  border: 1px solid var(--admin-line);
+  border-bottom: 0;
+  border-radius: var(--admin-panel-radius) var(--admin-panel-radius) 0 0;
+  background: #ffffff;
+}
+
+.admin-page #logs-tab .log-list,
+.admin-page #shares-tab .share-list {
+  border: 1px solid var(--admin-line);
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.admin-page #logs-tab .log-list {
+  padding: 0 14px 4px;
+  border-radius: 0 0 var(--admin-panel-radius) var(--admin-panel-radius);
+}
+
+.admin-page #shares-tab .share-list {
+  padding: 6px 14px;
+  border-radius: var(--admin-panel-radius);
+}
+
+.admin-page .access-rule-list,
+.admin-page .webhook-list,
+.admin-page .webhook-deliveries-list,
+.admin-page .task-list {
+  padding-right: 0 !important;
+}
+
+.admin-page .access-rule-card,
+.admin-page .log-card,
+.admin-page .share-card,
+.admin-page .webhook-row,
+.admin-page .webhook-delivery-row,
+.admin-page .task-row {
+  padding: var(--admin-item-pad) !important;
+  border-width: 0 0 1px !important;
+  border-color: var(--admin-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.admin-page .access-rule-card:hover,
+.admin-page .log-card:hover,
+.admin-page .share-card:hover,
+.admin-page .webhook-row:hover,
+.admin-page .webhook-delivery-row:hover,
+.admin-page .task-row:hover {
+  background: #f8fbff !important;
+  transform: none !important;
+}
+
+.admin-page .access-rule-card:last-child,
+.admin-page .log-card:last-child,
+.admin-page .share-card:last-child,
+.admin-page .webhook-row:last-child,
+.admin-page .webhook-delivery-row:last-child,
+.admin-page .task-row:last-child {
+  border-bottom: 0 !important;
+}
+
+.admin-page .log-empty,
+.admin-page .share-empty,
+.admin-page .task-empty,
+.admin-page .webhook-empty,
+.admin-page .access-empty,
+.admin-page .quota-empty,
+.admin-page .admin-empty-state {
+  min-height: 150px;
+  padding: 18px !important;
+  border: 1px dashed #cbd5e1 !important;
+  border-radius: var(--admin-panel-radius) !important;
+  background: #f8fbff !important;
+}
+
+@media (max-width: 768px) {
+  body.admin-page {
+    --admin-outer-pad: 14px;
+    --admin-page-gap: 12px;
+    --admin-panel-pad: 14px;
+    --admin-panel-gap: 12px;
+    --admin-item-pad: 12px;
+  }
+
+  .admin-page .explorer-card {
+    padding: 0 !important;
+  }
+
+  .admin-page #overview-tab,
+  .admin-page #health-tab,
+  .admin-page #logs-tab,
+  .admin-page #access-tab,
+  .admin-page #quota-tab,
+  .admin-page #shares-tab,
+  .admin-page #webhooks-tab {
+    padding: var(--admin-outer-pad) !important;
+  }
+
+  .admin-page .admin-page-panel {
+    padding: 0 !important;
+  }
+
+  .admin-page .admin-section-head,
+  .admin-page .admin-page-panel .admin-section-head,
+  .admin-page .health-workbench-head,
+  .admin-page .log-workbench-head,
+  .admin-page .share-workbench-head,
+  .admin-page .task-workbench-head,
+  .admin-page .quota-workbench-head,
+  .admin-page .access-workbench-head,
+  .admin-page .storage-console-head,
+  .admin-page .webhook-workbench-head {
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 12px !important;
+  }
+
+  .admin-page .overview-panels-grid > section,
+  .admin-page .health-status-panel,
+  .admin-page .health-maintenance-panel,
+  .admin-page .health-advice-panel,
+  .admin-page .log-filter-panel,
+  .admin-page .share-filter-panel,
+  .admin-page .storage-panel,
+  .admin-page .quota-editor-panel,
+  .admin-page .quota-status-panel,
+  .admin-page .access-editor-panel,
+  .admin-page .access-list-panel,
+  .admin-page .webhook-editor-column,
+  .admin-page .webhook-list-panel,
+  .admin-page .webhook-delivery-panel,
+  .admin-page .admin-table-card {
+    padding: var(--admin-panel-pad) !important;
+  }
+
+  .admin-page #logs-tab .log-list-head {
+    display: none;
+  }
+
+  .admin-page #logs-tab .log-list,
+  .admin-page #shares-tab .share-list {
+    padding: 6px 12px;
+    border-radius: var(--admin-panel-radius);
+  }
+
+  .admin-page .admin-log-row,
+  .admin-page .admin-share-row {
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
