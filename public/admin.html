@@ -9,21 +9,16 @@
     <link rel="stylesheet" href="/explorer.css">
     <link rel="stylesheet" href="/admin.css?v=20260608-storage-compact">
     <link rel="stylesheet" href="/design.css">
-    <link rel="stylesheet" href="/admin-redesign.css">
+    <link rel="stylesheet" href="/classic.css">
 </head>
 <body class="admin-page flex flex-col bg-background text-slate-900">
-    <main class="container admin-console">
-        <div class="admin-shell">
-        <aside class="admin-sidebar" aria-label="后台导航">
-        <header class="header-card mt-4 admin-sidebar-head">
-            <div class="admin-sidebar-brand">
+    <main class="container">
+        <header class="header-card mt-4">
+            <div class="flex items-center gap-3">
                 <span class="brand-mark brand-mark-header" aria-hidden="true">⚙️</span>
-                <div>
-                    <h1 class="font-bold text-slate-900 tracking-tight text-lg">O-Drive</h1>
-                    <p>管理控制台</p>
-                </div>
+                <h1 class="font-bold text-slate-900 tracking-tight text-lg">管理控制台</h1>
             </div>
-            <a href="/" class="btn text-slate-900 admin-sidebar-return">返回云盘</a>
+            <a href="/" class="btn text-slate-900">返回云盘</a>
         </header>
 
         <div class="tab-shell flex gap-2 p-2 bg-surface border border-border rounded-xl w-full shadow-sm mt-4" role="tablist" aria-label="后台管理">
@@ -35,23 +30,6 @@
             <button id="btn-shares" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["shares"]' class="admin-tab-btn">分享链接</button>
             <button id="btn-webhooks" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["webhooks"]' class="admin-tab-btn">Webhook</button>
         </div>
-        <div class="admin-sidebar-footer">
-            <span>Cloudflare Pages</span>
-            <strong>R2 / D1 / Webhook</strong>
-        </div>
-        </aside>
-
-        <section class="admin-workspace">
-        <header class="admin-topbar">
-            <div>
-                <p class="admin-topbar-kicker">Workspace</p>
-                <h2>管理控制台</h2>
-            </div>
-            <div class="admin-topbar-actions">
-                <span class="admin-live-pill">在线维护</span>
-                <a href="/" class="btn text-slate-900">返回云盘</a>
-            </div>
-        </header>
 
         <div class="explorer-card mt-4 mb-4">
             <div id="overview-tab" class="overview-tab flex-1 flex flex-col p-6 text-slate-900">
@@ -605,8 +583,6 @@
                     </div>
                 </section>
             </div>
-        </div>
-        </section>
         </div>
 
         <footer class="footer">
