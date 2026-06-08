@@ -17,10 +17,16 @@ export const UI = {
       : `<button class="btn btn-primary font-bold" data-action="show-modal" data-args='["loginModal"]'>登录</button>`;
 
     const desktop = document.getElementById('authButtons');
-    if (desktop) desktop.innerHTML = html;
+    if (desktop) {
+      desktop.hidden = false;
+      desktop.innerHTML = html;
+    }
 
     const mobile = document.getElementById('authButtonsMobile');
-    if (mobile) mobile.innerHTML = html;
+    if (mobile) {
+      mobile.hidden = false;
+      mobile.innerHTML = html;
+    }
 
     document.querySelectorAll('.admin-only').forEach(el => {
       el.hidden = state.userRole !== 'admin';
@@ -188,8 +194,16 @@ export const UI = {
     this.renderDetailsPanel(null);
     this.updateBatchUI();
     this.renderBreadcrumb();
-    document.getElementById('authButtons')?.replaceChildren();
-    document.getElementById('authButtonsMobile')?.replaceChildren();
+    const desktopAuth = document.getElementById('authButtons');
+    if (desktopAuth) {
+      desktopAuth.replaceChildren();
+      desktopAuth.hidden = true;
+    }
+    const mobileAuth = document.getElementById('authButtonsMobile');
+    if (mobileAuth) {
+      mobileAuth.replaceChildren();
+      mobileAuth.hidden = true;
+    }
 
     const list = document.getElementById('fileList');
     if (!list) return;

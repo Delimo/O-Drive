@@ -153,6 +153,7 @@ export const AdminActions = {
       button?.setAttribute('aria-selected', tabId === tab ? 'true' : 'false');
     });
     adminState.activeTab = tabId;
+    document.body.dataset.adminTab = tabId;
     if (options.persist !== false && window.location.hash !== `#${tabId}`) {
       history.replaceState(null, '', `#${tabId}`);
     }
@@ -271,7 +272,7 @@ export const AdminActions = {
     const warnings = Array.isArray(data.warnings) ? data.warnings : [];
     const warningsHtml = warnings.length
       ? `
-        <div class="health-item is-bad">
+        <div class="health-item health-item-wide is-bad">
           <div>
             <strong>系统提醒</strong>
             <span>${escapeHtml(warnings.map(item => `${item.source}: ${item.message}`).join('；'))}</span>
@@ -279,7 +280,7 @@ export const AdminActions = {
           <em>${warnings.length} 条</em>
         </div>
       `
-      : this.healthItem('系统提醒', true, '暂无非致命运行告警');
+      : '';
 
     grid.innerHTML = [
       this.healthItem('D1 数据库绑定 D1', Boolean(data.db?.ok), data.db?.message || tableList),

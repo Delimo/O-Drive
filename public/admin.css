@@ -125,6 +125,10 @@ body.admin-page {
   background: #fff;
 }
 
+.admin-page .health-item-wide {
+  grid-column: 1 / -1;
+}
+
 .admin-page .health-item div {
   display: grid;
   gap: 4px;
@@ -896,9 +900,9 @@ body.admin-page {
 }
 
 .admin-page #shares-tab .admin-table-card {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-height: 0;
-  max-height: min(560px, calc(100vh - 300px));
+  max-height: none;
   overflow-y: auto;
 }
 
