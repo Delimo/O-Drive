@@ -315,7 +315,7 @@ export const UI = {
     const protectedBadge = item.protected ? '<span class="protected-badge">受保护</span>' : '';
     const safeSize = escapeHtml(isFolder ? '文件夹' : item.sizeFormatted);
     const safeIcon = isFolder ? Utils.getFolderIcon() : Utils.getFileIcon(item.name);
-    const thumbUrl = !isFolder && Utils.isImageFile(item.name) ? escapeHtml(api.thumbnailUrl(item.path)) : '';
+    const thumbUrl = !isFolder && Utils.isImageFile(item.name) ? escapeHtml(api.thumbnailUrl(item.path, { w: 360, h: 260 })) : '';
     const selectControl = state.userRole === 'admin'
       ? `<button class="file-select-btn ${isSelected ? 'is-selected' : ''}" aria-label="${isSelected ? '取消选择' : '选择'} ${safeName}" data-action="toggle-select" data-args='${escapeHtml(JSON.stringify([item.fullKey]))}'>${isSelected ? '✓' : ''}</button>`
       : '';

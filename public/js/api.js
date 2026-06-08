@@ -114,7 +114,14 @@ export const api = {
   },
   preview(path) { return fetch(apiFileUrl('/api/preview', path)); },
   previewUrl(path) { return apiFileUrl('/api/preview', path); },
-  thumbnailUrl(path) { return apiFileUrl('/api/thumbnail', path); },
+  thumbnailUrl(path, options = {}) {
+    const url = apiFileUrl('/api/thumbnail', path);
+    const params = new URLSearchParams();
+    if (options.w) params.set('w', String(options.w));
+    if (options.h) params.set('h', String(options.h));
+    const query = params.toString();
+    return query ? `${url}?${query}` : url;
+  },
   download(path) { return apiFileUrl('/api/download', path); },
   adminLogs(page, size, filters = {}) {
     const params = new URLSearchParams({ page: String(page), size: String(size) });

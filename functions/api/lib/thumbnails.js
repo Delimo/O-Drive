@@ -9,7 +9,7 @@ function encodeR2Key(key) {
 }
 
 function isImageKey(key) {
-  return /\.(jpe?g|png|gif|webp)$/i.test(key);
+  return /\.(jpe?g|png|gif|webp|avif)$/i.test(key);
 }
 
 async function originalImageResponse(env, r2Key) {

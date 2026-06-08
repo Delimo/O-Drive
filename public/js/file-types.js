@@ -1,4 +1,4 @@
-export const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+export const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'];
 export const videoExts = ['mp4', 'webm'];
 export const audioExts = ['mp3', 'wav', 'ogg', 'flac'];
 export const textExts = ['txt', 'md', 'js', 'css', 'html', 'json', 'py', 'sh', 'sql', 'php', 'yml', 'yaml', 'xml', 'csv', 'log'];

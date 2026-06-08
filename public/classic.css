@@ -66,7 +66,7 @@ body.share-page {
 
 .toolbar-card,
 .admin-page .tab-shell {
-  min-height: 74px;
+  min-height: 68px;
   padding: 10px !important;
   margin-top: 10px;
 }
@@ -260,13 +260,14 @@ body.share-page {
 }
 
 .grid-layout {
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important;
-  gap: 22px !important;
-  padding: 24px 26px !important;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)) !important;
+  gap: 18px !important;
+  padding: 22px 24px !important;
 }
 
 .grid-item {
-  height: 280px;
+  height: 232px;
+  padding: 18px 14px !important;
   background: #fff !important;
 }
 
@@ -279,19 +280,40 @@ body.share-page {
 }
 
 .grid-item .file-icon {
-  height: 76px;
-  font-size: 42px;
+  width: 96px;
+  height: 74px;
+  margin: 0 auto 8px;
+  border: 1px solid #e1eaf6;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #f4f8fd);
+  font-size: 38px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .grid-item .file-thumb-wrap {
-  width: 110px;
-  height: 84px;
+  width: 116px;
+  height: 82px;
+  margin: 0 auto 8px;
   border-color: var(--border);
+  border-radius: 14px;
+  background: #eef4fb;
+}
+
+.grid-item .file-thumb {
+  object-fit: cover;
 }
 
 .grid-item .file-name {
+  flex: 0 0 auto;
+  min-height: 42px;
+  margin: 6px 0 8px;
   font-size: 15px;
   font-weight: 900;
+}
+
+.grid-item .file-size,
+.grid-item .file-info {
+  margin-bottom: 6px;
 }
 
 .admin-page .breakdown-track,
@@ -343,7 +365,7 @@ body.share-page {
   }
 
   .grid-item {
-    height: 188px;
+    height: 178px;
   }
 }
 
@@ -493,6 +515,60 @@ body.share-page {
 
 .search-bar input {
   height: 46px !important;
+}
+
+.header-card .btn,
+.toolbar-card .btn,
+.toolbar-card .upload-menu-wrap > .btn,
+#authButtons .btn,
+#authButtonsMobile .btn,
+.mobile-search-btn,
+.mobile-bottom-btn {
+  height: 44px !important;
+  min-height: 44px !important;
+  min-width: 82px;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+}
+
+.toolbar-card .tools-right,
+.toolbar-card #batchTools,
+.toolbar-card #pasteGroup {
+  gap: 10px;
+}
+
+.toolbar-card .hidden.sm\:flex {
+  gap: 10px;
+}
+
+.toolbar-card #breadcrumb,
+.mobile-breadcrumb {
+  color: #1d4ed8;
+}
+
+.breadcrumb-root {
+  height: 44px !important;
+  padding: 0 18px !important;
+  border-color: #d7e2f2 !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #061126 !important;
+  font-weight: 900 !important;
+}
+
+.upload-menu {
+  border-color: #d7e2f2 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1) !important;
+}
+
+.upload-menu-item {
+  height: 38px !important;
+  min-height: 38px !important;
+  justify-content: flex-start;
+  box-shadow: none !important;
 }
 
 .admin-page textarea.admin-input,
