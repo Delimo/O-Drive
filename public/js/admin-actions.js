@@ -628,11 +628,12 @@ export const AdminActions = {
     if (quotaRemaining) quotaRemaining.textContent = remainingLabel;
     if (quotaPercent) quotaPercent.textContent = `${usedPercent}%`;
     if (usageBar) usageBar.style.width = `${Math.max(0, Math.min(100, usedPercent))}%`;
-    info.innerHTML = [
-      this.maintenanceItem('存储配额', quotaLabel, data.quota > 0 ? `已用 ${usedPercent}%` : '未设置上限'),
-      this.maintenanceItem('已使用', data.usedFormatted, `${usedPercent}%`),
-      this.maintenanceItem('剩余空间', remainingLabel, ''),
-    ].join('');
+    info.innerHTML = `
+      <div class="quota-note-card">
+        <strong>${data.quota > 0 ? '配额已启用' : '当前不限制容量'}</strong>
+        <span>${data.quota > 0 ? `已使用 ${data.usedFormatted || '0 B'}，剩余 ${formatBytesLocal(data.remaining)}。` : '上传不会受总容量限制，仍建议定期清理回收站和临时文件。'}</span>
+      </div>
+    `;
     const input = document.getElementById('quotaInput');
     if (input && data.quota > 0) input.value = data.quota;
   },
