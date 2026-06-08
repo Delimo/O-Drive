@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/main.css">
     <link rel="stylesheet" href="/explorer.css">
-    <link rel="stylesheet" href="/admin.css?v=20260608-storage-unit">
+    <link rel="stylesheet" href="/admin.css?v=20260608-storage-compact">
 </head>
 <body class="admin-page flex flex-col bg-background text-slate-900">
     <main class="container">
@@ -316,7 +316,10 @@
                                     </label>
                                     <label class="storage-field">
                                         <span>溢出阈值</span>
-                                        <input type="number" id="overflowThresholdInput" placeholder="默认 85" min="1" max="99" class="admin-input">
+                                        <div class="storage-unit-input storage-unit-input-compact">
+                                            <input type="number" id="overflowThresholdInput" value="85" placeholder="85" min="1" max="99" inputmode="numeric" class="admin-input storage-unit-number">
+                                            <span class="storage-unit-suffix">%</span>
+                                        </div>
                                     </label>
                                 </div>
                                 <label class="access-mode-card">
@@ -585,6 +588,6 @@
         </footer>
     </main>
 
-    <script type="module" src="/js/admin-app.js?v=20260608-storage-unit"></script>
+    <script type="module" src="/js/admin-app.js?v=20260608-storage-compact"></script>
 </body>
 </html>

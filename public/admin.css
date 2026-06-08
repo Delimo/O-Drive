@@ -495,7 +495,7 @@ body.admin-page {
 }
 
 .admin-page #quota-tab .admin-page-panel {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   overflow: visible;
 }
@@ -503,6 +503,7 @@ body.admin-page {
 .admin-page .storage-console {
   display: flex;
   flex-direction: column;
+  flex: 0 0 auto;
   gap: 10px;
   min-height: 0;
   overflow: visible;
@@ -820,8 +821,8 @@ body.admin-page {
 }
 
 .admin-page .storage-console .access-empty {
-  min-height: 62px;
-  padding: 14px;
+  min-height: 50px;
+  padding: 12px 14px;
 }
 
 .admin-page .storage-console .quota-info-grid {
@@ -829,7 +830,7 @@ body.admin-page {
 }
 
 .admin-page .storage-binding-workbench {
-  max-width: 900px;
+  width: 100%;
 }
 
 .admin-page .storage-binding-workbench .access-rule-list {
@@ -2519,7 +2520,7 @@ body.admin-page {
 }
 
 .admin-page #quota-tab .admin-page-panel {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
 }
 
