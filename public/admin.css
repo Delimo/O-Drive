@@ -516,6 +516,49 @@ body.admin-page {
   border-bottom: 1px solid var(--border);
 }
 
+.admin-page .storage-subtabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-page .storage-subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-page .storage-subtab-btn.is-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.16);
+}
+
+.admin-page .storage-view {
+  display: none;
+  min-height: 0;
+}
+
+.admin-page .storage-view.is-active {
+  display: block;
+}
+
 .admin-page .storage-metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -551,12 +594,22 @@ body.admin-page {
   overflow-wrap: anywhere;
 }
 
-.admin-page .storage-main-grid {
+.admin-page .storage-main-grid,
+.admin-page .storage-overview-grid,
+.admin-page .storage-s3-grid {
   display: grid;
   grid-template-columns: minmax(390px, 0.9fr) minmax(520px, 1.1fr);
   gap: 14px;
   align-items: start;
   min-width: 0;
+}
+
+.admin-page .storage-overview-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.74fr);
+}
+
+.admin-page .storage-s3-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.52fr);
 }
 
 .admin-page .storage-stack {
@@ -750,6 +803,15 @@ body.admin-page {
 
 .admin-page .storage-inline-binding .access-rule-list {
   max-height: 120px;
+  overflow-y: auto;
+}
+
+.admin-page .storage-binding-workbench {
+  max-width: 900px;
+}
+
+.admin-page .storage-binding-workbench .access-rule-list {
+  max-height: 320px;
   overflow-y: auto;
 }
 
@@ -2997,7 +3059,9 @@ body.admin-page {
     overflow: visible;
   }
 
-  .admin-page .storage-main-grid {
+  .admin-page .storage-main-grid,
+  .admin-page .storage-overview-grid,
+  .admin-page .storage-s3-grid {
     grid-template-columns: 1fr;
   }
 

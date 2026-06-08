@@ -1,5 +1,5 @@
-import { AdminActions, getInitialAdminTab } from './admin-actions.js?v=20260608-storage-page2';
-import { api } from './api.js?v=20260608-storage-page2';
+import { AdminActions, getInitialAdminTab } from './admin-actions.js?v=20260608-storage-tabs';
+import { api } from './api.js?v=20260608-storage-tabs';
 
 window.AdminActions = AdminActions;
 
@@ -33,6 +33,7 @@ document.addEventListener('click', event => {
     case 'refresh-maintenance': return AdminActions.loadMaintenance();
     case 'maintenance-action': return AdminActions.runMaintenanceAction(args[0]);
     case 'set-quota': return AdminActions.setQuota();
+    case 'switch-storage-view': return AdminActions.switchStorageView(args[0]);
     case 'add-storage-space': return AdminActions.addStorageSpace();
     case 'test-storage-space': return AdminActions.testStorageSpace(args[0] || '');
     case 'save-storage-policy': return AdminActions.saveStoragePolicy();

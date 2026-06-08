@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/main.css">
     <link rel="stylesheet" href="/explorer.css">
-    <link rel="stylesheet" href="/admin.css?v=20260608-storage-page2">
+    <link rel="stylesheet" href="/admin.css?v=20260608-storage-tabs">
 </head>
 <body class="admin-page flex flex-col bg-background text-slate-900">
     <main class="container">
@@ -266,8 +266,13 @@
                             <p>管理全局配额、R2 安全容量、S3 空间和文件夹绑定。</p>
                         </div>
                     </div>
-                    <div class="storage-main-grid">
-                        <div class="storage-stack">
+                    <div class="storage-subtabs" role="tablist" aria-label="存储设置">
+                        <button class="storage-subtab-btn" data-admin-action="switch-storage-view" data-args='["overview"]'>总览与 R2</button>
+                        <button class="storage-subtab-btn is-active" data-admin-action="switch-storage-view" data-args='["s3"]'>S3 空间</button>
+                        <button class="storage-subtab-btn" data-admin-action="switch-storage-view" data-args='["bindings"]'>文件夹绑定</button>
+                    </div>
+                    <div class="storage-view" data-storage-view="overview">
+                        <div class="storage-overview-grid">
                             <section class="storage-panel">
                                 <div class="storage-panel-head">
                                     <div>
@@ -320,7 +325,9 @@
                                 </div>
                             </section>
                         </div>
-                        <div class="storage-stack">
+                    </div>
+                    <div class="storage-view is-active" data-storage-view="s3">
+                        <div class="storage-s3-grid">
                             <section class="storage-panel storage-panel-primary">
                                 <div class="storage-panel-head">
                                     <div>
@@ -331,20 +338,6 @@
                                         <button class="btn btn-primary" data-admin-action="add-storage-space">保存</button>
                                         <button class="btn" data-admin-action="test-storage-space">测试</button>
                                     </div>
-                                </div>
-                                <div class="storage-inline-binding">
-                                    <div class="storage-panel-head">
-                                        <div>
-                                            <h3>文件夹绑定</h3>
-                                            <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
-                                        </div>
-                                    </div>
-                                    <div class="storage-input-row bind">
-                                        <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
-                                        <select id="bindingStorageInput" class="admin-input"></select>
-                                        <button class="btn btn-primary" data-admin-action="add-storage-binding">绑定</button>
-                                    </div>
-                                    <div id="storageBindingList" class="access-rule-list"></div>
                                 </div>
                                 <div class="storage-form-grid two">
                                     <label class="storage-field">
@@ -412,6 +405,22 @@
                                 <div id="storageSpaceList" class="access-rule-list"></div>
                             </section>
                         </div>
+                    </div>
+                    <div class="storage-view" data-storage-view="bindings">
+                        <section class="storage-panel storage-binding-workbench">
+                            <div class="storage-panel-head">
+                                <div>
+                                    <h3>文件夹绑定</h3>
+                                    <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
+                                </div>
+                            </div>
+                            <div class="storage-input-row bind">
+                                <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
+                                <select id="bindingStorageInput" class="admin-input"></select>
+                                <button class="btn btn-primary" data-admin-action="add-storage-binding">绑定</button>
+                            </div>
+                            <div id="storageBindingList" class="access-rule-list"></div>
+                        </section>
                     </div>
                 </section>
             </div>
@@ -573,6 +582,6 @@
         </footer>
     </main>
 
-    <script type="module" src="/js/admin-app.js?v=20260608-storage-page2"></script>
+    <script type="module" src="/js/admin-app.js?v=20260608-storage-tabs"></script>
 </body>
 </html>

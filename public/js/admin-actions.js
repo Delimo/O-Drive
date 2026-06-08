@@ -185,10 +185,26 @@ export const AdminActions = {
     if (tabId === 'health') return Promise.all([this.loadHealth(), this.loadMaintenance()]);
     if (tabId === 'logs') return this.loadLogs();
     if (tabId === 'access') return this.loadAccessRules();
-    if (tabId === 'quota') return Promise.all([this.loadQuota(), this.loadStorage()]);
+    if (tabId === 'quota') {
+      this.switchStorageView(adminState.storageView || 's3');
+      return Promise.all([this.loadQuota(), this.loadStorage()]);
+    }
     if (tabId === 'shares') return this.loadShares();
     if (tabId === 'webhooks') return Promise.all([this.loadWebhooks(), this.loadWebhookDeliveries()]);
     return this.loadStats();
+  },
+
+  switchStorageView(view = 's3') {
+    const active = ['overview', 's3', 'bindings'].includes(view) ? view : 's3';
+    adminState.storageView = active;
+    document.querySelectorAll('[data-storage-view]').forEach(panel => {
+      panel.classList.toggle('is-active', panel.dataset.storageView === active);
+    });
+    document.querySelectorAll('.storage-subtab-btn').forEach(button => {
+      let args = [];
+      try { args = JSON.parse(button.dataset.args || '[]'); } catch (_) {}
+      button.classList.toggle('is-active', args[0] === active);
+    });
   },
 
   async loadStats() {
