@@ -28,10 +28,12 @@ function adminConfirm(title, body = '') {
 }
 
 function setMaintenanceResult(text = '') {
-  const label = document.getElementById('healthMaintenanceResult');
-  if (!label) return;
-  label.textContent = text;
-  label.classList.toggle('hidden', !text);
+  ['healthMaintenanceResult', 'logMaintenanceResult'].forEach(id => {
+    const label = document.getElementById(id);
+    if (!label) return;
+    label.textContent = text;
+    label.classList.toggle('hidden', !text);
+  });
 }
 
 function setWebhookForm(item = {}) {
@@ -351,6 +353,7 @@ export const AdminActions = {
       'rebuild-index': ['重建文件索引？', '重建会重新扫描 R2 文件并刷新统计索引。'],
       'cleanup-access-attempts': ['清理访问失败记录？', '这会移除受保护路径的密码错误计数。'],
       'cleanup-thumbnails': ['清理缩略图缓存？', '缩略图会在后续预览时重新生成。'],
+      'cleanup-logs': ['清理旧操作日志？', '将保留最近 2000 条和最近 90 天内的操作日志。'],
     };
     const confirmText = names[action];
     if (confirmText && !(await adminConfirm(confirmText[0], confirmText[1]))) return;
@@ -366,6 +369,7 @@ export const AdminActions = {
     setMaintenanceResult(summary);
     await this.loadMaintenance();
     if (adminState.activeTab === 'overview') await this.loadStats();
+    if (adminState.activeTab === 'logs') await this.loadLogs();
   },
 
   renderStorageWarnings(data) {

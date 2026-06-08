@@ -2,6 +2,11 @@ import { ensureCoreTables } from './schema.js';
 
 export { ensureCoreTables } from './schema.js';
 
+const SYSTEM_WARNING_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const SYSTEM_WARNING_RETENTION_ROWS = 100;
+const LOG_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+const LOG_RETENTION_ROWS = 2000;
+
 /**
  * Cloudflare Workers environment bindings.
  * @typedef {Object} Env
@@ -141,19 +146,45 @@ export async function addLog(env, request, action, details) {
       String(meta.errorCode || meta.code || ''),
       meta.metadata ? JSON.stringify(meta.metadata).slice(0, 4000) : '',
     ).run();
+    await cleanupLogs(env);
   } catch (e) {
-    try { await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, detailText, ip).run(); } catch (_) {}
+    try {
+      await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, detailText, ip).run();
+      await cleanupLogs(env);
+    } catch (_) {}
   }
+}
+
+export async function cleanupLogs(env, now = Date.now()) {
+  await ensureCoreTables(env);
+  const cutoff = new Date(now - LOG_RETENTION_MS).toISOString().replace('T', ' ').slice(0, 19);
+  const beforeCount = await env.D1.prepare('SELECT COUNT(*) as count FROM logs').first().catch(() => ({ count: 0 }));
+  await env.D1.prepare('DELETE FROM logs WHERE timestamp < ?').bind(cutoff).run();
+  await env.D1.prepare(
+    'DELETE FROM logs WHERE id NOT IN (SELECT id FROM logs ORDER BY timestamp DESC, id DESC LIMIT ?)'
+  ).bind(LOG_RETENTION_ROWS).run();
+  const afterCount = await env.D1.prepare('SELECT COUNT(*) as count FROM logs').first().catch(() => ({ count: 0 }));
+  return Math.max(0, Number(beforeCount?.count || 0) - Number(afterCount?.count || 0));
 }
 
 export async function recordSystemWarning(env, source, message) {
   if (!env?.D1) return;
   try {
     await ensureCoreTables(env);
+    const createdAt = Date.now();
     await env.D1.prepare('INSERT INTO system_warnings (source, message, created_at) VALUES (?, ?, ?)')
-      .bind(String(source || 'system'), String(message || 'Unknown warning').slice(0, 1000), Date.now())
+      .bind(String(source || 'system'), String(message || 'Unknown warning').slice(0, 1000), createdAt)
       .run();
+    await cleanupSystemWarnings(env, createdAt);
   } catch (_) {}
+}
+
+async function cleanupSystemWarnings(env, now = Date.now()) {
+  const cutoff = now - SYSTEM_WARNING_RETENTION_MS;
+  await env.D1.prepare('DELETE FROM system_warnings WHERE created_at < ?').bind(cutoff).run();
+  await env.D1.prepare(
+    'DELETE FROM system_warnings WHERE id NOT IN (SELECT id FROM system_warnings ORDER BY created_at DESC, id DESC LIMIT ?)'
+  ).bind(SYSTEM_WARNING_RETENTION_ROWS).run();
 }
 
 const MAX_BODY_SIZE = 512 * 1024; // 512 KB for JSON/regular requests

@@ -2,6 +2,8 @@ import { addLog, apiError, jsonResponse } from './common.js';
 import { handleBatchDelete, handlePaste } from './file-mutations.js';
 
 const TASK_TYPES = ['paste', 'delete'];
+const TASK_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const TASK_RETENTION_ROWS = 100;
 
 function taskId() {
   const bytes = new Uint8Array(12);
@@ -26,6 +28,23 @@ async function ensureTaskTable(env) {
       finished_at INTEGER NOT NULL DEFAULT 0
     )`
   ).run();
+}
+
+async function cleanupFileTasks(env, now = Date.now()) {
+  const cutoff = now - TASK_RETENTION_MS;
+  await env.D1.prepare(
+    "DELETE FROM file_tasks WHERE status NOT IN ('queued', 'running') AND finished_at > 0 AND finished_at < ?"
+  ).bind(cutoff).run();
+  await env.D1.prepare(
+    `DELETE FROM file_tasks
+     WHERE status NOT IN ('queued', 'running')
+       AND id NOT IN (
+         SELECT id FROM file_tasks
+         WHERE status NOT IN ('queued', 'running')
+         ORDER BY created_at DESC
+         LIMIT ?
+       )`
+  ).bind(TASK_RETENTION_ROWS).run();
 }
 
 function mapTask(row) {
@@ -132,6 +151,7 @@ function scheduleTask(env, request, context, task) {
 
 export async function createFileTask(env, request, context = {}) {
   await ensureTaskTable(env);
+  await cleanupFileTasks(env);
   const body = await request.json().catch(() => ({}));
   const type = String(body.type || '').trim();
   if (!TASK_TYPES.includes(type)) return apiError('INVALID_TASK_TYPE', 'Invalid task type', 400);
@@ -170,6 +190,7 @@ export async function createFileTask(env, request, context = {}) {
 
 export async function getFileTask(env, url) {
   await ensureTaskTable(env);
+  await cleanupFileTasks(env);
   const id = url.searchParams.get('id') || '';
   if (!id) {
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit') || 20), 1), 50);

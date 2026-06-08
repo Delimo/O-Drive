@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 
 import { onRequest } from '../functions/api/[[path]].js';
+import { recordSystemWarning } from '../functions/api/lib/common.js';
 import { handleListFiles, handleDownloadOrPreview, handleSearch } from '../functions/api/lib/file-reads.js';
 import {
   handleMultipartCreate,
@@ -1191,6 +1192,75 @@ test('admin maintenance reports counts and runs cleanup actions', async () => {
   assert.equal(statusData.thumbnailsPresent, false);
 });
 
+test('operation logs can be manually cleaned with retention policy', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const realNow = Date.now;
+  const base = new Date('2026-06-01T00:00:00Z').getTime();
+
+  try {
+    for (let i = 0; i < 2005; i++) {
+      Date.now = () => base + i * 1000;
+      await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind('TEST', `log-${i}`, '127.0.0.1').run();
+    }
+    for (let i = 0; i < 3; i++) {
+      Date.now = () => base - 91 * 24 * 60 * 60 * 1000 - i * 1000;
+      await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind('OLD', `old-${i}`, '127.0.0.2').run();
+    }
+    Date.now = () => base + 2006 * 1000;
+
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const cleanup = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/maintenance', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'cleanup-logs' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    const cleanupData = await cleanup.json();
+    assert.equal(cleanup.status, 200);
+    assert.equal(cleanupData.deleted, 8);
+
+    const listed = await handleAdminLogs(env, new URL('https://example.com/api/admin/logs?page=1&size=20'));
+    const listedData = await listed.json();
+    assert.equal(listedData.totalPages, 100);
+    assert.equal(listedData.logs.length, 20);
+    assert.equal(listedData.logs[0].details, '清理旧操作日志 8 条');
+    assert.equal(listedData.logs[1].details, 'log-2004');
+    assert.equal(listedData.logs.some(row => row.action === 'OLD'), false);
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test('system warnings are capped to recent rows', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  for (let i = 0; i < 105; i++) {
+    await recordSystemWarning(env, 'test.warning', `warning-${i}`);
+  }
+
+  const health = await handleAdminHealth(env);
+  const data = await health.json();
+  assert.equal(data.warnings.length, 10);
+  assert.equal(data.warnings[0].message, 'warning-104');
+  assert.equal(data.warnings.at(-1).message, 'warning-95');
+});
+
 test('webhook settings saved in D1 are used for file operation notifications', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -1718,6 +1788,52 @@ test('admin can send generic webhook test messages', async () => {
     assert.equal(deliveryData.items.length, 1);
     assert.equal(deliveryData.items[0].event, 'webhook.test');
     assert.equal(deliveryData.items[0].ok, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('webhook delivery records are capped while showing the latest page', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('ok', { status: 200 });
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    for (let i = 0; i < 205; i++) {
+      const res = await onRequest({
+        env,
+        request: new Request('https://example.com/api/admin/settings/webhooks', {
+          method: 'POST',
+          body: JSON.stringify({ endpoint: { name: `receiver-${i}`, url: `https://example.com/webhook-${i}` } }),
+          headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+        }),
+      });
+      assert.equal(res.status, 200);
+    }
+
+    const deliveries = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/webhook-deliveries', {
+        headers: { Cookie: cookie },
+      }),
+    });
+    const data = await deliveries.json();
+    assert.equal(data.items.length, 20);
+    assert.equal(data.items[0].endpoint, 'receiver-204');
+    assert.equal(data.items.at(-1).endpoint, 'receiver-185');
   } finally {
     globalThis.fetch = originalFetch;
   }

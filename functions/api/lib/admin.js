@@ -1,5 +1,6 @@
 ﻿import { addLog, jsonResponse, normalizeHiddenPath, formatBytes, isReservedKey, listR2Objects, recordSystemWarning } from './common.js';
 import { fileIndexStatus, getIndexedStats, indexedFileCount, indexedFileKind, rebuildFileIndex, syncFileIndexFromR2 } from './file-index.js';
+import { cleanupLogs } from './common.js';
 import { mapWithConcurrency } from './r2-tree.js';
 import { getStorageQuota, setStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
 import { tokenSecretStatus } from './secrets.js';
@@ -185,7 +186,7 @@ async function checkR2(env) {
 
 async function latestSystemWarnings(env) {
   try {
-    const rows = await env.D1.prepare('SELECT * FROM system_warnings ORDER BY created_at DESC LIMIT 10').all();
+    const rows = await env.D1.prepare('SELECT * FROM system_warnings ORDER BY created_at DESC, id DESC LIMIT 10').all();
     return rows.results || [];
   } catch (_) {
     return [];
@@ -275,6 +276,11 @@ export async function handleAdminMaintenanceAction(env, request) {
     await addLog(env, request, 'MAINTENANCE', `清理缩略图缓存 ${result.deleted || 0} 项${result.truncated ? '，已达扫描上限' : ''}`);
     return jsonResponse({ success: true, action, ...result });
   }
+  if (action === 'cleanup-logs') {
+    const deleted = await cleanupLogs(env);
+    await addLog(env, request, 'MAINTENANCE', `清理旧操作日志 ${deleted} 条`);
+    return jsonResponse({ success: true, action, deleted });
+  }
   return jsonResponse({ success: false, message: 'Invalid maintenance action' }, 400);
 }
 
@@ -339,7 +345,7 @@ export async function handleAdminWebhooks(env, request, method) {
 
 export async function handleAdminWebhookDeliveries(env) {
   try {
-    const rows = await env.D1.prepare('SELECT * FROM webhook_deliveries ORDER BY created_at DESC LIMIT 20').all();
+    const rows = await env.D1.prepare('SELECT * FROM webhook_deliveries ORDER BY created_at DESC, id DESC LIMIT 20').all();
     return jsonResponse({ items: rows.results || [] });
   } catch (_) {
     return jsonResponse({ items: [] });

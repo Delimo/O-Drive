@@ -121,6 +121,10 @@
                             <h2>操作日志</h2>
                             <p>记录管理员上传、删除、维护等关键操作，便于追踪变更来源。</p>
                         </div>
+                        <div class="log-cleanup-actions">
+                            <button class="btn btn-danger-soft h-9 px-3" data-admin-action="maintenance-action" data-args='["cleanup-logs"]'>清理旧日志</button>
+                            <span id="logMaintenanceResult" class="maintenance-result hidden text-xs text-slate-500"></span>
+                        </div>
                     </div>
                     <div class="log-filter-panel">
                         <input id="logFilterQuery" type="search" class="admin-input" placeholder="关键词：路径、详情、IP">
@@ -425,7 +429,7 @@
                             <div class="webhook-list-head">
                                 <div>
                                     <h3>最近投递</h3>
-                                    <span class="webhook-list-count">最近 20 条</span>
+                                    <span class="webhook-list-count">显示 20 条，保留 200 条/30 天</span>
                                 </div>
                                 <button class="btn h-9 px-3" data-admin-action="refresh-webhook-deliveries">刷新</button>
                             </div>

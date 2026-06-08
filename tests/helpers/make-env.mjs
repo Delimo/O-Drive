@@ -7,13 +7,16 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const loginAlertRows = [];
   const downloadBurstRows = [];
   const webhookDeliveryRows = [];
+  let webhookDeliveryNextId = 1;
   const systemWarningRows = [];
+  let systemWarningNextId = 1;
   const taskRows = [];
   const settingsRows = new Map();
   const kvRows = new Map();
   const fileIndexRows = [];
   const shareRows = [];
   const logs = [];
+  let logNextId = 1;
   const sizeOf = body => typeof body === 'string' ? body.length : body?.byteLength || 0;
   const listObjects = (prefix = '') => [...byKey.values()]
     .filter(obj => obj.key.startsWith(prefix))
@@ -44,10 +47,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
     }
     return rows;
   };
-  const materializedLogs = () => logs.map((log, i) => ({
-    ...log,
-    timestamp: new Date(Date.now() - i * 1000).toISOString().replace('T', ' ').replace(/\.\d+Z$/, ''),
-  }));
+  const sqlTimestamp = (value = Date.now()) => new Date(value).toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
+  const materializedLogs = () => [...logs]
+    .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')) || Number(b.id || 0) - Number(a.id || 0));
   const filteredLogs = (sql = '', bound = []) => {
     let rows = materializedLogs();
     let idx = 0;
@@ -190,7 +192,19 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
           },
           async run() {
             if (/INSERT INTO logs/i.test(sql)) {
-              logs.push({ action: statement.bound?.[0], details: statement.bound?.[1], ip: statement.bound?.[2] });
+              logs.push({
+                id: logNextId++,
+                action: statement.bound?.[0],
+                details: statement.bound?.[1],
+                ip: statement.bound?.[2],
+                actor: statement.bound?.[3] || '',
+                status: statement.bound?.[4] || '',
+                duration_ms: statement.bound?.[5] || 0,
+                target_path: statement.bound?.[6] || '',
+                error_code: statement.bound?.[7] || '',
+                metadata: statement.bound?.[8] || '',
+                timestamp: sqlTimestamp(),
+              });
             }
             if (/INSERT INTO trash/i.test(sql)) {
               trashRows.push({
@@ -255,7 +269,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/INSERT INTO webhook_deliveries/i.test(sql)) {
               webhookDeliveryRows.push({
-                id: webhookDeliveryRows.length + 1,
+                id: webhookDeliveryNextId++,
                 event: statement.bound?.[0],
                 endpoint: statement.bound?.[1],
                 url: statement.bound?.[2],
@@ -268,7 +282,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/INSERT INTO system_warnings/i.test(sql)) {
               systemWarningRows.push({
-                id: systemWarningRows.length + 1,
+                id: systemWarningNextId++,
                 source: statement.bound?.[0],
                 message: statement.bound?.[1],
                 created_at: statement.bound?.[2],
@@ -435,11 +449,78 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/DELETE FROM path_access_attempts$/i.test(sql.trim())) {
               pathAttemptRows.length = 0;
             }
+            if (/DELETE FROM logs WHERE timestamp < \?/i.test(sql)) {
+              const cutoff = String(statement.bound?.[0] || '');
+              for (let i = logs.length - 1; i >= 0; i--) {
+                if (String(logs[i].timestamp || '') < cutoff) logs.splice(i, 1);
+              }
+            }
+            if (/DELETE FROM logs WHERE id NOT IN/i.test(sql)) {
+              const limit = Number(statement.bound?.[0] || 2000);
+              const keep = new Set(materializedLogs().slice(0, limit).map(row => row.id));
+              for (let i = logs.length - 1; i >= 0; i--) {
+                if (!keep.has(logs[i].id)) logs.splice(i, 1);
+              }
+            }
             if (/DELETE FROM download_bursts WHERE window_start < \? AND last_alert < \?/i.test(sql)) {
               const [windowCutoff, alertCutoff] = statement.bound || [];
               for (let i = downloadBurstRows.length - 1; i >= 0; i--) {
                 const row = downloadBurstRows[i];
                 if (Number(row.window_start || 0) < windowCutoff && Number(row.last_alert || 0) < alertCutoff) downloadBurstRows.splice(i, 1);
+              }
+            }
+            if (/DELETE FROM webhook_deliveries WHERE created_at < \?/i.test(sql)) {
+              const cutoff = Number(statement.bound?.[0] || 0);
+              for (let i = webhookDeliveryRows.length - 1; i >= 0; i--) {
+                if (Number(webhookDeliveryRows[i].created_at || 0) < cutoff) webhookDeliveryRows.splice(i, 1);
+              }
+            }
+            if (/DELETE FROM webhook_deliveries WHERE id NOT IN/i.test(sql)) {
+              const limit = Number(statement.bound?.[0] || 200);
+              const keep = new Set(
+                [...webhookDeliveryRows]
+                  .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0))
+                  .slice(0, limit)
+                  .map(row => row.id)
+              );
+              for (let i = webhookDeliveryRows.length - 1; i >= 0; i--) {
+                if (!keep.has(webhookDeliveryRows[i].id)) webhookDeliveryRows.splice(i, 1);
+              }
+            }
+            if (/DELETE FROM system_warnings WHERE created_at < \?/i.test(sql)) {
+              const cutoff = Number(statement.bound?.[0] || 0);
+              for (let i = systemWarningRows.length - 1; i >= 0; i--) {
+                if (Number(systemWarningRows[i].created_at || 0) < cutoff) systemWarningRows.splice(i, 1);
+              }
+            }
+            if (/DELETE FROM system_warnings WHERE id NOT IN/i.test(sql)) {
+              const limit = Number(statement.bound?.[0] || 100);
+              const keep = new Set(
+                [...systemWarningRows]
+                  .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0))
+                  .slice(0, limit)
+                  .map(row => row.id)
+              );
+              for (let i = systemWarningRows.length - 1; i >= 0; i--) {
+                if (!keep.has(systemWarningRows[i].id)) systemWarningRows.splice(i, 1);
+              }
+            }
+            if (/DELETE FROM file_tasks WHERE status NOT IN \('queued', 'running'\) AND finished_at > 0 AND finished_at < \?/i.test(sql)) {
+              const cutoff = Number(statement.bound?.[0] || 0);
+              for (let i = taskRows.length - 1; i >= 0; i--) {
+                const row = taskRows[i];
+                if (!['queued', 'running'].includes(row.status) && Number(row.finished_at || 0) > 0 && Number(row.finished_at || 0) < cutoff) taskRows.splice(i, 1);
+              }
+            }
+            if (/DELETE FROM file_tasks\s+WHERE status NOT IN \('queued', 'running'\)\s+AND id NOT IN/i.test(sql)) {
+              const limit = Number(statement.bound?.[0] || 100);
+              const completed = taskRows
+                .filter(row => !['queued', 'running'].includes(row.status))
+                .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0))
+                .slice(0, limit);
+              const keep = new Set(completed.map(row => row.id));
+              for (let i = taskRows.length - 1; i >= 0; i--) {
+                if (!['queued', 'running'].includes(taskRows[i].status) && !keep.has(taskRows[i].id)) taskRows.splice(i, 1);
               }
             }
             return {};
@@ -527,15 +608,23 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM share_links ORDER BY created_at DESC/i.test(sql)) {
               return { results: [...shareRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)) };
             }
-            if (/SELECT \* FROM webhook_deliveries ORDER BY created_at DESC LIMIT 20/i.test(sql)) {
-              return { results: [...webhookDeliveryRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, 20) };
+            if (/SELECT \* FROM webhook_deliveries ORDER BY created_at DESC/i.test(sql)) {
+              return {
+                results: [...webhookDeliveryRows]
+                  .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0))
+                  .slice(0, 20)
+              };
             }
             if (/SELECT \* FROM file_tasks ORDER BY created_at DESC LIMIT \?/i.test(sql)) {
               const limit = Number(statement.bound?.[0] || 20);
               return { results: [...taskRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, limit) };
             }
-            if (/SELECT \* FROM system_warnings ORDER BY created_at DESC LIMIT 10/i.test(sql)) {
-              return { results: [...systemWarningRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, 10) };
+            if (/SELECT \* FROM system_warnings ORDER BY created_at DESC/i.test(sql)) {
+              return {
+                results: [...systemWarningRows]
+                  .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0))
+                  .slice(0, 10)
+              };
             }
             if (/SELECT kind, COUNT\(\*\) as count, SUM\(size\) as size FROM file_index GROUP BY kind/i.test(sql)) {
               const byKind = {};

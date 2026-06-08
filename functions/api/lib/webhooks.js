@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Webhook notification system for file operations.
  * Sends HTTP POST notifications to configured webhook URLs when
  * significant events occur (file upload, delete, move, etc.).
@@ -16,6 +16,8 @@ import { ensureCoreTables } from './common.js';
 
 const WEBHOOK_TIMEOUT_MS = 5000;
 const MAX_RETRIES = 2;
+const DELIVERY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const DELIVERY_RETENTION_ROWS = 200;
 const WEBHOOK_MSG_TYPES = ['json', 'text', 'markdown'];
 const WEBHOOK_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const WEBHOOK_EVENTS = [
@@ -230,7 +232,7 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
       }
       lastError = `HTTP ${res.status}`;
     } catch (err) {
-      // Network error or timeout — retry
+      // Network error or timeout: retry.
       lastError = err?.name === 'AbortError' ? 'Timeout' : (err?.message || 'Network error');
     }
     if (attempt < retries) {
@@ -244,6 +246,7 @@ async function recordDelivery(env, endpoint, event, result) {
   if (!env?.D1) return;
   try {
     await ensureCoreTables(env);
+    const createdAt = Date.now();
     await env.D1.prepare(
       'INSERT INTO webhook_deliveries (event, endpoint, url, ok, status, error, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
@@ -254,9 +257,18 @@ async function recordDelivery(env, endpoint, event, result) {
       Number(result.status || 0),
       result.error || '',
       Number(result.durationMs || 0),
-      Date.now(),
+      createdAt,
     ).run();
+    await cleanupWebhookDeliveries(env, createdAt);
   } catch (_) {}
+}
+
+async function cleanupWebhookDeliveries(env, now = Date.now()) {
+  const cutoff = now - DELIVERY_RETENTION_MS;
+  await env.D1.prepare('DELETE FROM webhook_deliveries WHERE created_at < ?').bind(cutoff).run();
+  await env.D1.prepare(
+    'DELETE FROM webhook_deliveries WHERE id NOT IN (SELECT id FROM webhook_deliveries ORDER BY created_at DESC, id DESC LIMIT ?)'
+  ).bind(DELIVERY_RETENTION_ROWS).run();
 }
 
 /**
