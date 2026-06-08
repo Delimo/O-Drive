@@ -1177,6 +1177,21 @@ test('admin stats can summarize from file index', async () => {
   assert.ok(data.attention.some(item => item.title === '系统提醒待查看'));
 });
 
+test('admin attention warns when storage quota usage reaches 90 percent', async () => {
+  const env = makeEnv();
+  await setStorageQuotaForTest(env.D1, 100);
+  await upsertFileIndex(env, 'docs/archive.zip', { size: 90, contentType: 'application/zip', uploaded: new Date('2026-01-03') });
+
+  const res = await handleAdminStats(env);
+  const data = await res.json();
+  const item = data.attention.find(entry => entry.title === '存储空间即将用满');
+
+  assert.ok(item);
+  assert.equal(item.level, 'warning');
+  assert.equal(item.tab, 'quota');
+  assert.match(item.body, /90%/);
+});
+
 test('admin maintenance reports counts and runs cleanup actions', async () => {
   const env = makeEnv({
     objects: [

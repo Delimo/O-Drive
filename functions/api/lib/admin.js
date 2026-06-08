@@ -180,6 +180,21 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
       tab: 'health',
     });
   }
+  try {
+    const quota = await getStorageQuota(env.D1);
+    if (quota > 0) {
+      const used = await getStorageUsed(env.D1);
+      const usedPercent = Math.round((used / quota) * 100);
+      if (usedPercent >= 90) {
+        items.push({
+          level: 'warning',
+          title: '存储空间即将用满',
+          body: `已使用 ${formatQuotaBytes(used)} / ${formatQuotaBytes(quota)}（${usedPercent}%），建议清理回收站或调整配额。`,
+          tab: 'quota',
+        });
+      }
+    }
+  } catch (_) {}
   if (trashCount >= 100 || trashSize > Math.max(totalSize * 0.2, 1024 * 1024 * 1024)) {
     items.push({
       level: 'warning',

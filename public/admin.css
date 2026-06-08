@@ -2349,12 +2349,20 @@ body.admin-page {
 }
 
 .admin-page .breakdown-grid,
-.admin-page .latest-grid,
-.admin-page .attention-grid {
+.admin-page .latest-grid {
   min-height: 0;
   flex: 1;
   display: grid;
   grid-template-rows: repeat(7, minmax(0, 1fr));
+}
+
+.admin-page .attention-grid {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  align-content: start;
+  grid-auto-rows: minmax(68px, auto);
+  overflow-y: auto;
 }
 
 .admin-page .breakdown-grid > div,
@@ -2367,6 +2375,90 @@ body.admin-page {
 .admin-page .latest-grid,
 .admin-page .attention-grid {
   gap: 8px;
+}
+
+.admin-page .overview-focus-panel {
+  gap: 16px;
+}
+
+.admin-page .overview-focus-pane {
+  min-height: 0;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-page .overview-task-pane {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-page .overview-focus-head {
+  min-height: 32px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.admin-page .overview-focus-head .btn {
+  flex-shrink: 0;
+}
+
+.admin-page .task-summary-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.admin-page .task-summary-compact .task-summary-card {
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.admin-page .task-summary-compact .task-summary-card span {
+  font-size: 11px;
+}
+
+.admin-page .task-summary-compact .task-summary-card strong {
+  font-size: 17px;
+}
+
+.admin-page .task-list-compact {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.admin-page .task-list-compact .task-empty {
+  min-height: 0;
+  height: 100%;
+  padding: 14px;
+}
+
+.admin-page .task-list-compact .task-row {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.admin-page .task-list-compact .task-row-head strong {
+  font-size: 13px;
+}
+
+.admin-page .task-list-compact .task-row-count {
+  position: static;
+  justify-self: end;
+  margin-top: -4px;
+}
+
+.admin-page .task-list-compact .task-row-meta {
+  gap: 6px;
 }
 
 .admin-page .breakdown-item,
@@ -2573,16 +2665,14 @@ body.admin-page {
   .admin-page #health-tab,
   .admin-page #logs-tab,
   .admin-page #quota-tab,
-  .admin-page #shares-tab,
-  .admin-page #tasks-tab {
+  .admin-page #shares-tab {
     overflow-y: auto;
   }
 
   .admin-page #health-tab .admin-page-panel,
   .admin-page #logs-tab .admin-page-panel,
   .admin-page #quota-tab .admin-page-panel,
-  .admin-page #shares-tab .admin-page-panel,
-  .admin-page #tasks-tab .admin-page-panel {
+  .admin-page #shares-tab .admin-page-panel {
     overflow: visible;
   }
 
@@ -2751,7 +2841,6 @@ body.admin-page {
   .admin-page #logs-tab,
   .admin-page #access-tab,
   .admin-page #quota-tab,
-  .admin-page #tasks-tab,
   .admin-page #shares-tab,
   .admin-page #webhooks-tab {
     overflow: visible;
@@ -2780,8 +2869,7 @@ body.admin-page {
 
   .admin-page .health-workbench,
   .admin-page .log-workbench,
-  .admin-page .share-workbench,
-  .admin-page .task-workbench {
+  .admin-page .share-workbench {
     height: auto;
     overflow: visible;
   }

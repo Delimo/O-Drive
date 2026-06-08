@@ -14,7 +14,7 @@ import {
 } from './admin-webhook-utils.js';
 
 const LOG_PAGE_SIZE = 10;
-export const ADMIN_TABS = ['overview', 'health', 'logs', 'access', 'quota', 'shares', 'webhooks', 'tasks'];
+export const ADMIN_TABS = ['overview', 'health', 'logs', 'access', 'quota', 'shares', 'webhooks'];
 
 export function getInitialAdminTab() {
   const tab = (window.location.hash || '').replace(/^#/, '');
@@ -171,14 +171,13 @@ export const AdminActions = {
       history.replaceState(null, '', `#${tabId}`);
     }
 
-    if (tabId === 'overview') return this.loadStats();
+    if (tabId === 'overview') return Promise.all([this.loadStats(), this.loadTasks()]);
     if (tabId === 'health') return Promise.all([this.loadHealth(), this.loadMaintenance()]);
     if (tabId === 'logs') return this.loadLogs();
     if (tabId === 'access') return this.loadAccessRules();
     if (tabId === 'quota') return this.loadQuota();
     if (tabId === 'shares') return this.loadShares();
     if (tabId === 'webhooks') return Promise.all([this.loadWebhooks(), this.loadWebhookDeliveries()]);
-    if (tabId === 'tasks') return this.loadTasks();
     return this.loadStats();
   },
 
