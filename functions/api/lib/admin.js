@@ -20,6 +20,36 @@ function emptyBreakdown() {
   };
 }
 
+function parseCapacityBytes(value) {
+  if (typeof value === 'number') return Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
+  const raw = String(value ?? '').trim();
+  if (!raw) return 0;
+  const match = raw.match(/^(\d+(?:\.\d+)?)\s*([kmgtp]?i?b?|b)?$/i);
+  if (!match) return Math.max(0, Math.floor(Number(raw) || 0));
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return 0;
+  const unit = String(match[2] || 'b').toLowerCase();
+  const powers = {
+    b: 0,
+    k: 1,
+    kb: 1,
+    kib: 1,
+    m: 2,
+    mb: 2,
+    mib: 2,
+    g: 3,
+    gb: 3,
+    gib: 3,
+    t: 4,
+    tb: 4,
+    tib: 4,
+    p: 5,
+    pb: 5,
+    pib: 5,
+  };
+  return Math.max(0, Math.floor(amount * (1024 ** (powers[unit] ?? 0))));
+}
+
 export async function handleAdminLogs(env, url) {
   const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
   const size = Math.max(1, Math.min(100, Number(url.searchParams.get('size') || '20')));
@@ -318,7 +348,7 @@ export async function handleAdminQuota(env, request, method) {
   }
   if (method === 'PUT') {
     const { bytes } = await request.json().catch(() => ({}));
-    const nextBytes = Number(bytes) || 0;
+    const nextBytes = parseCapacityBytes(bytes);
     await setStorageQuota(env.D1, nextBytes);
     await addLog(env, request, 'QUOTA', nextBytes > 0 ? `设置存储配额为 ${formatQuotaBytes(nextBytes)}` : '取消存储配额限制');
     return jsonResponse({ success: true });

@@ -3,6 +3,7 @@
 const FILE_INDEX_SQL = `
   CREATE TABLE IF NOT EXISTS file_index (
     path TEXT PRIMARY KEY,
+    storage_id TEXT NOT NULL DEFAULT 'r2',
     name TEXT NOT NULL,
     parent TEXT NOT NULL,
     kind TEXT NOT NULL,
@@ -55,15 +56,22 @@ export async function ensureFileIndexTable(env) {
   if (!env?.D1) return false;
   try {
     await runStatement(env.D1.prepare(FILE_INDEX_SQL));
+    try {
+      await runStatement(env.D1.prepare("ALTER TABLE file_index ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'"));
+    } catch (_) {}
+    try {
+      await runStatement(env.D1.prepare('CREATE INDEX IF NOT EXISTS idx_file_index_storage_id ON file_index(storage_id)'));
+    } catch (_) {}
     return true;
   } catch (_) {
     return false;
   }
 }
 
-const UPSERT_SQL = `INSERT INTO file_index (path, name, parent, kind, size, content_type, uploaded_at, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+const UPSERT_SQL = `INSERT INTO file_index (path, storage_id, name, parent, kind, size, content_type, uploaded_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT(path) DO UPDATE SET
+    storage_id = excluded.storage_id,
     name = excluded.name,
     parent = excluded.parent,
     kind = excluded.kind,
@@ -76,7 +84,7 @@ export function buildUpsertParams(key, meta = {}) {
   const size = Number(meta.size || 0);
   const contentType = meta.httpMetadata?.contentType || meta.contentType || '';
   const uploadedAt = uploadedMs(meta.uploaded);
-  return [key, nameOf(key), parentOf(key), indexedFileKind(key), size, contentType, uploadedAt, Date.now()];
+  return [key, meta.storageId || meta.storage_id || 'r2', nameOf(key), parentOf(key), indexedFileKind(key), size, contentType, uploadedAt, Date.now()];
 }
 
 export async function upsertFileIndex(env, key, meta = {}) {
@@ -151,12 +159,32 @@ export async function fileIndexStatus(env) {
   }
 }
 
+export async function getFileIndexStorageId(env, key) {
+  if (!key || !(await ensureFileIndexTable(env))) return '';
+  try {
+    const row = await env.D1.prepare('SELECT storage_id FROM file_index WHERE path = ?').bind(key).first();
+    return row?.storage_id || 'r2';
+  } catch (_) {
+    return '';
+  }
+}
+
+export async function getIndexedStorageUsed(env, storageId = 'r2') {
+  if (!(await ensureFileIndexTable(env))) return 0;
+  try {
+    const row = await env.D1.prepare('SELECT COALESCE(SUM(size), 0) AS total FROM file_index WHERE storage_id = ?').bind(storageId).first();
+    return Number(row?.total || 0);
+  } catch (_) {
+    return 0;
+  }
+}
+
 export async function syncFileIndexFromR2(env, { maxObjects = 20000 } = {}) {
   if (!(await ensureFileIndexTable(env))) return { synced: 0, truncated: false };
   const listed = await listR2Objects(env.R2, {}, { maxObjects });
   const entries = (listed.objects || [])
     .filter(obj => indexableKey(obj.key))
-    .map(obj => [obj.key, obj]);
+    .map(obj => [obj.key, { ...obj, storageId: 'r2' }]);
   const synced = await batchUpsertFileIndex(env, entries);
   return { synced, truncated: Boolean(listed.truncated) };
 }
@@ -176,10 +204,37 @@ export function mapIndexRow(row) {
     name: row.name,
     path: '/' + row.path,
     fullKey: row.path,
+    storageId: row.storage_id || 'r2',
     sizeFormatted: formatBytes(size),
     rawSize: size,
     time,
   };
+}
+
+export async function listIndexedDirectory(env, parent = '') {
+  if (!(await ensureFileIndexTable(env))) return { folders: [], files: [] };
+  const cleanParent = String(parent || '').replace(/^\/+|\/+$/g, '');
+  try {
+    const [fileRows, descendantRows] = await env.D1.batch([
+      env.D1.prepare('SELECT * FROM file_index WHERE parent = ? ORDER BY name ASC').bind(cleanParent),
+      env.D1.prepare('SELECT path FROM file_index WHERE path LIKE ? LIMIT 10000').bind(cleanParent ? `${cleanParent}/%` : '%'),
+    ]);
+    const files = (fileRows.results || []).map(mapIndexRow);
+    const folderNames = new Set();
+    for (const row of descendantRows.results || []) {
+      const path = String(row.path || '');
+      const rest = cleanParent ? path.slice(cleanParent.length + 1) : path;
+      const slash = rest.indexOf('/');
+      if (slash > 0) folderNames.add(rest.slice(0, slash));
+    }
+    const folders = [...folderNames].map(name => {
+      const fullKey = cleanParent ? `${cleanParent}/${name}` : name;
+      return { name, path: '/' + fullKey, fullKey, indexed: true };
+    });
+    return { folders, files };
+  } catch (_) {
+    return { folders: [], files: [] };
+  }
 }
 
 function searchFilterClauses(filters = {}) {

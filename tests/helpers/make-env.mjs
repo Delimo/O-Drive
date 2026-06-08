@@ -214,7 +214,8 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 name: statement.bound?.[3],
                 kind: statement.bound?.[4],
                 size: statement.bound?.[5],
-                trashed_at: statement.bound?.[6],
+                storage_id: statement.bound?.length >= 8 ? statement.bound?.[6] : 'r2',
+                trashed_at: statement.bound?.length >= 8 ? statement.bound?.[7] : statement.bound?.[6],
               });
             }
             if (/INSERT INTO path_passwords/i.test(sql)) {
@@ -233,13 +234,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/INSERT INTO file_index/i.test(sql)) {
               const row = {
                 path: statement.bound?.[0],
-                name: statement.bound?.[1],
-                parent: statement.bound?.[2],
-                kind: statement.bound?.[3],
-                size: statement.bound?.[4],
-                content_type: statement.bound?.[5],
-                uploaded_at: statement.bound?.[6],
-                updated_at: statement.bound?.[7],
+                storage_id: statement.bound?.length >= 9 ? statement.bound?.[1] : 'r2',
+                name: statement.bound?.length >= 9 ? statement.bound?.[2] : statement.bound?.[1],
+                parent: statement.bound?.length >= 9 ? statement.bound?.[3] : statement.bound?.[2],
+                kind: statement.bound?.length >= 9 ? statement.bound?.[4] : statement.bound?.[3],
+                size: statement.bound?.length >= 9 ? statement.bound?.[5] : statement.bound?.[4],
+                content_type: statement.bound?.length >= 9 ? statement.bound?.[6] : statement.bound?.[5],
+                uploaded_at: statement.bound?.length >= 9 ? statement.bound?.[7] : statement.bound?.[6],
+                updated_at: statement.bound?.length >= 9 ? statement.bound?.[8] : statement.bound?.[7],
               };
               const idx = fileIndexRows.findIndex(item => item.path === row.path);
               if (idx >= 0) fileIndexRows[idx] = row;
@@ -568,8 +570,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const value = kvRows.get(statement.bound?.[0]);
               return value == null ? null : { value };
             }
+            if (/SELECT storage_id FROM file_index WHERE path = \?/i.test(sql)) {
+              const row = fileIndexRows.find(item => item.path === statement.bound?.[0]);
+              return row ? { storage_id: row.storage_id || 'r2' } : null;
+            }
             if (/SELECT COALESCE\(SUM\(size\), 0\) AS total FROM file_index/i.test(sql)) {
-              return { total: fileIndexRows.reduce((sum, row) => sum + Number(row.size || 0), 0) };
+              const storageId = /WHERE storage_id = \?/i.test(sql) ? statement.bound?.[0] : '';
+              const rows = storageId ? fileIndexRows.filter(row => (row.storage_id || 'r2') === storageId) : fileIndexRows;
+              return { total: rows.reduce((sum, row) => sum + Number(row.size || 0), 0) };
             }
             if (/SELECT COUNT\(\*\) as count, COALESCE\(SUM\(size\), 0\) as totalSize, COALESCE\(MAX\(updated_at\), 0\) as latestUpdatedAt FROM file_index/i.test(sql)) {
               return {
@@ -596,6 +604,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const limit = statement.bound?.[statement.bound.length - 2] ?? rows.length;
               const offset = statement.bound?.[statement.bound.length - 1] ?? 0;
               return { results: rows.sort((a, b) => a.path.localeCompare(b.path)).slice(offset, offset + limit) };
+            }
+            if (/SELECT \* FROM file_index WHERE parent = \?/i.test(sql)) {
+              const parent = statement.bound?.[0] || '';
+              return { results: fileIndexRows.filter(row => row.parent === parent).sort((a, b) => String(a.name).localeCompare(String(b.name))) };
+            }
+            if (/SELECT path FROM file_index WHERE path LIKE \?/i.test(sql)) {
+              const prefix = String(statement.bound?.[0] || '').replace(/%$/, '');
+              return { results: fileIndexRows.filter(row => String(row.path || '').startsWith(prefix)).map(row => ({ path: row.path })) };
             }
             if (/SELECT key FROM settings WHERE value = 'hidden'/i.test(sql)) {
               return {

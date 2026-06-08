@@ -35,6 +35,7 @@ import {
   handleAdminWebhookDeliveries,
   loadWebhookEndpoints,
 } from './admin.js';
+import { handleAdminStorage, handleAdminStorageTest } from './storage.js';
 import { handleAdminMaintenance, handleAdminMaintenanceAction } from './admin-maintenance.js';
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
 import { handleAdminShares } from './shares.js';
@@ -93,6 +94,8 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
   if (path === '/api/admin/settings/protected') return await handleProtectedSettings(env, request, method, url);
   if (path === '/api/admin/settings/trash-retention') return await handleTrashRetention(env, request, method);
   if (path === '/api/admin/settings/quota') return await handleAdminQuota(env, request, method);
+  if (path === '/api/admin/settings/storage/test' && method === 'POST') return await handleAdminStorageTest(env, request);
+  if (path === '/api/admin/settings/storage') return await handleAdminStorage(env, request, method);
   if (path === '/api/admin/settings/webhooks') return await handleAdminWebhooks(env, request, method);
   if (path === '/api/admin/webhook-deliveries') return await handleAdminWebhookDeliveries(env);
   if (path === '/api/admin/shares') return await handleAdminShares(env, request, method, url);

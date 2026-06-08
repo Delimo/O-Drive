@@ -1,4 +1,6 @@
-﻿function encodeR2Key(key) {
+import { resolveExistingStorageId, storageGet } from './storage.js';
+
+function encodeR2Key(key) {
   return String(key || '')
     .split('/')
     .filter(Boolean)
@@ -11,7 +13,8 @@ function isImageKey(key) {
 }
 
 async function originalImageResponse(env, r2Key) {
-  const obj = await env.R2.get(r2Key);
+  const storageId = await resolveExistingStorageId(env, r2Key);
+  const obj = await storageGet(env, storageId, r2Key);
   if (!obj) return new Response('404', { status: 404 });
   return new Response(obj.body, {
     headers: {

@@ -20,7 +20,8 @@ import {
   handleTrashRetention,
   handlePaste,
 } from '../functions/api/lib/file-mutations.js';
-import { handleAdminHealth, handleAdminLogs, handleAdminStats } from '../functions/api/lib/admin.js';
+import { handleAdminHealth, handleAdminLogs, handleAdminQuota, handleAdminStats } from '../functions/api/lib/admin.js';
+import { handleAdminStorage, handleAdminStorageTest } from '../functions/api/lib/storage.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
@@ -1139,6 +1140,192 @@ test('quota check syncs empty file index from R2 before accepting uploads', asyn
 
   assert.equal(upload.status, 507);
   assert.equal(await indexedFileCount(env), 1);
+});
+
+test('admin quota accepts human-readable capacity input', async () => {
+  const env = makeEnv();
+  const expected = Math.floor(9.5 * 1024 * 1024 * 1024);
+
+  const saved = await handleAdminQuota(env, new Request('https://example.com/api/admin/settings/quota', {
+    method: 'PUT',
+    body: JSON.stringify({ bytes: '9.5GB' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'PUT');
+  assert.equal(saved.status, 200);
+
+  const loaded = await handleAdminQuota(env, new Request('https://example.com/api/admin/settings/quota'), 'GET');
+  const data = await loaded.json();
+  assert.equal(data.quota, expected);
+  assert.equal(data.quotaFormatted, '9.5 GB');
+});
+
+test('R2 high-water uploads overflow to configured S3 with a visible warning', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'existing.bin', { size: 9 * 1024 * 1024 * 1024, storageId: 'r2', uploaded: Date.now() });
+  const saved = await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
+    method: 'PUT',
+    body: JSON.stringify({
+      r2QuotaBytes: 10 * 1024 * 1024 * 1024,
+      overflowEnabled: true,
+      overflowThresholdPercent: 85,
+      spaces: [{
+        id: 's3-main',
+        name: 'S3-主存储',
+        endpoint: 'https://s3.example.test',
+        bucket: 'bucket-a',
+        accessKeyId: 'ak',
+        secretAccessKey: 'sk',
+        region: 'auto',
+        enabled: true,
+        overflowTarget: true,
+      }],
+      bindings: [],
+    }),
+  }), 'PUT');
+  assert.equal(saved.status, 200);
+
+  const oldFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), method: options.method });
+    return new Response('', { status: 200 });
+  };
+  try {
+    const form = new FormData();
+    form.append('file', new File(['new-content'], 'overflow.txt', { type: 'text/plain' }));
+    const upload = await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: form }), '');
+    const data = await upload.json();
+    assert.equal(upload.status, 200);
+    assert.equal(data.storageId, 's3-main');
+    assert.equal(data.overflowed, true);
+    assert.match(data.warning, /R2 空间已使用/);
+    assert.equal(calls[0]?.method, 'PUT');
+    assert.match(calls[0]?.url || '', /s3\.example\.test/);
+
+    const listed = await handleListFiles(env, new Request('https://example.com/api/files'), [], { role: 'admin' }, '');
+    const listedData = await listed.json();
+    assert.ok(listedData.files.some(item => item.fullKey === 'overflow.txt' && item.storageId === 's3-main'));
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
+test('admin can test S3-compatible storage connectivity', async () => {
+  const env = makeEnv();
+  const oldFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), method: options.method, auth: options.headers?.get?.('authorization') || '' });
+    return new Response('<ListBucketResult></ListBucketResult>', { status: 200 });
+  };
+  try {
+    const res = await handleAdminStorageTest(env, new Request('https://example.com/api/admin/settings/storage/test', {
+      method: 'POST',
+      body: JSON.stringify({
+        space: {
+          id: 's3-main',
+          name: 'S3-主存储',
+          endpoint: 'https://s3.example.test',
+          bucket: 'bucket-a',
+          accessKeyId: 'ak',
+          secretAccessKey: 'sk',
+          region: 'auto',
+        },
+      }),
+    }));
+    const data = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(data.success, true);
+    assert.equal(calls[0]?.method, 'GET');
+    assert.match(calls[0]?.url || '', /list-type=2/);
+    assert.match(calls[0]?.auth || '', /AWS4-HMAC-SHA256/);
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
+test('admin S3 storage test reports connection failures', async () => {
+  const env = makeEnv();
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('Forbidden', { status: 403 });
+  try {
+    const res = await handleAdminStorageTest(env, new Request('https://example.com/api/admin/settings/storage/test', {
+      method: 'POST',
+      body: JSON.stringify({
+        space: {
+          id: 's3-main',
+          name: 'S3-主存储',
+          endpoint: 'https://s3.example.test',
+          bucket: 'bucket-a',
+          accessKeyId: 'bad',
+          secretAccessKey: 'bad',
+          region: 'auto',
+        },
+      }),
+    }));
+    const data = await res.json();
+    assert.equal(res.status, 502);
+    assert.equal(data.success, false);
+    assert.match(data.message, /HTTP 403/);
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
+test('uploads enforce the selected storage bucket quota', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'r2-used.bin', { size: Math.floor(9.5 * 1024 * 1024 * 1024) - 2, storageId: 'r2', uploaded: Date.now() });
+  await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
+    method: 'PUT',
+    body: JSON.stringify({
+      r2QuotaBytes: '9.5GB',
+      overflowEnabled: false,
+      overflowThresholdPercent: 85,
+      spaces: [],
+      bindings: [],
+    }),
+  }), 'PUT');
+
+  const tooLarge = new FormData();
+  tooLarge.append('file', new File(['hello'], 'too-large.bin', { type: 'application/octet-stream' }));
+  const denied = await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: tooLarge }), '');
+  const deniedData = await denied.json();
+  assert.equal(denied.status, 507);
+  assert.match(deniedData.message, /Cloudflare R2 空间配额不足/);
+});
+
+test('uploads enforce S3 bucket quota after path binding', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 's3/a.bin', { size: 90, storageId: 's3-main', uploaded: Date.now() });
+  await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
+    method: 'PUT',
+    body: JSON.stringify({
+      r2QuotaBytes: '9.5GB',
+      overflowEnabled: true,
+      overflowThresholdPercent: 85,
+      spaces: [{
+        id: 's3-main',
+        name: 'S3-主存储',
+        endpoint: 'https://s3.example.test',
+        bucket: 'bucket-a',
+        accessKeyId: 'ak',
+        secretAccessKey: 'sk',
+        region: 'auto',
+        quotaBytes: '100B',
+        enabled: true,
+        overflowTarget: true,
+      }],
+      bindings: [{ path: 's3', storageId: 's3-main' }],
+    }),
+  }), 'PUT');
+
+  const form = new FormData();
+  form.append('file', new File(['hello world'], 'b.txt', { type: 'text/plain' }));
+  const denied = await handleUpload(env, new Request('https://example.com/api/files/s3', { method: 'POST', body: form }), 's3');
+  const data = await denied.json();
+  assert.equal(denied.status, 507);
+  assert.equal(data.storageId, 's3-main');
+  assert.match(data.message, /S3-主存储 空间配额不足/);
 });
 
 test('admin stats summarize visible stored files', async () => {

@@ -1,16 +1,39 @@
-﻿import { jsonResponse, formatBytes, isHiddenKey, isReservedKey, listR2Objects } from './common.js';
+import { jsonResponse, formatBytes, isHiddenKey, isReservedKey } from './common.js';
 import { checkProtectedAccess, markProtection } from './protected-paths.js';
-import { indexedFileKind, searchFileIndex } from './file-index.js';
+import { indexedFileKind, listIndexedDirectory, searchFileIndex } from './file-index.js';
+import { loadStorageConfig, resolveExistingStorageId, resolveStorageIdForPath, storageGet, storageHead, storageList } from './storage.js';
 
 function mapEntry(o) {
   return {
     name: o.key.split('/').pop(),
     path: '/' + o.key,
     fullKey: o.key,
+    storageId: o.storageId || 'r2',
     sizeFormatted: formatBytes(o.size),
     rawSize: o.size,
     time: o.uploaded.getTime(),
   };
+}
+
+function cleanPath(path = '') {
+  return String(path || '').replace(/^\/+|\/+$/g, '');
+}
+
+function virtualBindingFolders(bindings = [], currentKey = '') {
+  const current = cleanPath(currentKey);
+  const prefix = current ? `${current}/` : '';
+  const names = new Set();
+  for (const binding of bindings || []) {
+    const path = cleanPath(binding.path);
+    if (!path || (current && !path.startsWith(prefix))) continue;
+    const rest = current ? path.slice(prefix.length) : path;
+    if (!rest || rest.includes('/')) continue;
+    names.add(rest);
+  }
+  return [...names].map(name => {
+    const fullKey = current ? `${current}/${name}` : name;
+    return { name, path: '/' + fullKey, fullKey, virtual: true };
+  });
 }
 
 export async function handleSearch(env, request, url, hiddenPaths, auth, protectedPaths = []) {
@@ -28,14 +51,15 @@ export async function handleSearch(env, request, url, hiddenPaths, auth, protect
   const matches = [];
   let nextCursor = '';
   let scanned = 0;
+  const storageId = await resolveStorageIdForPath(env, scope);
 
   do {
     const pageLimit = Math.max(1, Math.min(limit - matches.length, scanLimit - scanned));
-    const listed = await env.R2.list({ prefix: scope, cursor, limit: pageLimit });
+    const listed = await storageList(env, storageId, { prefix: scope, cursor, limit: pageLimit }, { maxObjects: pageLimit });
     const objects = listed.objects || [];
     scanned += objects.length;
     const pageMatches = objects
-      .map(mapEntry)
+      .map(obj => mapEntry({ ...obj, storageId }))
       .filter(f => f.name.toLowerCase().includes(q) && f.name !== '.folder' && !isReservedKey(f.fullKey) && matchesSearchFilters(f, filters) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)));
     matches.push(...pageMatches);
     cursor = listed.truncated ? listed.cursor : undefined;
@@ -92,19 +116,27 @@ export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, pr
     return jsonResponse({ success: false, code: 'password_required', path: access.rule.path, message: 'Password required' }, 403);
   }
   const prefix = r2Key ? r2Key + '/' : '';
-  const listed = await listR2Objects(env.R2, { prefix, delimiter: '/' });
-  const folders = await markProtection((listed.delimitedPrefixes || [])
-    .map(p => {
-      const fullKey = p.slice(0, -1);
-      return { name: fullKey.split('/').slice(-1)[0], path: '/' + fullKey, fullKey };
-    })
+  const storageId = await resolveStorageIdForPath(env, r2Key);
+  const listed = await storageList(env, storageId, { prefix, delimiter: '/' });
+  const config = await loadStorageConfig(env);
+  const indexed = await listIndexedDirectory(env, r2Key);
+  const folderMap = new Map();
+  for (const folder of virtualBindingFolders(config.bindings, r2Key)) folderMap.set(folder.fullKey, folder);
+  for (const folder of indexed.folders || []) folderMap.set(folder.fullKey, folder);
+  for (const p of listed.delimitedPrefixes || []) {
+    const fullKey = p.slice(0, -1);
+    folderMap.set(fullKey, { name: fullKey.split('/').slice(-1)[0], path: '/' + fullKey, fullKey });
+  }
+  const folders = await markProtection([...folderMap.values()]
     .filter(f => f.fullKey && f.name && f.name !== '.folder')
     .filter(f => !isReservedKey(f.fullKey))
     .filter(f => auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)), request, env, auth, protectedPaths);
-  const files = await markProtection((listed.objects || [])
-    .map(mapEntry)
+  const fileMap = new Map();
+  for (const file of indexed.files || []) fileMap.set(file.fullKey, file);
+  for (const file of (listed.objects || []).map(obj => mapEntry({ ...obj, storageId }))) fileMap.set(file.fullKey, file);
+  const files = await markProtection([...fileMap.values()]
     .filter(f => f.name !== '' && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths))), request, env, auth, protectedPaths);
-  return jsonResponse({ folders, files });
+  return jsonResponse({ folders, files, storageId });
 }
 
 function parseByteRange(rangeHeader) {
@@ -127,8 +159,9 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
   const rangeHeader = request.headers.get('Range');
   const parsedRange = parseByteRange(rangeHeader);
   const wantsRange = Boolean(parsedRange);
-  const meta = wantsRange ? await env.R2.head(r2Key) : null;
-  const obj = wantsRange ? meta : await env.R2.get(r2Key);
+  const storageId = await resolveExistingStorageId(env, r2Key);
+  const meta = wantsRange ? await storageHead(env, storageId, r2Key) : null;
+  const obj = wantsRange ? meta : await storageGet(env, storageId, r2Key);
   if (!obj) return new Response('404', { status: 404 });
 
   const headers = new Headers();
@@ -166,7 +199,7 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
     length = end - offset + 1;
   }
 
-  const ranged = await env.R2.get(r2Key, { range: { offset, length } });
+  const ranged = await storageGet(env, storageId, r2Key, { range: { offset, length } });
   if (!ranged) return new Response('404', { status: 404 });
 
   headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${size}`);

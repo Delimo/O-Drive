@@ -25,6 +25,22 @@ body.admin-page {
   min-height: 0;
 }
 
+body.admin-page[data-admin-tab="quota"] {
+  height: auto;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+body.admin-page[data-admin-tab="quota"] .container {
+  min-height: 100vh;
+}
+
+body.admin-page[data-admin-tab="quota"] .explorer-card {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+}
+
 .admin-page .tab-shell {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -490,7 +506,7 @@ body.admin-page {
 }
 
 .admin-page #quota-tab {
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .admin-page #quota-tab .admin-page-panel {
@@ -500,7 +516,7 @@ body.admin-page {
 .admin-page .storage-console {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   min-height: 0;
   overflow: visible;
 }
@@ -508,24 +524,25 @@ body.admin-page {
 .admin-page .storage-console-head {
   flex-shrink: 0;
   align-items: center;
-  padding-bottom: 14px;
+  margin-bottom: 0;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
 .admin-page .storage-metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .admin-page .storage-metric-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
-  min-height: 64px;
-  padding: 14px 16px;
+  min-height: 48px;
+  padding: 9px 13px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
@@ -540,7 +557,7 @@ body.admin-page {
 .admin-page .storage-metric-card strong {
   min-width: 0;
   color: var(--primary-strong);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 900;
   line-height: 1;
   text-align: right;
@@ -549,27 +566,28 @@ body.admin-page {
 
 .admin-page .storage-main-grid {
   display: grid;
-  grid-template-columns: minmax(360px, 0.86fr) minmax(460px, 1.14fr);
-  gap: 16px;
+  grid-template-columns: minmax(340px, 0.82fr) minmax(460px, 1.18fr);
+  gap: 12px;
   align-items: start;
   min-width: 0;
 }
 
 .admin-page .storage-stack {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
 }
 
 .admin-page .storage-panel {
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
-  padding: 16px;
+  padding: 13px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
+  box-sizing: border-box;
 }
 
 .admin-page .storage-panel-primary {
@@ -594,7 +612,7 @@ body.admin-page {
 }
 
 .admin-page .storage-panel-head p {
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 700;
@@ -604,7 +622,7 @@ body.admin-page {
 .admin-page .storage-input-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 96px;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -614,7 +632,7 @@ body.admin-page {
 
 .admin-page .storage-input-row .btn,
 .admin-page .storage-actions .btn {
-  height: 42px;
+  height: 40px;
   padding: 0 14px;
   font-size: 13px;
   font-weight: 850;
@@ -622,7 +640,7 @@ body.admin-page {
 
 .admin-page .storage-form-grid {
   display: grid;
-  gap: 10px;
+  gap: 9px 10px;
   min-width: 0;
 }
 
@@ -634,9 +652,19 @@ body.admin-page {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.admin-page .storage-panel-primary .storage-form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 1280px) {
+  .admin-page .storage-panel-primary .storage-form-grid.two:first-of-type {
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 0.64fr);
+  }
+}
+
 .admin-page .storage-field {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 
@@ -650,7 +678,15 @@ body.admin-page {
 .admin-page .storage-field .admin-input,
 .admin-page .storage-input-row .admin-input {
   width: 100%;
-  height: 42px;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.admin-page .storage-console .admin-input,
+.admin-page .storage-console .btn,
+.admin-page .storage-console select {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .admin-page .storage-actions {
@@ -659,6 +695,30 @@ body.admin-page {
   gap: 10px;
   align-items: center;
   justify-content: flex-start;
+}
+
+.admin-page .storage-console .quota-usage-card,
+.admin-page .storage-console .quota-note-card {
+  padding: 10px 12px;
+}
+
+.admin-page .storage-console .quota-usage-track {
+  height: 8px;
+}
+
+.admin-page .storage-console .access-mode-card {
+  min-height: 58px;
+  padding: 10px 12px;
+}
+
+.admin-page .storage-console .access-rule-list {
+  overflow: visible;
+  padding-right: 0;
+}
+
+.admin-page .storage-console .access-empty {
+  min-height: 74px;
+  padding: 14px;
 }
 
 .admin-page .quota-workbench-head {

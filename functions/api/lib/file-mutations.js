@@ -4,10 +4,24 @@
  * @typedef {ApiError & { completed?: number, failed?: Array<{path: string, message: string}> }} BatchResult
  */
 
-import { jsonResponse, normalizeName, addLog, isReservedKey, listR2Objects, assertCompleteListing } from './common.js';
+import { jsonResponse, normalizeName, addLog, isReservedKey, assertCompleteListing } from './common.js';
 import { deleteFileIndexKey, deleteFileIndexPrefix, upsertFileIndex } from './file-index.js';
 import { copyR2Object, copyTree, mapWithConcurrency } from './r2-tree.js';
 import { checkQuota, formatBytes as formatQuotaBytes } from './storage-quota.js';
+import {
+  checkStorageQuota,
+  chooseUploadStorage,
+  resolveExistingStorageId,
+  storageAbortMultipartUpload,
+  storageCompleteMultipartUpload,
+  storageCreateMultipartUpload,
+  storageDelete,
+  storageGet,
+  storageHead,
+  storageList,
+  storagePut,
+  storageUploadPart,
+} from './storage.js';
 
 const TRASH_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS trash (
@@ -17,6 +31,7 @@ const TRASH_TABLE_SQL = `
     name TEXT NOT NULL,
     kind TEXT NOT NULL,
     size INTEGER NOT NULL DEFAULT 0,
+    storage_id TEXT NOT NULL DEFAULT 'r2',
     trashed_at INTEGER NOT NULL
   )
 `;
@@ -37,9 +52,12 @@ async function ensureTrashTable(env) {
   const stmt = env.D1.prepare(TRASH_TABLE_SQL);
   if (typeof stmt.bind === 'function') {
     await stmt.bind().run();
-    return;
+  } else {
+    await stmt.run();
   }
-  await stmt.run();
+  try {
+    await env.D1.prepare("ALTER TABLE trash ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'").run();
+  } catch (_) {}
 }
 
 async function ensureSettingsTable(env) {
@@ -97,8 +115,9 @@ function estimatePathList(paths) {
  * @returns {Promise<boolean>}
  */
 async function keyExists(env, key) {
-  if (await env.R2.head(key)) return true;
-  const listed = await env.R2.list({ prefix: key + '/', limit: 1 });
+  const storageId = await resolveExistingStorageId(env, key);
+  if (await storageHead(env, storageId, key)) return true;
+  const listed = await storageList(env, storageId, { prefix: key + '/', limit: 1 });
   return Boolean((listed.objects || []).length || (listed.delimitedPrefixes || []).length);
 }
 
@@ -142,8 +161,9 @@ async function resolveUploadConflict(env, key, mode = 'error') {
 }
 
 async function softDeleteTree(env, sourceKey, request) {
-  const exact = await env.R2.get(sourceKey);
-  const listed = await listR2Objects(env.R2, { prefix: sourceKey + '/' });
+  const storageId = await resolveExistingStorageId(env, sourceKey);
+  const exact = await storageGet(env, storageId, sourceKey);
+  const listed = await storageList(env, storageId, { prefix: sourceKey + '/' });
   assertCompleteListing(listed, `Path ${sourceKey}`);
   const entries = [];
 
@@ -160,20 +180,20 @@ async function softDeleteTree(env, sourceKey, request) {
     const source = entry.key;
     const target = `.trash/${trashId}/${entry.key}`;
     const copied = await copyR2Object(env, source, target);
-    if (copied) await env.R2.delete(source);
+    if (copied) await storageDelete(env, storageId, source);
     if (copied) await deleteFileIndexKey(env, source);
   });
 
   if (!exact && entries.length === 1 && entries[0].key === `${sourceKey}/.folder`) {
-    await env.R2.put(`${trashKey}/.folder`, new Uint8Array(0));
+    await storagePut(env, storageId, `${trashKey}/.folder`, new Uint8Array(0));
   }
 
   const kind = exact && listed.objects.length === 0 ? 'file' : 'folder';
   const size = exact?.size || 0;
 
   await ensureTrashTable(env);
-  await env.D1.prepare('INSERT INTO trash (id, original_key, trash_key, name, kind, size, trashed_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .bind(trashId, sourceKey, trashKey, sourceKey.split('/').pop() || sourceKey, kind, size, Date.now())
+  await env.D1.prepare('INSERT INTO trash (id, original_key, trash_key, name, kind, size, storage_id, trashed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(trashId, sourceKey, trashKey, sourceKey.split('/').pop() || sourceKey, kind, size, storageId, Date.now())
     .run();
 
   await addLog(env, request, 'TRASH', sourceKey);
@@ -380,8 +400,9 @@ export async function handleOperationEstimate(env, request) {
 
   for (const key of normalizedPaths) {
     assertUserKey(key);
-    const exact = await env.R2.head(key);
-    const listed = await listR2Objects(env.R2, { prefix: key + '/' }, { maxObjects: 1001 });
+  const storageId = await resolveExistingStorageId(env, key);
+  const exact = await storageHead(env, storageId, key);
+  const listed = await storageList(env, storageId, { prefix: key + '/' }, { maxObjects: 1001 });
     const childCount = (listed.objects || []).length;
     const isFolder = childCount > 0;
     const exists = Boolean(exact || isFolder);
@@ -423,9 +444,10 @@ export async function handleMkdir(env, request, r2Key) {
   const key = folderKey + '/.folder';
   assertUserKey(key);
   await assertTargetAvailable(env, folderKey);
-  await env.R2.put(key, new Uint8Array(0));
+  const storageId = await resolveExistingStorageId(env, folderKey);
+  await storagePut(env, storageId, key, new Uint8Array(0));
   await addLog(env, request, 'MKDIR', cleanName);
-  return jsonResponse({ success: true, key: folderKey, path: `/${folderKey}/` });
+  return jsonResponse({ success: true, key: folderKey, path: `/${folderKey}/`, storageId });
 }
 
 /**
@@ -444,17 +466,25 @@ export async function handleUpload(env, request, r2Key) {
   assertUserKey(key);
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped) return jsonResponse({ success: true, skipped: true, key });
-  const quota = await checkQuota(env, Number(file.size || 0));
-  if (!quota.allowed) {
+  const selected = await chooseUploadStorage(env, resolved.key, Number(file.size || 0));
+  const totalQuota = await checkQuota(env, Number(file.size || 0));
+  if (!totalQuota.allowed) {
     return jsonResponse(
-      { success: false, code: 'QUOTA_EXCEEDED', message: `Storage quota exceeded. Used: ${formatQuotaBytes(quota.used)}, Quota: ${formatQuotaBytes(quota.quota)}, Requested: ${formatQuotaBytes(file.size || 0)}` },
+      { success: false, code: 'QUOTA_EXCEEDED', message: `总存储配额不足。已使用 ${formatQuotaBytes(totalQuota.used)} / ${formatQuotaBytes(totalQuota.quota)}，本次需要 ${formatQuotaBytes(file.size || 0)}。` },
       507,
     );
   }
-  await env.R2.put(resolved.key, file.stream(), { httpMetadata: { contentType: file.type } });
-  await upsertFileIndex(env, resolved.key, { size: file.size, contentType: file.type, uploaded: Date.now() });
+  const quota = await checkStorageQuota(env, selected.storageId, Number(file.size || 0));
+  if (!quota.allowed) {
+    return jsonResponse(
+      { success: false, code: 'QUOTA_EXCEEDED', storageId: selected.storageId, message: `${quota.storageName} 空间配额不足。已使用 ${formatQuotaBytes(quota.used)} / ${formatQuotaBytes(quota.quota)}，本次需要 ${formatQuotaBytes(file.size || 0)}。` },
+      507,
+    );
+  }
+  await storagePut(env, selected.storageId, resolved.key, file.stream(), { httpMetadata: { contentType: file.type } });
+  await upsertFileIndex(env, resolved.key, { size: file.size, contentType: file.type, uploaded: Date.now(), storageId: selected.storageId });
   await addLog(env, request, resolved.conflict ? 'UPLOAD_CONFLICT' : 'UPLOAD', resolved.key);
-  return jsonResponse({ success: true, key: resolved.key, renamed: resolved.key !== key });
+  return jsonResponse({ success: true, key: resolved.key, renamed: resolved.key !== key, storageId: selected.storageId, overflowed: selected.overflowed, warning: selected.warning || '' });
 }
 
 function uploadKey(targetDir, name) {
@@ -476,19 +506,27 @@ export async function handleMultipartCreate(env, request) {
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped) return jsonResponse({ key, skipped: true });
   const incomingBytes = Number(totalSize || size || 0);
+  const selected = await chooseUploadStorage(env, resolved.key, incomingBytes);
   if (incomingBytes > 0) {
-    const quota = await checkQuota(env, incomingBytes);
+    const totalQuota = await checkQuota(env, incomingBytes);
+    if (!totalQuota.allowed) {
+      return jsonResponse(
+        { success: false, code: 'QUOTA_EXCEEDED', message: `总存储配额不足。剩余 ${formatQuotaBytes(totalQuota.remaining)} / ${formatQuotaBytes(totalQuota.quota)}。` },
+        507,
+      );
+    }
+    const quota = await checkStorageQuota(env, selected.storageId, incomingBytes);
     if (!quota.allowed) {
       return jsonResponse(
-        { success: false, code: 'QUOTA_EXCEEDED', message: `Storage quota exceeded. ${formatQuotaBytes(quota.remaining)} remaining of ${formatQuotaBytes(quota.quota)}` },
+        { success: false, code: 'QUOTA_EXCEEDED', storageId: selected.storageId, message: `${quota.storageName} 空间配额不足。剩余 ${formatQuotaBytes(quota.remaining)} / ${formatQuotaBytes(quota.quota)}。` },
         507,
       );
     }
   }
-  const upload = await env.R2.createMultipartUpload(resolved.key, {
+  const upload = await storageCreateMultipartUpload(env, selected.storageId, resolved.key, {
     httpMetadata: { contentType: type || 'application/octet-stream' },
   });
-  return jsonResponse({ key: upload.key, uploadId: upload.uploadId, renamed: resolved.key !== key });
+  return jsonResponse({ key: upload.key, uploadId: upload.uploadId, storageId: selected.storageId, renamed: resolved.key !== key, overflowed: selected.overflowed, warning: selected.warning || '' });
 }
 
 export async function handleMultipartPart(env, request, url) {
@@ -500,31 +538,31 @@ export async function handleMultipartPart(env, request, url) {
   }
   assertUserKey(key);
   if (!request.body) return jsonResponse({ success: false, message: 'Missing request body' }, 400);
-  const upload = env.R2.resumeMultipartUpload(key, uploadId);
-  const part = await upload.uploadPart(partNumber, request.body);
+  const storageId = url.searchParams.get('storageId') || await resolveExistingStorageId(env, key);
+  const part = await storageUploadPart(env, storageId, key, uploadId, partNumber, request.body);
   return jsonResponse(part);
 }
 
 export async function handleMultipartComplete(env, request) {
-  const { key, uploadId, parts } = await request.json();
+  const { key, uploadId, parts, storageId: bodyStorageId } = await request.json();
   if (!key || !uploadId || !Array.isArray(parts) || parts.length === 0) {
     return jsonResponse({ success: false, message: 'Invalid multipart complete request' }, 400);
   }
   assertUserKey(key);
-  const upload = env.R2.resumeMultipartUpload(key, uploadId);
-  const object = await upload.complete(parts.sort((a, b) => a.partNumber - b.partNumber));
-  const meta = await env.R2.head(key);
-  await upsertFileIndex(env, key, meta || { uploaded: Date.now() });
+  const storageId = bodyStorageId || await resolveExistingStorageId(env, key);
+  const object = await storageCompleteMultipartUpload(env, storageId, key, uploadId, parts);
+  const meta = await storageHead(env, storageId, key);
+  await upsertFileIndex(env, key, { ...(meta || { uploaded: Date.now() }), storageId });
   await addLog(env, request, 'UPLOAD', key);
-  return jsonResponse({ success: true, key: object.key, etag: object.httpEtag });
+  return jsonResponse({ success: true, key: object.key, etag: object.httpEtag, storageId });
 }
 
 export async function handleMultipartAbort(env, request) {
-  const { key, uploadId } = await request.json();
+  const { key, uploadId, storageId: bodyStorageId } = await request.json();
   if (!key || !uploadId) return jsonResponse({ success: false, message: 'Invalid multipart abort request' }, 400);
   assertUserKey(key);
-  const upload = env.R2.resumeMultipartUpload(key, uploadId);
-  await upload.abort();
+  const storageId = bodyStorageId || await resolveExistingStorageId(env, key);
+  await storageAbortMultipartUpload(env, storageId, key, uploadId);
   await addLog(env, request, 'UPLOAD_ABORT', key);
   return jsonResponse({ success: true });
 }
@@ -541,8 +579,9 @@ export async function handleSaveText(env, request, r2Key) {
   assertUserKey(r2Key);
   const body = await request.json();
   if (typeof body.content !== 'string') return jsonResponse({ success: false, message: 'Invalid content' }, 400);
-  await env.R2.put(r2Key, body.content, { httpMetadata: { contentType: 'text/plain' } });
-  await upsertFileIndex(env, r2Key, { size: body.content.length, contentType: 'text/plain', uploaded: Date.now() });
+  const storageId = await resolveExistingStorageId(env, r2Key);
+  await storagePut(env, storageId, r2Key, body.content, { httpMetadata: { contentType: 'text/plain' } });
+  await upsertFileIndex(env, r2Key, { size: body.content.length, contentType: 'text/plain', uploaded: Date.now(), storageId });
   await addLog(env, request, 'SAVE_TEXT', r2Key);
   return jsonResponse({ success: true });
 }
@@ -603,7 +642,8 @@ async function trashRows(env, where = '', params = []) {
 }
 
 async function restoreTrashRecord(env, row, request) {
-  const listed = await listR2Objects(env.R2, { prefix: row.trash_key });
+  const storageId = row.storage_id || await resolveExistingStorageId(env, row.trash_key);
+  const listed = await storageList(env, storageId, { prefix: row.trash_key });
   assertCompleteListing(listed, `Trash item ${row.id}`);
   if (await keyExists(env, row.original_key)) {
     const err = new Error('Target already exists');
@@ -613,11 +653,11 @@ async function restoreTrashRecord(env, row, request) {
   await mapWithConcurrency(listed.objects || [], 6, async item => {
     const suffix = item.key.slice(row.trash_key.length);
     const target = row.original_key + suffix;
-    const obj = await env.R2.get(item.key);
+    const obj = await storageGet(env, storageId, item.key);
     if (obj) {
-      await env.R2.put(target, obj.body, { httpMetadata: obj.httpMetadata });
-      await upsertFileIndex(env, target, obj);
-      await env.R2.delete(item.key);
+      await storagePut(env, storageId, target, obj.body, { httpMetadata: obj.httpMetadata });
+      await upsertFileIndex(env, target, { ...obj, storageId });
+      await storageDelete(env, storageId, item.key);
     }
   });
 
@@ -627,9 +667,10 @@ async function restoreTrashRecord(env, row, request) {
 }
 
 async function purgeTrashRecord(env, row, request) {
-  const listed = await listR2Objects(env.R2, { prefix: row.trash_key });
+  const storageId = row.storage_id || await resolveExistingStorageId(env, row.trash_key);
+  const listed = await storageList(env, storageId, { prefix: row.trash_key });
   assertCompleteListing(listed, `Trash item ${row.id}`);
-  await mapWithConcurrency(listed.objects || [], 8, item => env.R2.delete(item.key));
+  await mapWithConcurrency(listed.objects || [], 8, item => storageDelete(env, storageId, item.key));
   await env.D1.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
   await addLog(env, request, 'PURGE', row.original_key);
 }

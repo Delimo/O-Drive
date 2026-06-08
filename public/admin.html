@@ -277,11 +277,11 @@
                                 <div class="storage-panel-head">
                                     <div>
                                         <h3>总配额</h3>
-                                        <p>可填 0、9.5GB、100GB；0 表示不限制。</p>
+                                        <p>可填容量或字节数，0 表示不限制。</p>
                                     </div>
                                 </div>
                                 <div class="storage-input-row">
-                                    <input type="text" id="quotaInput" placeholder="例如 9.5GB；0 表示不限制" class="admin-input">
+                                    <input type="text" id="quotaInput" placeholder="容量或字节数；0 表示不限制" class="admin-input">
                                     <button class="btn btn-primary" data-admin-action="set-quota">保存</button>
                                 </div>
                                 <p id="quotaResult" class="quota-result"></p>
@@ -304,7 +304,7 @@
                                 <div class="storage-form-grid two">
                                     <label class="storage-field">
                                         <span>R2 容量上限</span>
-                                        <input type="text" id="r2QuotaBytesInput" placeholder="例如 9.5GB" class="admin-input">
+                                        <input type="text" id="r2QuotaBytesInput" placeholder="R2 容量上限" class="admin-input">
                                     </label>
                                     <label class="storage-field">
                                         <span>溢出阈值</span>
@@ -383,7 +383,7 @@
                                     </label>
                                     <label class="storage-field">
                                         <span>容量上限</span>
-                                        <input type="text" id="storageQuotaInput" placeholder="如 100GB" class="admin-input">
+                                        <input type="text" id="storageQuotaInput" placeholder="容量上限，可留空" class="admin-input">
                                     </label>
                                 </div>
                                 <div class="access-mode-grid">
