@@ -634,7 +634,7 @@ body.admin-page {
 }
 
 .admin-page .storage-input-row.bind {
-  grid-template-columns: minmax(140px, 1fr) minmax(150px, 0.8fr) 82px;
+  grid-template-columns: minmax(150px, 1fr) minmax(160px, 0.86fr) 82px;
 }
 
 .admin-page .storage-input-row .btn,
@@ -714,8 +714,9 @@ body.admin-page {
 }
 
 .admin-page .storage-console .access-mode-card {
-  min-height: 58px;
-  padding: 10px 12px;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 12px;
 }
 
 .admin-page .storage-console .access-rule-list {
@@ -724,12 +725,32 @@ body.admin-page {
 }
 
 .admin-page .storage-console .access-empty {
-  min-height: 74px;
+  min-height: 62px;
   padding: 14px;
 }
 
 .admin-page .storage-console .quota-info-grid {
   min-height: 0;
+}
+
+.admin-page .storage-inline-binding {
+  display: grid;
+  gap: 9px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-page .storage-inline-binding .storage-panel-head h3 {
+  font-size: 14px;
+}
+
+.admin-page .storage-inline-binding .storage-panel-head p {
+  margin-top: 3px;
+}
+
+.admin-page .storage-inline-binding .access-rule-list {
+  max-height: 120px;
+  overflow-y: auto;
 }
 
 .admin-page .quota-workbench-head {

@@ -319,32 +319,32 @@
                                     <button class="btn" data-admin-action="save-storage-policy">保存 R2 设置</button>
                                 </div>
                             </section>
-                            <section class="storage-panel">
-                                <div class="storage-panel-head">
-                                    <div>
-                                        <h3>文件夹绑定</h3>
-                                        <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
-                                    </div>
-                                </div>
-                                <div class="storage-input-row bind">
-                                    <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
-                                    <select id="bindingStorageInput" class="admin-input"></select>
-                                    <button class="btn btn-primary" data-admin-action="add-storage-binding">绑定</button>
-                                </div>
-                                <div id="storageBindingList" class="access-rule-list"></div>
-                            </section>
                         </div>
                         <div class="storage-stack">
                             <section class="storage-panel storage-panel-primary">
                                 <div class="storage-panel-head">
                                     <div>
                                         <h3>S3 空间</h3>
-                                        <p>填写 S3 兼容存储，可用于文件夹绑定或 R2 溢出。</p>
+                                        <p>S3 兼容存储，可用于文件夹绑定或 R2 溢出。</p>
                                     </div>
                                     <div class="storage-head-actions">
                                         <button class="btn btn-primary" data-admin-action="add-storage-space">保存</button>
                                         <button class="btn" data-admin-action="test-storage-space">测试</button>
                                     </div>
+                                </div>
+                                <div class="storage-inline-binding">
+                                    <div class="storage-panel-head">
+                                        <div>
+                                            <h3>文件夹绑定</h3>
+                                            <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
+                                        </div>
+                                    </div>
+                                    <div class="storage-input-row bind">
+                                        <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
+                                        <select id="bindingStorageInput" class="admin-input"></select>
+                                        <button class="btn btn-primary" data-admin-action="add-storage-binding">绑定</button>
+                                    </div>
+                                    <div id="storageBindingList" class="access-rule-list"></div>
                                 </div>
                                 <div class="storage-form-grid two">
                                     <label class="storage-field">
@@ -393,11 +393,11 @@
                                 <div class="access-mode-grid">
                                     <label class="access-mode-card">
                                         <input id="storageEnabledInput" type="checkbox" checked>
-                                        <span><strong>启用</strong><small>允许写入和读取</small></span>
+                                        <span><strong>启用</strong></span>
                                     </label>
                                     <label class="access-mode-card">
                                         <input id="storageOverflowInput" type="checkbox" checked>
-                                        <span><strong>作为溢出空间</strong><small>R2 超过阈值后自动使用</small></span>
+                                        <span><strong>作为溢出空间</strong></span>
                                     </label>
                                 </div>
                                 <p id="storageResult" class="quota-result"></p>
