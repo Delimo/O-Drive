@@ -705,7 +705,7 @@ export const AdminActions = {
     const r2Quota = document.getElementById('r2QuotaBytesInput');
     const threshold = document.getElementById('overflowThresholdInput');
     const enabled = document.getElementById('overflowEnabledInput');
-    if (r2Quota) r2Quota.value = data.r2?.quotaFormatted || '10 GB';
+    if (r2Quota) r2Quota.value = formatGbInput(data.r2?.quotaBytes);
     if (threshold) threshold.value = data.overflowThresholdPercent || 85;
     if (enabled) enabled.checked = Boolean(data.overflowEnabled);
     bindingSelect.innerHTML = [
@@ -751,9 +751,10 @@ export const AdminActions = {
 
   readStorageBaseConfig() {
     const current = adminState.storageConfig || { spaces: [], bindings: [] };
+    const r2QuotaValue = document.getElementById('r2QuotaBytesInput')?.value.trim();
     return {
       ...current,
-      r2QuotaBytes: document.getElementById('r2QuotaBytesInput')?.value || current.r2?.quotaBytes || '10GB',
+      r2QuotaBytes: r2QuotaValue !== undefined && r2QuotaValue !== '' ? `${r2QuotaValue}GB` : current.r2?.quotaBytes || '10GB',
       overflowThresholdPercent: Number(document.getElementById('overflowThresholdInput')?.value || current.overflowThresholdPercent || 85),
       overflowEnabled: Boolean(document.getElementById('overflowEnabledInput')?.checked),
       spaces: [...(current.spaces || [])],
@@ -1109,6 +1110,13 @@ function formatBytesLocal(bytes) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 2 : 0) + ' ' + units[i];
+}
+
+function formatGbInput(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value < 0) return '10';
+  const gb = value / (1024 ** 3);
+  return Number(gb.toFixed(2)).toString();
 }
 
 function parseCapacityLocal(value) {

@@ -11,6 +11,18 @@
 /*.css
   Cache-Control: public, max-age=3600, must-revalidate
 
+/admin.css
+  Cache-Control: no-store
+
+/js/admin-app.js
+  Cache-Control: no-store
+
+/js/admin-actions.js
+  Cache-Control: no-store
+
+/js/api.js
+  Cache-Control: no-store
+
 /*.html
   Cache-Control: no-store
 
