@@ -192,11 +192,29 @@ export const UI = {
     const list = document.getElementById('fileList');
     if (!list) return;
     list.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">O</div>
-        <div>
-          <strong>需要登录</strong>
-          <p>当前站点未开启游客浏览，请登录后查看文件。</p>
+      <div class="locked-state">
+        <div class="locked-copy">
+          <div class="locked-kicker">
+            <span class="locked-status-dot"></span>
+            私有空间
+          </div>
+          <h2>需要登录后访问文件</h2>
+          <p>当前站点未开启游客浏览。登录管理员账号后，可以浏览目录、预览文件并进行管理操作。</p>
+          <div class="locked-actions">
+            <button class="btn btn-primary locked-login-btn" data-action="show-modal" data-args='["loginModal"]'>登录</button>
+          </div>
+        </div>
+        <div class="locked-visual" aria-hidden="true">
+          <div class="locked-cloud">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="locked-file-list">
+            <div class="locked-file-row is-strong"><span></span><i></i><b></b></div>
+            <div class="locked-file-row"><span></span><i></i><b></b></div>
+            <div class="locked-file-row"><span></span><i></i><b></b></div>
+          </div>
         </div>
       </div>
     `;
