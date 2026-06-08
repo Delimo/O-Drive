@@ -225,88 +225,103 @@
             </div>
 
             <div id="webhooks-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
-                <section class="admin-page-panel">
-                    <div class="admin-section-head">
+                <section class="admin-page-panel webhook-workbench">
+                    <div class="admin-section-head webhook-workbench-head">
                         <div>
                             <h2>Webhook 通知</h2>
-                            <p>文件上传、删除、移动、重命名、创建文件夹时，系统会按当前配置发送请求通知。</p>
+                            <p>管理文件操作、异常行为和分享链接到期的外部通知通道。</p>
+                        </div>
+                        <div class="webhook-head-actions">
+                            <span class="webhook-head-pill">文件事件</span>
+                            <span class="webhook-head-pill">异常提醒</span>
+                            <span class="webhook-head-pill">分享到期</span>
                         </div>
                     </div>
                     <div id="webhookSettingsBody" class="webhook-settings-body">
-                        <div class="webhook-form-block">
-                            <div class="webhook-block-title">发送目标</div>
-                            <div class="webhook-grid webhook-target-grid">
-                                <label class="webhook-field webhook-name-field">
-                                    <span>名称</span>
-                                    <input type="text" id="webhookNameInput" placeholder="可选" class="admin-input">
-                                </label>
-                                <label class="webhook-field webhook-url-field">
-                                    <span>URL *</span>
-                                    <input type="url" id="webhookUrlInput" class="admin-input">
-                                </label>
-                                <label class="webhook-field webhook-msgtype-field">
-                                    <span>消息格式</span>
-                                    <select id="webhookMsgTypeInput" class="admin-input">
-                                        <option value="json">json</option>
-                                        <option value="text">text</option>
-                                        <option value="markdown">markdown</option>
-                                    </select>
-                                </label>
-                                <label class="webhook-field webhook-method-field">
-                                    <span>Method</span>
-                                    <select id="webhookMethodInput" class="admin-input">
-                                        <option value="POST">POST</option>
-                                        <option value="PUT">PUT</option>
-                                        <option value="PATCH">PATCH</option>
-                                        <option value="DELETE">DELETE</option>
-                                        <option value="GET">GET</option>
-                                    </select>
-                                </label>
-                                <label class="webhook-field webhook-content-type-field">
-                                    <span>Content-Type</span>
-                                    <input type="text" id="webhookContentTypeInput" class="admin-input" value="application/json">
-                                </label>
+                        <div class="webhook-editor-column">
+                            <div class="webhook-editor-head">
+                                <div>
+                                    <h3>通知配置</h3>
+                                    <p>当前编辑内容会保存为一条 Webhook 规则。</p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="webhook-form-block webhook-request-block">
-                            <div class="webhook-block-title">请求内容</div>
-                            <div class="webhook-grid webhook-request-grid">
-                                <label class="webhook-field webhook-headers-field">
-                                    <span>Headers</span>
-                                    <textarea id="webhookHeadersInput" class="admin-input webhook-textarea" placeholder='{"X-Token": "..."}'></textarea>
-                                </label>
-                                <label class="webhook-field webhook-body-field">
-                                    <span>Body</span>
-                                    <textarea id="webhookBodyInput" class="admin-input webhook-textarea" placeholder='{"event":"{event}","path":"{{data.path}}"}'></textarea>
-                                </label>
+                            <div class="webhook-form-block">
+                                <div class="webhook-block-title">发送目标</div>
+                                <div class="webhook-grid webhook-target-grid">
+                                    <label class="webhook-field webhook-name-field">
+                                        <span>名称</span>
+                                        <input type="text" id="webhookNameInput" placeholder="可选" class="admin-input">
+                                    </label>
+                                    <label class="webhook-field webhook-url-field">
+                                        <span>URL *</span>
+                                        <input type="url" id="webhookUrlInput" class="admin-input">
+                                    </label>
+                                    <label class="webhook-field webhook-msgtype-field">
+                                        <span>消息格式</span>
+                                        <select id="webhookMsgTypeInput" class="admin-input">
+                                            <option value="json">json</option>
+                                            <option value="text">text</option>
+                                            <option value="markdown">markdown</option>
+                                        </select>
+                                    </label>
+                                    <label class="webhook-field webhook-method-field">
+                                        <span>Method</span>
+                                        <select id="webhookMethodInput" class="admin-input">
+                                            <option value="POST">POST</option>
+                                            <option value="PUT">PUT</option>
+                                            <option value="PATCH">PATCH</option>
+                                            <option value="DELETE">DELETE</option>
+                                            <option value="GET">GET</option>
+                                        </select>
+                                    </label>
+                                    <label class="webhook-field webhook-content-type-field">
+                                        <span>Content-Type</span>
+                                        <input type="text" id="webhookContentTypeInput" class="admin-input" value="application/json">
+                                    </label>
+                                </div>
                             </div>
-                        </div>
-                        <div class="webhook-form-block webhook-event-field">
-                            <div class="webhook-block-title">触发事件</div>
-                            <div class="webhook-event-grid">
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.uploaded" checked><span><strong>上传</strong><small>文件写入完成</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.deleted" checked><span><strong>删除</strong><small>移入回收站</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.purged" checked><span><strong>彻底删除</strong><small>回收站永久清除</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.moved" checked><span><strong>移动</strong><small>路径位置变更</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.copied" checked><span><strong>复制</strong><small>生成副本</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.renamed" checked><span><strong>重命名</strong><small>名称变更</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="folder.created" checked><span><strong>新建文件夹</strong><small>目录创建</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="download.burst" checked><span><strong>下载异常提醒</strong><small>短时间下载过多</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="login.burst" checked><span><strong>登录异常</strong><small>连续失败登录</small></span></label>
-                                <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="share.expired" checked><span><strong>分享链接到期</strong><small>分享失效或耗尽</small></span></label>
+                            <div class="webhook-form-block webhook-request-block">
+                                <div class="webhook-block-title">请求内容</div>
+                                <div class="webhook-grid webhook-request-grid">
+                                    <label class="webhook-field webhook-headers-field">
+                                        <span>Headers</span>
+                                        <textarea id="webhookHeadersInput" class="admin-input webhook-textarea" placeholder='{"X-Token": "..."}'></textarea>
+                                    </label>
+                                    <label class="webhook-field webhook-body-field">
+                                        <span>Body</span>
+                                        <textarea id="webhookBodyInput" class="admin-input webhook-textarea" placeholder='{"event":"{event}","path":"{{data.path}}"}'></textarea>
+                                    </label>
+                                </div>
                             </div>
-                        </div>
-                        <div class="webhook-save-row">
-                            <p id="webhookFormHint" class="webhook-form-hint hidden"></p>
-                            <div class="webhook-save-actions">
-                                <button class="btn h-10 px-4" data-admin-action="refresh-webhooks">刷新列表</button>
-                                <button id="webhookSaveButton" class="btn btn-primary h-10 px-5" data-admin-action="add-webhook">保存</button>
+                            <div class="webhook-form-block webhook-event-field">
+                                <div class="webhook-block-title">触发事件</div>
+                                <div class="webhook-event-grid">
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.uploaded" checked><span><strong>上传</strong><small>文件写入完成</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.deleted" checked><span><strong>删除</strong><small>移入回收站</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.purged" checked><span><strong>彻底删除</strong><small>回收站永久清除</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.moved" checked><span><strong>移动</strong><small>路径位置变更</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.copied" checked><span><strong>复制</strong><small>生成副本</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="file.renamed" checked><span><strong>重命名</strong><small>名称变更</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="folder.created" checked><span><strong>新建文件夹</strong><small>目录创建</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="download.burst" checked><span><strong>下载异常提醒</strong><small>短时间下载过多</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="login.burst" checked><span><strong>登录异常</strong><small>连续失败登录</small></span></label>
+                                    <label class="webhook-event-option"><input type="checkbox" name="webhookEvents" value="share.expired" checked><span><strong>分享链接到期</strong><small>分享失效或耗尽</small></span></label>
+                                </div>
+                            </div>
+                            <div class="webhook-save-row">
+                                <p id="webhookFormHint" class="webhook-form-hint hidden"></p>
+                                <div class="webhook-save-actions">
+                                    <button id="webhookSaveButton" class="btn btn-primary h-10 px-5" data-admin-action="add-webhook">保存</button>
+                                </div>
                             </div>
                         </div>
                         <div class="webhook-list-panel">
                             <div class="webhook-list-head">
-                                <h3>已配置 Webhook</h3>
-                                <span id="webhookListCount" class="webhook-list-count">0 个</span>
+                                <div>
+                                    <h3>已配置 Webhook</h3>
+                                    <span id="webhookListCount" class="webhook-list-count">0 个</span>
+                                </div>
+                                <button class="btn h-9 px-3" data-admin-action="refresh-webhooks">刷新</button>
                             </div>
                             <div id="webhookList" class="webhook-list"></div>
                             <p id="webhookResult" class="webhook-result hidden"></p>
