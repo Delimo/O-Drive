@@ -480,9 +480,17 @@ export const AdminActions = {
   },
 
   async loadAccessRules() {
-    const tbody = document.getElementById('accessTbody');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5"><div class="admin-empty-state">正在加载...</div></td></tr>';
+    const list = document.getElementById('accessRuleList') || document.getElementById('accessTbody');
+    const count = document.getElementById('accessRuleCount');
+    const hiddenCount = document.getElementById('accessHiddenCount');
+    const protectedCount = document.getElementById('accessProtectedCount');
+    const privateCount = document.getElementById('accessPrivateCount');
+    if (!list) return;
+    list.innerHTML = '<div class="access-empty">正在加载...</div>';
+    if (count) count.textContent = '0 条规则';
+    [hiddenCount, protectedCount, privateCount].forEach(el => {
+      if (el) el.textContent = '0';
+    });
     const [hiddenRes, protectedRes] = await Promise.all([api.hiddenPaths(), api.protectedPaths()]);
     const hiddenList = hiddenRes.data?.list || [];
     const protectedList = protectedRes.data?.list || [];
@@ -500,7 +508,11 @@ export const AdminActions = {
       byPath.set(item.path, row);
     });
     const rows = [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path));
-    tbody.innerHTML = rows.map(item => {
+    if (count) count.textContent = `${rows.length} 条规则`;
+    if (hiddenCount) hiddenCount.textContent = String(rows.filter(item => item.hidden).length);
+    if (protectedCount) protectedCount.textContent = String(rows.filter(item => item.protected).length);
+    if (privateCount) privateCount.textContent = String(rows.filter(item => item.hidden && item.protected).length);
+    list.innerHTML = rows.map(item => {
       const path = escapeHtml(item.path);
       const hiddenBadge = item.hidden
         ? '<span class="admin-status-badge is-hidden">已隐藏</span>'
@@ -509,22 +521,42 @@ export const AdminActions = {
         ? '<span class="admin-status-badge is-visible">需要密码</span>'
         : '<span class="admin-status-badge is-hidden">不需要</span>';
       const nameVisible = item.protected
-        ? (item.showName ? '<span class="admin-share-subtle">名称可见</span>' : '<span class="admin-share-subtle">名称隐藏</span>')
+        ? (item.showName ? '<span class="access-rule-note">名称可见</span>' : '<span class="access-rule-note">名称隐藏</span>')
         : '';
       const actions = [
         item.hidden ? `<button class="admin-danger-btn" data-admin-action="remove-hidden" data-args='${escapeHtml(JSON.stringify([item.path]))}'>取消隐藏</button>` : '',
         item.protected ? `<button class="admin-danger-btn" data-admin-action="remove-protected" data-args='${escapeHtml(JSON.stringify([item.path]))}'>删除密码</button>` : '',
       ].filter(Boolean).join('');
       return `
-        <tr class="admin-access-row hover:bg-slate-50 transition-colors">
-          <td data-label="路径" class="px-5 py-4 font-mono text-primary break-all">${path}</td>
-          <td data-label="可见性" class="px-5 py-4">${hiddenBadge}</td>
-          <td data-label="访问密码" class="px-5 py-4">${protectedBadge}${nameVisible}</td>
-          <td data-label="备注" class="px-5 py-4 text-slate-500 break-all">${escapeHtml(item.note || '-')}</td>
-          <td data-label="操作" class="px-5 py-4 text-right"><div class="admin-share-buttons">${actions || '<span class="text-xs text-slate-400">无</span>'}</div></td>
-        </tr>
+        <div class="access-rule-card">
+          <div class="access-rule-main">
+            <strong>${path}</strong>
+            <span>${escapeHtml(item.note || '无备注')}</span>
+          </div>
+          <div class="access-rule-states">
+            ${hiddenBadge}
+            ${protectedBadge}
+            ${nameVisible}
+          </div>
+          <div class="access-rule-actions">${actions || '<span class="access-rule-note">无可用操作</span>'}</div>
+        </div>
       `;
-    }).join('') || '<tr><td colspan="5"><div class="admin-empty-state">暂无访问控制规则</div></td></tr>';
+    }).join('') || '<div class="access-empty">暂无访问控制规则</div>';
+  },
+
+  setAccessPreset(mode = '') {
+    const hide = document.getElementById('accessHideInput');
+    const showName = document.getElementById('protectedShowNameInput');
+    const password = document.getElementById('protectedPasswordInput');
+    const path = document.getElementById('protectedPathInput');
+    if (hide) hide.checked = mode === 'hide' || mode === 'private';
+    if (showName) showName.checked = mode !== 'private';
+    if (mode === 'hide') {
+      if (password) password.value = '';
+      path?.focus();
+      return;
+    }
+    password?.focus();
   },
 
   async saveAccessRule() {

@@ -25,7 +25,9 @@ document.addEventListener('click', event => {
     case 'add-hidden': return AdminActions.saveAccessRule();
     case 'remove-hidden': return AdminActions.removeHidden(args[0]);
     case 'add-protected': return AdminActions.saveAccessRule();
+    case 'set-access-preset': return AdminActions.setAccessPreset(args[0]);
     case 'save-access-rule': return AdminActions.saveAccessRule();
+    case 'refresh-access-rules': return AdminActions.loadAccessRules();
     case 'remove-protected': return AdminActions.removeProtected(args[0]);
     case 'refresh-health': return Promise.all([AdminActions.loadHealth(), AdminActions.loadMaintenance()]);
     case 'refresh-maintenance': return AdminActions.loadMaintenance();

@@ -128,38 +128,91 @@
             </div>
 
             <div id="access-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
-                <div class="admin-section-head">
-                    <div>
-                        <h2>访问控制</h2>
-                        <p>统一管理路径可见性和访问密码。隐藏会从访客列表移除，密码保护会限制预览和下载。</p>
+                <section class="admin-page-panel access-workbench">
+                    <div class="admin-section-head access-workbench-head">
+                        <div>
+                            <h2>访问控制</h2>
+                            <p>按路径管理访客可见性和访问密码，管理员始终可以查看和维护。</p>
+                        </div>
+                        <button class="btn h-9 px-3" data-admin-action="refresh-access-rules">刷新</button>
                     </div>
-                </div>
-                <div class="admin-protected-form access-control-form">
-                    <div class="admin-protected-fields">
-                        <input type="text" id="protectedPathInput" placeholder="输入路径，如 /客户资料/" class="admin-input">
-                        <input type="password" id="protectedPasswordInput" placeholder="访问密码，至少 4 位" class="admin-input">
-                        <input type="text" id="protectedNoteInput" placeholder="备注，可选" class="admin-input">
-                    </div>
-                    <div class="admin-protected-options">
-                        <label class="admin-check-row">
-                            <input id="accessHideInput" type="checkbox">
+                    <div class="access-summary-grid">
+                        <div class="access-summary-card">
                             <span>隐藏路径</span>
-                        </label>
-                        <label class="admin-check-row">
-                            <input id="protectedShowNameInput" type="checkbox" checked>
-                            <span>允许游客看到名称</span>
-                        </label>
-                        <button class="btn btn-primary h-11 px-8" data-admin-action="save-access-rule">保存规则</button>
+                            <strong id="accessHiddenCount">0</strong>
+                        </div>
+                        <div class="access-summary-card">
+                            <span>密码保护</span>
+                            <strong id="accessProtectedCount">0</strong>
+                        </div>
+                        <div class="access-summary-card">
+                            <span>双重保护</span>
+                            <strong id="accessPrivateCount">0</strong>
+                        </div>
                     </div>
-                </div>
-                <div class="admin-table-card overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
-                    <table class="w-full text-left text-slate-900">
-                        <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr><th class="px-5 py-3 text-slate-500">路径</th><th class="px-5 py-3 text-slate-500">可见性</th><th class="px-5 py-3 text-slate-500">访问密码</th><th class="px-5 py-3 text-slate-500">备注</th><th class="px-5 py-3 text-right text-slate-500">操作</th></tr>
-                        </thead>
-                        <tbody id="accessTbody" class="text-sm divide-y divide-border/40 text-slate-600"></tbody>
-                    </table>
-                </div>
+                    <div class="access-workbench-body">
+                        <div class="access-editor-panel">
+                            <div class="access-panel-title">
+                                <h3>规则编辑</h3>
+                                <p>路径可以是目录，也可以是具体文件。</p>
+                            </div>
+                            <div class="access-preset-row">
+                                <button class="access-preset-btn" data-admin-action="set-access-preset" data-args='["hide"]'>仅隐藏</button>
+                                <button class="access-preset-btn" data-admin-action="set-access-preset" data-args='["password"]'>仅密码</button>
+                                <button class="access-preset-btn" data-admin-action="set-access-preset" data-args='["private"]'>隐藏+密码</button>
+                            </div>
+                            <div class="access-fields">
+                                <label class="access-field">
+                                    <span>路径</span>
+                                    <input type="text" id="protectedPathInput" placeholder="/客户资料/" class="admin-input">
+                                </label>
+                                <label class="access-field">
+                                    <span>访问密码</span>
+                                    <input type="password" id="protectedPasswordInput" placeholder="至少 4 位，可不填" class="admin-input">
+                                </label>
+                                <label class="access-field">
+                                    <span>备注</span>
+                                    <input type="text" id="protectedNoteInput" placeholder="可选" class="admin-input">
+                                </label>
+                            </div>
+                            <div class="access-mode-grid">
+                                <label class="access-mode-card">
+                                    <input id="accessHideInput" type="checkbox">
+                                    <span>
+                                        <strong>隐藏路径</strong>
+                                        <small>从访客文件列表移除</small>
+                                    </span>
+                                </label>
+                                <label class="access-mode-card">
+                                    <input id="protectedShowNameInput" type="checkbox" checked>
+                                    <span>
+                                        <strong>名称可见</strong>
+                                        <small>受密码保护时仍显示名称</small>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="access-submit-row">
+                                <button class="btn btn-primary h-11 px-8" data-admin-action="save-access-rule">保存规则</button>
+                            </div>
+                            <div class="access-examples">
+                                <div><strong>/客户资料/</strong><span>整目录规则</span></div>
+                                <div><strong>/合同/报价.pdf</strong><span>单文件规则</span></div>
+                            </div>
+                        </div>
+                        <div class="access-list-panel">
+                            <div class="access-list-head">
+                                <div>
+                                    <h3>规则列表</h3>
+                                    <p id="accessRuleCount">0 条规则</p>
+                                </div>
+                            </div>
+                            <div id="accessRuleList" class="access-rule-list"></div>
+                            <table class="hidden">
+                                <tbody id="accessTbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
             </div>
             <div id="quota-tab" class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
                 <section class="admin-page-panel">
