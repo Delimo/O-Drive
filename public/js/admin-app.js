@@ -22,9 +22,10 @@ document.addEventListener('click', event => {
     case 'change-page': return AdminActions.changePage(Number(args[0] || 0));
     case 'apply-log-filters': return AdminActions.applyLogFilters();
     case 'reset-log-filters': return AdminActions.resetLogFilters();
-    case 'add-hidden': return AdminActions.addHidden();
+    case 'add-hidden': return AdminActions.saveAccessRule();
     case 'remove-hidden': return AdminActions.removeHidden(args[0]);
-    case 'add-protected': return AdminActions.addProtected();
+    case 'add-protected': return AdminActions.saveAccessRule();
+    case 'save-access-rule': return AdminActions.saveAccessRule();
     case 'remove-protected': return AdminActions.removeProtected(args[0]);
     case 'refresh-health': return Promise.all([AdminActions.loadHealth(), AdminActions.loadMaintenance()]);
     case 'refresh-maintenance': return AdminActions.loadMaintenance();
@@ -52,8 +53,10 @@ document.addEventListener('submit', event => {
   if (!form) return;
   event.preventDefault();
   switch (form.dataset.submitAction) {
-    case 'add-hidden': return AdminActions.addHidden();
-    case 'add-protected': return AdminActions.addProtected();
+    case 'add-hidden':
+    case 'add-protected':
+    case 'save-access-rule':
+      return AdminActions.saveAccessRule();
   }
 });
 

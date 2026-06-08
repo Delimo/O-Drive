@@ -23,8 +23,7 @@
             <button id="btn-overview" role="tab" aria-selected="true" data-admin-action="switch-tab" data-args='["overview"]' class="admin-tab-btn is-active">概览</button>
             <button id="btn-health" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["health"]' class="admin-tab-btn">系统状态</button>
             <button id="btn-logs" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["logs"]' class="admin-tab-btn">操作日志</button>
-            <button id="btn-privacy" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["privacy"]' class="admin-tab-btn">隐藏管理</button>
-            <button id="btn-protected" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["protected"]' class="admin-tab-btn">访问密码</button>
+            <button id="btn-access" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["access"]' class="admin-tab-btn">访问控制</button>
             <button id="btn-quota" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["quota"]' class="admin-tab-btn">存储配额</button>
             <button id="btn-shares" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["shares"]' class="admin-tab-btn">分享链接</button>
             <button id="btn-webhooks" role="tab" aria-selected="false" data-admin-action="switch-tab" data-args='["webhooks"]' class="admin-tab-btn">Webhook</button>
@@ -128,54 +127,37 @@
                 </div>
             </div>
 
-            <div id="privacy-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
+            <div id="access-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
                 <div class="admin-section-head">
                     <div>
-                        <h2>隐藏管理</h2>
-                        <p>隐藏路径会从访客列表中移除，但管理员仍可查看和管理。需要让访客输入密码访问时，请使用“访问密码”。</p>
+                        <h2>访问控制</h2>
+                        <p>统一管理路径可见性和访问密码。隐藏会从访客列表移除，密码保护会限制预览和下载。</p>
                     </div>
                 </div>
-                <div class="admin-form-panel">
-                    <input type="text" id="hideInput" placeholder="输入隐藏路径，如 /private/" class="admin-input">
-                    <button class="btn btn-primary admin-form-submit" data-admin-action="add-hidden">添加隐藏</button>
-                </div>
-                <div class="admin-table-card overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
-                    <table class="w-full text-left text-slate-900">
-                        <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr><th class="px-5 py-3 text-slate-500">已屏蔽路径</th><th class="px-5 py-3 text-right text-slate-500">操作</th></tr>
-                        </thead>
-                        <tbody id="hiddenTbody" class="text-sm divide-y divide-border/40 text-slate-600"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="protected-tab" class="hidden flex-1 flex flex-col p-6 overflow-hidden text-slate-900">
-                <div class="admin-section-head">
-                    <div>
-                        <h2>访问密码</h2>
-                        <p>密码保护用于控制预览和下载；隐藏管理用于控制访客列表是否显示。关闭名称可见后，访客列表中也不会显示该路径。</p>
-                    </div>
-                </div>
-                <div class="admin-protected-form">
+                <div class="admin-protected-form access-control-form">
                     <div class="admin-protected-fields">
-                        <input type="text" id="protectedPathInput" placeholder="输入保护路径，如 /客户资料/" class="admin-input">
+                        <input type="text" id="protectedPathInput" placeholder="输入路径，如 /客户资料/" class="admin-input">
                         <input type="password" id="protectedPasswordInput" placeholder="访问密码，至少 4 位" class="admin-input">
                         <input type="text" id="protectedNoteInput" placeholder="备注，可选" class="admin-input">
                     </div>
                     <div class="admin-protected-options">
                         <label class="admin-check-row">
+                            <input id="accessHideInput" type="checkbox">
+                            <span>隐藏路径</span>
+                        </label>
+                        <label class="admin-check-row">
                             <input id="protectedShowNameInput" type="checkbox" checked>
                             <span>允许游客看到名称</span>
                         </label>
-                        <button class="btn btn-primary h-11 px-8" data-admin-action="add-protected">添加/更新</button>
+                        <button class="btn btn-primary h-11 px-8" data-admin-action="save-access-rule">保存规则</button>
                     </div>
                 </div>
                 <div class="admin-table-card overflow-y-auto flex-1 custom-scroll text-slate-900 text-sm">
                     <table class="w-full text-left text-slate-900">
                         <thead class="sticky top-0 bg-surface-soft text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-border">
-                            <tr><th class="px-5 py-3 text-slate-500">路径</th><th class="px-5 py-3 text-slate-500">名称可见</th><th class="px-5 py-3 text-slate-500">备注</th><th class="px-5 py-3 text-right text-slate-500">操作</th></tr>
+                            <tr><th class="px-5 py-3 text-slate-500">路径</th><th class="px-5 py-3 text-slate-500">可见性</th><th class="px-5 py-3 text-slate-500">访问密码</th><th class="px-5 py-3 text-slate-500">备注</th><th class="px-5 py-3 text-right text-slate-500">操作</th></tr>
                         </thead>
-                        <tbody id="protectedTbody" class="text-sm divide-y divide-border/40 text-slate-600"></tbody>
+                        <tbody id="accessTbody" class="text-sm divide-y divide-border/40 text-slate-600"></tbody>
                     </table>
                 </div>
             </div>

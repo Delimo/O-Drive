@@ -274,17 +274,6 @@ body.admin-page {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
-.admin-page #hideInput {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  height: 40px;
-  min-height: 40px;
-  border-radius: 8px !important;
-  font-size: 13px;
-  appearance: none;
-}
-
 .admin-page .admin-form-submit {
   width: 124px;
   min-width: 124px;
@@ -1093,6 +1082,28 @@ body.admin-page {
   flex-shrink: 0;
 }
 
+.admin-page #access-tab table {
+  table-layout: fixed;
+}
+
+.admin-page #access-tab th:nth-child(1) {
+  width: 28%;
+}
+
+.admin-page #access-tab th:nth-child(2),
+.admin-page #access-tab th:nth-child(3) {
+  width: 15%;
+}
+
+.admin-page #access-tab th:nth-child(4) {
+  width: 24%;
+}
+
+.admin-page .admin-access-row .admin-status-badge + .admin-share-subtle {
+  display: block;
+  margin-top: 6px;
+}
+
 .admin-page .admin-check-row {
   display: inline-flex;
   align-items: center;
@@ -1807,8 +1818,7 @@ body.admin-page {
   .admin-page #overview-tab,
   .admin-page #health-tab,
   .admin-page #logs-tab,
-  .admin-page #privacy-tab,
-  .admin-page #protected-tab,
+  .admin-page #access-tab,
   .admin-page #shares-tab,
   .admin-page #webhooks-tab {
     overflow: visible;
@@ -1915,15 +1925,6 @@ body.admin-page {
     background: var(--surface-soft);
   }
 
-  .admin-page #privacy-tab .admin-form-panel .admin-input {
-    height: 40px;
-    min-height: 40px;
-    padding: 0 14px;
-    border-radius: 8px !important;
-    background: var(--surface);
-    font-size: 13px;
-  }
-
   .admin-page .admin-form-submit {
     width: 100%;
     min-width: 0;
@@ -2027,16 +2028,11 @@ body.admin-page {
   .admin-page #logs-tab tbody,
   .admin-page #logs-tab tr,
   .admin-page #logs-tab td,
-  .admin-page #privacy-tab table,
-  .admin-page #privacy-tab thead,
-  .admin-page #privacy-tab tbody,
-  .admin-page #privacy-tab tr,
-  .admin-page #privacy-tab td,
-  .admin-page #protected-tab table,
-  .admin-page #protected-tab thead,
-  .admin-page #protected-tab tbody,
-  .admin-page #protected-tab tr,
-  .admin-page #protected-tab td,
+  .admin-page #access-tab table,
+  .admin-page #access-tab thead,
+  .admin-page #access-tab tbody,
+  .admin-page #access-tab tr,
+  .admin-page #access-tab td,
   .admin-page #shares-tab table,
   .admin-page #shares-tab thead,
   .admin-page #shares-tab tbody,
@@ -2046,15 +2042,13 @@ body.admin-page {
   }
 
   .admin-page #logs-tab table,
-  .admin-page #privacy-tab table,
-  .admin-page #protected-tab table,
+  .admin-page #access-tab table,
   .admin-page #shares-tab table {
     border-collapse: separate;
   }
 
   .admin-page #logs-tab thead,
-  .admin-page #privacy-tab thead,
-  .admin-page #protected-tab thead,
+  .admin-page #access-tab thead,
   .admin-page #shares-tab thead {
     position: absolute;
     width: 1px;
@@ -2064,15 +2058,13 @@ body.admin-page {
     white-space: nowrap;
   }
 
-  .admin-page #privacy-tab .admin-table-card,
-  .admin-page #protected-tab .admin-table-card,
+  .admin-page #access-tab .admin-table-card,
   .admin-page #shares-tab .admin-table-card {
     padding: 8px;
     background: var(--surface-soft);
   }
 
-  .admin-page #privacy-tab tbody,
-  .admin-page #protected-tab tbody,
+  .admin-page #access-tab tbody,
   .admin-page #shares-tab tbody {
     display: grid;
     gap: 10px;
@@ -2086,16 +2078,7 @@ body.admin-page {
     background: var(--surface-soft);
   }
 
-  .admin-page .admin-hidden-row {
-    margin: 0 0 12px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: var(--surface);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  }
-
-  .admin-page .admin-protected-row {
+  .admin-page .admin-access-row {
     margin: 0 0 12px;
     padding: 14px 16px;
     border: 1px solid var(--border);
@@ -2114,8 +2097,7 @@ body.admin-page {
   }
 
   .admin-page .admin-log-row td,
-  .admin-page .admin-hidden-row td,
-  .admin-page .admin-protected-row td,
+  .admin-page .admin-access-row td,
   .admin-page .admin-share-row td {
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr);
@@ -2127,8 +2109,7 @@ body.admin-page {
   }
 
   .admin-page .admin-log-row td::before,
-  .admin-page .admin-hidden-row td::before,
-  .admin-page .admin-protected-row td::before,
+  .admin-page .admin-access-row td::before,
   .admin-page .admin-share-row td::before {
     content: attr(data-label);
     color: #64748b;
@@ -2166,12 +2147,7 @@ body.admin-page {
     padding: 0 12px;
   }
 
-  .admin-page .admin-hidden-row td:last-child {
-    align-items: center;
-  }
-
-  .admin-page .admin-hidden-row td,
-  .admin-page .admin-protected-row td,
+  .admin-page .admin-access-row td,
   .admin-page .admin-share-row td {
     display: grid;
     grid-template-columns: 1fr;
@@ -2179,8 +2155,7 @@ body.admin-page {
     padding: 7px 0;
   }
 
-  .admin-page .admin-hidden-row td::before,
-  .admin-page .admin-protected-row td::before,
+  .admin-page .admin-access-row td::before,
   .admin-page .admin-share-row td::before {
     display: block;
     color: var(--text-muted);
@@ -2188,31 +2163,27 @@ body.admin-page {
     line-height: 1.2;
   }
 
-  .admin-page .admin-hidden-row td:first-child,
-  .admin-page .admin-protected-row td:first-child,
+  .admin-page .admin-access-row td:first-child,
   .admin-page .admin-share-row td:first-child {
     padding-top: 0;
   }
 
-  .admin-page .admin-hidden-row td:first-child::before,
-  .admin-page .admin-protected-row td:first-child::before,
+  .admin-page .admin-access-row td:first-child::before,
   .admin-page .admin-share-row td:first-child::before,
-  .admin-page .admin-hidden-row td:last-child::before,
-  .admin-page .admin-protected-row td:last-child::before,
+  .admin-page .admin-access-row td:last-child::before,
   .admin-page .admin-share-row td:last-child::before {
     display: none;
   }
 
-  .admin-page .admin-hidden-row td:first-child,
-  .admin-page .admin-protected-row td:first-child {
+  .admin-page .admin-access-row td:first-child {
     color: var(--primary);
     font-size: 15px;
     font-weight: 800;
     line-height: 1.45;
   }
 
-  .admin-page .admin-protected-row td:nth-child(2),
-  .admin-page .admin-protected-row td:nth-child(3) {
+  .admin-page .admin-access-row td:nth-child(2),
+  .admin-page .admin-access-row td:nth-child(3) {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -2220,16 +2191,15 @@ body.admin-page {
     font-size: 13px;
   }
 
-  .admin-page .admin-protected-row td:nth-child(2)::before,
-  .admin-page .admin-protected-row td:nth-child(3)::before {
+  .admin-page .admin-access-row td:nth-child(2)::before,
+  .admin-page .admin-access-row td:nth-child(3)::before {
     flex-shrink: 0;
     width: 58px;
     color: var(--text-muted);
     font-size: 12px;
   }
 
-  .admin-page .admin-hidden-row td:last-child,
-  .admin-page .admin-protected-row td:last-child,
+  .admin-page .admin-access-row td:last-child,
   .admin-page .admin-share-row td:last-child {
     display: flex;
     align-items: center;
@@ -2241,8 +2211,7 @@ body.admin-page {
     border-top: 1px solid var(--border);
   }
 
-  .admin-page .admin-hidden-row td:last-child .admin-danger-btn,
-  .admin-page .admin-protected-row td:last-child .admin-danger-btn,
+  .admin-page .admin-access-row td:last-child .admin-danger-btn,
   .admin-page .admin-share-row td:last-child .admin-danger-btn {
     justify-self: auto;
     min-width: 96px;
