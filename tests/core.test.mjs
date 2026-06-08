@@ -27,6 +27,7 @@ import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
 import { indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index.js';
 import { setStorageQuota as setStorageQuotaForTest } from '../functions/api/lib/storage-quota.js';
+import { createFileTask, updateFileTask } from '../functions/api/lib/tasks.js';
 import {
   handleProtectedSettings,
   handleProtectedUnlock,
@@ -594,6 +595,44 @@ test('admin file task runs paste work in the background task table', async () =>
   assert.equal(list.status, 200);
   assert.equal(listData.items.length, 1);
   assert.equal(listData.items[0].id, createdData.item.id);
+});
+
+test('upload tasks can be created and updated by client uploader', async () => {
+  const env = makeEnv();
+  const create = await createFileTask(env, new Request('https://example.com/api/tasks', {
+    method: 'POST',
+    body: JSON.stringify({
+      type: 'upload',
+      payload: {
+        files: [
+          { name: 'a.bin', size: 10 },
+          { name: 'b.bin', size: 20 },
+        ],
+      },
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(create.status, 202);
+  const created = await create.json();
+  assert.equal(created.item.type, 'upload');
+  assert.equal(created.item.status, 'queued');
+  assert.equal(created.item.total, 2);
+
+  const update = await updateFileTask(env, new Request(`https://example.com/api/tasks?id=${created.item.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      status: 'running',
+      completed: 1,
+      failed: 0,
+      result: { progressPct: 60, currentFile: 'b.bin' },
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  }), new URL(`https://example.com/api/tasks?id=${created.item.id}`));
+  assert.equal(update.status, 200);
+  const updated = await update.json();
+  assert.equal(updated.item.status, 'running');
+  assert.equal(updated.item.completed, 1);
+  assert.equal(updated.item.result.progressPct, 60);
 });
 
 test('protected paths require password and unlock with signed cookie', async () => {

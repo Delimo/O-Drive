@@ -1,7 +1,8 @@
 import { addLog, apiError, jsonResponse } from './common.js';
 import { handleBatchDelete, handlePaste } from './file-mutations.js';
 
-const TASK_TYPES = ['paste', 'delete'];
+const TASK_TYPES = ['paste', 'delete', 'upload'];
+const TASK_STATUSES = ['queued', 'running', 'completed', 'partial', 'failed'];
 const TASK_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const TASK_RETENTION_ROWS = 100;
 
@@ -50,8 +51,14 @@ async function cleanupFileTasks(env, now = Date.now()) {
 function mapTask(row) {
   let result = {};
   let payload = {};
-  try { result = JSON.parse(row.result || '{}'); } catch (_) {}
-  try { payload = JSON.parse(row.payload || '{}'); } catch (_) {}
+  if (row.result && typeof row.result === 'object') result = row.result;
+  else {
+    try { result = JSON.parse(row.result || '{}'); } catch (_) {}
+  }
+  if (row.payload && typeof row.payload === 'object') payload = row.payload;
+  else {
+    try { payload = JSON.parse(row.payload || '{}'); } catch (_) {}
+  }
   return {
     id: row.id,
     type: row.type,
@@ -70,7 +77,7 @@ function mapTask(row) {
 
 async function updateTask(env, id, patch) {
   const row = await env.D1.prepare('SELECT * FROM file_tasks WHERE id = ?').bind(id).first();
-  if (!row) return;
+  if (!row) return null;
   const next = { ...row, ...patch, updated_at: Date.now() };
   await env.D1.prepare(
     `UPDATE file_tasks SET status = ?, total = ?, completed = ?, failed = ?, result = ?, error = ?, updated_at = ?, finished_at = ?
@@ -86,6 +93,7 @@ async function updateTask(env, id, patch) {
     Number(next.finished_at || 0),
     id,
   ).run();
+  return mapTask(next);
 }
 
 function jsonRequest(url, body, request) {
@@ -157,7 +165,9 @@ export async function createFileTask(env, request, context = {}) {
   if (!TASK_TYPES.includes(type)) return apiError('INVALID_TASK_TYPE', 'Invalid task type', 400);
   const payload = body.payload && typeof body.payload === 'object' ? body.payload : {};
   const paths = Array.isArray(payload.paths) ? payload.paths : [];
-  if (!paths.length) return apiError('INVALID_TASK_PAYLOAD', 'Task paths are required', 400);
+  const uploadFiles = Array.isArray(payload.files) ? payload.files : [];
+  if (type !== 'upload' && !paths.length) return apiError('INVALID_TASK_PAYLOAD', 'Task paths are required', 400);
+  if (type === 'upload' && !uploadFiles.length) return apiError('INVALID_TASK_PAYLOAD', 'Upload files are required', 400);
 
   const id = taskId();
   const now = Date.now();
@@ -165,7 +175,7 @@ export async function createFileTask(env, request, context = {}) {
     id,
     type,
     status: 'queued',
-    total: paths.length,
+    total: type === 'upload' ? uploadFiles.length : paths.length,
     completed: 0,
     failed: 0,
     payload,
@@ -184,8 +194,37 @@ export async function createFileTask(env, request, context = {}) {
     status: 'queued',
     metadata: { taskId: id, type, total: task.total },
   });
-  scheduleTask(env, request, context, task);
+  if (type !== 'upload') scheduleTask(env, request, context, task);
   return jsonResponse({ success: true, item: mapTask(task) }, 202);
+}
+
+export async function updateFileTask(env, request, url) {
+  await ensureTaskTable(env);
+  const id = url.searchParams.get('id') || '';
+  if (!id) return apiError('TASK_ID_REQUIRED', 'Task id is required', 400);
+  const row = await env.D1.prepare('SELECT * FROM file_tasks WHERE id = ?').bind(id).first();
+  if (!row) return apiError('TASK_NOT_FOUND', 'Task not found', 404);
+  if (row.type !== 'upload') return apiError('TASK_UPDATE_NOT_ALLOWED', 'Only upload tasks can be updated by clients', 409);
+
+  const body = await request.json().catch(() => ({}));
+  const status = TASK_STATUSES.includes(body.status) ? body.status : row.status;
+  const total = Number.isFinite(Number(body.total)) ? Math.max(0, Number(body.total)) : Number(row.total || 0);
+  const completed = Number.isFinite(Number(body.completed)) ? Math.max(0, Number(body.completed)) : Number(row.completed || 0);
+  const failed = Number.isFinite(Number(body.failed)) ? Math.max(0, Number(body.failed)) : Number(row.failed || 0);
+  let currentResult = {};
+  try { currentResult = JSON.parse(row.result || '{}'); } catch (_) {}
+  const result = body.result && typeof body.result === 'object' ? body.result : currentResult;
+  const finished = ['completed', 'partial', 'failed'].includes(status);
+  const item = await updateTask(env, id, {
+    status,
+    total,
+    completed,
+    failed,
+    result,
+    error: String(body.error || ''),
+    finished_at: finished ? Number(body.finishedAt || Date.now()) : 0,
+  });
+  return jsonResponse({ success: true, item });
 }
 
 export async function getFileTask(env, url) {

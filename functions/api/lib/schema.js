@@ -61,6 +61,16 @@ export const CORE_TABLE_SQL = [
     message TEXT NOT NULL,
     created_at INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS trash (
+    id TEXT PRIMARY KEY,
+    original_key TEXT NOT NULL,
+    trash_key TEXT NOT NULL,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    storage_id TEXT NOT NULL DEFAULT 'r2',
+    trashed_at INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS file_tasks (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
@@ -85,6 +95,9 @@ export const CORE_MIGRATION_SQL = [
   `ALTER TABLE logs ADD COLUMN target_path TEXT DEFAULT ''`,
   `ALTER TABLE logs ADD COLUMN error_code TEXT DEFAULT ''`,
   `ALTER TABLE logs ADD COLUMN metadata TEXT DEFAULT ''`,
+  `ALTER TABLE trash ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'`,
+  `CREATE INDEX IF NOT EXISTS idx_trash_trashed_at ON trash(trashed_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_trash_original_key ON trash(original_key)`,
 ];
 
 export const SHARE_TABLE_SQL = `

@@ -22,7 +22,7 @@ const csrfProtectedRoutes = [
   ['/api/admin/settings/quota', ['PUT']],
   ['/api/admin/settings/webhooks', ['PUT', 'POST']],
   ['/api/admin/shares', ['POST', 'DELETE']],
-  ['/api/tasks', ['POST']],
+  ['/api/tasks', ['POST', 'PATCH']],
   ['/api/mkdir', ['POST']],
   ['/api/upload-multipart/create', ['POST']],
   ['/api/upload-multipart/part', ['PUT']],

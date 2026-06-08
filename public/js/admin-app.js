@@ -76,6 +76,10 @@ if (yearDisp) yearDisp.textContent = currentYear > startYear ? `${startYear} - $
 await api.getRole();
 AdminActions.switchTab(getInitialAdminTab(), { persist: false });
 
+setInterval(() => {
+  if (document.body.dataset.adminTab === 'overview') AdminActions.loadTasks();
+}, 3000);
+
 window.addEventListener('hashchange', () => {
   AdminActions.switchTab(getInitialAdminTab(), { persist: false });
 });

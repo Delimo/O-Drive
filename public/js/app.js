@@ -7,6 +7,10 @@ window.UI = UI;
 window.Message = Message;
 window.Actions = Actions;
 
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/upload-worker.js').catch(() => {});
+}
+
 function readArgs(el) {
   const raw = el.dataset.args || '[]';
   try {

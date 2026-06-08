@@ -41,6 +41,13 @@ export const api = {
   createTask(type, payload) {
     return requestJson('/api/tasks', { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ type, payload }) });
   },
+  updateTask(id, payload) {
+    return requestJson(`/api/tasks?id=${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: csrfHeaders(jsonHeaders),
+      body: JSON.stringify(payload),
+    });
+  },
   fileTask(id) {
     return requestJson(`/api/tasks?id=${encodeURIComponent(id)}`);
   },

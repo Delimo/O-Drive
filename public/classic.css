@@ -479,6 +479,22 @@ body.share-page {
   border-radius: 10px !important;
 }
 
+.grid-item .file-actions {
+  width: 100%;
+  min-height: 34px;
+  gap: 8px;
+  justify-content: center;
+}
+
+.grid-item .file-action-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 8px !important;
+  font-size: 13px !important;
+}
+
 .upload-close-btn {
   min-width: 40px;
   width: 40px;

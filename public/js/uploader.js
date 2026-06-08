@@ -8,6 +8,7 @@ const FILE_CONCURRENCY = 2;
 const PART_RETRIES = 3;
 const CANCEL_MESSAGE = '已取消';
 const RESUME_KEY = 'odrive.multipartUploads.v1';
+const UPLOAD_WORKER_URL = '/upload-worker.js';
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -265,6 +266,17 @@ function collectSummary(tasks) {
   };
 }
 
+async function getUploadWorker() {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const registration = await navigator.serviceWorker.register(UPLOAD_WORKER_URL);
+    const ready = await navigator.serviceWorker.ready;
+    return ready.active || registration.active || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 export class UploadQueue {
   constructor({ onComplete } = {}) {
     this.queue = [];
@@ -274,6 +286,8 @@ export class UploadQueue {
     this.onComplete = onComplete;
     this.closeTimer = null;
     this.boundListEvents = false;
+    this.workerEventsBound = false;
+    this.backgroundBatches = new Map();
   }
 
   get summary() {
@@ -323,6 +337,41 @@ export class UploadQueue {
     });
   }
 
+  bindWorkerEvents() {
+    if (this.workerEventsBound || !('serviceWorker' in navigator)) return;
+    this.workerEventsBound = true;
+    navigator.serviceWorker.addEventListener('message', event => {
+      const data = event.data || {};
+      if (!data.type || !String(data.type).startsWith('ODRIVE_UPLOAD_')) return;
+      if (data.type === 'ODRIVE_UPLOAD_FILE_STATUS') this.applyWorkerFileStatus(data);
+      if (data.type === 'ODRIVE_UPLOAD_BATCH_DONE') {
+        this.backgroundBatches.delete(data.batchId);
+        this.renderSummary();
+        this.scheduleAutoClose();
+        this.onComplete?.();
+      }
+    });
+  }
+
+  applyWorkerFileStatus(data) {
+    const task = this.tasksById.get(data.fileId);
+    if (!task) return;
+    const pct = Number(data.progressPct || 0);
+    const loaded = Math.round((task.file.size || 0) * Math.max(0, Math.min(100, pct)) / 100);
+    if (data.status === 'running') {
+      task.state = 'running';
+      updateProgress(task, loaded, task.file.size, data.message || '上传中');
+      task.item.querySelector('.pause-btn')?.remove();
+      task.item.querySelector('.cancel-btn')?.remove();
+      task.item.querySelector('.retry-btn')?.remove();
+    } else if (data.status === 'completed') {
+      this.markSuccess(task);
+    } else if (data.status === 'failed') {
+      this.markFailed(task, data.message || '上传失败');
+    }
+    this.renderSummary();
+  }
+
   scheduleAutoClose() {
     const { total, success, failed, cancelled } = this.summary;
     const settled = success + failed + cancelled;
@@ -370,6 +419,38 @@ export class UploadQueue {
     task.item.querySelector('.retry-btn')?.remove();
   }
 
+  async startBackgroundUpload(tasks, options = {}) {
+    const worker = await getUploadWorker();
+    if (!worker) return false;
+    this.bindWorkerEvents();
+    const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const payloadFiles = tasks.map(task => ({
+      id: task.id,
+      name: task.uploadName || task.file.name,
+      displayName: task.file.displayName || task.file.name,
+      size: task.file.size,
+      targetDir: task.targetDir,
+    }));
+    const created = await api.createTask('upload', { files: payloadFiles });
+    if (!created.res.ok || !created.data?.item?.id) return false;
+    this.backgroundBatches.set(batchId, { taskId: created.data.item.id, tasks });
+    worker.postMessage({
+      type: 'ODRIVE_UPLOAD_BATCH',
+      batchId,
+      taskId: created.data.item.id,
+      conflictMode: options.conflictMode || 'error',
+      csrfHeaders: api.csrfHeaders({}),
+      files: tasks.map(task => ({
+        id: task.id,
+        file: task.file,
+        targetDir: task.targetDir,
+        uploadName: task.uploadName,
+        displayName: task.file.displayName || task.file.name,
+      })),
+    });
+    return true;
+  }
+
   add(files, targetDir, options = {}) {
     const manager = document.getElementById('uploadManager');
     const list = document.getElementById('uploadList');
@@ -378,7 +459,7 @@ export class UploadQueue {
     manager.classList.remove('hidden');
     manager.classList.add('flex');
 
-    [...files].forEach(file => {
+    const newTasks = [...files].map(file => {
       const uploadName = file.uploadName || file.name;
       const taskTargetDir = file.targetDir || targetDir;
       const taskId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -408,11 +489,26 @@ export class UploadQueue {
       this.tasksById.set(taskId, task);
       list.prepend(task.item);
       this.tasks.push(task);
-      this.queue.push(task);
+      return task;
     });
 
     this.renderSummary();
-    this.pump();
+    this.startBackgroundUpload(newTasks, options).then(started => {
+      if (!started) {
+        this.queue.push(...newTasks);
+        this.pump();
+        return;
+      }
+      newTasks.forEach(task => {
+        task.item.querySelector('.status').textContent = '后台上传中';
+        task.item.querySelector('.pause-btn')?.remove();
+        task.item.querySelector('.cancel-btn')?.remove();
+      });
+      this.renderSummary();
+    }).catch(() => {
+      this.queue.push(...newTasks);
+      this.pump();
+    });
   }
 
   retryTask(task) {

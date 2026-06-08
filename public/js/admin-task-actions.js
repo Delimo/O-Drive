@@ -32,8 +32,11 @@ export function createAdminTaskActions() {
         const completed = Math.max(Number(item.completed || 0), 0);
         const failed = Math.max(Number(item.failed || 0), 0);
         const done = Math.min(total || completed + failed || 1, completed + failed);
-        const pct = total ? Math.round((done / total) * 100) : (item.status === 'completed' ? 100 : 0);
-        const typeLabel = item.type === 'paste' ? '复制/移动' : item.type === 'delete' ? '删除' : item.type;
+        const uploadPct = item.type === 'upload' && Number.isFinite(Number(item.result?.progressPct))
+          ? Number(item.result.progressPct)
+          : null;
+        const pct = uploadPct !== null ? uploadPct : (total ? Math.round((done / total) * 100) : (item.status === 'completed' ? 100 : 0));
+        const typeLabel = item.type === 'paste' ? '复制/移动' : item.type === 'delete' ? '删除' : item.type === 'upload' ? '上传' : item.type;
         return `
           <div class="task-row">
             <div class="task-row-head">
@@ -43,8 +46,9 @@ export function createAdminTaskActions() {
             <div class="task-progress"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>
             <div class="task-row-count">${Math.max(0, Math.min(100, pct))}%</div>
             <div class="task-row-meta">
-              <span>完成 ${completed}/${total || '-'}</span>
+              <span>${item.type === 'upload' ? '上传' : '完成'} ${completed}/${total || '-'}</span>
               ${failed ? `<span>失败 ${failed}</span>` : ''}
+              ${item.type === 'upload' && item.result?.currentFile ? `<span>${escapeHtml(item.result.currentFile)}</span>` : ''}
               <span>创建 ${escapeHtml(adminTime(item.createdAt))}</span>
               ${item.finishedAt ? `<span>结束 ${escapeHtml(adminTime(item.finishedAt))}</span>` : ''}
             </div>
