@@ -27,7 +27,9 @@ function adminConfirm(title, body = '') {
 
 function setMaintenanceResult(text = '') {
   const label = document.getElementById('healthMaintenanceResult');
-  if (label) label.textContent = text;
+  if (!label) return;
+  label.textContent = text;
+  label.classList.toggle('hidden', !text);
 }
 
 function setWebhookForm(item = {}) {
