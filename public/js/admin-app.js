@@ -15,6 +15,7 @@ function readArgs(el) {
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-admin-action]');
   if (!target) return;
+  event.preventDefault();
   const action = target.dataset.adminAction;
   const args = readArgs(target);
   switch (action) {
@@ -54,6 +55,23 @@ document.addEventListener('click', event => {
     case 'refresh-webhook-deliveries': return AdminActions.loadWebhookDeliveries();
     case 'refresh-tasks': return AdminActions.loadTasks();
   }
+});
+
+document.querySelector('.tab-shell')?.addEventListener('keydown', event => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const tabs = [...document.querySelectorAll('.admin-tab-btn')];
+  const currentIndex = tabs.findIndex(tab => tab.getAttribute('aria-selected') === 'true');
+  let nextIndex = currentIndex < 0 ? 0 : currentIndex;
+  if (event.key === 'ArrowRight') nextIndex = (nextIndex + 1) % tabs.length;
+  if (event.key === 'ArrowLeft') nextIndex = (nextIndex - 1 + tabs.length) % tabs.length;
+  if (event.key === 'Home') nextIndex = 0;
+  if (event.key === 'End') nextIndex = tabs.length - 1;
+  const next = tabs[nextIndex];
+  const targetTab = next?.dataset.args ? JSON.parse(next.dataset.args || '[]')[0] : '';
+  if (!targetTab) return;
+  event.preventDefault();
+  next.focus();
+  AdminActions.switchTab(targetTab);
 });
 
 document.addEventListener('submit', event => {

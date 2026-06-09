@@ -34,13 +34,24 @@ export const AdminActions = {
     removeLegacyQuotaShortcuts();
     const tabId = ADMIN_TABS.includes(id) ? id : 'overview';
     ADMIN_TABS.forEach(tab => {
-      document.getElementById(`${tab}-tab`)?.classList.toggle('hidden', tabId !== tab);
+      const isActive = tabId === tab;
+      const panel = document.getElementById(`${tab}-tab`);
+      if (panel) {
+        panel.classList.toggle('hidden', !isActive);
+        panel.hidden = !isActive;
+        panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        if ('inert' in panel) panel.inert = !isActive;
+        if (isActive) panel.scrollTop = 0;
+      }
       const button = document.getElementById(`btn-${tab}`);
-      button?.classList.toggle('is-active', tabId === tab);
-      button?.setAttribute('aria-selected', tabId === tab ? 'true' : 'false');
+      button?.classList.toggle('is-active', isActive);
+      button?.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      button?.setAttribute('tabindex', isActive ? '0' : '-1');
     });
     adminState.activeTab = tabId;
     document.body.dataset.adminTab = tabId;
+    const activeButton = document.getElementById(`btn-${tabId}`);
+    activeButton?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     if (options.persist !== false && window.location.hash !== `#${tabId}`) {
       history.replaceState(null, '', `#${tabId}`);
     }

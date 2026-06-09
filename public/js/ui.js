@@ -15,6 +15,7 @@ let virtualScroller = null;
 
 export const UI = {
   renderAuthButtons() {
+    document.body.dataset.userRole = state.userRole || 'guest';
     const html = state.userRole === 'admin'
       ? `<a href="/admin.html" class="btn text-slate-900 font-bold">管理</a><button class="btn ml-2 text-slate-900 opacity-60" data-action="logout">退出</button>`
       : `<button class="btn btn-primary font-bold" data-action="show-modal" data-args='["loginModal"]'>登录</button>`;
@@ -127,6 +128,7 @@ export const UI = {
   },
 
   renderLockedState() {
+    document.body.dataset.userRole = 'guest';
     if (virtualScroller) { virtualScroller.destroy(); virtualScroller = null; }
     state.fileData = { folders: [], files: [] };
     state.visibleKeys = [];

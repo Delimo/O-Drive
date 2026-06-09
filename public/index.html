@@ -2,15 +2,16 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>O-Drive</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/main.css">
     <link rel="stylesheet" href="/explorer.css">
     <link rel="stylesheet" href="/design.css">
     <link rel="stylesheet" href="/classic.css">
+    <link rel="stylesheet" href="/ui-fixes.css">
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden" data-user-role="guest">
     <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center"></div>
 
     <main class="container">
@@ -25,7 +26,7 @@
             <div class="mobile-search-card">
                 <div class="search-bar mobile-search-bar">
                     <span class="search-icon">🔍</span>
-                    <input type="search" id="mobileSearchInput" placeholder="搜索文件..." data-enter-action="search">
+                    <input type="search" id="mobileSearchInput" placeholder="搜索文件..." aria-label="搜索文件" autocomplete="off" data-enter-action="search">
                 </div>
                 <button class="btn btn-primary mobile-search-btn" data-action="search">搜索</button>
                 <div id="mobileSearchSuggestions" class="search-suggestions hidden"></div>
@@ -44,7 +45,7 @@
             <div class="flex items-center gap-4">
                 <div class="search-bar hidden md:block">
                     <span class="search-icon">🔍</span>
-                    <input type="search" id="searchInput" placeholder="搜索文件..." data-enter-action="search">
+                    <input type="search" id="searchInput" placeholder="搜索文件..." aria-label="搜索文件" autocomplete="off" data-enter-action="search">
                     <div id="searchSuggestions" class="search-suggestions hidden"></div>
                 </div>
                 <div id="authButtons"></div>
@@ -150,7 +151,7 @@
         <button class="mobile-bottom-btn" data-action="open-filters">筛选</button>
     </div>
 
-    <div id="confirmModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[400] hidden items-center justify-center p-4 text-slate-900">
+    <div id="confirmModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[400] hidden items-center justify-center p-4 text-slate-900" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
         <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-md shadow-2xl">
             <h1 id="confirmTitle" class="text-lg font-bold mb-3 text-center">确认操作</h1>
             <div id="confirmBody" class="text-sm text-slate-600 mb-4 max-h-60 overflow-y-auto whitespace-pre-line"></div>
@@ -161,23 +162,26 @@
         </div>
     </div>
 
-    <div id="loginModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
+    <div id="loginModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
         <div class="bg-surface border border-border p-8 rounded-2xl w-full max-w-sm relative shadow-2xl">
-            <button class="absolute top-4 right-4 text-xl opacity-40 hover:opacity-100" data-action="close-modal" data-args='["loginModal"]'>&times;</button>
+            <button class="modal-close-btn absolute top-4 right-4 text-xl opacity-40 hover:opacity-100" aria-label="关闭登录窗口" data-action="close-modal" data-args='["loginModal"]'>&times;</button>
             <form data-submit-action="login">
-                <h1 class="text-xl font-bold mb-6 text-center">登录管理后台</h1>
-                <input type="text" id="adminUser" placeholder="用户名" autocomplete="username" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-slate-900">
-                <input type="password" id="adminPass" placeholder="密码" autocomplete="current-password" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-slate-900">
+                <h1 id="loginTitle" class="text-xl font-bold mb-6 text-center">登录管理后台</h1>
+                <label class="sr-only" for="adminUser">用户名</label>
+                <input type="text" id="adminUser" placeholder="用户名" autocomplete="username" aria-describedby="loginError" required class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 focus:outline-none focus:border-primary text-slate-900">
+                <label class="sr-only" for="adminPass">密码</label>
+                <input type="password" id="adminPass" placeholder="密码" autocomplete="current-password" aria-describedby="loginError" required class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-6 focus:outline-none focus:border-primary text-slate-900">
                 <button type="submit" class="btn btn-primary w-full h-11 rounded-lg font-bold">登录</button>
             </form>
-            <p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4"></p>
+            <p id="loginError" class="text-red-500 text-center mt-4 text-xs h-4" role="alert" aria-live="polite"></p>
         </div>
     </div>
 
-    <div id="mkdirModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900">
+    <div id="mkdirModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900" role="dialog" aria-modal="true" aria-labelledby="mkdirTitle">
         <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h1 class="text-lg font-bold mb-4 text-center">新建文件夹</h1>
-            <input type="text" id="folderNameInput" placeholder="请输入名称" data-enter-action="mkdir" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-900">
+            <h1 id="mkdirTitle" class="text-lg font-bold mb-4 text-center">新建文件夹</h1>
+            <label class="sr-only" for="folderNameInput">文件夹名称</label>
+            <input type="text" id="folderNameInput" placeholder="请输入名称" data-enter-action="mkdir" aria-label="文件夹名称" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-900">
             <div class="flex gap-2">
                 <button class="btn flex-1" data-action="close-modal" data-args='["mkdirModal"]'>取消</button>
                 <button class="btn btn-primary flex-1 font-bold" data-action="submit-mkdir">创建</button>
@@ -185,12 +189,13 @@
         </div>
     </div>
 
-    <div id="unlockModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[420] hidden items-center justify-center p-4 text-slate-900">
+    <div id="unlockModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[420] hidden items-center justify-center p-4 text-slate-900" role="dialog" aria-modal="true" aria-labelledby="unlockTitle">
         <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h1 class="text-lg font-bold mb-2 text-center">需要访问密码</h1>
+            <h1 id="unlockTitle" class="text-lg font-bold mb-2 text-center">需要访问密码</h1>
             <p id="unlockPathLabel" class="text-xs text-slate-500 text-center mb-4 break-all"></p>
-            <input type="password" id="unlockPasswordInput" placeholder="请输入密码" data-enter-action="unlock" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-3 outline-none focus:border-primary text-sm text-slate-900">
-            <p id="unlockError" class="text-red-500 text-center text-xs h-4 mb-3"></p>
+            <label class="sr-only" for="unlockPasswordInput">访问密码</label>
+            <input type="password" id="unlockPasswordInput" placeholder="请输入密码" data-enter-action="unlock" aria-describedby="unlockPathLabel unlockError" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-3 outline-none focus:border-primary text-sm text-slate-900">
+            <p id="unlockError" class="text-red-500 text-center text-xs h-4 mb-3" role="alert" aria-live="polite"></p>
             <div class="flex gap-2">
                 <button class="btn flex-1" data-action="close-modal" data-args='["unlockModal"]'>取消</button>
                 <button class="btn btn-primary flex-1 font-bold" data-action="submit-unlock">解锁</button>
@@ -198,14 +203,14 @@
         </div>
     </div>
 
-    <div id="shareModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[430] hidden items-center justify-center p-4 text-slate-900">
+    <div id="shareModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[430] hidden items-center justify-center p-4 text-slate-900" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
         <div class="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <div class="min-w-0">
-                    <h1 class="text-lg font-bold">创建分享</h1>
+                    <h1 id="shareTitle" class="text-lg font-bold">创建分享</h1>
                     <p id="sharePathLabel" class="text-xs text-slate-500 mt-1 truncate"></p>
                 </div>
-                <button class="text-2xl opacity-40 hover:opacity-100" data-action="close-modal" data-args='["shareModal"]'>&times;</button>
+                <button class="modal-close-btn text-2xl opacity-40 hover:opacity-100" aria-label="关闭分享窗口" data-action="close-modal" data-args='["shareModal"]'>&times;</button>
             </div>
             <div class="p-5 space-y-4">
                 <input type="hidden" id="sharePathInput">
