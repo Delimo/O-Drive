@@ -183,17 +183,23 @@ body.admin-page {
   .admin-page #quota-tab,
   .admin-page #shares-tab,
   .admin-page #webhooks-tab {
+    box-sizing: border-box !important;
     flex: 1 1 auto !important;
-    height: 100% !important;
+    height: auto !important;
     min-height: 0 !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    padding: 18px !important;
+    padding: 18px 18px 40px !important;
   }
 
   .admin-page .overview-stats-grid {
     gap: 12px !important;
     margin-bottom: 12px !important;
+  }
+
+  .admin-page #overview-tab {
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .admin-page .stat-card {
@@ -219,8 +225,11 @@ body.admin-page {
   }
 
   .admin-page .overview-panels-grid {
+    flex: 1 1 0 !important;
     gap: 14px !important;
-    align-items: start;
+    align-items: stretch !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
 
   .admin-page .overview-panels-grid > section,
@@ -236,6 +245,38 @@ body.admin-page {
   .admin-page .webhook-list-panel,
   .admin-page .webhook-delivery-panel {
     padding: 0 !important;
+  }
+
+  .admin-page .overview-panels-grid > section {
+    display: flex !important;
+    flex-direction: column !important;
+    align-self: stretch !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .admin-page .overview-focus-panel,
+  .admin-page .overview-focus-pane,
+  .admin-page .overview-task-pane {
+    min-height: 0 !important;
+  }
+
+  .admin-page .breakdown-grid,
+  .admin-page .latest-grid,
+  .admin-page .attention-grid,
+  .admin-page .task-list-compact {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .admin-page .overview-task-pane .task-list-compact {
+    flex: 0 0 auto !important;
+  }
+
+  .admin-page .overview-panels-grid .task-empty {
+    height: auto !important;
+    min-height: 72px !important;
   }
 
   .admin-page .breakdown-item,
