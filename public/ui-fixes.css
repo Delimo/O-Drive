@@ -120,19 +120,52 @@ body.admin-page {
   accent-color: var(--primary);
 }
 
+.grid-item .file-icon {
+  width: 96px !important;
+  height: 74px !important;
+  margin: 0 auto 8px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 42px !important;
+}
+
 @media (min-width: 769px) {
+  html:has(> body.admin-page),
+  body.admin-page {
+    height: 100vh !important;
+    min-height: 100vh !important;
+    overflow: hidden !important;
+  }
+
   .admin-page .container {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    height: auto !important;
     max-width: 1360px;
+    min-height: 0 !important;
   }
 
   .admin-page .header-card {
+    flex: 0 0 auto !important;
     height: 64px !important;
   }
 
   .admin-page .tab-shell {
+    flex: 0 0 auto !important;
     min-height: 56px !important;
     padding: 7px 14px !important;
     gap: 6px !important;
+  }
+
+  .admin-page .explorer-card {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
 
   .admin-page .admin-tab-btn {
@@ -150,6 +183,11 @@ body.admin-page {
   .admin-page #quota-tab,
   .admin-page #shares-tab,
   .admin-page #webhooks-tab {
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     padding: 18px !important;
   }
 
