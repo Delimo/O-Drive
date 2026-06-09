@@ -18,8 +18,8 @@ function removeLegacyQuotaShortcuts() {
 
 export function createAdminStorageActions({ adminConfirm }) {
   return {
-    switchStorageView(view = 's3') {
-      const active = ['overview', 's3', 'bindings'].includes(view) ? view : 's3';
+    switchStorageView(view = 'overview') {
+      const active = ['overview', 's3', 'bindings'].includes(view) ? view : 'overview';
       adminState.storageView = active;
       document.querySelectorAll('[data-storage-view]').forEach(panel => {
         panel.classList.toggle('is-active', panel.dataset.storageView === active);

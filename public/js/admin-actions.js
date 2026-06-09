@@ -61,7 +61,7 @@ export const AdminActions = {
     if (tabId === 'logs') return this.loadLogs();
     if (tabId === 'access') return this.loadAccessRules();
     if (tabId === 'quota') {
-      this.switchStorageView(adminState.storageView || 's3');
+      this.switchStorageView(adminState.storageView || 'overview');
       return Promise.all([this.loadQuota(), this.loadStorage()]);
     }
     if (tabId === 'shares') return this.loadShares();
