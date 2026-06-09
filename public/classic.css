@@ -1152,9 +1152,146 @@ body.admin-page {
   padding: 14px !important;
 }
 
+/* Admin surface simplification: one primary canvas, lighter inner grouping. */
+.admin-page .tab-shell {
+  border-color: transparent !important;
+  background: rgba(248, 251, 255, 0.72) !important;
+  box-shadow: none !important;
+}
+
+.admin-page .tab-shell .admin-tab-btn,
+.admin-page .storage-subtabs .storage-subtab-btn {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.admin-page .tab-shell .admin-tab-btn:hover,
+.admin-page .storage-subtabs .storage-subtab-btn:hover {
+  background: #eef6ff !important;
+  transform: none !important;
+}
+
+.admin-page .tab-shell .admin-tab-btn.is-active,
+.admin-page .storage-subtabs .storage-subtab-btn.is-active {
+  border-color: #3b82f6 !important;
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.16) !important;
+}
+
+.admin-page .storage-subtabs {
+  border-color: transparent !important;
+  background: #f7faff !important;
+  box-shadow: inset 0 0 0 1px #e7edf5 !important;
+}
+
+.admin-page .admin-page-panel {
+  gap: 18px !important;
+}
+
+.admin-page .overview-panels-grid > section,
+.admin-page .health-status-panel,
+.admin-page .health-maintenance-panel,
+.admin-page .health-advice-panel,
+.admin-page .log-filter-panel,
+.admin-page .share-filter-panel,
+.admin-page .storage-panel,
+.admin-page .quota-editor-panel,
+.admin-page .quota-status-panel,
+.admin-page .access-editor-panel,
+.admin-page .access-list-panel,
+.admin-page .webhook-editor-column,
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel,
+.admin-page .admin-table-card {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.admin-page .overview-panels-grid > section,
+.admin-page .health-status-panel,
+.admin-page .health-maintenance-panel,
+.admin-page .health-advice-panel,
+.admin-page .storage-panel,
+.admin-page .quota-editor-panel,
+.admin-page .quota-status-panel,
+.admin-page .access-editor-panel,
+.admin-page .access-list-panel,
+.admin-page .webhook-editor-column,
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel {
+  padding: 0 !important;
+}
+
+.admin-page .overview-panels-grid > section:not(:first-child),
+.admin-page .health-maintenance-panel,
+.admin-page .health-advice-panel,
+.admin-page .access-list-panel,
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel,
+.admin-page .storage-s3-grid > .storage-panel + .storage-panel {
+  border-top: 1px solid var(--admin-line) !important;
+  padding-top: 18px !important;
+}
+
+@media (min-width: 1181px) {
+  .admin-page .overview-panels-grid > section:not(:first-child),
+  .admin-page .health-maintenance-panel,
+  .admin-page .access-list-panel,
+  .admin-page .webhook-list-panel,
+  .admin-page .storage-s3-grid > .storage-panel + .storage-panel {
+    border-top: 0 !important;
+    border-left: 1px solid var(--admin-line) !important;
+    padding-top: 0 !important;
+    padding-left: 18px !important;
+  }
+}
+
+.admin-page .log-filter-panel,
+.admin-page .share-filter-panel {
+  padding: 0 0 16px !important;
+  border-bottom: 1px solid var(--admin-line) !important;
+  border-radius: 0 !important;
+}
+
+.admin-page #logs-tab .log-list-head,
+.admin-page #logs-tab .log-list,
+.admin-page #shares-tab .share-list {
+  border-color: var(--admin-line) !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-radius: 0 !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-panel {
+  padding: 0 !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-s3-grid > .storage-panel + .storage-panel {
+  padding-left: 18px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .access-empty,
+.admin-page .log-empty,
+.admin-page .share-empty,
+.admin-page .task-empty,
+.admin-page .webhook-empty,
+.admin-page .access-empty,
+.admin-page .quota-empty,
+.admin-page .admin-empty-state {
+  border-color: #d8e5f4 !important;
+  background: #f9fbff !important;
+}
+
 @media (max-width: 1180px) {
   .admin-page .storage-s3-grid {
     grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-page .storage-view[data-storage-view="s3"] .storage-s3-grid > .storage-panel + .storage-panel {
+    padding-left: 0 !important;
   }
 }
 
