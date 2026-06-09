@@ -19,15 +19,12 @@ function removeLegacyQuotaShortcuts() {
 export function createAdminStorageActions({ adminConfirm }) {
   return {
     switchStorageView(view = 'overview') {
-      const active = ['overview', 's3', 'bindings'].includes(view) ? view : 'overview';
-      adminState.storageView = active;
+      adminState.storageView = ['overview', 's3', 'bindings'].includes(view) ? view : 'overview';
       document.querySelectorAll('[data-storage-view]').forEach(panel => {
-        panel.classList.toggle('is-active', panel.dataset.storageView === active);
+        panel.classList.add('is-active');
       });
       document.querySelectorAll('.storage-subtab-btn').forEach(button => {
-        let args = [];
-        try { args = JSON.parse(button.dataset.args || '[]'); } catch (_) {}
-        button.classList.toggle('is-active', args[0] === active);
+        button.classList.remove('is-active');
       });
     },
 

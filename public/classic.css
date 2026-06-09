@@ -1490,6 +1490,11 @@ body.admin-page {
   overflow: visible !important;
 }
 
+.admin-page .storage-redesign .storage-view {
+  display: block !important;
+  min-height: 0 !important;
+}
+
 .admin-page .storage-redesign-head {
   padding-bottom: 14px !important;
 }

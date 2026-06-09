@@ -267,22 +267,8 @@
                     <div class="admin-section-head storage-console-head storage-redesign-head">
                         <div>
                             <h2>存储配额</h2>
-                            <p>统一查看容量水位，配置 R2 安全阈值，并管理 S3 扩展与路径绑定。</p>
+                            <p>统一查看容量水位、R2 安全策略、S3 扩展空间和路径绑定。</p>
                         </div>
-                    </div>
-                    <div class="storage-subtabs storage-redesign-tabs" role="tablist" aria-label="存储设置">
-                        <button class="storage-subtab-btn is-active" data-admin-action="switch-storage-view" data-args='["overview"]'>
-                            <span>总览</span>
-                            <small>容量与 R2</small>
-                        </button>
-                        <button class="storage-subtab-btn" data-admin-action="switch-storage-view" data-args='["s3"]'>
-                            <span>S3 空间</span>
-                            <small>扩展与溢出</small>
-                        </button>
-                        <button class="storage-subtab-btn" data-admin-action="switch-storage-view" data-args='["bindings"]'>
-                            <span>路径绑定</span>
-                            <small>目录路由</small>
-                        </button>
                     </div>
 
                     <div class="storage-view is-active" data-storage-view="overview">
@@ -353,12 +339,12 @@
                         </div>
                     </div>
 
-                    <div class="storage-view" data-storage-view="s3">
+                    <div class="storage-view is-active" data-storage-view="s3">
                         <div class="storage-s3-workbench">
                             <section class="storage-panel storage-s3-editor">
                                 <div class="storage-panel-head storage-s3-editor-head">
                                     <div>
-                                        <h3>S3 空间配置</h3>
+                                        <h3>扩展存储</h3>
                                         <p>S3 兼容存储可作为文件夹目标，也可承担 R2 溢出。</p>
                                     </div>
                                     <div class="storage-head-actions">
@@ -441,7 +427,7 @@
                         </div>
                     </div>
 
-                    <div class="storage-view" data-storage-view="bindings">
+                    <div class="storage-view is-active" data-storage-view="bindings">
                         <section class="storage-panel storage-binding-workbench storage-binding-redesign">
                             <div class="storage-panel-head">
                                 <div>
