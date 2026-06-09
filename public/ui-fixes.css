@@ -65,6 +65,113 @@ body:has(#previewModal:not(.hidden)) .mobile-bottom-bar {
   display: none !important;
 }
 
+.admin-page #logs-tab {
+  --admin-log-grid: 180px minmax(0, 1fr) 210px;
+  --admin-log-gap: 14px;
+  --admin-log-row-pad: 20px;
+}
+
+.admin-page #logs-tab .log-list-head,
+.admin-page #logs-tab .log-card {
+  display: grid !important;
+  grid-template-columns: var(--admin-log-grid) !important;
+  gap: var(--admin-log-gap) !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  padding-left: var(--admin-log-row-pad) !important;
+  padding-right: var(--admin-log-row-pad) !important;
+}
+
+.admin-page #logs-tab .log-list-head {
+  min-height: 52px !important;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.admin-page #logs-tab .log-list {
+  padding: 0 !important;
+}
+
+.admin-page #logs-tab .log-card {
+  min-height: 66px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.admin-page #logs-tab .log-card-time,
+.admin-page #logs-tab .log-card-ip,
+.admin-page #logs-tab .log-list-head > span {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.admin-page #logs-tab .log-card-ip,
+.admin-page #logs-tab .log-list-head > span:last-child {
+  justify-content: center;
+  text-align: center;
+}
+
+.admin-page #logs-tab .admin-pagination {
+  align-items: center !important;
+  min-height: 64px;
+}
+
+.admin-page #logs-tab .admin-pagination > .flex {
+  align-items: center !important;
+}
+
+.admin-page #logs-tab .admin-pagination .btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+}
+
+.admin-page #logs-tab .admin-pagination .font-mono {
+  display: inline-block !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  min-width: 96px;
+  padding: 0 16px !important;
+  border-radius: 10px;
+  box-sizing: border-box !important;
+  line-height: 44px !important;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.admin-page #logs-tab .admin-pagination .font-mono > span {
+  display: inline !important;
+}
+
+@media (max-width: 768px) {
+  .admin-page #logs-tab .log-card {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    padding: 12px !important;
+  }
+
+  .admin-page #logs-tab .log-card-main {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-page #logs-tab .log-card-main .admin-action-badge {
+    width: fit-content !important;
+  }
+
+  .admin-page #logs-tab .log-card-ip {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
 html:has(> body.admin-page),
 body.admin-page {
   height: auto !important;
