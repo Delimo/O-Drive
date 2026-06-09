@@ -2150,7 +2150,7 @@ body.admin-page {
     flex: 1 1 auto !important;
     flex-direction: column !important;
     height: auto !important;
-    max-width: 1360px;
+    max-width: 1440px;
     min-height: 0 !important;
   }
 
@@ -2913,4 +2913,29 @@ body.admin-page {
     height: auto !important;
     overflow: visible !important;
   }
+}
+
+/* Admin tabs: keep the navigation strip as light as the surrounding panels. */
+.admin-page .tab-shell {
+  border-color: #edf3fb !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.035),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset !important;
+}
+
+.admin-page .tab-shell .admin-tab-btn {
+  border-color: #eef4fb !important;
+  background: #fbfdff !important;
+}
+
+.admin-page .tab-shell .admin-tab-btn:hover {
+  border-color: #dbeafe !important;
+  background: #f4f9ff !important;
+}
+
+.admin-page .tab-shell .admin-tab-btn.is-active {
+  border-color: #3b82f6 !important;
+  background: #3b82f6 !important;
+  box-shadow: 0 8px 18px rgba(59, 130, 246, 0.14) !important;
 }
