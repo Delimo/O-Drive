@@ -803,6 +803,10 @@ body.admin-page {
   --admin-line: #e7edf5;
 }
 
+.admin-page .container {
+  max-width: 1440px;
+}
+
 .admin-page #overview-tab,
 .admin-page #health-tab,
 .admin-page #logs-tab,
@@ -1095,6 +1099,97 @@ body.admin-page {
 .admin-page #storageResult:empty,
 .admin-page #sharesResult.hidden {
   display: none !important;
+}
+
+.admin-page #overview-tab:has(.breakdown-grid:empty) {
+  flex: 0 0 auto;
+  overflow: visible !important;
+}
+
+.admin-page .explorer-card:has(#overview-tab:not(.hidden) .breakdown-grid:empty) {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.admin-page #overview-tab:has(.breakdown-grid:empty) .overview-panels-grid {
+  align-items: start !important;
+}
+
+.admin-page #overview-tab:has(.breakdown-grid:empty) .overview-panels-grid > section {
+  min-height: 0 !important;
+}
+
+.admin-page #overview-tab:has(.breakdown-grid:empty) .overview-focus-pane {
+  flex: 0 0 auto !important;
+}
+
+.admin-page #overview-tab:has(.breakdown-grid:empty) .overview-task-pane {
+  padding-top: 14px;
+}
+
+.admin-page .overview-panels-grid > section:has(.breakdown-grid:empty),
+.admin-page .overview-panels-grid > section:has(.latest-grid:empty) {
+  min-height: 180px !important;
+}
+
+.admin-page .overview-panels-grid > section:has(.latest-grid > .text-slate-500:only-child) {
+  min-height: 180px !important;
+}
+
+.admin-page .overview-panels-grid > section:has(.breakdown-grid:empty) .breakdown-grid,
+.admin-page .overview-panels-grid > section:has(.latest-grid:empty) .latest-grid,
+.admin-page .overview-panels-grid > section:has(.latest-grid > .text-slate-500:only-child) .latest-grid {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto !important;
+  grid-template-rows: none !important;
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--admin-panel-radius);
+  background: #f8fbff;
+}
+
+.admin-page .overview-panels-grid > section:has(.breakdown-grid:empty) .breakdown-grid::before,
+.admin-page .overview-panels-grid > section:has(.latest-grid:empty) .latest-grid::before,
+.admin-page .overview-panels-grid > section:has(.latest-grid > .text-slate-500:only-child) .latest-grid::before {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.admin-page .overview-panels-grid > section:has(.breakdown-grid:empty) .breakdown-grid::before {
+  content: "暂无类型分布";
+}
+
+.admin-page .overview-panels-grid > section:has(.latest-grid:empty) .latest-grid::before {
+  content: "暂无最近新增";
+}
+
+.admin-page .overview-panels-grid > section:has(.latest-grid > .text-slate-500:only-child) .latest-grid > .text-slate-500 {
+  display: none;
+}
+
+.admin-page .overview-panels-grid > section:has(.latest-grid > .text-slate-500:only-child) .latest-grid::before {
+  content: "暂无最近新增";
+}
+
+.admin-page .overview-panels-grid > section:has(.task-empty) .task-list-compact,
+.admin-page .overview-panels-grid > section:has(.task-empty) .task-empty {
+  flex: 0 0 auto !important;
+  min-height: 72px !important;
+}
+
+.admin-page .overview-panels-grid > section:has(.task-empty) {
+  min-height: 0 !important;
 }
 
 @media (max-width: 768px) {
