@@ -2697,7 +2697,7 @@ body.admin-page {
       "head head"
       "overview s3"
       "bindings bindings";
-    gap: 12px !important;
+    gap: 8px !important;
     align-items: start;
   }
 
@@ -2858,6 +2858,7 @@ body.admin-page {
       "row list";
     gap: 10px 14px !important;
     align-items: start;
+    padding: 10px 12px !important;
   }
 
   .admin-page .storage-binding-redesign .storage-panel-head {
@@ -2870,13 +2871,24 @@ body.admin-page {
 
   .admin-page .storage-binding-list {
     grid-area: list;
-    max-height: 126px !important;
+    max-height: 96px !important;
     overflow-y: auto !important;
   }
 
   .admin-page .storage-binding-list .access-empty {
-    min-height: 92px !important;
+    min-height: 72px !important;
     padding: 12px !important;
+  }
+}
+
+@media (min-width: 1181px) and (min-height: 901px) {
+  body.admin-page[data-admin-tab="quota"] .explorer-card,
+  body.admin-page[data-admin-tab="quota"] #quota-tab {
+    overflow: hidden !important;
+  }
+
+  body.admin-page[data-admin-tab="quota"] .storage-redesign {
+    max-height: calc(100vh - 190px);
   }
 }
 
