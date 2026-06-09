@@ -233,6 +233,76 @@ body.admin-page {
   }
 }
 
+@media (max-width: 1279px) {
+  .admin-page .overview-panels-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    height: auto !important;
+    min-height: 0 !important;
+    gap: 14px !important;
+  }
+
+  .admin-page .overview-panels-grid > section,
+  .admin-page .overview-focus-panel,
+  .admin-page .overview-focus-pane,
+  .admin-page .overview-task-pane {
+    display: flex !important;
+    flex-direction: column !important;
+    align-self: stretch !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .admin-page .overview-focus-panel {
+    gap: 14px !important;
+  }
+
+  .admin-page .overview-task-pane {
+    padding-top: 14px !important;
+    border-top: 1px solid var(--admin-line, #e7edf5) !important;
+  }
+
+  .admin-page .breakdown-grid,
+  .admin-page .latest-grid,
+  .admin-page .attention-grid,
+  .admin-page .task-list-compact {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .admin-page .overview-panels-grid > section:has(.breakdown-grid:empty),
+  .admin-page .overview-panels-grid > section:has(.latest-grid:empty),
+  .admin-page .overview-panels-grid > section:has(.latest-grid > .text-slate-500:only-child),
+  .admin-page .overview-panels-grid > section:has(.task-empty) {
+    width: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .admin-page .overview-panels-grid > section:has(.breakdown-grid:empty) .breakdown-grid,
+  .admin-page .overview-panels-grid > section:has(.latest-grid:empty) .latest-grid,
+  .admin-page .overview-panels-grid > section:has(.latest-grid > .text-slate-500:only-child) .latest-grid,
+  .admin-page .overview-panels-grid > section:has(.task-empty) .task-list-compact,
+  .admin-page .overview-panels-grid > section:has(.task-empty) .task-empty {
+    box-sizing: border-box !important;
+    align-self: stretch !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .admin-page .overview-panels-grid > section:has(.task-empty) .task-empty {
+    margin: 0 !important;
+  }
+}
+
 @media (max-width: 768px) {
   .admin-page .container {
     padding: 8px 10px 20px !important;
