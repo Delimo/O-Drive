@@ -233,9 +233,8 @@ body.admin-page {
   }
 
   .admin-page .overview-panels-grid > section,
-  .admin-page .health-status-panel,
-  .admin-page .health-maintenance-panel,
-  .admin-page .health-advice-panel,
+  .admin-page .log-filter-panel,
+  .admin-page .share-filter-panel,
   .admin-page .access-editor-panel,
   .admin-page .access-list-panel,
   .admin-page .quota-editor-panel,
@@ -244,7 +243,47 @@ body.admin-page {
   .admin-page .webhook-editor-column,
   .admin-page .webhook-list-panel,
   .admin-page .webhook-delivery-panel {
-    padding: 0 !important;
+    padding: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  .admin-page .health-workbench {
+    min-height: 0 !important;
+    gap: 14px !important;
+  }
+
+  .admin-page .health-workbench-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    gap: 14px !important;
+    overflow: hidden !important;
+  }
+
+  .admin-page .health-status-panel,
+  .admin-page .health-maintenance-panel,
+  .admin-page .health-advice-panel {
+    padding: 14px !important;
+    border: 1px solid var(--admin-line, #e7edf5) !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+  }
+
+  .admin-page .health-status-panel,
+  .admin-page .health-maintenance-panel {
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .admin-page .health-status-panel .health-grid,
+  .admin-page .health-maintenance-panel .health-grid {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  .admin-page .health-advice-panel {
+    flex: 0 0 auto !important;
+    align-items: start !important;
   }
 
   .admin-page .overview-panels-grid > section {
@@ -254,6 +293,12 @@ body.admin-page {
     height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
+  }
+
+  .admin-page .overview-panels-grid > section:not(:first-child),
+  .admin-page .storage-view[data-storage-view="s3"] .storage-panel,
+  .admin-page .storage-view[data-storage-view="s3"] .storage-s3-grid > .storage-panel + .storage-panel {
+    padding: 14px !important;
   }
 
   .admin-page .overview-focus-panel,
@@ -498,8 +543,19 @@ body.admin-page {
     flex: 0 0 auto !important;
     height: auto !important;
     min-height: 0 !important;
-    padding: 0 !important;
+    padding: 14px !important;
     overflow: visible !important;
+  }
+
+  .admin-page .storage-view.is-active .storage-panel {
+    padding: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  .admin-page .overview-panels-grid > section:not(:first-child),
+  .admin-page .storage-view[data-storage-view="s3"] .storage-panel,
+  .admin-page .storage-view[data-storage-view="s3"] .storage-s3-grid > .storage-panel + .storage-panel {
+    padding: 14px !important;
   }
 
   .admin-page .overview-focus-panel,
