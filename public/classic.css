@@ -1054,7 +1054,7 @@ body.admin-page {
 }
 
 .admin-page .webhook-editor-column {
-  padding-bottom: 0 !important;
+  padding-bottom: 72px !important;
 }
 
 .admin-page .webhook-save-row {
@@ -1223,6 +1223,10 @@ body.admin-page {
 .admin-page .webhook-list-panel,
 .admin-page .webhook-delivery-panel {
   padding: 0 !important;
+}
+
+.admin-page .webhook-editor-column {
+  padding-bottom: 72px !important;
 }
 
 .admin-page .overview-panels-grid > section:not(:first-child),
