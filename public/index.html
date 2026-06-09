@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/ui-fixes.css">
 </head>
 <body class="flex flex-col h-screen overflow-hidden" data-user-role="guest">
-    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center"></div>
+    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <main class="container">
         <div class="mobile-shell">
@@ -31,7 +31,7 @@
                 <button class="btn btn-primary mobile-search-btn" data-action="search">搜索</button>
                 <div id="mobileSearchSuggestions" class="search-suggestions hidden"></div>
             </div>
-            <div class="mobile-breadcrumb-card">
+            <div class="mobile-breadcrumb-card" hidden>
                 <div id="mobileBreadcrumb" class="mobile-breadcrumb"></div>
             </div>
         </div>

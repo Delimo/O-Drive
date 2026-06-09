@@ -38,6 +38,22 @@ button,
   border-radius: 12px !important;
 }
 
+@media (max-width: 640px) {
+  #toastContainer {
+    top: auto !important;
+    right: 14px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 86px);
+    left: 14px !important;
+    width: auto;
+    transform: none !important;
+    align-items: stretch;
+  }
+
+  #toastContainer > * {
+    justify-content: center;
+  }
+}
+
 body[data-user-role="guest"] .mobile-bottom-bar,
 body:has(#loginModal:not(.hidden)) .mobile-bottom-bar,
 body:has(#mkdirModal:not(.hidden)) .mobile-bottom-bar,

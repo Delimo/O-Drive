@@ -201,7 +201,11 @@ export const UI = {
     const desktop = document.getElementById('breadcrumb');
     if (desktop) desktop.innerHTML = html;
     const mobile = document.getElementById('mobileBreadcrumb');
-    if (mobile) mobile.innerHTML = html;
+    if (mobile) {
+      mobile.innerHTML = html;
+      const card = mobile.closest('.mobile-breadcrumb-card');
+      if (card) card.hidden = false;
+    }
   },
 
   renderSearchBreadcrumb(query) {
@@ -213,7 +217,33 @@ export const UI = {
     const desktop = document.getElementById('breadcrumb');
     if (desktop) desktop.innerHTML = html;
     const mobile = document.getElementById('mobileBreadcrumb');
-    if (mobile) mobile.innerHTML = html;
+    if (mobile) {
+      mobile.innerHTML = html;
+      const card = mobile.closest('.mobile-breadcrumb-card');
+      if (card) card.hidden = false;
+    }
+  },
+
+  renderFileListStatus({ title, message, tone = 'info', actionLabel = '', action = '' }) {
+    const list = document.getElementById('fileList');
+    if (!list) return;
+    if (virtualScroller) { virtualScroller.destroy(); virtualScroller = null; }
+    state.visibleKeys = [];
+    const mobileBreadcrumb = document.getElementById('mobileBreadcrumb');
+    const mobileBreadcrumbCard = mobileBreadcrumb?.closest('.mobile-breadcrumb-card');
+    if (mobileBreadcrumb) clearElement(mobileBreadcrumb);
+    if (mobileBreadcrumbCard) mobileBreadcrumbCard.hidden = true;
+
+    list.innerHTML = `
+      <div class="file-status-state file-status-state-${escapeHtml(tone)}" role="status" aria-live="polite">
+        <div class="file-status-mark" aria-hidden="true">${tone === 'error' ? '!' : 'i'}</div>
+        <div class="file-status-copy">
+          <h2>${escapeHtml(title)}</h2>
+          <p>${escapeHtml(message)}</p>
+          ${actionLabel && action ? `<button class="btn btn-primary file-status-action" data-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>` : ''}
+        </div>
+      </div>
+    `;
   },
 
   updateFileList() {

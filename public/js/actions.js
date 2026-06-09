@@ -31,7 +31,16 @@ export const Actions = {
     const { res, data } = await api.listFiles(state.currentPath);
     if (!res.ok) {
       if (data?.code === 'password_required') return this.handlePasswordRequired(data, () => this.loadFiles());
-      Message.error(data?.message || '文件列表加载失败');
+      const message = data?.message || '文件列表加载失败';
+      state.fileData = { folders: [], files: [] };
+      UI.renderFileListStatus({
+        title: '文件列表加载失败',
+        message: `${message}。请检查网络或稍后重试。`,
+        tone: 'error',
+        actionLabel: '重试',
+        action: 'reload-files',
+      });
+      Message.error(message);
       return;
     }
     state.fileData = data;

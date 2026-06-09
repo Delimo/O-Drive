@@ -52,6 +52,7 @@ document.addEventListener('click', event => {
       return document.getElementById('folderInput')?.click();
     case 'toggle-view': return Actions.toggleViewMode();
     case 'toggle-sort': return Actions.toggleSortMode();
+    case 'reload-files': return Actions.loadFiles();
     case 'search': return Actions.handleSearch();
     case 'select-all': return Actions.toggleSelectAll();
     case 'clear-selection': return Actions.clearSelection();

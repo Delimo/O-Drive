@@ -136,6 +136,23 @@
         display: none;
     }
 
+    .file-status-state {
+        grid-template-columns: 1fr;
+        align-content: center;
+        justify-items: center;
+        gap: 14px;
+        padding: 24px 22px;
+        text-align: center;
+    }
+
+    .file-status-copy h2 {
+        font-size: 18px;
+    }
+
+    .file-status-copy p {
+        font-size: 13px;
+    }
+
     .grid-layout {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
         gap: 10px !important;

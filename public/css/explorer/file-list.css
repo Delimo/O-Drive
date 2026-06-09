@@ -179,6 +179,62 @@
     box-shadow: 0 10px 20px rgba(37, 99, 235, 0.20);
 }
 
+.file-status-state {
+    min-height: 100%;
+    display: grid;
+    grid-template-columns: 46px minmax(0, 420px);
+    align-content: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 32px;
+    box-sizing: border-box;
+    color: var(--text-main);
+    text-align: left;
+}
+
+.file-status-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eff6ff;
+    color: var(--primary-strong);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.file-status-state-error .file-status-mark {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.file-status-copy {
+    min-width: 0;
+}
+
+.file-status-copy h2 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.file-status-copy p {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.65;
+}
+
+.file-status-action {
+    margin-top: 18px;
+}
+
 .list-layout {
     width: 100%;
 }
