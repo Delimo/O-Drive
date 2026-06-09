@@ -1076,7 +1076,86 @@ body.admin-page {
 }
 
 .admin-page .storage-s3-grid {
-  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.82fr) !important;
+  align-items: stretch !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] {
+  min-height: 0;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-s3-grid {
+  min-height: 0;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-panel {
+  gap: 10px !important;
+  padding: 14px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-panel-head {
+  align-items: center !important;
+  padding-bottom: 10px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-panel-head h3 {
+  font-size: 16px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-panel-head p {
+  margin-top: 4px !important;
+  line-height: 1.35 !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-form-grid {
+  gap: 7px 10px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-field {
+  gap: 4px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-field .admin-input {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-head-actions {
+  gap: 8px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .storage-head-actions .btn {
+  height: 40px !important;
+  min-height: 40px !important;
+  min-width: 74px !important;
+  padding: 0 14px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .access-mode-grid {
+  gap: 10px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .access-mode-card {
+  min-height: 40px !important;
+  padding: 8px 12px !important;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .access-rule-list {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.admin-page .storage-view[data-storage-view="s3"] .access-empty {
+  min-height: 72px !important;
+  padding: 14px !important;
+}
+
+@media (max-width: 1180px) {
+  .admin-page .storage-s3-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }
 
 .admin-page #quota-tab .storage-panel,
