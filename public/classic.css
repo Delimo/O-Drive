@@ -807,6 +807,11 @@ body.admin-page {
   max-width: 1440px;
 }
 
+.admin-page .tab-shell,
+.admin-page .explorer-card {
+  box-sizing: border-box;
+}
+
 .admin-page #overview-tab,
 .admin-page #health-tab,
 .admin-page #logs-tab,
@@ -815,16 +820,21 @@ body.admin-page {
 .admin-page #shares-tab,
 .admin-page #webhooks-tab {
   box-sizing: border-box;
+  flex: 1 1 auto !important;
+  width: 100%;
+  min-height: 0;
   padding: var(--admin-outer-pad) !important;
+  overflow-y: auto;
 }
 
-.admin-page #overview-tab,
-.admin-page #logs-tab,
-.admin-page #access-tab,
-.admin-page #quota-tab,
-.admin-page #shares-tab,
-.admin-page #webhooks-tab {
-  min-height: 0;
+.admin-page #overview-tab.hidden,
+.admin-page #health-tab.hidden,
+.admin-page #logs-tab.hidden,
+.admin-page #access-tab.hidden,
+.admin-page #quota-tab.hidden,
+.admin-page #shares-tab.hidden,
+.admin-page #webhooks-tab.hidden {
+  display: none !important;
 }
 
 .admin-page .admin-page-panel {
@@ -1057,18 +1067,6 @@ body.admin-page {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), #ffffff 42%) !important;
 }
 
-.admin-page .explorer-card:has(#quota-tab:not(.hidden)),
-.admin-page .explorer-card:has(#shares-tab:not(.hidden)) {
-  flex: 0 0 auto;
-  min-height: 0;
-}
-
-.admin-page #quota-tab,
-.admin-page #shares-tab {
-  flex: 0 0 auto;
-  overflow: visible !important;
-}
-
 .admin-page .storage-console {
   flex: 0 0 auto !important;
 }
@@ -1099,16 +1097,6 @@ body.admin-page {
 .admin-page #storageResult:empty,
 .admin-page #sharesResult.hidden {
   display: none !important;
-}
-
-.admin-page #overview-tab:has(.breakdown-grid:empty) {
-  flex: 0 0 auto;
-  overflow: visible !important;
-}
-
-.admin-page .explorer-card:has(#overview-tab:not(.hidden) .breakdown-grid:empty) {
-  flex: 0 0 auto;
-  min-height: 0;
 }
 
 .admin-page #overview-tab:has(.breakdown-grid:empty) .overview-panels-grid {
@@ -1274,8 +1262,4 @@ body.admin-page {
     padding: 12px var(--admin-panel-pad) var(--admin-panel-pad) !important;
   }
 
-  .admin-page .explorer-card:has(#quota-tab:not(.hidden)),
-  .admin-page .explorer-card:has(#shares-tab:not(.hidden)) {
-    flex: none;
-  }
 }
