@@ -49,6 +49,21 @@ body:has(#previewModal:not(.hidden)) .mobile-bottom-bar {
   display: none !important;
 }
 
+html:has(> body.admin-page),
+body.admin-page {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.admin-page .container {
+  width: 100%;
+  height: auto !important;
+  min-height: 100vh !important;
+  flex: 0 0 auto !important;
+}
+
 .admin-page .tab-shell {
   display: flex !important;
   position: relative;
@@ -72,10 +87,21 @@ body:has(#previewModal:not(.hidden)) .mobile-bottom-bar {
 .admin-page .explorer-card {
   position: relative;
   z-index: 1;
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+  overflow: visible !important;
 }
 
 .admin-page [role="tabpanel"][hidden] {
   display: none !important;
+}
+
+.admin-page [role="tabpanel"]:not([hidden]) {
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+  overflow: visible !important;
 }
 
 .admin-page .access-mode-card,
@@ -229,14 +255,16 @@ body:has(#previewModal:not(.hidden)) .mobile-bottom-bar {
   .admin-page .tab-shell {
     display: flex !important;
     width: 100%;
-    min-height: 0 !important;
+    height: auto !important;
+    min-height: 58px !important;
     gap: 6px !important;
     padding: 7px !important;
     overflow-x: auto !important;
-    overflow-y: hidden !important;
+    overflow-y: visible !important;
     white-space: nowrap !important;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
+    align-items: center !important;
   }
 
   .admin-page .tab-shell::-webkit-scrollbar {
@@ -251,6 +279,7 @@ body:has(#previewModal:not(.hidden)) .mobile-bottom-bar {
     min-height: 44px !important;
     padding: 0 13px !important;
     font-size: 13px !important;
+    line-height: 1 !important;
     scroll-snap-align: start;
   }
 
@@ -306,13 +335,42 @@ body:has(#previewModal:not(.hidden)) .mobile-bottom-bar {
   }
 
   .admin-page .overview-panels-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
     gap: 14px !important;
   }
 
   .admin-page .overview-panels-grid > section {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
     min-height: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
+  }
+
+  .admin-page .overview-focus-panel,
+  .admin-page .overview-focus-pane,
+  .admin-page .overview-task-pane {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .admin-page .overview-focus-panel {
+    gap: 14px !important;
+  }
+
+  .admin-page .overview-task-pane {
+    padding-top: 14px !important;
+    border-top: 1px solid var(--admin-line, #e7edf5) !important;
   }
 
   .admin-page .overview-panels-grid > section:not(:first-child),
@@ -328,10 +386,24 @@ body:has(#previewModal:not(.hidden)) .mobile-bottom-bar {
   .admin-page .latest-grid,
   .admin-page .attention-grid,
   .admin-page .task-list-compact {
+    display: grid !important;
+    flex: 0 0 auto !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     gap: 8px !important;
+    overflow: visible !important;
+  }
+
+  .admin-page .task-summary-compact {
+    grid-template-columns: 1fr !important;
+    flex: 0 0 auto !important;
+    margin-bottom: 8px !important;
+  }
+
+  .admin-page .task-empty,
+  .admin-page .admin-empty-state {
+    min-height: 72px !important;
   }
 
   .admin-page .breakdown-item,
