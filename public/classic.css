@@ -2687,3 +2687,210 @@ body.admin-page {
     max-height: none !important;
   }
 }
+
+/* Storage desktop fit: keep the complete storage workspace inside one desktop screen. */
+@media (min-width: 1181px) {
+  .admin-page .storage-redesign {
+    display: grid !important;
+    grid-template-columns: minmax(500px, 0.92fr) minmax(620px, 1.08fr);
+    grid-template-areas:
+      "head head"
+      "overview s3"
+      "bindings bindings";
+    gap: 12px !important;
+    align-items: start;
+  }
+
+  .admin-page .storage-redesign-head {
+    grid-area: head;
+    padding-bottom: 8px !important;
+  }
+
+  .admin-page .storage-redesign-head p {
+    margin-top: 4px !important;
+  }
+
+  .admin-page .storage-redesign [data-storage-view="overview"] {
+    grid-area: overview;
+  }
+
+  .admin-page .storage-redesign [data-storage-view="s3"] {
+    grid-area: s3;
+  }
+
+  .admin-page .storage-redesign [data-storage-view="bindings"] {
+    grid-area: bindings;
+  }
+
+  .admin-page .storage-overview-redesign {
+    gap: 10px;
+  }
+
+  .admin-page .storage-quota-hero {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .admin-page .storage-quota-hero-main {
+    gap: 10px;
+  }
+
+  .admin-page .storage-quota-number strong {
+    font-size: clamp(40px, 4vw, 58px);
+  }
+
+  .admin-page .storage-usage-strip .quota-usage-track {
+    height: 10px !important;
+  }
+
+  .admin-page .storage-quota-hero .quota-note-card span {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .admin-page .storage-metric-redesign {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .admin-page .storage-metric-redesign .storage-metric-card {
+    min-height: 52px !important;
+    padding: 10px 12px !important;
+  }
+
+  .admin-page .storage-metric-redesign .storage-metric-card strong {
+    font-size: 18px !important;
+  }
+
+  .admin-page .storage-config-grid {
+    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+    gap: 10px;
+  }
+
+  .admin-page .storage-config-card,
+  .admin-page .storage-s3-editor,
+  .admin-page .storage-s3-list-panel,
+  .admin-page .storage-binding-redesign {
+    padding: 14px !important;
+    border-radius: 14px !important;
+  }
+
+  .admin-page .storage-config-card,
+  .admin-page .storage-s3-editor,
+  .admin-page .storage-binding-redesign {
+    gap: 10px !important;
+  }
+
+  .admin-page .storage-panel-head {
+    gap: 10px;
+  }
+
+  .admin-page .storage-panel-head p {
+    margin-top: 3px !important;
+    line-height: 1.32 !important;
+  }
+
+  .admin-page .storage-toggle-card {
+    min-height: 50px !important;
+  }
+
+  .admin-page .storage-s3-workbench {
+    grid-template-columns: minmax(0, 1.08fr) minmax(260px, 0.72fr);
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .admin-page .storage-s3-editor-head {
+    align-items: center !important;
+    padding-bottom: 10px !important;
+  }
+
+  .admin-page .storage-form-block {
+    gap: 7px;
+    padding-bottom: 10px;
+  }
+
+  .admin-page .storage-s3-editor .storage-form-grid {
+    gap: 8px 10px !important;
+  }
+
+  .admin-page .storage-s3-editor .storage-field {
+    gap: 4px !important;
+  }
+
+  .admin-page .storage-s3-editor .storage-field > span,
+  .admin-page .storage-block-title {
+    font-size: 11px;
+  }
+
+  .admin-page .storage-option-block .access-mode-grid {
+    gap: 8px !important;
+  }
+
+  .admin-page .storage-option-block .access-mode-card {
+    min-height: 48px !important;
+    padding: 8px 10px !important;
+  }
+
+  .admin-page .storage-result-line {
+    min-height: 0 !important;
+  }
+
+  .admin-page .storage-space-list {
+    max-height: 238px !important;
+    overflow-y: auto !important;
+  }
+
+  .admin-page .storage-binding-row {
+    grid-template-columns: minmax(160px, 1fr) minmax(190px, 0.75fr) 104px !important;
+    gap: 8px !important;
+    padding: 10px;
+  }
+
+  .admin-page .storage-binding-redesign {
+    grid-template-columns: minmax(0, 0.9fr) minmax(360px, 0.72fr);
+    grid-template-areas:
+      "head list"
+      "row list";
+    gap: 10px 14px !important;
+    align-items: start;
+  }
+
+  .admin-page .storage-binding-redesign .storage-panel-head {
+    grid-area: head;
+  }
+
+  .admin-page .storage-binding-redesign .storage-binding-row {
+    grid-area: row;
+  }
+
+  .admin-page .storage-binding-list {
+    grid-area: list;
+    max-height: 126px !important;
+    overflow-y: auto !important;
+  }
+
+  .admin-page .storage-binding-list .access-empty {
+    min-height: 92px !important;
+    padding: 12px !important;
+  }
+}
+
+@media (min-width: 1181px) and (max-height: 900px) {
+  html:has(> body.admin-page),
+  body.admin-page {
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+
+  .admin-page .container,
+  .admin-page .explorer-card,
+  .admin-page [role="tabpanel"]:not([hidden]) {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
