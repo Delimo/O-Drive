@@ -1154,9 +1154,9 @@ body.admin-page {
 
 /* Admin surface simplification: one primary canvas, lighter inner grouping. */
 .admin-page .tab-shell {
-  border-color: transparent !important;
-  background: rgba(248, 251, 255, 0.72) !important;
-  box-shadow: none !important;
+  border-color: #dce8f6 !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
 .admin-page .tab-shell .admin-tab-btn,
