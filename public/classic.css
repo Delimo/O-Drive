@@ -2695,8 +2695,7 @@ body.admin-page {
     grid-template-columns: minmax(500px, 0.92fr) minmax(620px, 1.08fr);
     grid-template-areas:
       "head head"
-      "overview s3"
-      "bindings bindings";
+      "overview s3";
     gap: 8px !important;
     align-items: start;
   }
@@ -2716,10 +2715,6 @@ body.admin-page {
 
   .admin-page .storage-redesign [data-storage-view="s3"] {
     grid-area: s3;
-  }
-
-  .admin-page .storage-redesign [data-storage-view="bindings"] {
-    grid-area: bindings;
   }
 
   .admin-page .storage-overview-redesign {
@@ -2768,7 +2763,7 @@ body.admin-page {
 
   .admin-page .storage-config-grid {
     grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
-    gap: 10px;
+    gap: 8px;
   }
 
   .admin-page .storage-config-card,
@@ -2802,6 +2797,10 @@ body.admin-page {
     grid-template-columns: minmax(0, 1.08fr) minmax(260px, 0.72fr);
     gap: 12px;
     align-items: stretch;
+  }
+
+  .admin-page .storage-s3-list-panel {
+    gap: 12px !important;
   }
 
   .admin-page .storage-s3-editor-head {
@@ -2841,41 +2840,50 @@ body.admin-page {
   }
 
   .admin-page .storage-space-list {
-    max-height: 238px !important;
+    max-height: 150px !important;
     overflow-y: auto !important;
   }
 
-  .admin-page .storage-binding-row {
-    grid-template-columns: minmax(160px, 1fr) minmax(190px, 0.75fr) 104px !important;
+  .admin-page .storage-space-list .access-empty {
+    min-height: 72px !important;
+    padding: 12px !important;
+  }
+
+  .admin-page .storage-s3-list-panel .storage-binding-redesign {
     gap: 8px !important;
-    padding: 10px;
+    padding: 12px 0 0 !important;
+    border: 0 !important;
+    border-top: 1px solid #e7edf5 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
   }
 
-  .admin-page .storage-binding-redesign {
-    grid-template-columns: minmax(0, 0.9fr) minmax(360px, 0.72fr);
-    grid-template-areas:
-      "head list"
-      "row list";
-    gap: 10px 14px !important;
-    align-items: start;
-    padding: 10px 12px !important;
+  .admin-page .storage-s3-list-panel .storage-binding-redesign .storage-panel-head {
+    display: block;
   }
 
-  .admin-page .storage-binding-redesign .storage-panel-head {
-    grid-area: head;
+  .admin-page .storage-s3-list-panel .storage-binding-redesign .storage-panel-head p {
+    display: none;
   }
 
-  .admin-page .storage-binding-redesign .storage-binding-row {
-    grid-area: row;
+  .admin-page .storage-s3-list-panel .storage-binding-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
 
-  .admin-page .storage-binding-list {
-    grid-area: list;
+  .admin-page .storage-s3-list-panel .storage-binding-row .btn {
+    width: 100%;
+  }
+
+  .admin-page .storage-s3-list-panel .storage-binding-list {
     max-height: 96px !important;
     overflow-y: auto !important;
   }
 
-  .admin-page .storage-binding-list .access-empty {
+  .admin-page .storage-s3-list-panel .storage-binding-list .access-empty {
     min-height: 72px !important;
     padding: 12px !important;
   }

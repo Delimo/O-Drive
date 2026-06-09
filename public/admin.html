@@ -423,25 +423,22 @@
                                     </div>
                                 </div>
                                 <div id="storageSpaceList" class="access-rule-list storage-space-list"></div>
+                                <section class="storage-binding-workbench storage-binding-redesign">
+                                    <div class="storage-panel-head">
+                                        <div>
+                                            <h3>文件夹绑定</h3>
+                                            <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
+                                        </div>
+                                    </div>
+                                    <div class="storage-input-row bind storage-binding-row">
+                                        <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
+                                        <select id="bindingStorageInput" class="admin-input"></select>
+                                        <button class="btn btn-primary" data-admin-action="add-storage-binding">绑定路径</button>
+                                    </div>
+                                    <div id="storageBindingList" class="access-rule-list storage-binding-list"></div>
+                                </section>
                             </section>
                         </div>
-                    </div>
-
-                    <div class="storage-view is-active" data-storage-view="bindings">
-                        <section class="storage-panel storage-binding-workbench storage-binding-redesign">
-                            <div class="storage-panel-head">
-                                <div>
-                                    <h3>文件夹绑定</h3>
-                                    <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
-                                </div>
-                            </div>
-                            <div class="storage-input-row bind storage-binding-row">
-                                <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
-                                <select id="bindingStorageInput" class="admin-input"></select>
-                                <button class="btn btn-primary" data-admin-action="add-storage-binding">绑定路径</button>
-                            </div>
-                            <div id="storageBindingList" class="access-rule-list storage-binding-list"></div>
-                        </section>
                     </div>
                 </section>
             </div>
