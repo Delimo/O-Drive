@@ -3085,6 +3085,69 @@ body.admin-page {
   box-shadow: 0 8px 18px rgba(59, 130, 246, 0.14) !important;
 }
 
+/* Shared command bars: keep the client toolbar and admin tabs visually aligned. */
+.toolbar-card,
+.admin-page .tab-shell {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 68px !important;
+  padding: 10px 18px !important;
+  gap: 10px !important;
+  border: 1px solid #dce8f6 !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.035),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset !important;
+}
+
+.toolbar-card {
+  justify-content: space-between !important;
+}
+
+.admin-page .tab-shell {
+  justify-content: stretch !important;
+}
+
+.toolbar-card .tools-left,
+.toolbar-card .tools-right,
+.toolbar-card #batchTools,
+.toolbar-card #pasteGroup {
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.toolbar-card .btn,
+.toolbar-card .upload-menu-wrap > .btn,
+.toolbar-card .breadcrumb-root,
+.admin-page .tab-shell .admin-tab-btn {
+  height: 50px !important;
+  min-height: 50px !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+}
+
+.toolbar-card .btn,
+.toolbar-card .upload-menu-wrap > .btn,
+.toolbar-card .breadcrumb-root {
+  min-width: 102px !important;
+  padding: 0 20px !important;
+}
+
+.admin-page .tab-shell .admin-tab-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+
+@media (min-width: 1025px) {
+  .desktop-shell > .toolbar-card,
+  .admin-page .tab-shell {
+    padding: 10px 18px !important;
+  }
+}
+
 /* UI polish: tighter scanability and clearer async/selected states. */
 .grid-item {
   display: flex !important;
