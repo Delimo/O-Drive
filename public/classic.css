@@ -45,6 +45,57 @@ body.share-page {
   content: none;
 }
 
+.page-top-stack,
+.page-footer-shell {
+  width: 100%;
+}
+
+.page-top-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.page-top-stack > .header-card,
+.page-top-stack > .toolbar-card,
+.page-top-stack > .tab-shell {
+  margin-top: 0 !important;
+}
+
+.page-footer-shell {
+  margin-top: 12px;
+}
+
+.admin-console-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  color: var(--text-main);
+}
+
+.admin-console-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-console-eyebrow {
+  color: #5f718c;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.admin-console-title {
+  color: var(--text-main);
+  font-size: 21px;
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
 .header-card,
 .toolbar-card,
 .admin-page .tab-shell,
@@ -335,6 +386,18 @@ body.share-page {
 @media (max-width: 768px) {
   .container {
     padding: 10px 10px 72px;
+  }
+
+  .page-footer-shell {
+    margin-top: 10px;
+  }
+
+  .admin-console-link {
+    gap: 10px;
+  }
+
+  .admin-console-title {
+    font-size: 16px;
   }
 
   .header-card,
