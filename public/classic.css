@@ -3638,3 +3638,94 @@ body.admin-page {
   background: #dbeafe;
   color: #1e40af;
 }
+
+/* Desktop admin layout guardrails: keep quota and webhook workbenches contained after classic theme overrides. */
+@media (min-width: 1181px) {
+  body.admin-page[data-admin-tab="quota"] #quota-tab {
+    overflow-y: auto !important;
+  }
+
+  body.admin-page[data-admin-tab="quota"] .explorer-card {
+    overflow: hidden !important;
+  }
+
+  .admin-page #quota-tab,
+  .admin-page #quota-tab .admin-page-panel,
+  .admin-page .storage-console {
+    min-width: 0 !important;
+  }
+
+  .admin-page #quota-tab {
+    overflow-y: auto !important;
+  }
+
+  .admin-page #quota-tab .admin-page-panel,
+  .admin-page .storage-console {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+  }
+
+  .admin-page .storage-redesign {
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr) !important;
+  }
+
+  .admin-page .storage-redesign [data-storage-view="overview"],
+  .admin-page .storage-redesign [data-storage-view="s3"],
+  .admin-page .storage-config-grid,
+  .admin-page .storage-s3-workbench,
+  .admin-page .storage-s3-editor,
+  .admin-page .storage-s3-list-panel {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .admin-page .storage-config-grid {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) !important;
+  }
+
+  .admin-page .storage-s3-workbench {
+    grid-template-columns: minmax(0, 1.06fr) minmax(320px, 0.72fr) !important;
+  }
+
+  .admin-page .storage-space-list,
+  .admin-page .storage-binding-list {
+    max-height: 280px !important;
+    overflow-y: auto !important;
+  }
+
+  .admin-page #webhooks-tab,
+  .admin-page #webhooks-tab .admin-page-panel,
+  .admin-page .webhook-settings-body,
+  .admin-page .webhook-editor-column,
+  .admin-page .webhook-list-panel,
+  .admin-page .webhook-delivery-panel {
+    min-height: 0 !important;
+  }
+
+  .admin-page #webhooks-tab,
+  .admin-page #webhooks-tab .admin-page-panel,
+  .admin-page .webhook-settings-body,
+  .admin-page .webhook-list-panel,
+  .admin-page .webhook-delivery-panel {
+    overflow: hidden !important;
+  }
+
+  .admin-page .webhook-settings-body {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.48fr) !important;
+    grid-template-rows: minmax(0, 1fr) minmax(180px, 0.58fr) !important;
+    align-items: stretch !important;
+  }
+
+  .admin-page .webhook-editor-column {
+    overflow-y: auto !important;
+  }
+
+  .admin-page .webhook-list,
+  .admin-page .webhook-deliveries-list {
+    max-height: none !important;
+    overflow-y: auto !important;
+    padding-bottom: 4px !important;
+  }
+}
