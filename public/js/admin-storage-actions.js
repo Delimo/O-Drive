@@ -58,12 +58,14 @@ export function createAdminStorageActions({ adminConfirm }) {
       const quotaUsed = document.getElementById('quotaUsedValue');
       const quotaRemaining = document.getElementById('quotaRemainingValue');
       const quotaPercent = document.getElementById('quotaPercentValue');
+      const quotaPercentLabel = document.getElementById('quotaPercentLabel');
       const usageBar = document.getElementById('quotaUsageBar');
       const quotaHero = document.querySelector('.storage-quota-hero');
       if (quotaLimit) quotaLimit.textContent = quotaLabel;
       if (quotaUsed) quotaUsed.textContent = data.usedFormatted || '0 B';
       if (quotaRemaining) quotaRemaining.textContent = remainingLabel;
-      if (quotaPercent) quotaPercent.textContent = data.quota > 0 ? `${usedPercent}%` : '不限';
+      if (quotaPercent) quotaPercent.textContent = data.quota > 0 ? `${usedPercent}%` : data.usedFormatted || '0 B';
+      if (quotaPercentLabel) quotaPercentLabel.textContent = data.quota > 0 ? '已使用' : '当前未限制配额';
       if (usageBar) usageBar.style.width = `${Math.max(0, Math.min(100, usedPercent))}%`;
       quotaHero?.classList.toggle('is-unlimited', !(data.quota > 0));
       info.innerHTML = `
@@ -195,6 +197,7 @@ export function createAdminStorageActions({ adminConfirm }) {
       if (overflow) overflow.checked = space ? Boolean(space.overflowTarget) : true;
       const secret = document.getElementById('storageSecretKeyInput');
       if (secret) secret.type = 'password';
+      document.querySelector('.storage-secret-toggle')?.classList.remove('is-visible');
     },
 
     newStorageSpace() {
@@ -216,7 +219,12 @@ export function createAdminStorageActions({ adminConfirm }) {
     toggleStorageSecret() {
       const input = document.getElementById('storageSecretKeyInput');
       if (!input) return;
-      input.type = input.type === 'password' ? 'text' : 'password';
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      const button = document.querySelector('.storage-secret-toggle');
+      button?.classList.toggle('is-visible', visible);
+      button?.setAttribute('aria-label', visible ? '隐藏 Secret Access Key' : '显示 Secret Access Key');
+      button?.setAttribute('title', visible ? '隐藏密钥' : '显示密钥');
     },
 
     readStorageBaseConfig() {

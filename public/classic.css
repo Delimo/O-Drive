@@ -1619,7 +1619,18 @@ body.admin-page {
 
 .admin-page .storage-quota-hero.is-unlimited .storage-quota-number strong {
   color: #1f2937 !important;
-  font-size: clamp(38px, 5.5vw, 58px) !important;
+  font-size: clamp(34px, 4.8vw, 54px) !important;
+}
+
+.admin-page .storage-quota-hero.is-unlimited .storage-quota-number {
+  align-items: flex-end;
+}
+
+.admin-page .storage-quota-hero.is-unlimited .storage-quota-number span {
+  max-width: 150px;
+  padding-bottom: 4px;
+  color: #475569 !important;
+  line-height: 1.25;
 }
 
 .admin-page .storage-quota-hero .quota-info-grid {
@@ -1692,7 +1703,19 @@ body.admin-page {
 
 .admin-page .storage-toggle-card:has(input:disabled),
 .admin-page .storage-policy-grid:has(input:disabled) {
-  opacity: 0.62;
+  opacity: 0.58;
+  filter: grayscale(0.15);
+}
+
+.admin-page .storage-toggle-card:has(input:disabled) {
+  border-color: #e2e8f0 !important;
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+}
+
+.admin-page .storage-toggle-card:has(input:disabled) * {
+  cursor: not-allowed !important;
 }
 
 .admin-page .storage-policy-hint {
@@ -1712,11 +1735,18 @@ body.admin-page {
   display: grid;
   grid-template-columns: minmax(0, 1.06fr) minmax(340px, 0.72fr);
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .admin-page .storage-s3-editor {
   gap: 16px !important;
+  height: 100%;
+}
+
+.admin-page .storage-s3-list-panel {
+  display: flex !important;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .admin-page .storage-s3-editor-head {
@@ -1789,9 +1819,26 @@ body.admin-page {
   border-radius: 0 10px 10px 0;
   background: #f8fafc;
   color: #475569;
-  font-size: 12px;
-  font-weight: 900;
   cursor: pointer;
+}
+
+.admin-page .storage-eye-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-page .storage-eye-off,
+.admin-page .storage-secret-toggle.is-visible .storage-eye-open {
+  display: none;
+}
+
+.admin-page .storage-secret-toggle.is-visible .storage-eye-off {
+  display: block;
 }
 
 .admin-page .storage-secret-toggle:hover {
@@ -1827,6 +1874,10 @@ body.admin-page {
   gap: 0;
   max-height: none !important;
   overflow: visible !important;
+}
+
+.admin-page .storage-binding-redesign {
+  margin-top: auto;
 }
 
 .admin-page .storage-s3-list-panel .access-rule-card,
@@ -3148,11 +3199,24 @@ body.admin-page {
   box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16) !important;
 }
 
+.admin-page .health-advice-panel {
+  align-items: center !important;
+}
+
+.admin-page .health-advice-grid {
+  align-items: center !important;
+}
+
 .admin-page .health-advice-grid span {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 56px !important;
   color: #1f2937 !important;
   background: #f8fbff !important;
   font-weight: 800 !important;
   line-height: 1.45 !important;
+  text-align: center !important;
 }
 
 .admin-page .latest-item-main {
