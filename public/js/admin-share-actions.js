@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import { adminState } from './admin-state.js';
+import { renderAdminEmptyState, renderAdminLoadingState, setAdminStatusMessage } from './admin-ui-utils.js';
 import { escapeHtml } from './utils.js';
 
 function shareLink(token) {
@@ -11,12 +12,7 @@ function shareTime(value) {
 }
 
 function setSharesResult(text = '', tone = 'muted') {
-  const result = document.getElementById('sharesResult');
-  if (!result) return;
-  result.textContent = text;
-  result.classList.toggle('hidden', !text);
-  result.classList.toggle('text-rose-600', tone === 'error');
-  result.classList.toggle('text-emerald-700', tone === 'success');
+  setAdminStatusMessage('sharesResult', text, tone);
 }
 
 function readShareFilters() {
@@ -94,10 +90,16 @@ export function createAdminShareActions({ adminConfirm }) {
       if (!list) return;
       setSharesResult();
       syncShareFilters();
-      list.innerHTML = '<div class="share-empty">正在加载...</div>';
+      list.innerHTML = renderAdminLoadingState('正在加载分享...', '正在整理分享状态和访问记录');
       const { res, data } = await api.adminShares();
       if (!res.ok) {
-        list.innerHTML = '<div class="share-empty">分享链接加载失败</div>';
+        list.innerHTML = renderAdminEmptyState({
+          title: '分享链接加载失败',
+          description: '请稍后刷新，或检查分享记录服务是否可用。',
+          primaryAction: 'refresh-shares',
+          primaryLabel: '重新加载',
+          compact: true,
+        });
         setShareSummary([]);
         return;
       }
@@ -106,20 +108,20 @@ export function createAdminShareActions({ adminConfirm }) {
       const rows = allRows.filter(item => matchesShareFilters(item, adminState.shareFilters));
       if (!rows.length) {
         list.innerHTML = allRows.length
-          ? `
-            <div class="share-empty admin-empty-action">
-              <strong>没有匹配的分享链接</strong>
-              <span>换个关键词或状态条件再试试。</span>
-              <button class="admin-empty-link" data-admin-action="reset-share-filters">重置筛选</button>
-            </div>
-          `
-          : `
-            <div class="share-empty admin-empty-action">
-              <strong>暂无分享链接</strong>
-              <span>回到文件列表，选择一个文件后可在详情里创建分享。</span>
-              <a class="admin-empty-link" href="/">去文件列表</a>
-            </div>
-          `;
+          ? renderAdminEmptyState({
+              title: '没有匹配的分享链接',
+              description: '换个关键词或状态条件再试试。',
+              primaryAction: 'reset-share-filters',
+              primaryLabel: '重置筛选',
+            })
+          : renderAdminEmptyState({
+              title: '暂无分享链接',
+              description: '回到文件列表，选择一个文件后可在详情里创建分享。',
+              primaryAction: 'reset-share-filters',
+              primaryLabel: '清空筛选',
+              secondaryHref: '/',
+              secondaryLabel: '去文件列表',
+            });
         return;
       }
       list.innerHTML = rows.map(item => {
@@ -158,7 +160,7 @@ export function createAdminShareActions({ adminConfirm }) {
       const link = shareLink(token);
       try {
         await navigator.clipboard.writeText(link);
-        setSharesResult('分享链接已复制', 'success');
+        setSharesResult('分享链接已复制。', 'success');
       } catch (_) {
         setSharesResult(link, 'success');
       }
@@ -183,7 +185,7 @@ export function createAdminShareActions({ adminConfirm }) {
         return;
       }
       await this.loadShares();
-      setSharesResult('分享链接已删除', 'success');
+      setSharesResult('分享链接已删除。', 'success');
     },
 
     async cleanupShares() {
@@ -194,7 +196,7 @@ export function createAdminShareActions({ adminConfirm }) {
         return;
       }
       await this.loadShares();
-      setSharesResult(`已清理 ${data.deleted || 0} 条分享记录`, 'success');
+      setSharesResult(`已清理 ${data.deleted || 0} 条分享记录。`, 'success');
     },
   };
 }

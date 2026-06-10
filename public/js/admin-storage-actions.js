@@ -1,5 +1,12 @@
 import { adminState } from './admin-state.js';
 import { api } from './api.js';
+import {
+  buttonByAction,
+  renderAdminEmptyState,
+  renderAdminLoadingState,
+  setAdminButtonBusy,
+  setAdminStatusMessage,
+} from './admin-ui-utils.js';
 import { escapeHtml } from './utils.js';
 import {
   formatBytesLocal,
@@ -27,6 +34,14 @@ function inputGbValue(id) {
   return value ? `${value}GB` : '';
 }
 
+function setQuotaResult(text = '', tone = 'muted') {
+  setAdminStatusMessage('quotaResult', text, tone);
+}
+
+function setStorageResult(text = '', tone = 'muted') {
+  setAdminStatusMessage('storageResult', text, tone);
+}
+
 export function createAdminStorageActions({ adminConfirm }) {
   return {
     switchStorageView(view = 'overview') {
@@ -42,13 +57,16 @@ export function createAdminStorageActions({ adminConfirm }) {
     async loadQuota() {
       removeLegacyQuotaShortcuts();
       const info = document.getElementById('quotaInfo');
-      const result = document.getElementById('quotaResult');
-      if (result) result.textContent = '';
+      setQuotaResult();
       if (!info) return;
-      info.innerHTML = '<div class="quota-empty">正在加载...</div>';
+      info.innerHTML = renderAdminLoadingState('正在加载配额...', '正在读取容量水位和总配额状态');
       const { res, data } = await api.adminQuota();
       if (!res.ok) {
-        info.innerHTML = '<div class="quota-empty is-error">加载配额信息失败。</div>';
+        info.innerHTML = renderAdminEmptyState({
+          title: '配额信息加载失败',
+          description: '请稍后重试，或检查后台服务是否可用。',
+          compact: true,
+        });
         return;
       }
       const quotaLabel = data.quota > 0 ? data.quotaFormatted : '无限制';
@@ -79,15 +97,24 @@ export function createAdminStorageActions({ adminConfirm }) {
     },
 
     async loadStorage() {
-      const result = document.getElementById('storageResult');
       const spaceList = document.getElementById('storageSpaceList');
       const bindingList = document.getElementById('storageBindingList');
       const bindingSelect = document.getElementById('bindingStorageInput');
-      if (result) result.textContent = '';
+      setStorageResult();
       if (!spaceList || !bindingList || !bindingSelect) return;
       const { res, data } = await api.adminStorage();
       if (!res.ok) {
-        if (result) result.textContent = '加载存储配置失败';
+        setStorageResult('加载存储配置失败，请稍后重试。', 'error');
+        spaceList.innerHTML = renderAdminEmptyState({
+          title: 'S3 空间加载失败',
+          description: '当前无法读取扩展存储配置。',
+          compact: true,
+        });
+        bindingList.innerHTML = renderAdminEmptyState({
+          title: '路径绑定加载失败',
+          description: '请先恢复存储配置后再查看绑定关系。',
+          compact: true,
+        });
         return;
       }
       adminState.storageConfig = data;
@@ -121,7 +148,13 @@ export function createAdminStorageActions({ adminConfirm }) {
             <button class="admin-danger-btn" data-admin-action="remove-storage-space" data-args='${escapeHtml(JSON.stringify([item.id]))}'>删除</button>
           </div>
         </div>
-      `).join('') || '<div class="access-empty">暂无 S3 空间</div>';
+      `).join('') || renderAdminEmptyState({
+        title: '暂无 S3 空间',
+        description: '先添加一个扩展存储，再决定是否把它作为 R2 溢出目标。',
+        primaryAction: 'new-storage-space',
+        primaryLabel: '添加空间',
+        compact: true,
+      });
       bindingList.innerHTML = (data.bindings || []).map(item => `
         <div class="access-rule-card">
           <div class="access-rule-main">
@@ -132,7 +165,13 @@ export function createAdminStorageActions({ adminConfirm }) {
             <button class="admin-danger-btn" data-admin-action="remove-storage-binding" data-args='${escapeHtml(JSON.stringify([item.path]))}'>删除</button>
           </div>
         </div>
-      `).join('') || '<div class="access-empty">暂无路径绑定，根目录默认使用 R2</div>';
+      `).join('') || renderAdminEmptyState({
+        title: '暂无路径绑定',
+        description: '根目录默认使用 R2；你可以把指定文件夹绑定到某个 S3 空间。',
+        primaryAction: 'focus-storage-binding',
+        primaryLabel: '去填写路径',
+        compact: true,
+      });
     },
 
     storageName(id) {
@@ -207,6 +246,10 @@ export function createAdminStorageActions({ adminConfirm }) {
       document.getElementById('storageNameInput')?.focus();
     },
 
+    focusStorageBinding() {
+      document.getElementById('bindingPathInput')?.focus();
+    },
+
     editStorageSpace(id = '') {
       const space = (adminState.storageConfig?.spaces || []).find(item => item.id === id);
       if (!space) return;
@@ -242,15 +285,14 @@ export function createAdminStorageActions({ adminConfirm }) {
     },
 
     async saveStorageConfig(config, message = '存储配置已保存') {
-      const result = document.getElementById('storageResult');
-      if (result) result.textContent = '正在保存...';
+      setStorageResult('正在保存...', 'loading');
       const { res, data } = await api.setAdminStorage(config);
       if (!res.ok || data?.success === false) {
-        if (result) result.textContent = data?.message || '保存失败';
+        setStorageResult(data?.message || '保存失败', 'error');
         return false;
       }
-      if (result) result.textContent = message;
       await this.loadStorage();
+      setStorageResult(message, 'success');
       return true;
     },
 
@@ -271,45 +313,60 @@ export function createAdminStorageActions({ adminConfirm }) {
     },
 
     async addStorageSpace() {
+      const saveButton = buttonByAction('add-storage-space');
       const config = this.readStorageBaseConfig();
       const item = this.readStorageSpaceForm();
       if (!item.id || !item.name || !item.endpoint || !item.bucket) {
-        const result = document.getElementById('storageResult');
-        if (result) result.textContent = '请填写名称、ID、Endpoint 和 Bucket';
+        setStorageResult('请填写名称、ID、Endpoint 和 Bucket。', 'error');
         return;
       }
       if (!/^[a-zA-Z0-9-]+$/.test(item.id)) {
-        const result = document.getElementById('storageResult');
-        if (result) result.textContent = 'ID 仅支持英文、数字和连字符';
+        setStorageResult('ID 仅支持英文、数字和连字符。', 'error');
         return;
       }
       const idx = config.spaces.findIndex(space => space.id === item.id);
       if (idx >= 0) config.spaces[idx] = { ...config.spaces[idx], ...item };
       else config.spaces.push(item);
       adminState.storageEditingId = item.id;
-      await this.saveStorageConfig(config, 'S3 空间已保存');
+      setAdminButtonBusy(saveButton, true, '保存中...');
+      try {
+        await this.saveStorageConfig(config, 'S3 空间已保存。');
+      } finally {
+        setAdminButtonBusy(saveButton, false);
+      }
     },
 
     async testStorageSpace(id = '') {
-      const result = document.getElementById('storageResult');
+      const testButton = buttonByAction('test-storage-space');
       const saved = id ? (adminState.storageConfig?.spaces || []).find(item => item.id === id) : null;
       const space = saved || this.readStorageSpaceForm();
       if (!space?.id && !space?.name) {
-        if (result) result.textContent = '请先填写或选择一个 S3 空间';
+        setStorageResult('请先填写或选择一个 S3 空间。', 'error');
         return;
       }
-      if (result) result.textContent = '正在测试 S3 连接...';
-      const { res, data } = await api.testAdminStorage(space);
-      if (!res.ok || data?.success === false) {
-        if (result) result.textContent = data?.message || '连接测试失败';
-        return;
+      setAdminButtonBusy(testButton, true, '测试中...');
+      setStorageResult('正在测试 S3 连接...', 'loading');
+      try {
+        const { res, data } = await api.testAdminStorage(space);
+        if (!res.ok || data?.success === false) {
+          setStorageResult(data?.message || '连接测试失败', 'error');
+          return;
+        }
+        setStorageResult(`${data.message || '连接成功'}，耗时 ${data.durationMs || 0}ms。`, 'success');
+      } finally {
+        setAdminButtonBusy(testButton, false);
       }
-      if (result) result.textContent = `${data.message || '连接成功'}，耗时 ${data.durationMs || 0}ms`;
     },
 
     async saveStoragePolicy() {
+      const saveButton = buttonByAction('save-storage-policy');
       const config = this.readStorageBaseConfig();
-      await this.saveStorageConfig(config, 'R2 溢出设置已保存');
+      setAdminButtonBusy(saveButton, true, '保存中...');
+      try {
+        await this.saveStorageConfig(config, 'R2 溢出设置已保存。');
+      } finally {
+        setAdminButtonBusy(saveButton, false);
+      }
     },
 
     async removeStorageSpace(id) {
@@ -325,22 +382,27 @@ export function createAdminStorageActions({ adminConfirm }) {
     },
 
     async addStorageBinding() {
+      const saveButton = buttonByAction('add-storage-binding');
       const config = this.readStorageBaseConfig();
       const path = (document.getElementById('bindingPathInput')?.value || '').trim().replace(/^\/+|\/+$/g, '');
       const storageId = document.getElementById('bindingStorageInput')?.value || 'r2';
       if (!path) {
-        const result = document.getElementById('storageResult');
-        if (result) result.textContent = '请输入要绑定的路径';
+        setStorageResult('请输入要绑定的路径。', 'error');
         return;
       }
       config.bindings = [...config.bindings.filter(item => item.path !== path), { path, storageId }];
-      await this.saveStorageConfig(config, `/${path} 已绑定到 ${this.storageName(storageId)}`);
+      setAdminButtonBusy(saveButton, true, '绑定中...');
+      try {
+        await this.saveStorageConfig(config, `/${path} 已绑定到 ${this.storageName(storageId)}。`);
+      } finally {
+        setAdminButtonBusy(saveButton, false);
+      }
     },
 
     async removeStorageBinding(path) {
       const config = this.readStorageBaseConfig();
       config.bindings = config.bindings.filter(item => item.path !== path);
-      await this.saveStorageConfig(config, `/${path} 已取消绑定`);
+      await this.saveStorageConfig(config, `/${path} 已取消绑定。`);
     },
 
     fillQuota(bytes) {
@@ -349,23 +411,28 @@ export function createAdminStorageActions({ adminConfirm }) {
     },
 
     async setQuota() {
+      const saveButton = buttonByAction('set-quota');
       const input = document.getElementById('quotaInput');
-      const result = document.getElementById('quotaResult');
       const value = input?.value.trim();
       const parsed = parseCapacityLocal(value ? `${value}GB` : 0);
-      if (!parsed.ok) { if (result) result.textContent = '请输入有效容量，或填 0 表示不限制'; return; }
+      if (!parsed.ok) { setQuotaResult('请输入有效容量，或填 0 表示不限制。', 'error'); return; }
       const bytes = parsed.bytes;
       const confirmTitle = bytes > 0 ? '保存存储配额？' : '取消存储配额限制？';
       const confirmBody = bytes > 0 ? `新的配额为 ${formatBytesLocal(bytes)}。` : '取消后上传不再受总量配额限制。';
       if (!(await adminConfirm(confirmTitle, confirmBody))) return;
-      if (result) result.textContent = '正在保存...';
-      const { res, data } = await api.setAdminQuota(bytes);
-      if (!res.ok || data?.success === false) {
-        if (result) result.textContent = data?.message || '保存失败';
-        return;
+      setAdminButtonBusy(saveButton, true, '保存中...');
+      setQuotaResult('正在保存...', 'loading');
+      try {
+        const { res, data } = await api.setAdminQuota(bytes);
+        if (!res.ok || data?.success === false) {
+          setQuotaResult(data?.message || '保存失败', 'error');
+          return;
+        }
+        await this.loadQuota();
+        setQuotaResult(bytes > 0 ? `配额已设为 ${formatBytesLocal(bytes)}。` : '已取消配额限制。', 'success');
+      } finally {
+        setAdminButtonBusy(saveButton, false);
       }
-      if (result) result.textContent = bytes > 0 ? `配额已设为 ${formatBytesLocal(bytes)}` : '已取消配额限制';
-      await this.loadQuota();
     },
   };
 }

@@ -37,6 +37,7 @@ document.addEventListener('click', event => {
     case 'set-quota': return AdminActions.setQuota();
     case 'switch-storage-view': return AdminActions.switchStorageView(args[0]);
     case 'new-storage-space': return AdminActions.newStorageSpace();
+    case 'focus-storage-binding': return AdminActions.focusStorageBinding();
     case 'edit-storage-space': return AdminActions.editStorageSpace(args[0]);
     case 'toggle-storage-secret': return AdminActions.toggleStorageSecret();
     case 'add-storage-space': return AdminActions.addStorageSpace();
@@ -52,6 +53,7 @@ document.addEventListener('click', event => {
     case 'delete-share': return AdminActions.deleteShare(args[0]);
     case 'cleanup-shares': return AdminActions.cleanupShares();
     case 'add-webhook': return AdminActions.addWebhook();
+    case 'focus-webhook-editor': return AdminActions.focusWebhookEditor();
     case 'edit-webhook': return AdminActions.editWebhook(Number(args[0] || 0));
     case 'remove-webhook': return AdminActions.removeWebhook(Number(args[0] || 0));
     case 'test-webhook': return AdminActions.testWebhook(Number(args[0] || 0));

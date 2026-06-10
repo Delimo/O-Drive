@@ -1,5 +1,12 @@
 import { adminState } from './admin-state.js';
 import { api } from './api.js';
+import {
+  buttonByAction,
+  renderAdminEmptyState,
+  renderAdminLoadingState,
+  setAdminButtonBusy,
+  setAdminStatusMessage,
+} from './admin-ui-utils.js';
 import { escapeHtml } from './utils.js';
 import { adminTime } from './admin-format-utils.js';
 import {
@@ -30,12 +37,7 @@ function setWebhookForm(item = {}) {
 }
 
 function setWebhookResult(text = '', tone = 'muted') {
-  const result = document.getElementById('webhookResult');
-  if (!result) return;
-  result.textContent = text;
-  result.classList.toggle('hidden', !text);
-  result.classList.toggle('is-error', tone === 'error');
-  result.classList.toggle('is-muted', tone === 'muted');
+  setAdminStatusMessage('webhookResult', text, tone);
 }
 
 function setWebhookListCount(count = 0) {
@@ -47,7 +49,10 @@ function setWebhookFormMode(item = null) {
   const editing = adminState.webhookEditingIndex >= 0;
   const hint = document.getElementById('webhookFormHint');
   const button = document.getElementById('webhookSaveButton');
-  if (button) button.textContent = editing ? '更新' : '保存';
+  if (button) {
+    button.textContent = editing ? '更新规则' : '保存规则';
+    button.dataset.idleLabel = editing ? '更新规则' : '保存规则';
+  }
   if (hint) {
     const label = item?.name || item?.url || (editing ? `Webhook #${adminState.webhookEditingIndex + 1}` : '');
     hint.textContent = editing ? `正在编辑：${label}` : '';
@@ -67,13 +72,14 @@ function setWebhookRowStatus(index, text = '', tone = 'muted') {
   document.querySelectorAll('.webhook-row-status').forEach(item => {
     if (item === status) return;
     item.textContent = '';
-    item.classList.remove('is-visible', 'is-error', 'is-muted', 'is-success');
+    item.classList.remove('is-visible', 'is-error', 'is-muted', 'is-success', 'is-loading');
   });
   status.textContent = text;
   status.classList.toggle('is-visible', Boolean(text));
   status.classList.toggle('is-error', tone === 'error');
   status.classList.toggle('is-muted', tone === 'muted');
   status.classList.toggle('is-success', tone === 'success');
+  status.classList.toggle('is-loading', tone === 'loading');
 }
 
 function readWebhookForm() {
@@ -94,15 +100,25 @@ function readWebhookForm() {
 
 export function createAdminWebhookActions({ adminConfirm }) {
   return {
+    focusWebhookEditor() {
+      document.getElementById('webhookUrlInput')?.focus();
+    },
+
     async loadWebhooks() {
       const list = document.getElementById('webhookList');
       setWebhookResult();
       setWebhookListCount(0);
       if (!list) return;
-      list.innerHTML = '<div class="text-sm text-slate-500">正在加载...</div>';
+      list.innerHTML = renderAdminLoadingState('正在加载 Webhook...', '正在读取通知目标和事件订阅配置');
       const { res, data } = await api.adminWebhooks();
       if (!res.ok) {
-        list.innerHTML = '<div class="text-sm text-rose-600 font-bold">加载失败。</div>';
+        list.innerHTML = renderAdminEmptyState({
+          title: 'Webhook 加载失败',
+          description: '请稍后刷新，或检查通知配置服务是否可用。',
+          primaryAction: 'refresh-webhooks',
+          primaryLabel: '重新加载',
+          compact: true,
+        });
         return;
       }
       const items = normalizeWebhookItems(data);
@@ -111,7 +127,12 @@ export function createAdminWebhookActions({ adminConfirm }) {
       if (items.length === 0) {
         adminState.webhookEditingIndex = -1;
         setWebhookFormMode();
-        list.innerHTML = '<div class="webhook-empty">暂未配置 Webhook。</div>';
+        list.innerHTML = renderAdminEmptyState({
+          title: '暂未配置 Webhook',
+          description: '创建一个通知目标后，就可以订阅上传、删除、异常提醒等事件。',
+          primaryAction: 'focus-webhook-editor',
+          primaryLabel: '开始配置',
+        });
         return;
       }
       list.innerHTML = items.map((item, i) => `
@@ -146,15 +167,25 @@ export function createAdminWebhookActions({ adminConfirm }) {
     async loadWebhookDeliveries() {
       const list = document.getElementById('webhookDeliveriesList');
       if (!list) return;
-      list.innerHTML = '<div class="webhook-empty">正在加载投递记录...</div>';
+      list.innerHTML = renderAdminLoadingState('正在加载投递记录...', '正在整理最近 20 条通知结果');
       const { res, data } = await api.adminWebhookDeliveries();
       if (!res.ok) {
-        list.innerHTML = '<div class="webhook-empty">投递记录加载失败。</div>';
+        list.innerHTML = renderAdminEmptyState({
+          title: '投递记录加载失败',
+          description: '暂时无法读取通知历史，请稍后刷新。',
+          primaryAction: 'refresh-webhook-deliveries',
+          primaryLabel: '重新加载',
+          compact: true,
+        });
         return;
       }
       const items = Array.isArray(data?.items) ? data.items : [];
       if (!items.length) {
-        list.innerHTML = '<div class="webhook-empty">暂无投递记录。</div>';
+        list.innerHTML = renderAdminEmptyState({
+          title: '暂无投递记录',
+          description: '保存并触发一次 Webhook 后，这里会显示最近的投递结果。',
+          compact: true,
+        });
         return;
       }
       list.innerHTML = items.map(item => {
@@ -181,15 +212,16 @@ export function createAdminWebhookActions({ adminConfirm }) {
     },
 
     async addWebhook() {
+      const saveButton = buttonByAction('add-webhook');
       let next;
       try {
         next = readWebhookForm();
       } catch (err) {
-        setWebhookResult(err.message || 'headers 不是有效 JSON', 'error');
+        setWebhookResult(err.message || 'Headers 不是有效 JSON。', 'error');
         return;
       }
       if (!next.url || !next.url.startsWith('http')) {
-        setWebhookResult('请输入有效的 http(s) URL', 'error');
+        setWebhookResult('请输入有效的 http(s) URL。', 'error');
         return;
       }
       const { data } = await api.adminWebhooks();
@@ -208,16 +240,21 @@ export function createAdminWebhookActions({ adminConfirm }) {
           current.push(next);
         }
       }
-      setWebhookResult('正在保存...', 'muted');
-      const { res, data: saveData } = await api.setAdminWebhooks(current);
-      if (!res.ok || saveData?.success === false) {
-        setWebhookResult(saveData?.message || '保存失败', 'error');
-        return;
+      setAdminButtonBusy(saveButton, true, editingItem ? '更新中...' : '保存中...');
+      setWebhookResult('正在保存...', 'loading');
+      try {
+        const { res, data: saveData } = await api.setAdminWebhooks(current);
+        if (!res.ok || saveData?.success === false) {
+          setWebhookResult(saveData?.message || '保存失败', 'error');
+          return;
+        }
+        adminState.webhookEditingIndex = -1;
+        setWebhookForm();
+        await this.loadWebhooks();
+        setWebhookResult(updated ? 'Webhook 已更新。' : `已添加，共 ${current.length} 个 Webhook。`, 'success');
+      } finally {
+        setAdminButtonBusy(saveButton, false);
       }
-      adminState.webhookEditingIndex = -1;
-      setWebhookForm();
-      await this.loadWebhooks();
-      setWebhookResult(updated ? 'Webhook 已更新' : `已添加，共 ${current.length} 个 Webhook`, 'success');
     },
 
     async editWebhook(index) {
@@ -237,7 +274,7 @@ export function createAdminWebhookActions({ adminConfirm }) {
       if (index < 0 || index >= current.length) return;
       if (!(await adminConfirm('删除 Webhook？', current[index].name || current[index].url))) return;
       const removed = current.splice(index, 1);
-      setWebhookResult('正在保存...', 'muted');
+      setWebhookResult('正在保存...', 'loading');
       const { res } = await api.setAdminWebhooks(current);
       if (!res.ok) {
         setWebhookResult('删除失败', 'error');
@@ -250,7 +287,7 @@ export function createAdminWebhookActions({ adminConfirm }) {
         adminState.webhookEditingIndex -= 1;
       }
       await this.loadWebhooks();
-      setWebhookResult(`已删除 ${removed[0].name || removed[0].url}`, 'success');
+      setWebhookResult(`已删除 ${removed[0].name || removed[0].url}。`, 'success');
     },
 
     async testWebhook(index) {
@@ -259,13 +296,20 @@ export function createAdminWebhookActions({ adminConfirm }) {
       const current = normalizeWebhookItems(data);
       const endpoint = current[index];
       if (!endpoint) return;
-      setWebhookRowStatus(index, '正在发送测试通知...', 'muted');
-      const { res, data: testData } = await api.testAdminWebhook(endpoint);
-      if (!res.ok || testData?.success === false) {
-        setWebhookRowStatus(index, testData?.message || '测试发送失败，请检查 URL、平台类型或签名配置。', 'error');
-        return;
+      const testButton = buttonByAction('test-webhook');
+      setAdminButtonBusy(testButton, true, '测试中...');
+      setWebhookRowStatus(index, '正在发送测试通知...', 'loading');
+      try {
+        const { res, data: testData } = await api.testAdminWebhook(endpoint);
+        if (!res.ok || testData?.success === false) {
+          setWebhookRowStatus(index, testData?.message || '测试发送失败，请检查 URL、平台类型或签名配置。', 'error');
+          return;
+        }
+        const durationLabel = testData?.durationMs ? `，耗时 ${testData.durationMs}ms` : '';
+        setWebhookRowStatus(index, `测试发送成功${durationLabel}`, 'success');
+      } finally {
+        setAdminButtonBusy(testButton, false);
       }
-      setWebhookRowStatus(index, '测试发送成功', 'success');
     },
   };
 }

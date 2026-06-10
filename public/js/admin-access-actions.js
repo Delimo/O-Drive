@@ -1,4 +1,11 @@
 import { api } from './api.js';
+import {
+  buttonByAction,
+  renderAdminEmptyState,
+  renderAdminLoadingState,
+  setAdminButtonBusy,
+  setAdminStatusMessage,
+} from './admin-ui-utils.js';
 import { escapeHtml } from './utils.js';
 
 function updateAccessPresetButtons(mode = '') {
@@ -28,7 +35,8 @@ export function createAdminAccessActions({ adminConfirm }) {
       const protectedCount = document.getElementById('accessProtectedCount');
       const privateCount = document.getElementById('accessPrivateCount');
       if (!list) return;
-      list.innerHTML = '<div class="access-empty">正在加载...</div>';
+      setAdminStatusMessage('accessResult');
+      list.innerHTML = renderAdminLoadingState('正在加载规则...', '正在读取隐藏路径和访问密码配置');
       if (count) count.textContent = '0 条规则';
       [hiddenCount, protectedCount, privateCount].forEach(el => {
         if (el) el.textContent = '0';
@@ -83,13 +91,12 @@ export function createAdminAccessActions({ adminConfirm }) {
             <div class="access-rule-actions">${actions || '<span class="access-rule-note">无可用操作</span>'}</div>
           </div>
         `;
-      }).join('') || `
-        <div class="access-empty admin-empty-action">
-          <strong>暂无访问控制规则</strong>
-          <span>可以先为一个文件夹设置隐藏或访问密码。</span>
-          <button class="admin-empty-link" data-admin-action="focus-access-editor">立即创建一条规则</button>
-        </div>
-      `;
+      }).join('') || renderAdminEmptyState({
+        title: '暂无访问控制规则',
+        description: '可以先为一个文件夹设置隐藏、密码或组合保护。',
+        primaryAction: 'focus-access-editor',
+        primaryLabel: '立即创建规则',
+      });
     },
 
     setAccessPreset(mode = '') {
@@ -109,34 +116,53 @@ export function createAdminAccessActions({ adminConfirm }) {
     },
 
     async saveAccessRule() {
+      const saveButton = buttonByAction('save-access-rule');
       const path = document.getElementById('protectedPathInput')?.value.trim();
       const password = document.getElementById('protectedPasswordInput')?.value || '';
       const note = document.getElementById('protectedNoteInput')?.value.trim() || '';
       const showName = Boolean(document.getElementById('protectedShowNameInput')?.checked);
       const hide = Boolean(document.getElementById('accessHideInput')?.checked);
-      if (!path) return;
-      if (hide) await api.addHiddenPath(path);
-      if (password) await api.addProtectedPath({ path, password, note, showName });
-      document.getElementById('protectedPathInput').value = '';
-      document.getElementById('protectedPasswordInput').value = '';
-      document.getElementById('protectedNoteInput').value = '';
-      document.getElementById('protectedShowNameInput').checked = true;
-      document.getElementById('accessHideInput').checked = false;
-      updateAccessPresetButtons('');
-      await this.loadAccessRules();
+      if (!path) {
+        setAdminStatusMessage('accessResult', '请先填写要保护的路径。', 'error');
+        return;
+      }
+      if (!hide && !password) {
+        setAdminStatusMessage('accessResult', '请选择隐藏模式或填写访问密码。', 'error');
+        return;
+      }
+      setAdminButtonBusy(saveButton, true, '保存中...');
+      setAdminStatusMessage('accessResult', '正在保存规则...', 'loading');
+      try {
+        if (hide) await api.addHiddenPath(path);
+        if (password) await api.addProtectedPath({ path, password, note, showName });
+        document.getElementById('protectedPathInput').value = '';
+        document.getElementById('protectedPasswordInput').value = '';
+        document.getElementById('protectedNoteInput').value = '';
+        document.getElementById('protectedShowNameInput').checked = true;
+        document.getElementById('accessHideInput').checked = false;
+        updateAccessPresetButtons('');
+        await this.loadAccessRules();
+        setAdminStatusMessage('accessResult', '访问规则已保存。', 'success');
+      } catch (error) {
+        setAdminStatusMessage('accessResult', error?.message || '保存规则失败，请稍后重试。', 'error');
+      } finally {
+        setAdminButtonBusy(saveButton, false);
+      }
     },
 
     async removeHidden(p) {
       if (await adminConfirm('取消隐藏路径？', `路径 ${p} 将恢复可见。`)) {
         await api.removeHiddenPath(p);
-        this.loadAccessRules();
+        await this.loadAccessRules();
+        setAdminStatusMessage('accessResult', '隐藏规则已移除。', 'success');
       }
     },
 
     async removeProtected(p) {
       if (await adminConfirm('删除访问密码？', `路径 ${p} 将允许所有人访问。`)) {
         await api.removeProtectedPath(p);
-        this.loadAccessRules();
+        await this.loadAccessRules();
+        setAdminStatusMessage('accessResult', '密码保护已移除。', 'success');
       }
     },
   };
