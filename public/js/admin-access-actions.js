@@ -17,6 +17,10 @@ function updateAccessPresetButtons(mode = '') {
 
 export function createAdminAccessActions({ adminConfirm }) {
   return {
+    focusAccessEditor() {
+      document.getElementById('protectedPathInput')?.focus();
+    },
+
     async loadAccessRules() {
       const list = document.getElementById('accessRuleList') || document.getElementById('accessTbody');
       const count = document.getElementById('accessRuleCount');
@@ -79,7 +83,13 @@ export function createAdminAccessActions({ adminConfirm }) {
             <div class="access-rule-actions">${actions || '<span class="access-rule-note">无可用操作</span>'}</div>
           </div>
         `;
-      }).join('') || '<div class="access-empty">暂无访问控制规则</div>';
+      }).join('') || `
+        <div class="access-empty admin-empty-action">
+          <strong>暂无访问控制规则</strong>
+          <span>可以先为一个文件夹设置隐藏或访问密码。</span>
+          <button class="admin-empty-link" data-admin-action="focus-access-editor">立即创建一条规则</button>
+        </div>
+      `;
     },
 
     setAccessPreset(mode = '') {

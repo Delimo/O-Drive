@@ -6,4 +6,5 @@ export const adminState = {
   logFilters: { q: '', action: '', ip: '', from: '', to: '' },
   shareFilters: { q: '', status: 'all' },
   storageConfig: null,
+  storageEditingId: '',
 };

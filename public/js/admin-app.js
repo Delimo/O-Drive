@@ -27,6 +27,7 @@ document.addEventListener('click', event => {
     case 'remove-hidden': return AdminActions.removeHidden(args[0]);
     case 'add-protected': return AdminActions.saveAccessRule();
     case 'set-access-preset': return AdminActions.setAccessPreset(args[0]);
+    case 'focus-access-editor': return AdminActions.focusAccessEditor();
     case 'save-access-rule': return AdminActions.saveAccessRule();
     case 'refresh-access-rules': return AdminActions.loadAccessRules();
     case 'remove-protected': return AdminActions.removeProtected(args[0]);
@@ -35,6 +36,9 @@ document.addEventListener('click', event => {
     case 'maintenance-action': return AdminActions.runMaintenanceAction(args[0]);
     case 'set-quota': return AdminActions.setQuota();
     case 'switch-storage-view': return AdminActions.switchStorageView(args[0]);
+    case 'new-storage-space': return AdminActions.newStorageSpace();
+    case 'edit-storage-space': return AdminActions.editStorageSpace(args[0]);
+    case 'toggle-storage-secret': return AdminActions.toggleStorageSecret();
     case 'add-storage-space': return AdminActions.addStorageSpace();
     case 'test-storage-space': return AdminActions.testStorageSpace(args[0] || '');
     case 'save-storage-policy': return AdminActions.saveStoragePolicy();

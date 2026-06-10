@@ -105,7 +105,21 @@ export function createAdminShareActions({ adminConfirm }) {
       setShareSummary(allRows);
       const rows = allRows.filter(item => matchesShareFilters(item, adminState.shareFilters));
       if (!rows.length) {
-        list.innerHTML = `<div class="share-empty">${allRows.length ? '没有匹配的分享链接' : '暂无分享链接'}</div>`;
+        list.innerHTML = allRows.length
+          ? `
+            <div class="share-empty admin-empty-action">
+              <strong>没有匹配的分享链接</strong>
+              <span>换个关键词或状态条件再试试。</span>
+              <button class="admin-empty-link" data-admin-action="reset-share-filters">重置筛选</button>
+            </div>
+          `
+          : `
+            <div class="share-empty admin-empty-action">
+              <strong>暂无分享链接</strong>
+              <span>回到文件列表，选择一个文件后可在详情里创建分享。</span>
+              <a class="admin-empty-link" href="/">去文件列表</a>
+            </div>
+          `;
         return;
       }
       list.innerHTML = rows.map(item => {
