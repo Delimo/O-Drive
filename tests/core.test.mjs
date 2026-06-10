@@ -763,6 +763,56 @@ test('thumbnail endpoint only accepts image files', async () => {
   assert.equal(res.status, 415);
 });
 
+test('thumbnail endpoint falls back to the original image when resizing fails', async () => {
+  const env = makeEnv({
+    objects: [{
+      key: 'photos/a.jpg',
+      body: 'image-bytes',
+      size: 11,
+      uploaded: new Date('2026-01-01'),
+      httpMetadata: { contentType: 'image/jpeg' },
+    }],
+  });
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('resize failed', { status: 502 });
+  try {
+    const res = await handleThumbnail(env, new Request('https://example.com/api/thumbnail/photos/a.jpg?w=360&h=260'), 'photos/a.jpg', {});
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('Content-Type'), 'image/jpeg');
+    assert.equal(await res.text(), 'image-bytes');
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
+test('thumbnail endpoint reads aliased image paths from their backing object', async () => {
+  const env = makeEnv({
+    objects: [{
+      key: 'photos/a.jpg',
+      body: 'image-bytes',
+      size: 11,
+      uploaded: new Date('2026-01-01'),
+      httpMetadata: { contentType: 'image/jpeg' },
+    }],
+  });
+  await handlePaste(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'copy', paths: ['photos/a.jpg'], targetDir: '/copies' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('resize failed', { status: 502 });
+  try {
+    const res = await handleThumbnail(env, new Request('https://example.com/api/thumbnail/copies/a.jpg?w=360&h=260'), 'copies/a.jpg', {});
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('Content-Type'), 'image/jpeg');
+    assert.equal(await res.text(), 'image-bytes');
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
 test('multipart upload lifecycle returns upload id, parts, complete and abort', async () => {
   const env = makeEnv();
   const create = await handleMultipartCreate(env, new Request('https://example.com', {

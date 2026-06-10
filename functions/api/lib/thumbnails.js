@@ -1,5 +1,7 @@
 import { resolveExistingObjectLocation, storageGet } from './storage.js';
 
+const THUMBNAIL_RESIZE_TIMEOUT_MS = 1500;
+
 function encodeR2Key(key) {
   return String(key || '')
     .split('/')
@@ -22,6 +24,29 @@ async function originalImageResponse(env, r2Key) {
       'Cache-Control': 'public, max-age=3600, s-maxage=86400',
     },
   });
+}
+
+async function resizedImageResponse(request, sourceUrl, width, height) {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller
+    ? setTimeout(() => controller.abort(), THUMBNAIL_RESIZE_TIMEOUT_MS)
+    : null;
+  try {
+    return await fetch(new Request(sourceUrl.toString(), request), {
+      signal: controller?.signal,
+      cf: {
+        image: {
+          width,
+          height,
+          fit: 'cover',
+          quality: 72,
+          format: 'auto',
+        },
+      },
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export async function handleThumbnail(env, request, r2Key, context) {
@@ -48,21 +73,12 @@ export async function handleThumbnail(env, request, r2Key, context) {
 
   let response;
   try {
-    response = await fetch(new Request(sourceUrl.toString(), request), {
-      cf: {
-        image: {
-          width,
-          height,
-          fit: 'cover',
-          quality: 72,
-          format: 'auto',
-        },
-      },
-    });
+    response = await resizedImageResponse(request, sourceUrl, width, height);
   } catch (e) {
     response = await originalImageResponse(env, r2Key);
   }
 
+  if (!response.ok) response = await originalImageResponse(env, r2Key);
   if (!response.ok) return response;
 
   const headers = new Headers(response.headers);
