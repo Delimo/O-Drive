@@ -67,6 +67,9 @@ export async function ensureFileIndexTable(env) {
       await runStatement(env.D1.prepare('CREATE INDEX IF NOT EXISTS idx_file_index_storage_id ON file_index(storage_id)'));
     } catch (_) {}
     try {
+      await runStatement(env.D1.prepare('CREATE INDEX IF NOT EXISTS idx_file_index_parent ON file_index(parent)'));
+    } catch (_) {}
+    try {
       await runStatement(env.D1.prepare('CREATE INDEX IF NOT EXISTS idx_file_index_object ON file_index(storage_id, object_key)'));
     } catch (_) {}
     return true;
@@ -296,17 +299,22 @@ export async function listIndexedDirectory(env, parent = '') {
   if (!(await ensureFileIndexTable(env))) return { folders: [], files: [] };
   const cleanParent = String(parent || '').replace(/^\/+|\/+$/g, '');
   try {
-    const [fileRows, descendantRows] = await env.D1.batch([
+    const folderSql = cleanParent
+      ? 'SELECT DISTINCT parent FROM file_index WHERE parent LIKE ? ORDER BY parent ASC LIMIT 5000'
+      : "SELECT DISTINCT parent FROM file_index WHERE parent != '' ORDER BY parent ASC LIMIT 5000";
+    const folderParams = cleanParent ? [`${cleanParent}/%`] : [];
+    const [fileRows, parentRows] = await env.D1.batch([
       env.D1.prepare('SELECT * FROM file_index WHERE parent = ? ORDER BY name ASC').bind(cleanParent),
-      env.D1.prepare('SELECT path FROM file_index WHERE path LIKE ? LIMIT 10000').bind(cleanParent ? `${cleanParent}/%` : '%'),
+      env.D1.prepare(folderSql).bind(...folderParams),
     ]);
     const files = (fileRows.results || []).map(mapIndexRow);
     const folderNames = new Set();
-    for (const row of descendantRows.results || []) {
-      const path = String(row.path || '');
-      const rest = cleanParent ? path.slice(cleanParent.length + 1) : path;
+    for (const row of parentRows.results || []) {
+      const indexedParent = String(row.parent || '');
+      const rest = cleanParent ? indexedParent.slice(cleanParent.length + 1) : indexedParent;
+      if (!rest) continue;
       const slash = rest.indexOf('/');
-      if (slash > 0) folderNames.add(rest.slice(0, slash));
+      folderNames.add(slash > 0 ? rest.slice(0, slash) : rest);
     }
     const folders = [...folderNames].map(name => {
       const fullKey = cleanParent ? `${cleanParent}/${name}` : name;

@@ -1,6 +1,6 @@
 import { jsonResponse, formatBytes, isHiddenKey, isReservedKey } from './common.js';
 import { checkProtectedAccess, markProtection } from './protected-paths.js';
-import { countFileIndexObjectRefs, getFileIndexEntry, indexedFileKind, listFileIndexPrefix, listIndexedDirectory, searchFileIndex } from './file-index.js';
+import { indexedFileKind, listIndexedDirectory, searchFileIndex } from './file-index.js';
 import { loadStorageConfig, resolveExistingObjectLocation, resolveStorageIdForPath, storageGet, storageHead, storageList } from './storage.js';
 
 function mapEntry(o) {
@@ -34,16 +34,6 @@ function virtualBindingFolders(bindings = [], currentKey = '') {
     const fullKey = current ? `${current}/${name}` : name;
     return { name, path: '/' + fullKey, fullKey, virtual: true };
   });
-}
-
-async function hasVisibleStorageObjects(env, storageId, prefix) {
-  const listed = await storageList(env, storageId, { prefix, limit: 20 }, { maxObjects: 20 });
-  if (!(listed.objects || []).length) return true;
-  for (const obj of listed.objects || []) {
-    if (await getFileIndexEntry(env, obj.key)) return true;
-    if ((await countFileIndexObjectRefs(env, storageId, obj.key)) <= 0) return true;
-  }
-  return false;
 }
 
 export async function handleSearch(env, request, url, hiddenPaths, auth, protectedPaths = []) {
@@ -135,8 +125,6 @@ export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, pr
   for (const folder of indexed.folders || []) folderMap.set(folder.fullKey, folder);
   for (const p of listed.delimitedPrefixes || []) {
     const fullKey = p.slice(0, -1);
-    const indexedChildren = await listFileIndexPrefix(env, fullKey);
-    if (!indexedChildren.length && !(await hasVisibleStorageObjects(env, storageId, p))) continue;
     folderMap.set(fullKey, { name: fullKey.split('/').slice(-1)[0], path: '/' + fullKey, fullKey });
   }
   const folders = await markProtection([...folderMap.values()]
@@ -146,9 +134,6 @@ export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, pr
   const fileMap = new Map();
   for (const file of indexed.files || []) fileMap.set(file.fullKey, file);
   for (const obj of listed.objects || []) {
-    const indexedPath = await getFileIndexEntry(env, obj.key);
-    const refCount = await countFileIndexObjectRefs(env, storageId, obj.key);
-    if (!indexedPath && refCount > 0) continue;
     const file = mapEntry({ ...obj, storageId });
     fileMap.set(file.fullKey, file);
   }

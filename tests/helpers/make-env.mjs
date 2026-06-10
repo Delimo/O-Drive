@@ -691,9 +691,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                   .sort((a, b) => String(a.path).localeCompare(String(b.path))),
               };
             }
-            if (/SELECT path FROM file_index WHERE path LIKE \?/i.test(sql)) {
+            if (/SELECT DISTINCT parent FROM file_index WHERE parent LIKE \?/i.test(sql)) {
               const prefix = String(statement.bound?.[0] || '').replace(/%$/, '');
-              return { results: fileIndexRows.filter(row => String(row.path || '').startsWith(prefix)).map(row => ({ path: row.path })) };
+              const parents = new Set(fileIndexRows.map(row => String(row.parent || '')).filter(parent => parent.startsWith(prefix)));
+              return { results: [...parents].sort((a, b) => a.localeCompare(b)).slice(0, 5000).map(parent => ({ parent })) };
+            }
+            if (/SELECT DISTINCT parent FROM file_index WHERE parent != ''/i.test(sql)) {
+              const parents = new Set(fileIndexRows.map(row => String(row.parent || '')).filter(Boolean));
+              return { results: [...parents].sort((a, b) => a.localeCompare(b)).slice(0, 5000).map(parent => ({ parent })) };
             }
             if (/SELECT key FROM settings WHERE value = 'hidden'/i.test(sql)) {
               return {
