@@ -4,6 +4,7 @@ const FILE_INDEX_SQL = `
   CREATE TABLE IF NOT EXISTS file_index (
     path TEXT PRIMARY KEY,
     storage_id TEXT NOT NULL DEFAULT 'r2',
+    object_key TEXT NOT NULL DEFAULT '',
     name TEXT NOT NULL,
     parent TEXT NOT NULL,
     kind TEXT NOT NULL,
@@ -60,7 +61,13 @@ export async function ensureFileIndexTable(env) {
       await runStatement(env.D1.prepare("ALTER TABLE file_index ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'"));
     } catch (_) {}
     try {
+      await runStatement(env.D1.prepare("ALTER TABLE file_index ADD COLUMN object_key TEXT NOT NULL DEFAULT ''"));
+    } catch (_) {}
+    try {
       await runStatement(env.D1.prepare('CREATE INDEX IF NOT EXISTS idx_file_index_storage_id ON file_index(storage_id)'));
+    } catch (_) {}
+    try {
+      await runStatement(env.D1.prepare('CREATE INDEX IF NOT EXISTS idx_file_index_object ON file_index(storage_id, object_key)'));
     } catch (_) {}
     return true;
   } catch (_) {
@@ -68,10 +75,11 @@ export async function ensureFileIndexTable(env) {
   }
 }
 
-const UPSERT_SQL = `INSERT INTO file_index (path, storage_id, name, parent, kind, size, content_type, uploaded_at, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+const UPSERT_SQL = `INSERT INTO file_index (path, storage_id, object_key, name, parent, kind, size, content_type, uploaded_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT(path) DO UPDATE SET
     storage_id = excluded.storage_id,
+    object_key = excluded.object_key,
     name = excluded.name,
     parent = excluded.parent,
     kind = excluded.kind,
@@ -84,7 +92,18 @@ export function buildUpsertParams(key, meta = {}) {
   const size = Number(meta.size || 0);
   const contentType = meta.httpMetadata?.contentType || meta.contentType || '';
   const uploadedAt = uploadedMs(meta.uploaded);
-  return [key, meta.storageId || meta.storage_id || 'r2', nameOf(key), parentOf(key), indexedFileKind(key), size, contentType, uploadedAt, Date.now()];
+  return [
+    key,
+    meta.storageId || meta.storage_id || 'r2',
+    meta.objectKey || meta.object_key || key,
+    nameOf(key),
+    parentOf(key),
+    indexedFileKind(key),
+    size,
+    contentType,
+    uploadedAt,
+    Date.now(),
+  ];
 }
 
 export async function upsertFileIndex(env, key, meta = {}) {
@@ -169,10 +188,69 @@ export async function getFileIndexStorageId(env, key) {
   }
 }
 
+export function normalizeIndexRow(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    storage_id: row.storage_id || 'r2',
+    object_key: row.object_key || row.path,
+  };
+}
+
+export async function getFileIndexEntry(env, key) {
+  if (!key || !(await ensureFileIndexTable(env))) return null;
+  try {
+    const row = await env.D1.prepare('SELECT * FROM file_index WHERE path = ?').bind(key).first();
+    return normalizeIndexRow(row);
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function countFileIndexObjectRefs(env, storageId = 'r2', objectKey = '') {
+  if (!objectKey || !(await ensureFileIndexTable(env))) return 0;
+  try {
+    const row = await env.D1.prepare('SELECT COUNT(*) as count FROM file_index WHERE storage_id = ? AND COALESCE(NULLIF(object_key, \'\'), path) = ?')
+      .bind(storageId || 'r2', objectKey)
+      .first();
+    return Number(row?.count || 0);
+  } catch (_) {
+    return 0;
+  }
+}
+
+export async function updateFileIndexObjectKey(env, storageId = 'r2', oldObjectKey = '', newObjectKey = '') {
+  if (!oldObjectKey || !newObjectKey || !(await ensureFileIndexTable(env))) return;
+  try {
+    await env.D1.prepare('UPDATE file_index SET object_key = ?, updated_at = ? WHERE storage_id = ? AND COALESCE(NULLIF(object_key, \'\'), path) = ?')
+      .bind(newObjectKey, Date.now(), storageId || 'r2', oldObjectKey)
+      .run();
+  } catch (_) {}
+}
+
+export async function hasFileIndexPath(env, key) {
+  return Boolean(await getFileIndexEntry(env, key));
+}
+
+export async function listFileIndexPrefix(env, prefix) {
+  if (!(await ensureFileIndexTable(env))) return [];
+  const clean = String(prefix || '').replace(/^\/+|\/+$/g, '');
+  try {
+    const rows = await env.D1.prepare('SELECT * FROM file_index WHERE path = ? OR path LIKE ? ORDER BY path ASC')
+      .bind(clean, `${clean}/%`)
+      .all();
+    return (rows.results || []).map(normalizeIndexRow).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
 export async function getIndexedStorageUsed(env, storageId = 'r2') {
   if (!(await ensureFileIndexTable(env))) return 0;
   try {
-    const row = await env.D1.prepare('SELECT COALESCE(SUM(size), 0) AS total FROM file_index WHERE storage_id = ?').bind(storageId).first();
+    const row = await env.D1.prepare(
+      'SELECT COALESCE(SUM(size), 0) AS total FROM (SELECT storage_id, COALESCE(NULLIF(object_key, \'\'), path) AS object_key, MAX(size) AS size FROM file_index WHERE storage_id = ? GROUP BY storage_id, COALESCE(NULLIF(object_key, \'\'), path))'
+    ).bind(storageId).first();
     return Number(row?.total || 0);
   } catch (_) {
     return 0;
@@ -184,7 +262,7 @@ export async function syncFileIndexFromR2(env, { maxObjects = 20000 } = {}) {
   const listed = await listR2Objects(env.R2, {}, { maxObjects });
   const entries = (listed.objects || [])
     .filter(obj => indexableKey(obj.key))
-    .map(obj => [obj.key, { ...obj, storageId: 'r2' }]);
+    .map(obj => [obj.key, { ...obj, storageId: 'r2', objectKey: obj.key }]);
   const synced = await batchUpsertFileIndex(env, entries);
   return { synced, truncated: Boolean(listed.truncated) };
 }
@@ -198,13 +276,16 @@ export async function rebuildFileIndex(env, { maxObjects = 50000 } = {}) {
 }
 
 export function mapIndexRow(row) {
+  const normalized = normalizeIndexRow(row);
   const size = Number(row.size || 0);
   const time = Number(row.uploaded_at || row.updated_at || 0);
   return {
     name: row.name,
     path: '/' + row.path,
     fullKey: row.path,
-    storageId: row.storage_id || 'r2',
+    storageId: normalized.storage_id,
+    objectKey: normalized.object_key,
+    isAlias: normalized.object_key !== row.path,
     sizeFormatted: formatBytes(size),
     rawSize: size,
     time,

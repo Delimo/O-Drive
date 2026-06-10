@@ -43,7 +43,9 @@ export async function setStorageQuota(db, bytes) {
  */
 export async function getStorageUsed(db) {
   try {
-    const row = await db.prepare('SELECT COALESCE(SUM(size), 0) AS total FROM file_index').first();
+    const row = await db.prepare(
+      'SELECT COALESCE(SUM(size), 0) AS total FROM (SELECT storage_id, COALESCE(NULLIF(object_key, \'\'), path) AS object_key, MAX(size) AS size FROM file_index GROUP BY storage_id, COALESCE(NULLIF(object_key, \'\'), path))'
+    ).first();
     return Number(row?.total || 0);
   } catch {
     return 0;

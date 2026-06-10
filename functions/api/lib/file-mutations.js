@@ -5,7 +5,7 @@
  */
 
 import { jsonResponse, normalizeName, addLog, isReservedKey } from './common.js';
-import { upsertFileIndex } from './file-index.js';
+import { getFileIndexEntry, upsertFileIndex } from './file-index.js';
 import { copyTree, mapWithConcurrency } from './r2-tree.js';
 import { checkQuota, formatBytes as formatQuotaBytes } from './storage-quota.js';
 import {
@@ -72,6 +72,7 @@ function estimatePathList(paths) {
  * @returns {Promise<boolean>}
  */
 async function keyExists(env, key) {
+  if (await getFileIndexEntry(env, key)) return true;
   const storageId = await resolveExistingStorageId(env, key);
   if (await storageHead(env, storageId, key)) return true;
   const listed = await storageList(env, storageId, { prefix: key + '/', limit: 1 });

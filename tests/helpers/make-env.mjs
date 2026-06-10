@@ -232,16 +232,18 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               else protectedRows.push(row);
             }
             if (/INSERT INTO file_index/i.test(sql)) {
+              const hasObjectKey = statement.bound?.length >= 10;
               const row = {
                 path: statement.bound?.[0],
                 storage_id: statement.bound?.length >= 9 ? statement.bound?.[1] : 'r2',
-                name: statement.bound?.length >= 9 ? statement.bound?.[2] : statement.bound?.[1],
-                parent: statement.bound?.length >= 9 ? statement.bound?.[3] : statement.bound?.[2],
-                kind: statement.bound?.length >= 9 ? statement.bound?.[4] : statement.bound?.[3],
-                size: statement.bound?.length >= 9 ? statement.bound?.[5] : statement.bound?.[4],
-                content_type: statement.bound?.length >= 9 ? statement.bound?.[6] : statement.bound?.[5],
-                uploaded_at: statement.bound?.length >= 9 ? statement.bound?.[7] : statement.bound?.[6],
-                updated_at: statement.bound?.length >= 9 ? statement.bound?.[8] : statement.bound?.[7],
+                object_key: hasObjectKey ? statement.bound?.[2] : statement.bound?.[0],
+                name: hasObjectKey ? statement.bound?.[3] : (statement.bound?.length >= 9 ? statement.bound?.[2] : statement.bound?.[1]),
+                parent: hasObjectKey ? statement.bound?.[4] : (statement.bound?.length >= 9 ? statement.bound?.[3] : statement.bound?.[2]),
+                kind: hasObjectKey ? statement.bound?.[5] : (statement.bound?.length >= 9 ? statement.bound?.[4] : statement.bound?.[3]),
+                size: hasObjectKey ? statement.bound?.[6] : (statement.bound?.length >= 9 ? statement.bound?.[5] : statement.bound?.[4]),
+                content_type: hasObjectKey ? statement.bound?.[7] : (statement.bound?.length >= 9 ? statement.bound?.[6] : statement.bound?.[5]),
+                uploaded_at: hasObjectKey ? statement.bound?.[8] : (statement.bound?.length >= 9 ? statement.bound?.[7] : statement.bound?.[6]),
+                updated_at: hasObjectKey ? statement.bound?.[9] : (statement.bound?.length >= 9 ? statement.bound?.[8] : statement.bound?.[7]),
               };
               const idx = fileIndexRows.findIndex(item => item.path === row.path);
               if (idx >= 0) fileIndexRows[idx] = row;
@@ -368,6 +370,15 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 row.last_alert = statement.bound?.[1];
                 row.blocked_until = statement.bound?.[2];
                 row.sample_paths = statement.bound?.[3];
+              }
+            }
+            if (/UPDATE file_index SET object_key = \?, updated_at = \? WHERE storage_id = \? AND COALESCE\(NULLIF\(object_key, ''\), path\) = \?/i.test(sql)) {
+              const [nextObjectKey, updatedAt, storageId, oldObjectKey] = statement.bound || [];
+              for (const row of fileIndexRows) {
+                if ((row.storage_id || 'r2') === storageId && (row.object_key || row.path) === oldObjectKey) {
+                  row.object_key = nextObjectKey;
+                  row.updated_at = updatedAt;
+                }
               }
             }
             if (/INSERT OR REPLACE INTO settings/i.test(sql)) {
@@ -556,6 +567,25 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             return {};
           },
           async first() {
+            if (/SELECT COUNT\(\*\) as count FROM file_index WHERE storage_id = \? AND COALESCE\(NULLIF\(object_key, ''\), path\) = \?/i.test(sql)) {
+              const [storageId, objectKey] = statement.bound || [];
+              return {
+                count: fileIndexRows.filter(row =>
+                  (row.storage_id || 'r2') === storageId
+                  && (row.object_key || row.path) === objectKey
+                ).length,
+              };
+            }
+            if (/SELECT COALESCE\(SUM\(size\), 0\) AS total FROM \(SELECT storage_id, COALESCE\(NULLIF\(object_key, ''\), path\) AS object_key/i.test(sql)) {
+              const storageId = /WHERE storage_id = \?/i.test(sql) ? statement.bound?.[0] : '';
+              const rows = storageId ? fileIndexRows.filter(row => (row.storage_id || 'r2') === storageId) : fileIndexRows;
+              const objects = new Map();
+              for (const row of rows) {
+                const key = `${row.storage_id || 'r2'}\0${row.object_key || row.path}`;
+                objects.set(key, Math.max(Number(objects.get(key) || 0), Number(row.size || 0)));
+              }
+              return { total: [...objects.values()].reduce((sum, size) => sum + size, 0) };
+            }
             if (/SELECT COUNT\(\*\) as count FROM file_index/i.test(sql)) return { count: fileIndexRows.length };
             if (/SELECT COUNT\(\*\) as count FROM path_access_attempts/i.test(sql)) return { count: pathAttemptRows.length };
             if (/SELECT attempts, last_attempt FROM login_attempts WHERE ip = \?/i.test(sql)) {
@@ -606,9 +636,20 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const row = fileIndexRows.find(item => item.path === statement.bound?.[0]);
               return row ? { storage_id: row.storage_id || 'r2' } : null;
             }
+            if (/SELECT \* FROM file_index WHERE path = \?/i.test(sql)) {
+              return fileIndexRows.find(item => item.path === statement.bound?.[0]) || null;
+            }
             if (/SELECT COALESCE\(SUM\(size\), 0\) AS total FROM file_index/i.test(sql)) {
               const storageId = /WHERE storage_id = \?/i.test(sql) ? statement.bound?.[0] : '';
               const rows = storageId ? fileIndexRows.filter(row => (row.storage_id || 'r2') === storageId) : fileIndexRows;
+              if (/GROUP BY storage_id, COALESCE\(NULLIF\(object_key, ''\), path\)/i.test(sql)) {
+                const objects = new Map();
+                for (const row of rows) {
+                  const key = `${row.storage_id || 'r2'}\0${row.object_key || row.path}`;
+                  objects.set(key, Math.max(Number(objects.get(key) || 0), Number(row.size || 0)));
+                }
+                return { total: [...objects.values()].reduce((sum, size) => sum + size, 0) };
+              }
               return { total: rows.reduce((sum, row) => sum + Number(row.size || 0), 0) };
             }
             if (/SELECT COUNT\(\*\) as count, COALESCE\(SUM\(size\), 0\) as totalSize, COALESCE\(MAX\(updated_at\), 0\) as latestUpdatedAt FROM file_index/i.test(sql)) {
@@ -640,6 +681,15 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM file_index WHERE parent = \?/i.test(sql)) {
               const parent = statement.bound?.[0] || '';
               return { results: fileIndexRows.filter(row => row.parent === parent).sort((a, b) => String(a.name).localeCompare(String(b.name))) };
+            }
+            if (/SELECT \* FROM file_index WHERE path = \? OR path LIKE \?/i.test(sql)) {
+              const path = statement.bound?.[0];
+              const prefix = String(statement.bound?.[1] || '').replace(/%$/, '');
+              return {
+                results: fileIndexRows
+                  .filter(row => row.path === path || String(row.path || '').startsWith(prefix))
+                  .sort((a, b) => String(a.path).localeCompare(String(b.path))),
+              };
             }
             if (/SELECT path FROM file_index WHERE path LIKE \?/i.test(sql)) {
               const prefix = String(statement.bound?.[0] || '').replace(/%$/, '');

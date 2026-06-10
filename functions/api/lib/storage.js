@@ -1,5 +1,5 @@
 import { addLog, formatBytes, jsonResponse, listR2Objects, recordSystemWarning } from './common.js';
-import { getFileIndexStorageId, getIndexedStorageUsed } from './file-index.js';
+import { getFileIndexEntry, getFileIndexStorageId, getIndexedStorageUsed } from './file-index.js';
 import { parseCapacityBytes } from './capacity.js';
 import { signedS3Request } from './s3-signing.js';
 
@@ -211,6 +211,20 @@ export async function resolveExistingStorageId(env, key) {
     if (await env.R2?.head(key)) return 'r2';
   } catch (_) {}
   return resolveStorageIdForPath(env, key);
+}
+
+export async function resolveExistingObjectLocation(env, key) {
+  const indexed = await getFileIndexEntry(env, key);
+  if (indexed) {
+    return {
+      path: key,
+      storageId: indexed.storage_id || 'r2',
+      objectKey: indexed.object_key || indexed.path || key,
+      indexed,
+    };
+  }
+  const storageId = await resolveExistingStorageId(env, key);
+  return { path: key, storageId, objectKey: key, indexed: null };
 }
 
 export async function chooseUploadStorage(env, key, incomingBytes = 0) {

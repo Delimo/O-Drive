@@ -1,7 +1,8 @@
 import { addLog, assertCompleteListing, jsonResponse } from './common.js';
-import { deleteFileIndexKey, deleteFileIndexPrefix, upsertFileIndex } from './file-index.js';
-import { copyR2Object, mapWithConcurrency } from './r2-tree.js';
+import { getFileIndexEntry, listFileIndexPrefix, upsertFileIndex } from './file-index.js';
+import { copyR2Object, deletePathEntry, mapWithConcurrency } from './r2-tree.js';
 import {
+  resolveExistingObjectLocation,
   resolveExistingStorageId,
   storageDelete,
   storageGet,
@@ -55,6 +56,7 @@ function createTrashId() {
 }
 
 async function keyExists(env, key) {
+  if (await getFileIndexEntry(env, key)) return true;
   const storageId = await resolveExistingStorageId(env, key);
   if (await storageGet(env, storageId, key)) return true;
   const listed = await storageList(env, storageId, { prefix: key + '/', limit: 1 });
@@ -62,34 +64,43 @@ async function keyExists(env, key) {
 }
 
 export async function softDeleteTree(env, sourceKey, request) {
-  const storageId = await resolveExistingStorageId(env, sourceKey);
-  const exact = await storageGet(env, storageId, sourceKey);
+  const sourceLocation = await resolveExistingObjectLocation(env, sourceKey);
+  const storageId = sourceLocation.storageId;
+  const exact = await storageGet(env, sourceLocation.storageId, sourceLocation.objectKey);
   const listed = await storageList(env, storageId, { prefix: sourceKey + '/' });
   assertCompleteListing(listed, `Path ${sourceKey}`);
-  const entries = [];
+  const entries = new Map();
 
-  if (exact) entries.push({ key: sourceKey, size: exact.size || 0 });
-  for (const item of listed.objects || []) entries.push({ key: item.key, size: item.size || 0 });
-  if (entries.length === 0) {
+  if (exact) entries.set(sourceKey, { key: sourceKey, size: exact.size || 0, indexed: Boolean(sourceLocation.indexed) });
+  for (const row of await listFileIndexPrefix(env, sourceKey)) {
+    entries.set(row.path, { key: row.path, size: Number(row.size || 0), indexed: true });
+  }
+  for (const item of listed.objects || []) {
+    if (!entries.has(item.key)) entries.set(item.key, { key: item.key, size: item.size || 0, indexed: Boolean(await getFileIndexEntry(env, item.key)) });
+  }
+  const entryList = [...entries.values()];
+  if (entryList.length === 0) {
     throw new Error('File or folder not found');
   }
 
   const trashId = createTrashId();
   const trashKey = `.trash/${trashId}/${sourceKey}`;
 
-  await mapWithConcurrency(entries, 6, async entry => {
+  await mapWithConcurrency(entryList, 6, async entry => {
     const source = entry.key;
     const target = `.trash/${trashId}/${entry.key}`;
     const copied = await copyR2Object(env, source, target);
-    if (copied) await storageDelete(env, storageId, source);
-    if (copied) await deleteFileIndexKey(env, source);
+    if (!copied) return;
+    const location = await resolveExistingObjectLocation(env, source);
+    if (entry.indexed || location.indexed) await deletePathEntry(env, source, location.storageId, location.objectKey);
+    else await storageDelete(env, location.storageId, location.objectKey);
   });
 
-  if (!exact && entries.length === 1 && entries[0].key === `${sourceKey}/.folder`) {
+  if (!exact && entryList.length === 1 && entryList[0].key === `${sourceKey}/.folder`) {
     await storagePut(env, storageId, `${trashKey}/.folder`, new Uint8Array(0));
   }
 
-  const kind = exact && listed.objects.length === 0 ? 'file' : 'folder';
+  const kind = exact && listed.objects.length === 0 && entryList.length === 1 ? 'file' : 'folder';
   const size = exact?.size || 0;
 
   await ensureTrashTable(env);
@@ -173,13 +184,12 @@ async function restoreTrashRecord(env, row, request) {
     const obj = await storageGet(env, storageId, item.key);
     if (obj) {
       await storagePut(env, storageId, target, obj.body, { httpMetadata: obj.httpMetadata });
-      await upsertFileIndex(env, target, { ...obj, storageId });
+      await upsertFileIndex(env, target, { ...obj, storageId, objectKey: target });
       await storageDelete(env, storageId, item.key);
     }
   });
 
   await env.D1.prepare('DELETE FROM trash WHERE id = ?').bind(row.id).run();
-  await deleteFileIndexPrefix(env, row.trash_key);
   await addLog(env, request, 'RESTORE', row.original_key);
 }
 

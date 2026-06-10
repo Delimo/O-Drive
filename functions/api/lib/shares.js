@@ -2,6 +2,7 @@ import { addLog, encodeBase64Url, formatBytes, isReservedKey, jsonResponse, norm
 import { handleDownloadOrPreview } from './file-reads.js';
 import { signHmac } from './secrets.js';
 import { ensureShareTable } from './schema.js';
+import { resolveExistingObjectLocation, storageHead } from './storage.js';
 import { normalizeWebhookEndpoints, notifyWebhookWithLog } from './webhooks.js';
 
 const EXPIRED_SHARE_AUTO_DELETE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -236,7 +237,8 @@ export async function handleAdminShares(env, request, method, url) {
     }
 
     const path = normalizeSharePath(body.path);
-    const meta = await env.R2.head(path);
+    const location = await resolveExistingObjectLocation(env, path);
+    const meta = await storageHead(env, location.storageId, location.objectKey);
     if (!meta) return jsonResponse({ success: false, message: 'File not found' }, 404);
 
     const token = shareToken();

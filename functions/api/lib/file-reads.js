@@ -1,7 +1,7 @@
 import { jsonResponse, formatBytes, isHiddenKey, isReservedKey } from './common.js';
 import { checkProtectedAccess, markProtection } from './protected-paths.js';
-import { indexedFileKind, listIndexedDirectory, searchFileIndex } from './file-index.js';
-import { loadStorageConfig, resolveExistingStorageId, resolveStorageIdForPath, storageGet, storageHead, storageList } from './storage.js';
+import { countFileIndexObjectRefs, getFileIndexEntry, indexedFileKind, listFileIndexPrefix, listIndexedDirectory, searchFileIndex } from './file-index.js';
+import { loadStorageConfig, resolveExistingObjectLocation, resolveStorageIdForPath, storageGet, storageHead, storageList } from './storage.js';
 
 function mapEntry(o) {
   return {
@@ -34,6 +34,16 @@ function virtualBindingFolders(bindings = [], currentKey = '') {
     const fullKey = current ? `${current}/${name}` : name;
     return { name, path: '/' + fullKey, fullKey, virtual: true };
   });
+}
+
+async function hasVisibleStorageObjects(env, storageId, prefix) {
+  const listed = await storageList(env, storageId, { prefix, limit: 20 }, { maxObjects: 20 });
+  if (!(listed.objects || []).length) return true;
+  for (const obj of listed.objects || []) {
+    if (await getFileIndexEntry(env, obj.key)) return true;
+    if ((await countFileIndexObjectRefs(env, storageId, obj.key)) <= 0) return true;
+  }
+  return false;
 }
 
 export async function handleSearch(env, request, url, hiddenPaths, auth, protectedPaths = []) {
@@ -125,6 +135,8 @@ export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, pr
   for (const folder of indexed.folders || []) folderMap.set(folder.fullKey, folder);
   for (const p of listed.delimitedPrefixes || []) {
     const fullKey = p.slice(0, -1);
+    const indexedChildren = await listFileIndexPrefix(env, fullKey);
+    if (!indexedChildren.length && !(await hasVisibleStorageObjects(env, storageId, p))) continue;
     folderMap.set(fullKey, { name: fullKey.split('/').slice(-1)[0], path: '/' + fullKey, fullKey });
   }
   const folders = await markProtection([...folderMap.values()]
@@ -133,7 +145,13 @@ export async function handleListFiles(env, request, hiddenPaths, auth, r2Key, pr
     .filter(f => auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths)), request, env, auth, protectedPaths);
   const fileMap = new Map();
   for (const file of indexed.files || []) fileMap.set(file.fullKey, file);
-  for (const file of (listed.objects || []).map(obj => mapEntry({ ...obj, storageId }))) fileMap.set(file.fullKey, file);
+  for (const obj of listed.objects || []) {
+    const indexedPath = await getFileIndexEntry(env, obj.key);
+    const refCount = await countFileIndexObjectRefs(env, storageId, obj.key);
+    if (!indexedPath && refCount > 0) continue;
+    const file = mapEntry({ ...obj, storageId });
+    fileMap.set(file.fullKey, file);
+  }
   const files = await markProtection([...fileMap.values()]
     .filter(f => f.name !== '' && f.name !== '.folder' && !isReservedKey(f.fullKey) && (auth.role === 'admin' || !isHiddenKey(f.fullKey, hiddenPaths))), request, env, auth, protectedPaths);
   return jsonResponse({ folders, files, storageId });
@@ -159,9 +177,11 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
   const rangeHeader = request.headers.get('Range');
   const parsedRange = parseByteRange(rangeHeader);
   const wantsRange = Boolean(parsedRange);
-  const storageId = await resolveExistingStorageId(env, r2Key);
-  const meta = wantsRange ? await storageHead(env, storageId, r2Key) : null;
-  const obj = wantsRange ? meta : await storageGet(env, storageId, r2Key);
+  const location = await resolveExistingObjectLocation(env, r2Key);
+  const storageId = location.storageId;
+  const objectKey = location.objectKey;
+  const meta = wantsRange ? await storageHead(env, storageId, objectKey) : null;
+  const obj = wantsRange ? meta : await storageGet(env, storageId, objectKey);
   if (!obj) return new Response('404', { status: 404 });
 
   const headers = new Headers();
@@ -199,7 +219,7 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
     length = end - offset + 1;
   }
 
-  const ranged = await storageGet(env, storageId, r2Key, { range: { offset, length } });
+  const ranged = await storageGet(env, storageId, objectKey, { range: { offset, length } });
   if (!ranged) return new Response('404', { status: 404 });
 
   headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${size}`);

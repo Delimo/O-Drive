@@ -19,13 +19,14 @@ import {
   handleTrashCleanup,
   handleTrashRetention,
   handlePaste,
+  handleBatchDelete,
 } from '../functions/api/lib/file-mutations.js';
 import { handleAdminHealth, handleAdminLogs, handleAdminQuota, handleAdminStats } from '../functions/api/lib/admin.js';
 import { handleAdminStorage, handleAdminStorageTest } from '../functions/api/lib/storage.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
-import { indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index.js';
+import { getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index.js';
 import { setStorageQuota as setStorageQuotaForTest } from '../functions/api/lib/storage-quota.js';
 import { createFileTask, updateFileTask } from '../functions/api/lib/tasks.js';
 import {
@@ -583,7 +584,8 @@ test('admin file task runs paste work in the background task table', async () =>
   });
   const statusData = await status.json();
   assert.equal(statusData.item.status, 'completed');
-  assert.ok(await env.R2.get('copies/source.txt'));
+  const copied = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/copies/source.txt'), '/api/preview/copies/source.txt', 'copies/source.txt');
+  assert.equal(copied.status, 200);
 
   const list = await onRequest({
     env,
@@ -1005,6 +1007,133 @@ test('copy and move operations keep file index in sync', async () => {
   assert.deepEqual((await search.json()).files.map(file => file.fullKey), []);
 });
 
+test('same-storage copy creates a logical alias without duplicating the object', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/source.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const copy = await handlePaste(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'copy', paths: ['docs/source.txt'], targetDir: '/copies' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await copy.json()).success, true);
+
+  const sourceIndex = await getFileIndexEntry(env, 'docs/source.txt');
+  const copiedIndex = await getFileIndexEntry(env, 'copies/source.txt');
+  assert.equal(sourceIndex.object_key, 'docs/source.txt');
+  assert.equal(copiedIndex.object_key, 'docs/source.txt');
+  assert.equal(copiedIndex.path, 'copies/source.txt');
+  assert.equal(await env.R2.get('copies/source.txt'), null);
+  assert.equal(await getIndexedStorageUsed(env, 'r2'), 5);
+
+  const copied = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/copies/source.txt'), '/api/preview/copies/source.txt', 'copies/source.txt');
+  assert.equal(copied.status, 200);
+  assert.equal(await copied.text(), 'hello');
+});
+
+test('deleting original and alias paths only removes the backing object after the last reference', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/source.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  await handlePaste(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'copy', paths: ['docs/source.txt'], targetDir: '/copies' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+
+  const deleteOriginal = await handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/source.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await deleteOriginal.json()).success, true);
+  assert.equal(await getFileIndexEntry(env, 'docs/source.txt'), null);
+  assert.equal(await env.R2.get('docs/source.txt'), null);
+  const missingOriginal = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/docs/source.txt'), '/api/preview/docs/source.txt', 'docs/source.txt');
+  assert.equal(missingOriginal.status, 404);
+
+  const copiedIndex = await getFileIndexEntry(env, 'copies/source.txt');
+  assert.match(copiedIndex.object_key, /^\.system\/file-objects\/r2\//);
+  assert.ok(await env.R2.get(copiedIndex.object_key));
+  const copied = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/copies/source.txt'), '/api/preview/copies/source.txt', 'copies/source.txt');
+  assert.equal(copied.status, 200);
+  assert.equal(await copied.text(), 'hello');
+
+  const deleteAlias = await handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['copies/source.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await deleteAlias.json()).success, true);
+  assert.equal(await getFileIndexEntry(env, 'copies/source.txt'), null);
+  assert.equal(await env.R2.get(copiedIndex.object_key), null);
+});
+
+test('cross-storage copy writes a real object to the destination storage', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/source.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
+    method: 'PUT',
+    body: JSON.stringify({
+      r2QuotaBytes: '9.5GB',
+      overflowEnabled: true,
+      overflowThresholdPercent: 85,
+      spaces: [{
+        id: 's3-main',
+        name: 'S3-主存储',
+        endpoint: 'https://s3.example.test',
+        bucket: 'bucket-a',
+        accessKeyId: 'ak',
+        secretAccessKey: 'sk',
+        region: 'auto',
+        enabled: true,
+      }],
+      bindings: [{ path: 's3', storageId: 's3-main' }],
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'PUT');
+
+  const oldFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), method: options.method });
+    if (options.method === 'HEAD') return new Response('', { status: 404 });
+    if (options.method === 'GET') return new Response('hello', { status: 200, headers: { 'content-length': '5', 'content-type': 'text/plain' } });
+    return new Response('', { status: 200 });
+  };
+  try {
+    const copy = await handlePaste(env, new Request('https://example.com', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'copy', paths: ['docs/source.txt'], targetDir: '/s3' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    assert.equal((await copy.json()).success, true);
+
+    const put = calls.find(call => call.method === 'PUT');
+    assert.ok(put);
+    assert.match(put.url, /s3\.example\.test\/bucket-a\/s3\/source\.txt/);
+    assert.equal(await env.R2.get('s3/source.txt'), null);
+    const copiedIndex = await getFileIndexEntry(env, 's3/source.txt');
+    assert.equal(copiedIndex.storage_id, 's3-main');
+    assert.equal(copiedIndex.object_key, 's3/source.txt');
+
+    const copied = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/s3/source.txt'), '/api/preview/s3/source.txt', 's3/source.txt');
+    assert.equal(copied.status, 200);
+    assert.equal(await copied.text(), 'hello');
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
 test('paste preserves conflict behavior when multiple sources target the same destination name', async () => {
   const env = makeEnv({
     objects: [
@@ -1024,7 +1153,8 @@ test('paste preserves conflict behavior when multiple sources target the same de
   assert.equal(data.completed, 1);
   assert.equal(data.failed.length, 1);
   assert.match(data.failed[0].message, /already exists/i);
-  assert.ok(await env.R2.get('copies/a.txt'));
+  const copied = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/copies/a.txt'), '/api/preview/copies/a.txt', 'copies/a.txt');
+  assert.equal(copied.status, 200);
 });
 
 test('trash items can be purged permanently', async () => {
