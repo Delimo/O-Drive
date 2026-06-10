@@ -1283,17 +1283,17 @@ body.admin-page {
 }
 
 .admin-page .webhook-editor-column {
-  padding-bottom: 72px !important;
+  padding-bottom: 0 !important;
 }
 
 .admin-page .webhook-save-row {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  margin: 0 calc(var(--admin-panel-pad) * -1);
-  padding: 14px var(--admin-panel-pad) var(--admin-panel-pad) !important;
+  position: static !important;
+  bottom: auto !important;
+  z-index: auto !important;
+  margin: 0 !important;
+  padding: 14px 0 0 !important;
   border-top: 1px solid var(--admin-line) !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), #ffffff 42%) !important;
+  background: transparent !important;
 }
 
 .admin-page .storage-console {
@@ -1470,6 +1470,32 @@ body.admin-page {
 }
 
 @media (min-width: 1181px) {
+  .admin-page .webhook-settings-body {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.48fr) !important;
+    grid-template-rows: auto auto !important;
+    align-items: start !important;
+    overflow: visible !important;
+  }
+
+  .admin-page .webhook-editor-column,
+  .admin-page .webhook-list-panel,
+  .admin-page .webhook-delivery-panel {
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .admin-page .webhook-list,
+  .admin-page .webhook-deliveries-list {
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+
+  .admin-page .webhook-event-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+  }
+
   .admin-page .overview-panels-grid > section:not(:first-child),
   .admin-page .health-maintenance-panel,
   .admin-page .access-list-panel,
@@ -1964,18 +1990,18 @@ body.admin-page {
   display: grid;
   grid-template-columns: minmax(0, 1.06fr) minmax(340px, 0.72fr);
   gap: 18px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .admin-page .storage-s3-editor {
   gap: 16px !important;
-  height: 100%;
+  height: auto;
 }
 
 .admin-page .storage-s3-list-panel {
   display: flex !important;
   flex-direction: column;
-  min-height: 100%;
+  min-height: 0;
 }
 
 .admin-page .storage-s3-editor-head {
@@ -3195,7 +3221,7 @@ body.admin-page {
   .admin-page .storage-s3-workbench {
     grid-template-columns: minmax(0, 1.08fr) minmax(260px, 0.72fr);
     gap: 12px;
-    align-items: stretch;
+    align-items: start;
   }
 
   .admin-page .storage-s3-list-panel {
@@ -3239,8 +3265,8 @@ body.admin-page {
   }
 
   .admin-page .storage-space-list {
-    max-height: 150px !important;
-    overflow-y: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .admin-page .storage-space-list .access-empty {
@@ -3278,8 +3304,8 @@ body.admin-page {
   }
 
   .admin-page .storage-s3-list-panel .storage-binding-list {
-    max-height: 96px !important;
-    overflow-y: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .admin-page .storage-s3-list-panel .storage-binding-list .access-empty {
@@ -3291,11 +3317,11 @@ body.admin-page {
 @media (min-width: 1181px) and (min-height: 901px) {
   body.admin-page[data-admin-tab="quota"] .explorer-card,
   body.admin-page[data-admin-tab="quota"] #quota-tab {
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   body.admin-page[data-admin-tab="quota"] .storage-redesign {
-    max-height: calc(100vh - 190px);
+    max-height: none !important;
   }
 }
 
