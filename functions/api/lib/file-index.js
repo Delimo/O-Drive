@@ -426,7 +426,7 @@ export async function getIndexedStats(env) {
       env.D1.prepare('SELECT COUNT(*) as count, SUM(size) as totalSize FROM file_index'),
       env.D1.prepare('SELECT path, size, uploaded_at, updated_at FROM file_index ORDER BY uploaded_at DESC LIMIT 10'),
     ]);
-    const allKinds = ['image', 'video', 'audio', 'text', 'archive', 'exe', 'other'];
+    const allKinds = ['image', 'video', 'audio', 'pdf', 'text', 'archive', 'exe', 'other'];
     const breakdown = {};
     for (const kind of allKinds) {
       breakdown[kind] = { count: 0, size: 0, sizeFormatted: formatBytes(0) };

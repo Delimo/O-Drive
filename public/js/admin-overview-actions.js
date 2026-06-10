@@ -7,6 +7,30 @@ function attentionAttrs(item) {
   return `data-admin-action="${escapeHtml(action)}" data-args='${escapeHtml(JSON.stringify(args))}'`;
 }
 
+function fileKindLabel(kind = '') {
+  return {
+    image: '图片',
+    video: '视频',
+    audio: '音频',
+    pdf: 'PDF',
+    text: '文本',
+    archive: '压缩包',
+    exe: '程序',
+    other: '其他',
+  }[kind] || kind;
+}
+
+function fileKindIcon(key = '') {
+  const ext = String(key || '').split('.').pop().toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'].includes(ext)) return 'IMG';
+  if (['mp4', 'webm', 'mov', 'mkv'].includes(ext)) return 'VID';
+  if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(ext)) return 'AUD';
+  if (ext === 'pdf') return 'PDF';
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'ZIP';
+  if (['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'].includes(ext)) return 'TXT';
+  return 'FILE';
+}
+
 export function createAdminOverviewActions() {
   return {
     async loadStats() {
@@ -22,16 +46,15 @@ export function createAdminOverviewActions() {
       this.renderStorageWarnings(data);
       this.renderOverviewAttention(data.attention || []);
 
-      const labels = { image: '图片', video: '视频', audio: '音频', text: '文本', archive: '压缩包', exe: '程序', other: '其他' };
       const breakdown = Object.entries(data.breakdown || {});
-      const totalCount = breakdown.reduce((sum, [, item]) => sum + Number(item.count || 0), 0) || 1;
+      const totalSize = breakdown.reduce((sum, [, item]) => sum + Number(item.size || 0), 0);
       document.getElementById('statsBreakdown').innerHTML = breakdown.map(([kind, item]) => {
-        const count = Number(item.count || 0);
-        const pct = count > 0 ? Math.max(4, Math.round((count / totalCount) * 100)) : 0;
+        const size = Number(item.size || 0);
+        const pct = size > 0 && totalSize > 0 ? Math.max(2, Math.round((size / totalSize) * 100)) : 0;
         return `
           <div class="breakdown-item rounded-xl border border-border bg-background">
             <div class="breakdown-head">
-              <span class="breakdown-label">${labels[kind] || kind}</span>
+              <span class="breakdown-label">${fileKindLabel(kind)}</span>
               <strong class="breakdown-value font-mono">${escapeHtml(item.sizeFormatted || '0 B')}</strong>
             </div>
             <div class="breakdown-track">
@@ -43,7 +66,10 @@ export function createAdminOverviewActions() {
 
       document.getElementById('statsLatest').innerHTML = (data.latest || []).slice(0, 7).map(item => `
         <div class="latest-item rounded-xl border border-border bg-background px-4 py-3">
-          <div class="latest-item-name font-mono text-slate-700">${escapeHtml(item.key)}</div>
+          <div class="latest-item-main">
+            <span class="latest-file-kind">${escapeHtml(fileKindIcon(item.key))}</span>
+            <div class="latest-item-name font-mono text-slate-700">${escapeHtml(item.key)}</div>
+          </div>
           <div class="latest-item-meta mt-1 text-xs text-slate-500 flex items-center justify-between gap-3">
             <span>${escapeHtml(item.sizeFormatted || '0 B')}</span>
             <span>${escapeHtml(item.uploaded ? new Date(item.uploaded).toLocaleString('zh-CN', { hour12: false }) : '-')}</span>

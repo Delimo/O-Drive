@@ -69,6 +69,18 @@ function renderWarningText(warnings = []) {
   `).join('');
 }
 
+function loadingState(title = '正在检查...', detail = '正在读取系统状态') {
+  return `
+    <div class="admin-loading-state">
+      <span aria-hidden="true"></span>
+      <div>
+        <strong>${escapeHtml(title)}</strong>
+        <small>${escapeHtml(detail)}</small>
+      </div>
+    </div>
+  `;
+}
+
 function friendlyErrorMessage(res, data, fallback = '操作失败') {
   const message = String(data?.message || '');
   if (/csrf/i.test(message)) return '登录安全校验已过期，请刷新页面后重试。';
@@ -83,7 +95,7 @@ export function createAdminHealthActions({ adminConfirm }) {
     async loadHealth() {
       const grid = document.getElementById('healthGrid');
       if (!grid) return;
-      grid.innerHTML = '<div class="text-sm text-slate-500">正在检查...</div>';
+      grid.innerHTML = loadingState('正在检查...', '正在验证 D1、R2 和环境变量');
       const { res, data } = await api.adminHealth();
       if (!res.ok) {
         grid.innerHTML = '<div class="text-sm text-rose-600 font-bold">环境检查失败，请重新登录后再试。</div>';
@@ -118,7 +130,7 @@ export function createAdminHealthActions({ adminConfirm }) {
         .filter(Boolean);
       if (!grids.length) return;
       grids.forEach(grid => {
-        grid.innerHTML = '<div class="text-sm text-slate-500">正在检查...</div>';
+        grid.innerHTML = loadingState('正在检查...', '正在读取维护中心状态');
       });
       const { res, data } = await api.maintenance();
       if (!res.ok) {

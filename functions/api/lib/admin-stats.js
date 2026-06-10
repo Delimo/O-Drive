@@ -11,6 +11,7 @@ function emptyBreakdown() {
     image: { count: 0, size: 0 },
     video: { count: 0, size: 0 },
     audio: { count: 0, size: 0 },
+    pdf: { count: 0, size: 0 },
     text: { count: 0, size: 0 },
     archive: { count: 0, size: 0 },
     exe: { count: 0, size: 0 },

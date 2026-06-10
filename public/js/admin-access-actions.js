@@ -1,6 +1,20 @@
 import { api } from './api.js';
 import { escapeHtml } from './utils.js';
 
+function updateAccessPresetButtons(mode = '') {
+  document.querySelectorAll('.access-preset-btn').forEach(btn => {
+    let active = false;
+    try {
+      const args = JSON.parse(btn.dataset.args || '[]');
+      active = args[0] === mode;
+    } catch (_) {
+      active = false;
+    }
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
 export function createAdminAccessActions({ adminConfirm }) {
   return {
     async loadAccessRules() {
@@ -69,6 +83,7 @@ export function createAdminAccessActions({ adminConfirm }) {
     },
 
     setAccessPreset(mode = '') {
+      updateAccessPresetButtons(mode);
       const hide = document.getElementById('accessHideInput');
       const showName = document.getElementById('protectedShowNameInput');
       const password = document.getElementById('protectedPasswordInput');
@@ -97,6 +112,7 @@ export function createAdminAccessActions({ adminConfirm }) {
       document.getElementById('protectedNoteInput').value = '';
       document.getElementById('protectedShowNameInput').checked = true;
       document.getElementById('accessHideInput').checked = false;
+      updateAccessPresetButtons('');
       await this.loadAccessRules();
     },
 
