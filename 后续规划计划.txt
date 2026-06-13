@@ -1,0 +1,78 @@
+O-Drive 前端后续规划计划
+
+当前状态（2026-06-13）
+- 已完成 `public/js/api/index.js`
+- 已完成 `public/js/services/index.js`
+- 已完成 `public/js/state/thunks.js`
+- 已完成 `public/js/render/home.js`
+- 已完成 `public/js/render/modal.js`
+- 已完成 `public/js/render/pages.js`
+- 已完成 `public/js/render/shared.js`
+- 已完成 `public/js/events/index.js`
+- `public/index.js` 保留为总入口、状态定义、共享 helper 与应用编排层
+- 当前 `lint` 与 `build` 已通过
+
+阶段 1：稳定当前拆分结果
+目标：
+- 保持现有拆分后的功能行为不变
+- 持续清理入口文件中的历史遗留与死代码
+- 避免重复事件、重复渲染、重复 helper
+
+完成标准：
+- `index.js` 不再同时包含“新模块调用”和“旧实现残留”
+- 每次调整后都能通过 `npm run lint` 与 `npm run build`
+
+阶段 2：继续下沉共享渲染 helper
+目标：
+- 视需要补充 `public/js/render/shared.js`
+- 将 `renderInspector`、`renderEntryCard`、`renderBatchBar`、`renderTrashBatchBar`、`renderEmptyState` 等共享渲染函数继续归类
+- 让 `home/pages/modal` 模块只关心页面拼装，不再反向依赖过多入口函数
+
+完成标准：
+- 渲染 helper 的职责边界清晰
+- 新增页面或弹窗时，不需要频繁修改 `index.js`
+
+阶段 3：整理状态层
+目标：
+- 视复杂度决定是否继续拆 `actions / reducers / selectors`
+- 优先抽离 selector 风格函数，例如当前 entries、selected、path 相关读取逻辑
+- 保持 thunk 注入方式不变，避免循环依赖
+
+完成标准：
+- 状态读取逻辑不再分散
+- 业务新增时可以优先扩展 state 模块，而不是堆回入口
+
+阶段 4：补回核心功能
+优先顺序建议：
+1. 分享管理页增强
+2. 管理后台更多模块
+3. 更完整的上传队列
+4. 更完整的受保护路径能力
+5. 更高级的搜索与筛选
+6. 更完整的文本 / Markdown 预览
+
+执行原则：
+- 每次只补一类功能
+- 每补完一类都做一次校验与回归
+
+阶段 5：测试与回归检查
+目标：
+- 补基础状态与 API 交互检查
+- 补关键页面回归检查脚本
+- 重点覆盖上传、删除、回收站、分享、权限
+
+阶段 6：最后收口优化
+目标：
+- 清理重复 helper
+- 清理历史乱码文案
+- 统一命名
+- 优化移动端和管理页细节
+
+当前与规划的关系
+- 无冲突
+- 实际目录结构比最初规划更清晰
+- 当前属于“按规划继续优化后的版本”，不是偏离
+
+推荐下一步
+- 优先进入“阶段 2”，继续下沉共享渲染 helper
+- 然后再补功能，而不是把新功能继续堆回 `index.js`

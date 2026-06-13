@@ -1,0 +1,200 @@
+export function createSharedRenderers(deps) {
+  const {
+    icons,
+    escapeHtml,
+    inferKind,
+    formatTime,
+    formatRelative,
+    formatBytes,
+    entryKey,
+    iconForKind,
+    iconClass,
+    normalizeKey,
+  } = deps;
+
+  function renderInspector(selected, state) {
+    if (!selected) {
+      return `
+        <div class="details-panel-empty">
+          <h3 class="details-panel-title">文件详细</h3>
+          <p class="details-panel-copy">点击文件或文件夹后，这里会显示路径、时间、大小和快捷操作。</p>
+        </div>
+      `;
+    }
+
+    const kind = selected.kind || inferKind(selected);
+    const isFolder = kind === 'folder';
+    const canPreview = kind !== 'folder' && !state.explorer.trashMode;
+    const canDownload = kind !== 'folder' && !state.explorer.trashMode;
+    const pathValue = state.explorer.trashMode
+      ? selected.original_key || ''
+      : selected.fullKey || selected.path || selected.name || '';
+
+    return `
+      <div class="details-panel-shell">
+        <div class="details-panel-head">
+          <div>
+            <h3 class="details-panel-title">${escapeHtml(selected.name || '未命名')}</h3>
+            <p class="details-panel-copy">${escapeHtml(pathValue || '/')}</p>
+          </div>
+        </div>
+
+        <div class="details-panel-grid">
+          <div class="details-kv">
+            <div class="details-k">类型</div>
+            <div class="details-v">${escapeHtml(kind)}</div>
+          </div>
+          <div class="details-kv">
+            <div class="details-k">${state.explorer.trashMode ? '删除时间' : '更新时间'}</div>
+            <div class="details-v">${escapeHtml(formatTime(selected.trashedAt || selected.time || 0))}</div>
+          </div>
+          <div class="details-kv">
+            <div class="details-k">大小</div>
+            <div class="details-v">${escapeHtml(selected.sizeFormatted || formatBytes(selected.rawSize || 0))}</div>
+          </div>
+        </div>
+
+        <div class="details-panel-actions">
+          ${
+            state.explorer.trashMode
+              ? `
+                <button class="btn" data-action="restore-trash" data-key="${escapeHtml(entryKey(selected))}">恢复</button>
+                <button class="btn btn-danger" data-action="delete-trash" data-key="${escapeHtml(entryKey(selected))}">彻底删除</button>
+              `
+              : `
+                ${isFolder ? `<button class="btn" data-action="open-entry" data-key="${escapeHtml(entryKey(selected))}">打开文件夹</button>` : ''}
+                ${canPreview ? `<button class="btn" data-action="preview-entry" data-key="${escapeHtml(entryKey(selected))}">预览</button>` : ''}
+                ${canDownload ? `<button class="btn" data-action="download-entry" data-key="${escapeHtml(entryKey(selected))}">下载</button>` : ''}
+                ${!isFolder && state.app.role === 'admin' ? `<button class="btn" data-action="open-share-modal" data-key="${escapeHtml(entryKey(selected))}">分享</button>` : ''}
+                ${state.app.role === 'admin' ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(entryKey(selected))}">重命名</button>` : ''}
+              `
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBatchBar(state, selectedEntries) {
+    return `
+      <div class="batch-bar">
+        <div class="status-main">
+          <span class="status-dot"></span>
+          <span>已选中 ${selectedEntries.length} 项，可以批量复制、移动或删除。</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn" data-action="copy-selected">复制</button>
+          <button class="btn" data-action="move-selected">移动</button>
+          ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected">删除</button>` : ''}
+          <button class="btn" data-action="clear-selected">取消选择</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTrashBatchBar(state, selectedEntries) {
+    return `
+      <div class="batch-bar">
+        <div class="status-main">
+          <span class="status-dot"></span>
+          <span>已选中 ${selectedEntries.length} 项回收站记录，可以恢复或彻底删除。</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn" data-action="restore-selected-trash">批量恢复</button>
+          ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected-trash">批量彻底删除</button>` : ''}
+          <button class="btn" data-action="clear-selected">取消选择</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderKindOptions(selected) {
+    const options = [
+      ['all', '全部'],
+      ['folder', '文件夹'],
+      ['image', '图片'],
+      ['video', '视频'],
+      ['audio', '音频'],
+      ['pdf', 'PDF'],
+      ['text', '文本'],
+      ['archive', '压缩包'],
+      ['file', '其他'],
+    ];
+
+    return options
+      .map(([value, label]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`)
+      .join('');
+  }
+
+  function renderCrumb(item) {
+    return `
+      <button class="crumb ${item.current ? 'is-current' : ''}" data-action="crumb" data-path="${escapeHtml(item.path)}">
+        ${escapeHtml(item.label)}
+      </button>
+    `;
+  }
+
+  function buildBreadcrumbs(path) {
+    const parts = normalizeKey(path).split('/').filter(Boolean);
+    const crumbs = [{ label: '根目录', path: '', current: parts.length === 0 }];
+    let current = '';
+
+    parts.forEach((part, index) => {
+      current = current ? `${current}/${part}` : part;
+      crumbs.push({ label: part, path: current, current: index === parts.length - 1 });
+    });
+
+    return crumbs;
+  }
+
+  function renderEntryCard(item, state) {
+    const key = entryKey(item);
+    const selected = state.explorer.selectedKey === key;
+    const picked = state.explorer.selectedKeys.includes(key);
+    const kind = item.kind || inferKind(item);
+    const isFolder = kind === 'folder';
+    const meta = state.explorer.trashMode
+      ? [isFolder ? '文件夹' : '文件', formatTime(item.trashedAt || 0)]
+      : [
+          isFolder ? '目录' : (item.sizeFormatted || formatBytes(item.rawSize || 0)),
+          item.time ? formatRelative(item.time) : '等待同步',
+        ];
+
+    return `
+      <article class="item-card item-card-legacy ${selected ? 'is-selected' : ''}" data-action="select-entry" data-key="${escapeHtml(key)}">
+        <button class="item-pick ${picked ? 'is-active' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
+          ${picked ? icons.check : ''}
+        </button>
+        <div class="item-icon ${iconClass(kind)}">${iconForKind(kind)}</div>
+        <div class="item-content">
+          <h3 class="item-title">${escapeHtml(item.name || '未命名项目')}</h3>
+          <div class="item-meta">
+            ${meta.map(text => `<span class="item-chip">${escapeHtml(text)}</span>`).join('')}
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderEmptyState(title, copy, icon) {
+    return `
+      <div class="empty-state">
+        <div>
+          <div class="empty-orb">${icon}</div>
+          <h3 class="empty-title">${escapeHtml(title)}</h3>
+          <p class="empty-copy">${escapeHtml(copy)}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  return {
+    renderInspector,
+    renderBatchBar,
+    renderTrashBatchBar,
+    renderKindOptions,
+    renderCrumb,
+    buildBreadcrumbs,
+    renderEntryCard,
+    renderEmptyState,
+  };
+}
