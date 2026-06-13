@@ -13,7 +13,27 @@
 <body class="flex flex-col h-screen overflow-hidden" data-user-role="guest">
     <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col gap-2 pointer-events-none text-center" role="status" aria-live="polite" aria-atomic="true"></div>
 
-    <main class="container">
+    <header class="header-card header-card--drive">
+        <div class="drive-header-inner">
+            <a href="/" class="brand-link brand-panel flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
+                <span class="brand-mark brand-mark-header" aria-hidden="true">☁️</span>
+                <span class="brand-copy">
+                    <span class="brand-title">O-Drive</span>
+                    <span class="brand-subtitle">安全云端空间</span>
+                </span>
+            </a>
+            <div class="flex items-center gap-4">
+                <div class="search-bar hidden md:block">
+                    <span class="search-icon">🔍</span>
+                    <input type="search" id="searchInput" placeholder="搜索文件..." aria-label="搜索文件" autocomplete="off" data-enter-action="search">
+                    <div id="searchSuggestions" class="search-suggestions hidden"></div>
+                </div>
+                <div id="authButtons"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container drive-main">
         <div class="mobile-shell">
             <header class="mobile-header-card">
                 <a href="/" class="brand-link brand-panel flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
@@ -39,28 +59,10 @@
         </div>
 
         <div class="desktop-shell page-top-stack">
-        <header class="header-card">
-            <a href="/" class="brand-link brand-panel flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
-                <span class="brand-mark brand-mark-header" aria-hidden="true">☁️</span>
-                <span class="brand-copy">
-                    <span class="brand-title">O-Drive</span>
-                    <span class="brand-subtitle">安全云端空间</span>
-                </span>
-            </a>
-            <div class="flex items-center gap-4">
-                <div class="search-bar hidden md:block">
-                    <span class="search-icon">🔍</span>
-                    <input type="search" id="searchInput" placeholder="搜索文件..." aria-label="搜索文件" autocomplete="off" data-enter-action="search">
-                    <div id="searchSuggestions" class="search-suggestions hidden"></div>
-                </div>
-                <div id="authButtons"></div>
-            </div>
-        </header>
-
-        <div class="toolbar-card">
+        <section class="toolbar-card toolbar-card--drive">
             <div class="tools-left">
                 <div class="drive-heading">
-                    <span class="drive-heading__label">全部文件</span>
+                    <span class="drive-heading__label">根目录</span>
                     <div id="breadcrumb" class="text-sm font-medium text-primary"></div>
                 </div>
             </div>
@@ -93,10 +95,10 @@
                 <input type="file" id="fileInput" hidden multiple>
                 <input type="file" id="folderInput" hidden multiple webkitdirectory directory>
             </div>
-        </div>
+        </section>
         </div>
 
-        <div class="explorer-card" id="explorerCard">
+        <section class="explorer-card drive-explorer-stage" id="explorerCard">
             <div id="dropOverlay" class="hidden fixed inset-0 z-[250] bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-2xl flex items-center justify-center pointer-events-none">
                 <div class="text-center">
                     <div class="text-5xl mb-3">📁</div>
@@ -105,10 +107,10 @@
                 </div>
             </div>
             <div id="fileList" class="custom-scroll relative"></div>
-        </div>
+        </section>
 
         <div class="desktop-shell page-footer-shell">
-        <footer class="footer">
+        <footer class="footer drive-footer">
             <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 独立沙箱访客隔离支持</div>
             <div class="footer-powered">轻量、安全、可控的云端空间</div>
             <div class="footer-copyright">© <span id="year-display"></span> O-Drive. All rights reserved.</div>

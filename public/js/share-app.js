@@ -8,11 +8,11 @@ const currentYear = new Date().getFullYear();
 const yearDisp = document.getElementById('year-display');
 
 if (yearDisp) {
-  yearDisp.textContent = currentYear > startYear ? `${startYear} - ${currentYear}` : startYear;
+  yearDisp.textContent = currentYear > startYear ? `${startYear} - ${currentYear}` : String(startYear);
 }
 
 function renderStatus(message, tone = 'loading') {
-  card.className = `share-card share-card-${tone}`;
+  card.className = `share-card share-card--new share-card-${tone}`;
   card.innerHTML = `
     <div class="share-status share-status-${tone}">
       <span class="share-status-icon" aria-hidden="true">${tone === 'error' ? '!' : ''}</span>
@@ -64,7 +64,7 @@ function previewMarkup(item) {
 }
 
 function renderUnlock(error = '') {
-  card.className = 'share-card share-card-unlock';
+  card.className = 'share-card share-card--new share-card-unlock';
   card.innerHTML = `
     <div class="share-unlock">
       <div class="share-status-icon" aria-hidden="true">密</div>
@@ -90,7 +90,7 @@ function renderItem(item) {
     ? `${item.downloadCount || 0} / ${item.maxDownloads}`
     : `${item.downloadCount || 0} / 不限`;
 
-  card.className = 'share-card share-card-ready';
+  card.className = 'share-card share-card--new share-card-ready';
   card.innerHTML = `
     <div class="share-main">
       <div class="share-file-icon" aria-hidden="true">${escapeHtml(fileKindLabel(item.name).slice(0, 3))}</div>

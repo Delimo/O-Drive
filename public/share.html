@@ -12,8 +12,8 @@
     <link rel="stylesheet" href="/design.css">
 </head>
 <body class="share-page bg-background text-slate-900">
-    <main class="share-shell">
-        <header class="share-header">
+    <header class="share-header share-header--full">
+        <div class="share-header__inner">
             <a href="/" class="brand-link brand-panel flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
                 <span class="brand-mark brand-mark-header" aria-hidden="true">☁️</span>
                 <span class="brand-copy">
@@ -21,16 +21,21 @@
                     <span class="brand-subtitle">安全云端空间</span>
                 </span>
             </a>
-        </header>
-        <section id="shareCard" class="share-card">
+        </div>
+    </header>
+
+    <main class="share-shell share-shell--new">
+        <section id="shareCard" class="share-card share-card--new">
             <div id="shareStatus" class="share-status">正在加载分享...</div>
         </section>
+
         <footer class="footer share-footer">
             <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 独立沙箱访客隔离支持</div>
             <div class="footer-powered">轻量、安全、可控的云端空间</div>
             <div class="footer-copyright">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
         </footer>
     </main>
+
     <script type="module" src="/js/share-app.js"></script>
 </body>
 </html>

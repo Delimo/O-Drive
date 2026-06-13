@@ -1,4 +1,4 @@
-:root,
+﻿:root,
 html {
   --primary: #2563eb;
   --primary-strong: #1d4ed8;
@@ -3526,3 +3526,279 @@ body.admin-page .container {
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
   }
 }
+
+/* Structural pass for the new layout shells. */
+.header-card--drive {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.drive-header-inner,
+.admin-header-inner,
+.share-header__inner {
+  width: min(1152px, calc(100% - 48px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.drive-main {
+  padding-top: 28px !important;
+}
+
+.toolbar-card--drive {
+  align-items: center;
+}
+
+.drive-explorer-stage {
+  min-height: 380px;
+}
+
+.drive-footer,
+.share-footer,
+.admin-page .footer {
+  text-align: center;
+}
+
+.share-header--full {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.share-shell--new {
+  padding-top: 28px !important;
+}
+
+.share-card--new {
+  align-content: start;
+}
+
+.admin-header-card {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.admin-main-shell {
+  padding-top: 28px !important;
+}
+
+.admin-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.admin-hero-copy h1 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.admin-hero-copy p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.admin-tab-shell {
+  margin-top: 18px;
+}
+
+.admin-content-shell {
+  margin-top: 24px !important;
+}
+
+@media (max-width: 768px) {
+  .drive-header-inner,
+  .admin-header-inner,
+  .share-header__inner {
+    width: calc(100% - 24px);
+  }
+
+  .drive-main,
+  .share-shell--new,
+  .admin-main-shell {
+    padding-top: 16px !important;
+  }
+
+  .admin-hero {
+    padding-bottom: 14px;
+  }
+
+  .admin-hero-copy h1 {
+    font-size: 16px;
+  }
+}
+
+/* Final product pass for the rebuilt layout. */
+body:not(.admin-page):not(.share-page) .drive-header-inner {
+  min-height: 64px;
+}
+
+body:not(.admin-page):not(.share-page) .toolbar-card--drive {
+  justify-content: space-between;
+  gap: 14px !important;
+}
+
+body:not(.admin-page):not(.share-page) .drive-explorer-stage {
+  min-height: 420px;
+}
+
+body:not(.admin-page):not(.share-page) #fileList.grid-layout,
+body:not(.admin-page):not(.share-page) .grid-layout {
+  align-content: start;
+}
+
+body:not(.admin-page):not(.share-page) .grid-item {
+  justify-content: center !important;
+  text-align: center;
+}
+
+body:not(.admin-page):not(.share-page) .grid-item .file-actions {
+  gap: 0 !important;
+}
+
+body:not(.admin-page):not(.share-page) .grid-item .protected-badge {
+  align-self: center;
+}
+
+body:not(.admin-page):not(.share-page) .auth-console-btn,
+body:not(.admin-page):not(.share-page) .auth-logout-btn {
+  font-size: 12px !important;
+}
+
+.share-shell--new {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.share-card--new {
+  gap: 20px !important;
+}
+
+.share-card--new .share-title h1 {
+  max-width: 900px;
+}
+
+.share-card--new .share-actions {
+  padding-top: 2px;
+}
+
+.admin-page .admin-main-shell {
+  min-height: calc(100vh - 64px);
+}
+
+.admin-page .admin-content-shell {
+  padding-bottom: 4px;
+}
+
+.admin-page .overview-stats-grid,
+.admin-page .overview-panels-grid,
+.admin-page .access-workbench-body,
+.admin-page .health-workbench-body,
+.admin-page .webhook-settings-body {
+  gap: 18px !important;
+}
+
+.admin-page .share-summary-grid,
+.admin-page .access-summary-grid,
+.admin-page .quota-summary-grid,
+.admin-page .task-summary-grid,
+.admin-page .storage-metric-grid {
+  gap: 12px !important;
+}
+
+.admin-page .log-filter-panel,
+.admin-page .share-filter-panel {
+  padding: 14px !important;
+}
+
+.admin-page .webhook-editor-column,
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel,
+.admin-page .access-editor-panel,
+.admin-page .access-list-panel,
+.admin-page .quota-editor-panel,
+.admin-page .quota-status-panel,
+.admin-page .storage-panel,
+.admin-page .health-status-panel,
+.admin-page .health-maintenance-panel,
+.admin-page .health-advice-panel,
+.admin-page .overview-panels-grid > section,
+.admin-page .overview-focus-panel {
+  padding: 18px !important;
+}
+
+.admin-page .log-card-main,
+.admin-page .share-card-main {
+  gap: 10px !important;
+}
+
+.admin-page .share-card-actions,
+.admin-page .webhook-save-row,
+.admin-page .access-submit-row {
+  gap: 10px !important;
+}
+
+@media (max-width: 768px) {
+  body:not(.admin-page):not(.share-page) .toolbar-card--drive {
+    padding: 10px 12px !important;
+  }
+
+  body:not(.admin-page):not(.share-page) .drive-explorer-stage {
+    min-height: 320px;
+  }
+
+  body:not(.admin-page):not(.share-page) .grid-item {
+    height: 138px !important;
+    padding: 14px 12px !important;
+  }
+
+  body:not(.admin-page):not(.share-page) .grid-item .file-icon,
+  body:not(.admin-page):not(.share-page) .grid-item .file-thumb-wrap {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 36px !important;
+  }
+
+  .share-card--new .share-title h1 {
+    max-width: none;
+  }
+
+  .admin-page .admin-content-shell {
+    margin-top: 18px !important;
+  }
+
+  .admin-page .overview-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .admin-page .log-filter-panel,
+  .admin-page .share-filter-panel,
+  .admin-page .webhook-editor-column,
+  .admin-page .webhook-list-panel,
+  .admin-page .webhook-delivery-panel,
+  .admin-page .access-editor-panel,
+  .admin-page .access-list-panel,
+  .admin-page .quota-editor-panel,
+  .admin-page .quota-status-panel,
+  .admin-page .storage-panel,
+  .admin-page .health-status-panel,
+  .admin-page .health-maintenance-panel,
+  .admin-page .health-advice-panel,
+  .admin-page .overview-panels-grid > section,
+  .admin-page .overview-focus-panel {
+    padding: 14px !important;
+  }
+}
+
