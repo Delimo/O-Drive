@@ -17,8 +17,8 @@ export const UI = {
   renderAuthButtons() {
     document.body.dataset.userRole = state.userRole || 'guest';
     const html = state.userRole === 'admin'
-      ? `<a href="/admin.html" class="btn text-slate-900 font-bold">管理控制台</a><button class="btn ml-2 text-slate-900 opacity-60" data-action="logout">退出</button>`
-      : `<button class="btn btn-primary font-bold" data-action="show-modal" data-args='["loginModal"]'>管理员登录</button>`;
+      ? `<a href="/admin.html" class="btn auth-console-btn">管理控制台</a><button class="auth-logout-btn" data-action="logout">退出</button>`
+      : `<button class="btn auth-console-btn" data-action="show-modal" data-args='["loginModal"]'>管理员登录</button>`;
 
     const desktop = document.getElementById('authButtons');
     if (desktop) {
@@ -396,7 +396,7 @@ export const UI = {
 
     if (state.viewMode === 'grid') {
       el.className = `grid-item ${isSelected ? 'selected' : ''}`;
-      el.innerHTML = `${selectControl}${visual}<div class="file-name text-slate-900">${safeName}</div>${protectedBadge}<div class="file-size text-slate-500">${safeSize}</div><div class="file-info text-slate-400">${safeInfo}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div>`;
+      el.innerHTML = `${selectControl}${visual}<div class="file-name text-slate-900">${safeName}</div><div class="file-size text-slate-500">${safeSize}</div>${protectedBadge}<div class="file-info text-slate-400">${safeInfo}</div><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div>`;
     } else {
       el.className = `grid-row-layout file-item-row ${isSelected ? 'selected' : ''}`;
       el.innerHTML = `<div class="col-name text-slate-900">${selectControl}<span class="text-xl flex-shrink-0 select-none">${safeIcon}</span><span class="text-sm truncate file-name text-slate-700">${safeName}</span>${protectedBadge}</div><div class="col-size text-slate-500 font-mono text-center">${safeSize}</div><div class="col-time text-slate-500 font-mono text-center">${escapeHtml(Utils.formatDate(item.time))}</div><div class="col-acts text-slate-900"><div class="file-actions">${!isFolder ? `<button class="file-action-btn" data-action="open-preview" data-args='${previewArgs}'>预览</button><button class="file-action-btn" data-action="download-file" data-args='${downloadArg}'>下载</button>` : ''}<button class="file-action-btn" data-action="open-details" data-args='${detailArg}'>详情</button></div></div>`;

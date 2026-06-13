@@ -77,13 +77,13 @@
                     <button id="cancelPasteBtn" class="btn" data-action="clear-clipboard">取消</button>
                 </div>
                 <div class="upload-menu-wrap admin-only" hidden>
-                    <button class="btn" data-action="toggle-upload-menu">上传</button>
+                    <button class="btn btn-primary" data-action="toggle-upload-menu">上传文件</button>
                     <div class="upload-menu hidden">
                         <button class="upload-menu-item" data-action="open-file-input">文件</button>
                         <button class="upload-menu-item" data-action="open-folder-input">文件夹</button>
                     </div>
                 </div>
-                <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
+                <button class="btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建文件夹</button>
                 <div class="hidden sm:flex items-center gap-2">
                     <button id="sortBtn" class="btn" data-action="toggle-sort">名称</button>
                     <button id="viewBtn" class="btn" data-action="toggle-view">列表</button>
@@ -109,8 +109,8 @@
 
         <div class="desktop-shell page-footer-shell">
         <footer class="footer">
-            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 极简安全云端空间</div>
-            <div class="footer-powered">Powered by Cloudflare Pages · Cloudflare R2</div>
+            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 独立沙箱访客隔离支持</div>
+            <div class="footer-powered">轻量、安全、可控的云端空间</div>
             <div class="footer-copyright">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
         </footer>
         </div>
@@ -126,13 +126,13 @@
     <div id="mobileActionSheet" class="mobile-action-sheet">
         <div class="mobile-action-group">
             <div class="upload-menu-wrap admin-only" hidden>
-                <button class="mobile-action-btn" data-action="toggle-upload-menu">上传</button>
+                <button class="mobile-action-btn btn-primary" data-action="toggle-upload-menu">上传文件</button>
                 <div class="upload-menu mobile-upload-menu hidden">
                     <button class="upload-menu-item" data-action="open-file-input">文件</button>
                     <button class="upload-menu-item" data-action="open-folder-input">文件夹</button>
                 </div>
             </div>
-            <button class="mobile-action-btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建</button>
+                <button class="mobile-action-btn admin-only" data-action="show-modal" data-args='["mkdirModal"]' hidden>新建文件夹</button>
         </div>
         <div class="mobile-action-group" id="mobileBatchGroup">
             <button class="mobile-action-btn" id="mobileMoveBtn" data-action="set-clipboard" data-args='["move"]'>移动</button>
