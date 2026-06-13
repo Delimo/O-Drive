@@ -64,6 +64,27 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'refresh-admin-shares') {
+        store.dispatch(thunks.loadAdminShares());
+        return;
+      }
+
+      if (action === 'cleanup-expired-shares') {
+        store.dispatch(thunks.cleanupExpiredShares());
+        return;
+      }
+
+      if (action === 'delete-share') {
+        store.dispatch(thunks.deleteShare(key || ''));
+        return;
+      }
+
+      if (action === 'copy-share-link') {
+        if (!key) return;
+        copyText(`${windowRef.location.origin}/share.html?token=${encodeURIComponent(key)}`, '分享链接已复制');
+        return;
+      }
+
       if (action === 'upload') {
         const input = documentRef.getElementById('upload-input');
         if (input) input.click();

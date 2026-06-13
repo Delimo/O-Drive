@@ -47,6 +47,7 @@ export function createThunks(deps) {
       dispatch(actions.explorer.setSelection(''));
       const path = normalizeKey(state.explorer.path);
       const query = state.explorer.query.trim();
+
       try {
         if (state.explorer.trashMode) {
           const { response, data } = await trashApi.list(query);
@@ -79,18 +80,29 @@ export function createThunks(deps) {
       dispatch(actions.admin.setLoading(true));
       try {
         const { response, data } = await adminApi.stats();
-        if (!response.ok) throw new Error(data?.message || '管理概览加载失败');
+        if (!response.ok) throw new Error(data?.message || '后台概览加载失败');
         dispatch(actions.admin.setStats(data));
       } catch (error) {
-        dispatch(actions.admin.setError(error.message || '管理概览加载失败'));
+        dispatch(actions.admin.setError(error.message || '后台概览加载失败'));
+      }
+    },
+    loadAdminShares: () => async dispatch => {
+      dispatch(actions.admin.setSharesLoading(true));
+      try {
+        const { response, data } = await shareApi.list();
+        if (!response.ok) throw new Error(data?.message || '分享列表加载失败');
+        dispatch(actions.admin.setShares(data?.items || []));
+      } catch (error) {
+        dispatch(actions.admin.setSharesError(error.message || '分享列表加载失败'));
       }
     },
     loadShare: () => async (dispatch, getState) => {
       const token = getState().share.token.trim();
       if (!token) {
-        dispatch(actions.share.setError('请提供分享口令或 token。'));
+        dispatch(actions.share.setError('请提供分享 token。'));
         return;
       }
+
       dispatch(actions.share.setLoading(true));
       try {
         const { response, data } = await shareApi.info(token);
@@ -117,11 +129,20 @@ export function createThunks(deps) {
           }));
           return;
         }
+
         dispatch(actions.app.setModal(null));
         await dispatch(thunks.loadRole());
         dispatchToast('success', '管理员登录成功');
-        if (page === 'admin') await dispatch(thunks.loadAdminStats());
-        else await dispatch(thunks.loadExplorer());
+
+        if (page === 'admin') {
+          await Promise.all([
+            dispatch(thunks.loadAdminStats()),
+            dispatch(thunks.loadAdminShares()),
+          ]);
+          return;
+        }
+
+        await dispatch(thunks.loadExplorer());
       } catch (_) {
         dispatch(actions.app.setModal({
           type: 'login',
@@ -136,9 +157,15 @@ export function createThunks(deps) {
         await authApi.logout();
         dispatch(actions.app.setRole({ role: 'guest', csrf: '' }));
         dispatchToast('success', '已退出管理员账户');
-        if (page === 'admin') dispatch(actions.admin.setError('当前未登录管理员账户。'));
-        if (page === 'home') dispatch(actions.explorer.setTrashMode(false));
-        await dispatch(thunks.loadExplorer());
+        if (page === 'admin') {
+          dispatch(actions.admin.setError('当前未登录管理员账户。'));
+          dispatch(actions.admin.setShares([]));
+          dispatch(actions.admin.setSharesError(''));
+        }
+        if (page === 'home') {
+          dispatch(actions.explorer.setTrashMode(false));
+          await dispatch(thunks.loadExplorer());
+        }
       } catch (_) {
         dispatchToast('error', '退出失败');
       }
@@ -146,13 +173,14 @@ export function createThunks(deps) {
     createFolder: folderName => async (dispatch, getState) => {
       const name = String(folderName || '').trim();
       if (!name) return;
+
       const state = getState();
       const path = normalizeKey(state.explorer.path);
       try {
         const { response, data } = await fileApi.createFolder(path, name, state.explorer.storageId || 'r2');
         if (!response.ok || !data?.success) throw new Error(data?.message || '创建文件夹失败');
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', `已创建文件夹「${name}」`);
+        dispatchToast('success', `已创建文件夹“${name}”`);
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         dispatch(actions.app.setModal({
@@ -167,6 +195,7 @@ export function createThunks(deps) {
       const state = getState();
       const list = uploadService.prepareFiles(files, normalizeKey(state.explorer.path));
       if (!list.length) return;
+
       let uploaded = 0;
       try {
         for (const item of list) {
@@ -188,16 +217,19 @@ export function createThunks(deps) {
     },
     previewEntry: entry => async dispatch => {
       if (!entry || !getEntryPath(entry)) return;
+
       if (requiresProtectedUnlock(entry)) {
         openProtectedUnlockModal(getEntryPath(entry), createDeferredAction('preview', { path: getEntryPath(entry) }));
         return;
       }
+
       const baseModal = previewService.createModal(entry);
       dispatch(actions.app.setModal(baseModal));
       if (baseModal.contentMode !== 'text') {
         dispatch(actions.app.setModal({ ...baseModal, loading: false }));
         return;
       }
+
       try {
         const { response, text } = await previewService.fetchText(entry);
         if (!response.ok) throw new Error(`读取失败 (${response.status})`);
@@ -210,6 +242,7 @@ export function createThunks(deps) {
       const modal = getState().app.modal;
       const path = modal?.entry ? getEntryPath(modal.entry) : '';
       if (!path) return;
+
       try {
         const { response, data } = await fileApi.saveText(path, content);
         if (!response.ok || data?.success === false) throw new Error(humanError(response, data, '保存失败'));
@@ -240,6 +273,7 @@ export function createThunks(deps) {
       const entry = modal?.entry;
       const path = entry ? getEntryPath(entry) : '';
       if (!path) return;
+
       try {
         const payload = {
           path,
@@ -251,11 +285,48 @@ export function createThunks(deps) {
         };
         const { response, data } = await shareApi.create(payload);
         if (!response.ok || !data?.item?.token) throw new Error(humanError(response, data, '创建分享失败'));
+
         const link = `${window.location.origin}/share.html?token=${encodeURIComponent(data.item.token)}`;
         await copyText(link, '分享链接已创建并复制');
         dispatch(actions.app.setModal(null));
+
+        if (page === 'admin') {
+          await dispatch(thunks.loadAdminShares());
+        }
       } catch (error) {
         dispatch(actions.app.setModal({ ...modal, error: error.message || '创建分享失败', values }));
+      }
+    },
+    deleteShare: token => async dispatch => {
+      if (!token) return;
+
+      dispatch(actions.admin.setShareBusyToken(token));
+      try {
+        const { response, data } = await shareApi.remove(token);
+        if (!response.ok || data?.success === false) {
+          throw new Error(humanError(response, data, '删除分享失败'));
+        }
+        dispatchToast('success', '分享已删除');
+        await dispatch(thunks.loadAdminShares());
+      } catch (error) {
+        dispatchToast('error', error.message || '删除分享失败');
+      } finally {
+        dispatch(actions.admin.setShareBusyToken(''));
+      }
+    },
+    cleanupExpiredShares: () => async dispatch => {
+      dispatch(actions.admin.setShareBusyToken('__cleanup__'));
+      try {
+        const { response, data } = await shareApi.cleanupExpired();
+        if (!response.ok || data?.success === false) {
+          throw new Error(humanError(response, data, '清理过期分享失败'));
+        }
+        dispatchToast('success', '已清理过期分享');
+        await dispatch(thunks.loadAdminShares());
+      } catch (error) {
+        dispatchToast('error', error.message || '清理过期分享失败');
+      } finally {
+        dispatch(actions.admin.setShareBusyToken(''));
       }
     },
     restoreTrash: trashId => async dispatch => {
@@ -290,9 +361,12 @@ export function createThunks(deps) {
     },
     batchDelete: paths => async dispatch => {
       if (!paths?.length) return;
+
       try {
         const { response, data } = await fileApi.batchDelete(paths);
-        if (!response.ok || data?.success === false && !data?.completed) throw new Error(humanError(response, data, '删除失败'));
+        if ((!response.ok || data?.success === false) && !data?.completed) {
+          throw new Error(humanError(response, data, '删除失败'));
+        }
         dispatch(actions.explorer.setSelectedKeys([]));
         dispatchToast('success', data?.completed ? `已处理 ${data.completed} 项` : '已移入回收站');
         await dispatch(thunks.loadExplorer());
@@ -302,6 +376,7 @@ export function createThunks(deps) {
     },
     renameEntry: (path, newName) => async dispatch => {
       if (!path || !newName) return;
+
       try {
         const { response, data } = await fileApi.rename(path, newName);
         if (!response.ok) throw new Error(humanError(response, data, '重命名失败'));
@@ -316,13 +391,16 @@ export function createThunks(deps) {
     pasteClipboard: () => async (dispatch, getState) => {
       const clipboard = getState().explorer.clipboard;
       if (!clipboard?.paths?.length) return;
+
       try {
         const { response, data } = await fileApi.paste(
           clipboard.action,
           clipboard.paths,
           `/${normalizeKey(getState().explorer.path)}`.replace(/\/$/, '') || '/',
         );
-        if (!response.ok || data?.success === false && !data?.completed) throw new Error(humanError(response, data, '粘贴失败'));
+        if ((!response.ok || data?.success === false) && !data?.completed) {
+          throw new Error(humanError(response, data, '粘贴失败'));
+        }
         dispatch(actions.explorer.setClipboard(null));
         dispatch(actions.explorer.setSelectedKeys([]));
         dispatchToast('success', clipboard.action === 'move' ? '已执行移动' : '已执行复制');
@@ -333,6 +411,7 @@ export function createThunks(deps) {
     },
     batchRestoreTrash: trashIds => async dispatch => {
       if (!trashIds?.length) return;
+
       try {
         for (const id of trashIds) {
           const { response, data } = await trashApi.restore(id);
@@ -349,6 +428,7 @@ export function createThunks(deps) {
     },
     batchDeleteTrash: trashIds => async dispatch => {
       if (!trashIds?.length) return;
+
       try {
         for (const id of trashIds) {
           const { response, data } = await trashApi.remove(id);
@@ -367,15 +447,18 @@ export function createThunks(deps) {
       const modal = getState().app.modal;
       const path = modal?.path || '';
       if (!path) return;
+
       try {
         const { response, data } = await authApi.unlockProtectedPath(path, password);
         if (!response.ok || data?.success === false) {
           dispatch(actions.app.setModal({ ...modal, error: data?.message || '密码错误' }));
           return;
         }
+
         const deferred = modal.deferredAction;
         dispatch(actions.app.setModal(null));
         dispatchToast('success', '路径已解锁');
+
         if (deferred?.kind === 'preview') {
           const unlockedEntry = findCurrentEntryByPath(deferred.path);
           if (unlockedEntry) {
@@ -383,11 +466,13 @@ export function createThunks(deps) {
           }
           return;
         }
+
         if (deferred?.kind === 'download') {
           const unlockedEntry = findCurrentEntryByPath(deferred.path);
           if (unlockedEntry) openDownload({ ...unlockedEntry, protected: false });
           return;
         }
+
         if (deferred?.kind === 'navigate') {
           dispatch(actions.explorer.setTrashMode(false));
           dispatch(actions.explorer.setPath(normalizeKey(deferred.path)));
@@ -402,6 +487,7 @@ export function createThunks(deps) {
     unlockShare: password => async (dispatch, getState) => {
       const token = getState().share.token.trim();
       if (!token) return;
+
       dispatch(actions.share.setLoading(true));
       try {
         const { response, data } = await shareApi.unlock(token, password);

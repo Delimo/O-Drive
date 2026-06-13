@@ -1485,6 +1485,10 @@ const initialState = {
   admin: {
     loading: false,
     stats: null,
+    shares: [],
+    sharesLoading: false,
+    sharesError: '',
+    shareBusyToken: '',
     error: '',
   },
   share: {
@@ -1637,6 +1641,18 @@ const adminSlice = createSlice({
     },
     setStats(state, action) {
       return { ...state, loading: false, error: '', stats: action.payload };
+    },
+    setSharesLoading(state, action) {
+      return { ...state, sharesLoading: action.payload };
+    },
+    setShares(state, action) {
+      return { ...state, sharesLoading: false, sharesError: '', shares: action.payload || [] };
+    },
+    setSharesError(state, action) {
+      return { ...state, sharesLoading: false, sharesError: action.payload, shares: [] };
+    },
+    setShareBusyToken(state, action) {
+      return { ...state, shareBusyToken: action.payload || '' };
     },
     setError(state, action) {
       return { ...state, loading: false, error: action.payload };
@@ -1838,6 +1854,15 @@ function splitUploadTarget(file, basePath) {
   return { targetName, targetDir, relativeDir };
 }
 
+function isProtectedEntry(entry) {
+  return Boolean(
+    entry?.protected
+    || entry?.isProtected
+    || entry?.locked
+    || entry?.requiresPassword,
+  );
+}
+
 function createDeferredAction(kind, payload = {}) {
   return { kind, ...payload };
 }
@@ -1908,6 +1933,23 @@ function humanError(response, data, fallback) {
   if (response?.status === 409) return '目标位置存在同名项目，请更换名称后重试。';
   return raw || fallback;
 }
+
+const {
+  currentEntries,
+  getSelectedEntry,
+  entryKey,
+  getEntryPath,
+  detectContentMode,
+  findCurrentEntryByPath,
+  selectedEntriesFromState,
+  requiresProtectedUnlock,
+} = createStateSelectors({
+  formatBytes,
+  inferKind,
+  normalizeKey,
+  isProtectedEntry,
+});
+
 const { apiClient, request, authApi, fileApi, trashApi, shareApi, adminApi } = createApiLayer({
   fetchImpl: fetch,
   getState: () => store.getState(),
@@ -2159,7 +2201,10 @@ store.dispatch(thunks.loadRole()).then(async () => {
     await store.dispatch(thunks.loadExplorer());
   } else if (page === 'admin') {
     if (store.getState().app.role === 'admin') {
-      await store.dispatch(thunks.loadAdminStats());
+      await Promise.all([
+        store.dispatch(thunks.loadAdminStats()),
+        store.dispatch(thunks.loadAdminShares()),
+      ]);
     }
   } else if (page === 'share') {
     await store.dispatch(thunks.loadShare());

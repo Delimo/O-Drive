@@ -167,10 +167,26 @@ export function createApiLayer(deps) {
     info(token) {
       return request(`/api/share/${encodeURIComponent(token)}/info`);
     },
+    list() {
+      return request('/api/admin/shares');
+    },
     create(payload) {
       return request('/api/admin/shares', {
         method: 'POST',
         json: payload,
+        csrf: true,
+      });
+    },
+    remove(token) {
+      return request(`/api/admin/shares?token=${encodeURIComponent(token)}`, {
+        method: 'DELETE',
+        csrf: true,
+      });
+    },
+    cleanupExpired() {
+      return request('/api/admin/shares', {
+        method: 'POST',
+        json: { action: 'cleanup-expired' },
         csrf: true,
       });
     },
