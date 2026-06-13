@@ -3732,7 +3732,18 @@ body.admin-page {
 
 /* Storage quota page: wireframe-aligned layout pass */
 .admin-page .storage-redesign {
+  display: flex !important;
+  flex-direction: column !important;
   gap: 14px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.admin-page .storage-overview-strip,
+.admin-page .storage-summary-strip,
+.admin-page .storage-board {
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 .admin-page .storage-overview-strip {
@@ -3876,6 +3887,27 @@ body.admin-page {
   .admin-page .storage-board-center,
   .admin-page .storage-board-right {
     grid-column: auto;
+  }
+}
+
+@media (min-width: 1181px) {
+  .admin-page .storage-redesign {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+    grid-template-areas: none !important;
+    align-items: stretch !important;
+  }
+
+  .admin-page .storage-redesign-head,
+  .admin-page .storage-redesign [data-storage-view="overview"],
+  .admin-page .storage-redesign [data-storage-view="s3"] {
+    grid-area: auto !important;
+  }
+
+  .admin-page .storage-summary-strip,
+  .admin-page .storage-board {
+    grid-column: auto !important;
   }
 }
 
