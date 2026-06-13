@@ -3730,28 +3730,37 @@ body.admin-page {
   }
 }
 
-/* Storage quota page: wireframe-aligned layout pass */
+/* Storage quota page: redesigned per-bucket workbench */
 .admin-page .storage-redesign {
   display: flex !important;
   flex-direction: column !important;
-  gap: 14px !important;
+  gap: 16px !important;
   width: 100% !important;
   max-width: 100% !important;
 }
 
 .admin-page .storage-overview-strip,
-.admin-page .storage-board {
+.admin-page .storage-summary-redesign,
+.admin-page .storage-board-redesign,
+.admin-page .storage-stage,
+.admin-page .storage-policy-workbench,
+.admin-page .storage-editor-panel,
+.admin-page .storage-registry-panel {
   width: 100% !important;
   min-width: 0 !important;
 }
 
-.admin-page .storage-overview-strip {
+.admin-page .storage-redesign-head {
   margin: 0 !important;
-  padding: 18px 20px !important;
+  padding: 20px 22px !important;
   border: 1px solid #dce8f6 !important;
-  border-radius: 18px !important;
-  background: linear-gradient(135deg, rgba(248, 251, 255, 0.96), rgba(255, 255, 255, 0.98)) !important;
-  box-shadow: none !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(circle at top right, rgba(191, 219, 254, 0.52), transparent 34%),
+    linear-gradient(135deg, rgba(248, 251, 255, 0.98), rgba(255, 255, 255, 0.98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 28px rgba(15, 23, 42, 0.035) !important;
 }
 
 .admin-page .storage-overview-strip.storage-console-head {
@@ -3759,145 +3768,263 @@ body.admin-page {
   border-bottom: 1px solid #dce8f6 !important;
 }
 
-.admin-page .storage-board {
-  display: grid;
-  grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.86fr) minmax(320px, 0.72fr);
-  gap: 18px;
-  align-items: stretch;
-  padding: 16px;
-  border: 1px solid #dce8f6;
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.92), rgba(255, 255, 255, 0.98)),
-    #ffffff;
+.admin-page .storage-page-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.95);
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
-.admin-page .storage-board-column,
-.admin-page .storage-board-column > .storage-view {
+.admin-page .storage-summary-redesign {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-page .storage-summary-card {
+  min-height: 108px !important;
+  padding: 18px 18px 16px !important;
+  border: 1px solid #dce8f6 !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.95)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 8px 22px rgba(15, 23, 42, 0.03) !important;
+}
+
+.admin-page .storage-summary-card span {
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.01em;
+}
+
+.admin-page .storage-summary-card strong {
+  color: #061126 !important;
+  font-size: clamp(24px, 2vw, 30px) !important;
+  font-weight: 950 !important;
+  line-height: 1.05 !important;
+}
+
+.admin-page .storage-board-redesign {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+  padding: 18px !important;
+  border: 1px solid #dce8f6 !important;
+  border-radius: 22px !important;
+  background:
+    radial-gradient(circle at top right, rgba(219, 234, 254, 0.38), transparent 26%),
+    linear-gradient(180deg, rgba(248, 251, 255, 0.92), rgba(255, 255, 255, 0.98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 12px 30px rgba(15, 23, 42, 0.035) !important;
+}
+
+.admin-page .storage-stage {
+  display: grid;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.admin-page .storage-stage-top {
+  grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr);
+}
+
+.admin-page .storage-stage-bottom {
+  grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
+}
+
+.admin-page .storage-quota-hero-panel,
+.admin-page .storage-registry-panel,
+.admin-page .storage-editor-panel,
+.admin-page .storage-policy-workbench > .storage-config-card {
   min-width: 0;
   min-height: 0;
 }
 
-.admin-page .storage-board-column {
-  display: grid;
-  align-content: start;
+.admin-page .storage-quota-hero-panel {
+  min-height: 280px;
+  padding: 24px !important;
 }
 
-.admin-page .storage-board-left .storage-overview-redesign {
-  gap: 16px;
+.admin-page .storage-quota-hero-panel .storage-quota-hero-main {
+  align-content: stretch;
 }
 
-.admin-page .storage-board-left .storage-quota-hero {
-  grid-template-columns: 1fr;
-  gap: 16px;
-  min-height: 240px;
-  padding: 22px;
+.admin-page .storage-registry-panel {
+  display: flex !important;
+  flex-direction: column;
+  min-height: 280px;
 }
 
-.admin-page .storage-board-left .storage-quota-hero-main {
-  align-content: start;
+.admin-page .storage-registry-head {
+  align-items: flex-start !important;
+  gap: 12px !important;
+  padding-bottom: 16px !important;
+  border-bottom: 1px solid #e6eef8 !important;
 }
 
-.admin-page .storage-board-left .storage-quota-number strong {
-  font-size: clamp(40px, 5vw, 64px);
+.admin-page .storage-registry-note {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-.admin-page .storage-board-left .storage-config-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.admin-page .storage-board-left .storage-config-card {
-  min-height: 232px;
-}
-
-.admin-page .storage-board-center .storage-view,
-.admin-page .storage-board-center .storage-s3-editor {
-  height: 100%;
-}
-
-.admin-page .storage-board-center .storage-s3-editor {
-  min-height: 100%;
-  gap: 18px !important;
-}
-
-.admin-page .storage-board-right .storage-s3-sidebar {
-  display: grid;
-  gap: 16px;
-  height: 100%;
-}
-
-.admin-page .storage-board-right .storage-s3-list-panel {
-  min-height: 286px;
-}
-
-.admin-page .storage-board-right .storage-space-list {
-  max-height: 280px !important;
+.admin-page .storage-registry-panel .storage-space-list {
+  flex: 1 1 auto;
+  padding-top: 4px;
+  max-height: 488px !important;
   overflow-y: auto !important;
+  scrollbar-gutter: stable;
 }
 
-@media (max-width: 1280px) {
-  .admin-page .storage-board {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.admin-page .storage-registry-panel .storage-space-card {
+  padding-right: 4px !important;
+}
+
+.admin-page .storage-policy-workbench {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  align-items: stretch !important;
+}
+
+.admin-page .storage-config-compact {
+  min-height: 244px;
+  justify-content: flex-start;
+}
+
+.admin-page .storage-config-compact .storage-panel-head {
+  align-items: flex-start !important;
+}
+
+.admin-page .storage-config-compact .storage-panel-head p {
+  max-width: 34ch;
+}
+
+.admin-page .storage-editor-panel {
+  min-height: 100%;
+}
+
+.admin-page .storage-editor-panel .storage-s3-editor-head {
+  align-items: center !important;
+}
+
+.admin-page .storage-editor-panel .storage-form-block:last-of-type {
+  border-bottom: 0;
+}
+
+@media (max-width: 1380px) {
+  .admin-page .storage-summary-redesign {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .admin-page .storage-board-left {
-    grid-column: 1 / -1;
+  .admin-page .storage-stage-top,
+  .admin-page .storage-stage-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .storage-registry-panel .storage-space-list {
+    max-height: 360px !important;
   }
 }
 
-@media (max-width: 900px) {
-  .admin-page .storage-board,
-  .admin-page .storage-board-left .storage-config-grid {
-    grid-template-columns: 1fr !important;
+@media (max-width: 980px) {
+  .admin-page .storage-redesign-head {
+    padding: 18px !important;
   }
 
-  .admin-page .storage-board-left,
-  .admin-page .storage-board-center,
-  .admin-page .storage-board-right {
-    grid-column: auto;
-  }
-}
-
-@media (min-width: 1181px) {
-  .admin-page .storage-redesign {
-    display: flex !important;
-    flex-direction: column !important;
-    grid-template-columns: 1fr !important;
-    grid-template-areas: none !important;
-    align-items: stretch !important;
+  .admin-page .storage-summary-redesign,
+  .admin-page .storage-policy-workbench {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  .admin-page .storage-redesign-head,
-  .admin-page .storage-redesign [data-storage-view="overview"],
-  .admin-page .storage-redesign [data-storage-view="s3"] {
-    grid-area: auto !important;
+  .admin-page .storage-board-redesign {
+    padding: 16px !important;
+  }
+
+  .admin-page .storage-quota-hero-panel,
+  .admin-page .storage-registry-panel,
+  .admin-page .storage-editor-panel,
+  .admin-page .storage-policy-workbench > .storage-config-card {
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .admin-page .storage-registry-head {
+    flex-direction: column;
+    align-items: flex-start !important;
   }
 }
 
 @media (max-width: 768px) {
-  .admin-page .storage-overview-strip,
-  .admin-page .storage-board {
+  .admin-page .storage-redesign {
+    gap: 14px !important;
+  }
+
+  .admin-page .storage-redesign-head,
+  .admin-page .storage-board-redesign {
+    border-radius: 18px !important;
+  }
+
+  .admin-page .storage-summary-redesign,
+  .admin-page .storage-policy-workbench,
+  .admin-page .storage-option-block .access-mode-grid,
+  .admin-page .storage-s3-editor .storage-form-grid.two,
+  .admin-page .storage-s3-editor .storage-form-grid.three,
+  .admin-page .storage-policy-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-page .storage-summary-card {
+    min-height: 92px !important;
+  }
+
+  .admin-page .storage-summary-card strong {
+    font-size: 24px !important;
+  }
+
+  .admin-page .storage-board-redesign {
+    gap: 14px !important;
     padding: 14px !important;
-    border-radius: 16px !important;
   }
 
-  .admin-page .storage-board {
-    gap: 14px;
-  }
-
-  .admin-page .storage-board-left .storage-quota-hero,
-  .admin-page .storage-board-left .storage-config-card,
-  .admin-page .storage-board-center .storage-s3-editor,
-  .admin-page .storage-board-right .storage-s3-list-panel {
+  .admin-page .storage-quota-hero-panel {
     min-height: auto;
-    padding: 14px !important;
-    border-radius: 14px !important;
+    padding: 18px !important;
   }
 
-  .admin-page .storage-board-right .storage-space-list {
+  .admin-page .storage-registry-panel .storage-space-list {
     max-height: none !important;
     overflow: visible !important;
+  }
+
+  .admin-page .storage-quota-number {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .admin-page .storage-quota-number strong {
+    font-size: clamp(34px, 12vw, 52px) !important;
   }
 }
 

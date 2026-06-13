@@ -100,10 +100,14 @@ export function createAdminStorageActions({ adminConfirm }) {
 
     async loadStorage() {
       const spaceList = document.getElementById('storageSpaceList');
+      const storageSpaceCount = document.getElementById('storageSpaceCountValue');
+      const storageOverflowCount = document.getElementById('storageOverflowCountValue');
       setStorageResult();
       if (!spaceList) return;
       const { res, data } = await api.adminStorage();
       if (!res.ok) {
+        if (storageSpaceCount) storageSpaceCount.textContent = '0';
+        if (storageOverflowCount) storageOverflowCount.textContent = '0';
         setStorageResult('加载存储配置失败，请稍后重试。', 'error');
         spaceList.innerHTML = renderAdminEmptyState({
           title: 'S3 空间加载失败',
@@ -119,9 +123,13 @@ export function createAdminStorageActions({ adminConfirm }) {
       if (r2Quota) r2Quota.value = formatGbInput(data.r2?.quotaBytes);
       if (threshold) threshold.value = data.overflowThresholdPercent || 85;
       if (enabled) enabled.checked = Boolean(data.overflowEnabled);
+      const spaces = Array.isArray(data.spaces) ? data.spaces : [];
+      const overflowTargets = spaces.filter(item => item.enabled && item.overflowTarget);
+      if (storageSpaceCount) storageSpaceCount.textContent = String(spaces.length);
+      if (storageOverflowCount) storageOverflowCount.textContent = String(overflowTargets.length);
       this.syncStoragePolicyAvailability(data);
       this.syncStorageEditorState();
-      spaceList.innerHTML = (data.spaces || []).map(item => `
+      spaceList.innerHTML = spaces.map(item => `
         <div class="access-rule-card storage-space-card ${adminState.storageEditingId === item.id ? 'is-editing' : ''}">
           <div class="access-rule-main">
             <strong>${escapeHtml(item.name || item.id)}</strong>
