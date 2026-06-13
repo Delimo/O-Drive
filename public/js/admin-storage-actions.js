@@ -72,16 +72,10 @@ export function createAdminStorageActions({ adminConfirm }) {
       const r2 = data?.r2 || { quotaBytes: 0, usedBytes: 0, usedFormatted: '0 B', quotaFormatted: '未设置', usedPercent: 0 };
       const usedPercent = r2.quotaBytes > 0 ? Math.round((r2.usedBytes / r2.quotaBytes) * 100) : 0;
       const remainingBytes = r2.quotaBytes > 0 ? Math.max(0, r2.quotaBytes - r2.usedBytes) : Infinity;
-      const primaryBucket = document.getElementById('storagePrimaryBucketValue');
-      const quotaMode = document.getElementById('storageQuotaModeValue');
-      const policyStatus = document.getElementById('storagePolicyStatusValue');
       const quotaPercent = document.getElementById('quotaPercentValue');
       const quotaPercentLabel = document.getElementById('quotaPercentLabel');
       const usageBar = document.getElementById('quotaUsageBar');
       const quotaHero = document.querySelector('.storage-quota-hero');
-      if (primaryBucket) primaryBucket.textContent = 'R2';
-      if (quotaMode) quotaMode.textContent = '分桶独立';
-      if (policyStatus) policyStatus.textContent = data?.overflowEnabled ? '已启用' : '未启用';
       if (quotaPercent) quotaPercent.textContent = r2.quotaBytes > 0 ? `${usedPercent}%` : r2.usedFormatted || '0 B';
       if (quotaPercentLabel) quotaPercentLabel.textContent = r2.quotaBytes > 0 ? 'R2 已使用' : '当前按存储桶分别配额';
       if (usageBar) usageBar.style.width = `${Math.max(0, Math.min(100, usedPercent))}%`;
@@ -96,14 +90,10 @@ export function createAdminStorageActions({ adminConfirm }) {
 
     async loadStorage() {
       const spaceList = document.getElementById('storageSpaceList');
-      const storageSpaceCount = document.getElementById('storageSpaceCountValue');
-      const storageOverflowCount = document.getElementById('storageOverflowCountValue');
       setStorageResult();
       if (!spaceList) return;
       const { res, data } = await api.adminStorage();
       if (!res.ok) {
-        if (storageSpaceCount) storageSpaceCount.textContent = '0';
-        if (storageOverflowCount) storageOverflowCount.textContent = '0';
         setStorageResult('加载存储配置失败，请稍后重试。', 'error');
         spaceList.innerHTML = renderAdminEmptyState({
           title: 'S3 空间加载失败',
@@ -120,9 +110,6 @@ export function createAdminStorageActions({ adminConfirm }) {
       if (threshold) threshold.value = data.overflowThresholdPercent || 85;
       if (enabled) enabled.checked = Boolean(data.overflowEnabled);
       const spaces = Array.isArray(data.spaces) ? data.spaces : [];
-      const overflowTargets = spaces.filter(item => item.enabled && item.overflowTarget);
-      if (storageSpaceCount) storageSpaceCount.textContent = String(spaces.length);
-      if (storageOverflowCount) storageOverflowCount.textContent = String(overflowTargets.length);
       this.syncStoragePolicyAvailability(data);
       this.syncStorageEditorState();
       spaceList.innerHTML = spaces.map(item => `

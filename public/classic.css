@@ -1800,10 +1800,10 @@ body.admin-page {
 
 .admin-page .storage-quota-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.78fr);
-  gap: 18px;
+  grid-template-columns: 1fr;
+  gap: 14px;
   align-items: stretch;
-  padding: 20px;
+  padding: 18px;
   border: 1px solid #dce8f6;
   border-radius: 16px;
   background:
@@ -1815,8 +1815,8 @@ body.admin-page {
 
 .admin-page .storage-quota-hero-main {
   display: grid;
-  align-content: center;
-  gap: 14px;
+  align-content: start;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -1837,7 +1837,7 @@ body.admin-page {
 
 .admin-page .storage-quota-number strong {
   color: #061126;
-  font-size: clamp(42px, 7vw, 72px);
+  font-size: clamp(34px, 5vw, 56px);
   font-weight: 950;
   line-height: 0.92;
   letter-spacing: 0;
@@ -1856,7 +1856,7 @@ body.admin-page {
 }
 
 .admin-page .storage-usage-strip .quota-usage-track {
-  height: 12px !important;
+  height: 10px !important;
   background: #e8f0fb !important;
 }
 
@@ -3734,7 +3734,7 @@ body.admin-page {
 .admin-page .storage-redesign {
   display: flex !important;
   flex-direction: column !important;
-  gap: 16px !important;
+  gap: 14px !important;
   width: 100% !important;
   max-width: 100% !important;
 }
@@ -3838,7 +3838,7 @@ body.admin-page {
 }
 
 .admin-page .storage-stage-top {
-  grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr);
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
 }
 
 .admin-page .storage-stage-bottom {
@@ -3854,8 +3854,8 @@ body.admin-page {
 }
 
 .admin-page .storage-quota-hero-panel {
-  min-height: 280px;
-  padding: 24px !important;
+  min-height: 228px;
+  padding: 18px !important;
 }
 
 .admin-page .storage-quota-hero-panel .storage-quota-hero-main {
