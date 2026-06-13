@@ -286,7 +286,7 @@
                                 <div class="storage-overview-redesign">
                                     <section class="storage-quota-hero">
                                         <div class="storage-quota-hero-main">
-                                            <div class="storage-section-kicker">容量水位</div>
+                                            <div class="storage-section-kicker">R2 容量水位</div>
                                             <div class="storage-quota-number"><strong id="quotaPercentValue">0%</strong><span id="quotaPercentLabel">已使用</span></div>
                                             <div class="quota-usage-card storage-usage-strip">
                                                 <div class="quota-usage-track"><span id="quotaUsageBar"></span></div>
@@ -299,16 +299,16 @@
                                         <div class="storage-panel storage-config-card">
                                             <div class="storage-panel-head">
                                                 <div>
-                                                    <h3>全局配额</h3>
-                                                    <p>以 GB 为单位设置总容量；填 0 表示不限制总容量。</p>
+                                                    <h3>R2 配额</h3>
+                                                    <p>为默认主存储设置单独配额。高水位策略会基于这个配额计算溢出时机。</p>
                                                 </div>
                                             </div>
                                             <div class="storage-input-row storage-quota-row">
                                                 <div class="storage-unit-input">
-                                                    <input type="number" id="quotaInput" placeholder="20" min="0" step="0.01" inputmode="decimal" class="admin-input storage-unit-number">
+                                                    <input type="number" id="quotaInput" placeholder="10" min="0" step="0.01" inputmode="decimal" class="admin-input storage-unit-number">
                                                     <span class="storage-unit-suffix">GB</span>
                                                 </div>
-                                                <button id="quotaSaveButton" class="btn btn-primary" data-admin-action="set-quota">保存配额</button>
+                                                <button id="quotaSaveButton" class="btn btn-primary" data-admin-action="set-quota">保存 R2 配额</button>
                                             </div>
                                             <p id="quotaResult" class="admin-feedback is-hidden" aria-live="polite"></p>
                                         </div>

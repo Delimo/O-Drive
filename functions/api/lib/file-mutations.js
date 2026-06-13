@@ -7,7 +7,7 @@
 import { jsonResponse, normalizeName, addLog, isReservedKey } from './common.js';
 import { getFileIndexEntry, upsertFileIndex } from './file-index.js';
 import { copyTree, mapWithConcurrency } from './r2-tree.js';
-import { checkQuota, formatBytes as formatQuotaBytes } from './storage-quota.js';
+import { formatBytes as formatQuotaBytes } from './storage-quota.js';
 import {
   checkStorageQuota,
   chooseUploadStorage,
@@ -397,13 +397,6 @@ export async function handleUpload(env, request, r2Key) {
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped) return jsonResponse({ success: true, skipped: true, key });
   const selected = await chooseUploadStorage(env, resolved.key, Number(file.size || 0));
-  const totalQuota = await checkQuota(env, Number(file.size || 0));
-  if (!totalQuota.allowed) {
-    return jsonResponse(
-      { success: false, code: 'QUOTA_EXCEEDED', message: `总存储配额不足。已使用 ${formatQuotaBytes(totalQuota.used)} / ${formatQuotaBytes(totalQuota.quota)}，本次需要 ${formatQuotaBytes(file.size || 0)}。` },
-      507,
-    );
-  }
   const quota = await checkStorageQuota(env, selected.storageId, Number(file.size || 0));
   if (!quota.allowed) {
     return jsonResponse(
@@ -438,13 +431,6 @@ export async function handleMultipartCreate(env, request) {
   const incomingBytes = Number(totalSize || size || 0);
   const selected = await chooseUploadStorage(env, resolved.key, incomingBytes);
   if (incomingBytes > 0) {
-    const totalQuota = await checkQuota(env, incomingBytes);
-    if (!totalQuota.allowed) {
-      return jsonResponse(
-        { success: false, code: 'QUOTA_EXCEEDED', message: `总存储配额不足。剩余 ${formatQuotaBytes(totalQuota.remaining)} / ${formatQuotaBytes(totalQuota.quota)}。` },
-        507,
-      );
-    }
     const quota = await checkStorageQuota(env, selected.storageId, incomingBytes);
     if (!quota.allowed) {
       return jsonResponse(

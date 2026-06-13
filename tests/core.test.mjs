@@ -27,7 +27,6 @@ import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
 import { getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index.js';
-import { setStorageQuota as setStorageQuotaForTest } from '../functions/api/lib/storage-quota.js';
 import { createFileTask, updateFileTask } from '../functions/api/lib/tasks.js';
 import {
   handleProtectedSettings,
@@ -1300,68 +1299,7 @@ test('multipart uploads can resolve name conflicts', async () => {
   assert.equal((await skipped.json()).skipped, true);
 });
 
-test('skipped upload conflicts do not require remaining quota', async () => {
-  const env = makeEnv({
-    objects: [{ key: 'docs/report.pdf', body: 'old', size: 3, uploaded: new Date('2026-01-01') }],
-  });
-  await setStorageQuotaForTest(env.D1, 3);
-  await upsertFileIndex(env, 'docs/report.pdf', { size: 3, contentType: 'application/pdf', uploaded: new Date('2026-01-01') });
-
-  const form = new FormData();
-  form.append('file', new File(['new-content'], 'report.pdf', { type: 'application/pdf' }));
-  const upload = await handleUpload(env, new Request('https://example.com/api/files/docs?conflict=skip', {
-    method: 'POST',
-    body: form,
-  }), 'docs');
-  const uploadData = await upload.json();
-  assert.equal(upload.status, 200);
-  assert.equal(uploadData.skipped, true);
-
-  const multipart = await handleMultipartCreate(env, new Request('https://example.com', {
-    method: 'POST',
-    body: JSON.stringify({ targetDir: '/docs', name: 'report.pdf', type: 'application/pdf', totalSize: 10, conflict: 'skip' }),
-    headers: { 'Content-Type': 'application/json' },
-  }));
-  const multipartData = await multipart.json();
-  assert.equal(multipart.status, 200);
-  assert.equal(multipartData.skipped, true);
-});
-
-test('quota check syncs empty file index from R2 before accepting uploads', async () => {
-  const env = makeEnv({
-    objects: [{ key: 'existing.bin', body: '1234567890', size: 10, uploaded: new Date('2026-01-01') }],
-  });
-  await setStorageQuotaForTest(env.D1, 12);
-  env.ADMIN_USERNAME = 'admin';
-  env.ADMIN_PASSWORD = 'admin-secret';
-
-  const login = await onRequest({
-    env,
-    request: new Request('https://example.com/api/login', {
-      method: 'POST',
-      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  });
-  const loginData = await login.json();
-  const cookie = login.headers.get('Set-Cookie');
-
-  const form = new FormData();
-  form.append('file', new File(['abcde'], 'new.bin', { type: 'application/octet-stream' }));
-  const upload = await onRequest({
-    env,
-    request: new Request('https://example.com/api/files', {
-      method: 'POST',
-      body: form,
-      headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
-    }),
-  });
-
-  assert.equal(upload.status, 507);
-  assert.equal(await indexedFileCount(env), 1);
-});
-
-test('admin quota accepts human-readable capacity input', async () => {
+test('admin quota endpoint remains compatible for legacy reads and writes', async () => {
   const env = makeEnv();
   const expected = Math.floor(9.5 * 1024 * 1024 * 1024);
 
@@ -1376,6 +1314,33 @@ test('admin quota accepts human-readable capacity input', async () => {
   const data = await loaded.json();
   assert.equal(data.quota, expected);
   assert.equal(data.quotaFormatted, '9.5 GB');
+});
+
+test('legacy global quota no longer blocks uploads', async () => {
+  const env = makeEnv();
+  await handleAdminQuota(env, new Request('https://example.com/api/admin/settings/quota', {
+    method: 'PUT',
+    body: JSON.stringify({ bytes: '1B' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'PUT');
+  await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
+    method: 'PUT',
+    body: JSON.stringify({
+      r2QuotaBytes: 0,
+      overflowEnabled: false,
+      overflowThresholdPercent: 85,
+      spaces: [],
+      bindings: [],
+    }),
+  }), 'PUT');
+
+  const form = new FormData();
+  form.append('file', new File(['hello'], 'legacy.txt', { type: 'text/plain' }));
+  const upload = await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: form }), '');
+  const data = await upload.json();
+
+  assert.equal(upload.status, 200);
+  assert.equal(data.success, true);
 });
 
 test('R2 high-water uploads overflow to configured S3 with a visible warning', async () => {
@@ -1583,14 +1548,23 @@ test('admin stats can summarize from file index', async () => {
   assert.ok(data.attention.some(item => item.title === '系统提醒待查看'));
 });
 
-test('admin attention warns when storage quota usage reaches 90 percent', async () => {
+test('admin attention warns when bucket quota usage reaches 90 percent', async () => {
   const env = makeEnv();
-  await setStorageQuotaForTest(env.D1, 100);
-  await upsertFileIndex(env, 'docs/archive.zip', { size: 90, contentType: 'application/zip', uploaded: new Date('2026-01-03') });
+  await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
+    method: 'PUT',
+    body: JSON.stringify({
+      r2QuotaBytes: '100B',
+      overflowEnabled: false,
+      overflowThresholdPercent: 85,
+      spaces: [],
+      bindings: [],
+    }),
+  }), 'PUT');
+  await upsertFileIndex(env, 'docs/archive.zip', { size: 90, storageId: 'r2', contentType: 'application/zip', uploaded: new Date('2026-01-03') });
 
   const res = await handleAdminStats(env);
   const data = await res.json();
-  const item = data.attention.find(entry => entry.title === '存储空间即将用满');
+  const item = data.attention.find(entry => entry.title === 'Cloudflare R2 空间即将用满');
 
   assert.ok(item);
   assert.equal(item.level, 'warning');

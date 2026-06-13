@@ -59,19 +59,21 @@ export function createAdminStorageActions({ adminConfirm }) {
       const info = document.getElementById('quotaInfo');
       setQuotaResult();
       if (!info) return;
-      info.innerHTML = renderAdminLoadingState('正在加载配额...', '正在读取容量水位和总配额状态');
-      const { res, data } = await api.adminQuota();
+      info.innerHTML = renderAdminLoadingState('正在加载配额...', '正在读取 R2 水位和存储桶状态');
+      const { res, data } = await api.adminStorage();
       if (!res.ok) {
         info.innerHTML = renderAdminEmptyState({
-          title: '配额信息加载失败',
+          title: 'R2 配额信息加载失败',
           description: '请稍后重试，或检查后台服务是否可用。',
           compact: true,
         });
         return;
       }
-      const quotaLabel = data.quota > 0 ? data.quotaFormatted : '无限制';
-      const usedPercent = data.quota > 0 ? Math.round((data.used / data.quota) * 100) : 0;
-      const remainingLabel = data.quota > 0 ? `${formatBytesLocal(data.remaining)} 剩余` : '无限制';
+      const r2 = data?.r2 || { quotaBytes: 0, usedBytes: 0, usedFormatted: '0 B', quotaFormatted: '未设置', usedPercent: 0 };
+      const quotaLabel = r2.quotaBytes > 0 ? r2.quotaFormatted : '未设置';
+      const usedPercent = r2.quotaBytes > 0 ? Math.round((r2.usedBytes / r2.quotaBytes) * 100) : 0;
+      const remainingBytes = r2.quotaBytes > 0 ? Math.max(0, r2.quotaBytes - r2.usedBytes) : Infinity;
+      const remainingLabel = r2.quotaBytes > 0 ? `${formatBytesLocal(remainingBytes)} 剩余` : '按桶单独控制';
       const quotaLimit = document.getElementById('quotaLimitValue');
       const quotaUsed = document.getElementById('quotaUsedValue');
       const quotaRemaining = document.getElementById('quotaRemainingValue');
@@ -80,20 +82,20 @@ export function createAdminStorageActions({ adminConfirm }) {
       const usageBar = document.getElementById('quotaUsageBar');
       const quotaHero = document.querySelector('.storage-quota-hero');
       if (quotaLimit) quotaLimit.textContent = quotaLabel;
-      if (quotaUsed) quotaUsed.textContent = data.usedFormatted || '0 B';
+      if (quotaUsed) quotaUsed.textContent = r2.usedFormatted || '0 B';
       if (quotaRemaining) quotaRemaining.textContent = remainingLabel;
-      if (quotaPercent) quotaPercent.textContent = data.quota > 0 ? `${usedPercent}%` : data.usedFormatted || '0 B';
-      if (quotaPercentLabel) quotaPercentLabel.textContent = data.quota > 0 ? '已使用' : '当前未限制配额';
+      if (quotaPercent) quotaPercent.textContent = r2.quotaBytes > 0 ? `${usedPercent}%` : r2.usedFormatted || '0 B';
+      if (quotaPercentLabel) quotaPercentLabel.textContent = r2.quotaBytes > 0 ? 'R2 已使用' : '当前按存储桶分别配额';
       if (usageBar) usageBar.style.width = `${Math.max(0, Math.min(100, usedPercent))}%`;
-      quotaHero?.classList.toggle('is-unlimited', !(data.quota > 0));
+      quotaHero?.classList.toggle('is-unlimited', !(r2.quotaBytes > 0));
       info.innerHTML = `
         <div class="quota-note-card">
-          <strong>${data.quota > 0 ? '配额已启用' : '当前不限制容量'}</strong>
-          <span>${data.quota > 0 ? `已使用 ${data.usedFormatted || '0 B'}，剩余 ${formatBytesLocal(data.remaining)}。` : '上传不会受总容量限制，仍建议定期清理回收站和临时文件。'}</span>
+          <strong>${r2.quotaBytes > 0 ? 'R2 配额已启用' : '当前使用分桶配额模式'}</strong>
+          <span>${r2.quotaBytes > 0 ? `R2 已使用 ${r2.usedFormatted || '0 B'}，剩余 ${formatBytesLocal(remainingBytes)}。` : '上传不再检查全局总量，而是分别检查每个存储桶自己的配额。'}</span>
         </div>
       `;
       const input = document.getElementById('quotaInput');
-      if (input) input.value = data.quota > 0 ? formatGbInput(data.quota) : '0';
+      if (input) input.value = r2.quotaBytes > 0 ? formatGbInput(r2.quotaBytes) : '';
     },
 
     async loadStorage() {
@@ -387,21 +389,17 @@ export function createAdminStorageActions({ adminConfirm }) {
       const input = document.getElementById('quotaInput');
       const value = input?.value.trim();
       const parsed = parseCapacityLocal(value ? `${value}GB` : 0);
-      if (!parsed.ok) { setQuotaResult('请输入有效容量，或填 0 表示不限制。', 'error'); return; }
+      if (!parsed.ok) { setQuotaResult('请输入有效容量，或留空/填 0 表示不限制。', 'error'); return; }
       const bytes = parsed.bytes;
-      const confirmTitle = bytes > 0 ? '保存存储配额？' : '取消存储配额限制？';
-      const confirmBody = bytes > 0 ? `新的配额为 ${formatBytesLocal(bytes)}。` : '取消后上传不再受总量配额限制。';
+      const confirmTitle = bytes > 0 ? '保存 R2 配额？' : '取消 R2 配额限制？';
+      const confirmBody = bytes > 0 ? `R2 新的配额为 ${formatBytesLocal(bytes)}。S3 仍按各自配额独立校验。` : '取消后，R2 将不再设置硬上限；S3 仍按各自配额独立校验。';
       if (!(await adminConfirm(confirmTitle, confirmBody))) return;
+      const config = this.readStorageBaseConfig();
+      config.r2QuotaBytes = bytes > 0 ? `${value}GB` : 0;
       setAdminButtonBusy(saveButton, true, '保存中...');
-      setQuotaResult('正在保存...', 'loading');
       try {
-        const { res, data } = await api.setAdminQuota(bytes);
-        if (!res.ok || data?.success === false) {
-          setQuotaResult(data?.message || '保存失败', 'error');
-          return;
-        }
-        await this.loadQuota();
-        setQuotaResult(bytes > 0 ? `配额已设为 ${formatBytesLocal(bytes)}。` : '已取消配额限制。', 'success');
+        const ok = await this.saveStorageConfig(config, bytes > 0 ? `R2 配额已设为 ${formatBytesLocal(bytes)}。` : '已取消 R2 配额限制。');
+        if (ok) await this.loadQuota();
       } finally {
         setAdminButtonBusy(saveButton, false);
       }

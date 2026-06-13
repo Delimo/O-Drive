@@ -1,6 +1,6 @@
 import { ensureCoreTables, formatBytes, isReservedKey, jsonResponse, listR2Objects, recordSystemWarning } from './common.js';
 import { fileIndexStatus, getIndexedStats, indexedFileCount, indexedFileKind, syncFileIndexFromR2 } from './file-index.js';
-import { getStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
+import { checkStorageQuota, listConfiguredStorages } from './storage.js';
 
 function fileKind(key) {
   return indexedFileKind(key);
@@ -138,15 +138,17 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
     Object.assign(items[items.length - 1], { action: 'maintenance-action', actionArgs: ['rebuild-index'] });
   }
   try {
-    const quota = await getStorageQuota(env.D1);
-    if (quota > 0) {
-      const used = await getStorageUsed(env.D1);
-      const usedPercent = Math.round((used / quota) * 100);
+    const storageConfig = await listConfiguredStorages(env);
+    const storageTargets = [storageConfig.r2, ...(storageConfig.spaces || [])];
+    for (const target of storageTargets) {
+      const quota = await checkStorageQuota(env, target.id, 0);
+      if (!quota.quota) continue;
+      const usedPercent = Math.round((quota.used / quota.quota) * 100);
       if (usedPercent >= 90) {
         items.push({
           level: 'warning',
-          title: '存储空间即将用满',
-          body: `已使用 ${formatQuotaBytes(used)} / ${formatQuotaBytes(quota)}（${usedPercent}%），建议清理回收站或调整配额。`,
+          title: `${target.name} 空间即将用满`,
+          body: `已使用 ${formatBytes(quota.used)} / ${formatBytes(quota.quota)}（${usedPercent}%），建议清理文件或调整该存储桶配额。`,
           tab: 'quota',
         });
       }
