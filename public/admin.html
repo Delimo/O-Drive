@@ -321,7 +321,7 @@
                                 <div class="storage-panel-head storage-registry-head">
                                     <div>
                                         <h3>存储桶注册表</h3>
-                                        <p>所有 S3 扩展空间都在这里集中查看。目录绑定入口已迁移到云盘页“新建文件夹”。</p>
+                                        <p>所有 S3 扩展空间都在这里集中查看，配额在新建或编辑该空间时单独设置。目录绑定入口已迁移到云盘页“新建文件夹”。</p>
                                     </div>
                                     <div class="storage-registry-note">S3 目录绑定已迁移</div>
                                 </div>
@@ -334,8 +334,8 @@
                                 <div class="storage-panel storage-config-card storage-config-compact">
                                     <div class="storage-panel-head">
                                         <div>
-                                            <h3>R2 配额</h3>
-                                            <p>为默认主存储设置单独配额。高水位策略会基于这个配额计算溢出时机。</p>
+                                            <h3>默认桶配额（R2）</h3>
+                                            <p>这里只设置默认主存储 R2 的配额。后续新增的 S3，请在右侧编辑器里分别设置各自的容量上限。</p>
                                         </div>
                                     </div>
                                     <div class="storage-input-row storage-quota-row">
@@ -388,7 +388,7 @@
                                 <div class="storage-panel-head storage-s3-editor-head">
                                     <div>
                                         <h3 id="storageEditorTitle">添加扩展存储</h3>
-                                        <p id="storageEditorHint">S3 兼容存储可作为文件夹目标，也可承担 R2 溢出。</p>
+                                        <p id="storageEditorHint">S3 兼容存储可作为文件夹目标，也可单独设置配额并承担 R2 溢出。</p>
                                     </div>
                                     <button class="btn storage-new-btn" data-admin-action="new-storage-space">新建</button>
                                 </div>
@@ -449,12 +449,12 @@
                                             <small class="admin-field-help">可用于把此空间限制到桶内某个目录，适合共享桶场景。</small>
                                         </label>
                                         <label class="storage-field">
-                                            <span>容量上限</span>
+                                            <span>该存储桶容量上限</span>
                                             <div class="storage-unit-input">
                                                 <input type="number" id="storageQuotaInput" placeholder="留空不限" min="0" step="0.01" inputmode="decimal" class="admin-input storage-unit-number">
                                                 <span class="storage-unit-suffix">GB</span>
                                             </div>
-                                            <small class="admin-field-help">留空表示不限制；设置后上传会按这个空间的容量独立校验。</small>
+                                            <small class="admin-field-help">留空表示不限制；设置后上传会按这个 S3 存储桶自己的容量独立校验。</small>
                                         </label>
                                     </div>
                                 </div>

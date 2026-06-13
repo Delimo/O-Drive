@@ -188,8 +188,8 @@ export function createAdminStorageActions({ adminConfirm }) {
       if (title) title.textContent = space ? `编辑扩展存储 ${space.name || space.id}` : '添加扩展存储';
       if (hint) {
         hint.textContent = space
-          ? '正在编辑已配置空间。ID 为关联路径和索引使用，编辑时保持只读。'
-          : 'S3 兼容存储可作为文件夹目标，也可承担 R2 溢出。';
+          ? '正在编辑已配置空间。这个面板里可以单独调整它的配额、溢出角色和连接信息，ID 在编辑时保持只读。'
+          : '新增的 S3 空间会在这里设置自己的容量上限，也可以同时作为文件夹目标或 R2 溢出空间。';
       }
       if (idInput) idInput.readOnly = Boolean(space);
       document.querySelectorAll('.storage-space-card').forEach(card => {
