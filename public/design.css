@@ -1141,3 +1141,257 @@ textarea {
     border-radius: 16px !important;
   }
 }
+
+/* Deeper admin pass: make each tab feel like the same product, not separate modules. */
+.admin-page .overview-focus-head,
+.admin-page .storage-panel-head,
+.admin-page .quota-panel-title,
+.admin-page .access-panel-title,
+.admin-page .webhook-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-page .overview-focus-head h2,
+.admin-page .storage-panel-head h3,
+.admin-page .quota-panel-title h3,
+.admin-page .access-panel-title h3,
+.admin-page .webhook-editor-head h3 {
+  margin: 0;
+  color: var(--text-main) !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+}
+
+.admin-page .overview-focus-head span,
+.admin-page .storage-panel-head p,
+.admin-page .quota-panel-title p,
+.admin-page .access-panel-title p,
+.admin-page .webhook-editor-head p {
+  color: var(--text-muted) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
+}
+
+.admin-page .overview-focus-panel,
+.admin-page .overview-panels-grid > section {
+  padding: 18px !important;
+}
+
+.admin-page .task-summary-grid,
+.admin-page .share-summary-grid,
+.admin-page .quota-summary-grid,
+.admin-page .access-summary-grid,
+.admin-page .storage-summary-redesign,
+.admin-page .storage-metric-grid {
+  gap: 10px !important;
+}
+
+.admin-page .task-summary-card,
+.admin-page .share-summary-card,
+.admin-page .quota-summary-card,
+.admin-page .access-summary-card,
+.admin-page .storage-metric-card {
+  padding: 14px 16px !important;
+  min-height: 72px !important;
+  align-items: flex-end !important;
+  background: linear-gradient(180deg, #ffffff, #f8fbff) !important;
+}
+
+.admin-page .task-summary-card span,
+.admin-page .share-summary-card span,
+.admin-page .quota-summary-card span,
+.admin-page .access-summary-card span,
+.admin-page .storage-metric-card span {
+  font-size: 11px !important;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.admin-page .task-summary-card strong,
+.admin-page .share-summary-card strong,
+.admin-page .quota-summary-card strong,
+.admin-page .access-summary-card strong,
+.admin-page .storage-metric-card strong {
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+
+.admin-page .health-status-panel,
+.admin-page .health-maintenance-panel,
+.admin-page .health-advice-panel,
+.admin-page .quota-editor-panel,
+.admin-page .quota-status-panel,
+.admin-page .access-editor-panel,
+.admin-page .access-list-panel,
+.admin-page .webhook-editor-column,
+.admin-page .webhook-list-panel,
+.admin-page .webhook-delivery-panel,
+.admin-page .storage-panel,
+.admin-page .overview-panels-grid > section {
+  padding: 18px !important;
+}
+
+.admin-page .health-item,
+.admin-page .storage-warning,
+.admin-page .attention-item,
+.admin-page .access-mode-card,
+.admin-page .webhook-event-option,
+.admin-page .quota-note-card,
+.admin-page .quota-usage-card {
+  padding: 14px !important;
+  background: linear-gradient(180deg, #ffffff, #f8fbff) !important;
+}
+
+.admin-page .log-list-head {
+  padding: 0 18px 6px !important;
+  color: var(--text-soft) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-page .log-card,
+.admin-page .share-card,
+.admin-page .access-rule-card,
+.admin-page .webhook-row,
+.admin-page .webhook-delivery-row,
+.admin-page .task-row {
+  padding: 14px !important;
+}
+
+.admin-page .log-card,
+.admin-page .share-card,
+.admin-page .access-rule-card,
+.admin-page .webhook-row {
+  margin-bottom: 8px;
+}
+
+.admin-page .log-card:last-child,
+.admin-page .share-card:last-child,
+.admin-page .access-rule-card:last-child,
+.admin-page .webhook-row:last-child {
+  margin-bottom: 0;
+}
+
+.admin-page .log-card-main strong,
+.admin-page .share-card-title strong,
+.admin-page .access-rule-main strong,
+.admin-page .webhook-row-head strong,
+.admin-page .webhook-delivery-head strong,
+.admin-page .task-row-head strong {
+  color: var(--text-main) !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.admin-page .share-card-title span,
+.admin-page .access-rule-main span,
+.admin-page .webhook-url,
+.admin-page .log-card-time,
+.admin-page .log-card-ip {
+  color: var(--text-muted) !important;
+}
+
+.admin-page .share-card-actions,
+.admin-page .access-rule-actions,
+.admin-page .webhook-row-buttons,
+.admin-page .admin-share-buttons {
+  gap: 8px !important;
+}
+
+.admin-page .webhook-settings-body,
+.admin-page .access-workbench-body,
+.admin-page .quota-workbench-body,
+.admin-page .health-workbench-body {
+  gap: 16px !important;
+}
+
+.admin-page .webhook-form-block,
+.admin-page .storage-form-block,
+.admin-page .storage-inline-section {
+  padding-top: 16px !important;
+  border-top: 1px solid rgba(219, 228, 239, 0.95) !important;
+}
+
+.admin-page .webhook-save-row,
+.admin-page .access-submit-row,
+.admin-page .storage-form-actions,
+.admin-page .storage-actions {
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(219, 228, 239, 0.95) !important;
+}
+
+.admin-page .storage-subtabs {
+  padding: 6px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, #ffffff, #f8fbff) !important;
+}
+
+.admin-page .storage-subtab-btn {
+  min-height: 40px !important;
+  border-radius: 10px !important;
+  font-weight: 900 !important;
+}
+
+.admin-page .storage-subtab-btn.is-active {
+  background: linear-gradient(135deg, var(--primary), #3b82f6) !important;
+  color: #fff !important;
+}
+
+.admin-page .storage-redesign-head,
+.admin-page .storage-board-redesign {
+  border-color: rgba(219, 228, 239, 0.95) !important;
+}
+
+.admin-page .admin-pagination {
+  padding: 10px 14px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, #ffffff, #f8fbff) !important;
+}
+
+@media (max-width: 1024px) {
+  .admin-page .health-workbench-body,
+  .admin-page .quota-workbench-body,
+  .admin-page .access-workbench-body,
+  .admin-page .webhook-settings-body,
+  .admin-page .storage-main-grid,
+  .admin-page .storage-overview-grid,
+  .admin-page .storage-s3-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-page .task-summary-card,
+  .admin-page .share-summary-card,
+  .admin-page .quota-summary-card,
+  .admin-page .access-summary-card,
+  .admin-page .storage-metric-card {
+    min-height: 64px !important;
+    padding: 12px 14px !important;
+  }
+
+  .admin-page .task-summary-card strong,
+  .admin-page .share-summary-card strong,
+  .admin-page .quota-summary-card strong,
+  .admin-page .access-summary-card strong,
+  .admin-page .storage-metric-card strong {
+    font-size: 20px !important;
+  }
+
+  .admin-page .log-card,
+  .admin-page .share-card,
+  .admin-page .access-rule-card,
+  .admin-page .webhook-row,
+  .admin-page .webhook-delivery-row,
+  .admin-page .task-row,
+  .admin-page .health-item,
+  .admin-page .attention-item {
+    border-radius: 14px !important;
+  }
+}
