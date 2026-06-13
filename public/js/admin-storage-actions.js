@@ -82,8 +82,8 @@ export function createAdminStorageActions({ adminConfirm }) {
       quotaHero?.classList.toggle('is-unlimited', !(r2.quotaBytes > 0));
       info.innerHTML = `
         <div class="quota-note-card">
-          <strong>${r2.quotaBytes > 0 ? 'R2 配额已启用' : '当前使用分桶配额模式'}</strong>
-          <span>${r2.quotaBytes > 0 ? `R2 已使用 ${r2.usedFormatted || '0 B'}，剩余 ${formatBytesLocal(remainingBytes)}。` : '上传不再检查全局总量，而是分别检查每个存储桶自己的配额。'}</span>
+          <strong>${r2.quotaBytes > 0 ? 'R2 配额' : 'R2'}</strong>
+          <span>${r2.quotaBytes > 0 ? `已使用 ${r2.usedFormatted || '0 B'}，剩余 ${formatBytesLocal(remainingBytes)}。` : '未设置上限。'}</span>
         </div>
       `;
     },
@@ -132,7 +132,7 @@ export function createAdminStorageActions({ adminConfirm }) {
         </div>
       `).join('') || renderAdminEmptyState({
         title: '暂无 S3 空间',
-        description: '先添加一个扩展存储，再决定是否把它作为 R2 溢出目标。',
+        description: '',
         primaryAction: 'new-storage-space',
         primaryLabel: '添加空间',
         compact: true,
@@ -156,8 +156,8 @@ export function createAdminStorageActions({ adminConfirm }) {
       if (enabled && !hasOverflowTarget) enabled.checked = false;
       if (hint) {
         hint.textContent = hasOverflowTarget
-          ? '已检测到可用 S3 溢出空间，高水位策略可正常启用。'
-          : '请先配置并启用至少一个 S3 扩展存储，且勾选“作为溢出空间”。';
+          ? ''
+          : '请先添加溢出空间。';
         hint.classList.toggle('is-warning', !hasOverflowTarget);
       }
     },
@@ -169,11 +169,7 @@ export function createAdminStorageActions({ adminConfirm }) {
       const hint = document.getElementById('storageEditorHint');
       const idInput = document.getElementById('storageIdInput');
       if (title) title.textContent = space ? `编辑扩展存储 ${space.name || space.id}` : '添加扩展存储';
-      if (hint) {
-        hint.textContent = space
-          ? '正在编辑已配置空间。这个面板里可以单独调整它的配额、溢出角色和连接信息，ID 在编辑时保持只读。'
-          : '新增的 S3 空间会在这里设置自己的容量上限，也可以同时作为文件夹目标或 R2 溢出空间。';
-      }
+      if (hint) hint.textContent = '';
       if (idInput) idInput.readOnly = Boolean(space);
       document.querySelectorAll('.storage-space-card').forEach(card => {
         const editButton = card.querySelector('[data-admin-action="edit-storage-space"]');

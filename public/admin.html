@@ -271,14 +271,12 @@
                     </div>
                 </section>
             </div>
-            <div id="quota-tab" role="tabpanel" aria-labelledby="btn-quota" hidden class="hidden flex-1 flex flex-col p-6 overflow-y-auto text-slate-900">
+            <div id="quota-tab" role="tabpanel" aria-labelledby="btn-quota" hidden class="hidden flex-1 flex flex-col p-4 overflow-y-auto text-slate-900">
                 <section class="admin-page-panel storage-console storage-redesign">
                     <div class="admin-section-head storage-console-head storage-redesign-head storage-overview-strip">
                         <div>
                             <h2>存储配额</h2>
-                            <p>统一查看容量水位、R2 安全策略和 S3 扩展空间。</p>
                         </div>
-                        <div class="storage-page-chip">分桶配额模式</div>
                     </div>
 
                     <section class="storage-board storage-board-redesign">
@@ -298,9 +296,7 @@
                                 <div class="storage-panel-head storage-registry-head">
                                     <div>
                                         <h3>存储桶注册表</h3>
-                                        <p>所有 S3 扩展空间都在这里集中查看，配额在新建或编辑该空间时单独设置。目录绑定入口已迁移到云盘页“新建文件夹”。</p>
                                     </div>
-                                    <div class="storage-registry-note">S3 目录绑定已迁移</div>
                                 </div>
                                 <div id="storageSpaceList" class="access-rule-list storage-space-list"></div>
                             </section>
@@ -312,7 +308,6 @@
                                     <div class="storage-panel-head">
                                         <div>
                                             <h3>R2 配额与安全策略</h3>
-                                            <p>这里统一配置默认主存储 R2 的容量上限、高水位阈值和溢出策略。后续新增的 S3，请在右侧编辑器里分别设置各自的容量上限。</p>
                                         </div>
                                         <div class="storage-actions">
                                             <button id="storagePolicySaveButton" class="btn" data-admin-action="save-storage-policy">保存策略</button>
@@ -325,7 +320,6 @@
                                                 <input type="number" id="r2QuotaBytesInput" value="10" placeholder="10" min="0" step="0.01" inputmode="decimal" class="admin-input storage-unit-number">
                                                 <span class="storage-unit-suffix">GB</span>
                                             </div>
-                                            <small class="admin-field-help">这是默认桶 R2 的唯一配额入口。达到阈值前仍优先写入 R2。</small>
                                         </label>
                                         <label class="storage-field">
                                             <span>溢出阈值</span>
@@ -333,12 +327,11 @@
                                                 <input type="number" id="overflowThresholdInput" value="85" placeholder="85" min="1" max="99" inputmode="numeric" class="admin-input storage-unit-number">
                                                 <span class="storage-unit-suffix">%</span>
                                             </div>
-                                            <small class="admin-field-help">建议保留 10%-20% 缓冲，用于避免突发上传直接打满主存储。</small>
                                         </label>
                                     </div>
                                     <label class="access-mode-card storage-toggle-card">
                                         <input id="overflowEnabledInput" type="checkbox" checked>
-                                        <span><strong>启用 R2 高水位溢出</strong><small>超过阈值后上传提示会告知用户文件已进入 S3</small></span>
+                                        <span><strong>启用 R2 高水位溢出</strong></span>
                                     </label>
                                     <p id="storagePolicyHint" class="storage-policy-hint"></p>
                                     <p id="quotaResult" class="admin-feedback is-hidden" aria-live="polite"></p>
@@ -349,7 +342,6 @@
                                 <div class="storage-panel-head storage-s3-editor-head">
                                     <div>
                                         <h3 id="storageEditorTitle">添加扩展存储</h3>
-                                        <p id="storageEditorHint">S3 兼容存储可作为文件夹目标，也可单独设置配额并承担 R2 溢出。</p>
                                     </div>
                                     <button class="btn storage-new-btn" data-admin-action="new-storage-space">新建</button>
                                 </div>
@@ -359,22 +351,18 @@
                                         <label class="storage-field">
                                             <span>名称</span>
                                             <input type="text" id="storageNameInput" placeholder="S3-主存储" class="admin-input">
-                                            <small class="admin-field-help">用于后台展示和绑定选择，建议使用易辨认的业务名称。</small>
                                         </label>
                                         <label class="storage-field">
                                             <span>ID</span>
                                             <input type="text" id="storageIdInput" placeholder="s3-main" class="admin-input" pattern="[a-zA-Z0-9-]+" title="仅支持英文、数字和连字符">
-                                            <small class="admin-field-help">作为内部稳定标识，创建后会参与路径绑定和索引关联。</small>
                                         </label>
                                         <label class="storage-field wide">
                                             <span>Endpoint</span>
                                             <input type="url" id="storageEndpointInput" placeholder="https://s3.example.com" class="admin-input">
-                                            <small class="admin-field-help">填写完整的 S3 兼容地址，保存前可先测试连接。</small>
                                         </label>
                                         <label class="storage-field">
                                             <span>Bucket</span>
                                             <input type="text" id="storageBucketInput" placeholder="bucket-name" class="admin-input">
-                                            <small class="admin-field-help">目标桶需要具备列举、上传、删除和读对象权限。</small>
                                         </label>
                                     </div>
                                 </div>
@@ -384,7 +372,6 @@
                                         <label class="storage-field">
                                             <span>Access Key ID</span>
                                             <input type="text" id="storageAccessKeyInput" placeholder="Access Key ID" class="admin-input">
-                                            <small class="admin-field-help">建议使用最小权限访问密钥，避免复用管理员全局凭据。</small>
                                         </label>
                                         <label class="storage-field">
                                             <span>Secret Access Key</span>
@@ -395,19 +382,16 @@
                                                     <svg class="storage-eye-icon storage-eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"></path><path d="M10.6 5.9c.5-.1.9-.1 1.4-.1 6.2 0 9.8 6.2 9.8 6.2a17.2 17.2 0 0 1-3 3.6"></path><path d="M14.1 14.1A2.8 2.8 0 0 1 9.9 9.9"></path><path d="M6.4 6.9A17.8 17.8 0 0 0 2.2 12s3.6 6.2 9.8 6.2c1.6 0 3.1-.4 4.3-1"></path></svg>
                                                 </button>
                                             </div>
-                                            <small class="admin-field-help">留空时沿用已保存密钥；填写新值后会覆盖原有密钥。</small>
                                         </label>
                                     </div>
                                     <div class="storage-form-grid three">
                                         <label class="storage-field">
                                             <span>Region</span>
                                             <input type="text" id="storageRegionInput" placeholder="auto" class="admin-input">
-                                            <small class="admin-field-help">多数兼容服务支持 `auto`，特殊区域可按服务商实际值填写。</small>
                                         </label>
                                         <label class="storage-field">
                                             <span>前缀</span>
                                             <input type="text" id="storagePrefixInput" placeholder="可选" class="admin-input">
-                                            <small class="admin-field-help">可用于把此空间限制到桶内某个目录，适合共享桶场景。</small>
                                         </label>
                                         <label class="storage-field">
                                             <span>该存储桶容量上限</span>
@@ -415,7 +399,6 @@
                                                 <input type="number" id="storageQuotaInput" placeholder="留空不限" min="0" step="0.01" inputmode="decimal" class="admin-input storage-unit-number">
                                                 <span class="storage-unit-suffix">GB</span>
                                             </div>
-                                            <small class="admin-field-help">留空表示不限制；设置后上传会按这个 S3 存储桶自己的容量独立校验。</small>
                                         </label>
                                     </div>
                                 </div>
@@ -424,11 +407,11 @@
                                     <div class="access-mode-grid">
                                         <label class="access-mode-card">
                                             <input id="storageEnabledInput" type="checkbox" checked>
-                                            <span><strong>启用</strong><small>允许此空间参与写入和路径绑定</small></span>
+                                            <span><strong>启用</strong></span>
                                         </label>
                                         <label class="access-mode-card">
                                             <input id="storageOverflowInput" type="checkbox" checked>
-                                            <span><strong>作为溢出空间</strong><small>R2 高水位后可自动写入</small></span>
+                                            <span><strong>作为溢出空间</strong></span>
                                         </label>
                                     </div>
                                 </div>
