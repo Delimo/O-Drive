@@ -331,28 +331,11 @@
 
                         <div class="storage-stage storage-stage-bottom">
                             <section class="storage-config-grid storage-policy-workbench">
-                                <div class="storage-panel storage-config-card storage-config-compact">
+                                <div class="storage-panel storage-config-card storage-config-compact storage-policy-card">
                                     <div class="storage-panel-head">
                                         <div>
-                                            <h3>默认桶配额（R2）</h3>
-                                            <p>这里只设置默认主存储 R2 的配额。后续新增的 S3，请在右侧编辑器里分别设置各自的容量上限。</p>
-                                        </div>
-                                    </div>
-                                    <div class="storage-input-row storage-quota-row">
-                                        <div class="storage-unit-input">
-                                            <input type="number" id="quotaInput" placeholder="10" min="0" step="0.01" inputmode="decimal" class="admin-input storage-unit-number">
-                                            <span class="storage-unit-suffix">GB</span>
-                                        </div>
-                                        <button id="quotaSaveButton" class="btn btn-primary" data-admin-action="set-quota">保存 R2 配额</button>
-                                    </div>
-                                    <p id="quotaResult" class="admin-feedback is-hidden" aria-live="polite"></p>
-                                </div>
-
-                                <div class="storage-panel storage-config-card storage-config-compact">
-                                    <div class="storage-panel-head">
-                                        <div>
-                                            <h3>R2 安全策略</h3>
-                                            <p>R2 接近高水位时，将新上传切到可用的 S3 溢出空间。</p>
+                                            <h3>R2 配额与安全策略</h3>
+                                            <p>这里统一配置默认主存储 R2 的容量上限、高水位阈值和溢出策略。后续新增的 S3，请在右侧编辑器里分别设置各自的容量上限。</p>
                                         </div>
                                         <div class="storage-actions">
                                             <button id="storagePolicySaveButton" class="btn" data-admin-action="save-storage-policy">保存策略</button>
@@ -365,7 +348,7 @@
                                                 <input type="number" id="r2QuotaBytesInput" value="10" placeholder="10" min="0" step="0.01" inputmode="decimal" class="admin-input storage-unit-number">
                                                 <span class="storage-unit-suffix">GB</span>
                                             </div>
-                                            <small class="admin-field-help">为 R2 设置独立硬上限，达到阈值前仍优先写入 R2。</small>
+                                            <small class="admin-field-help">这是默认桶 R2 的唯一配额入口。达到阈值前仍优先写入 R2。</small>
                                         </label>
                                         <label class="storage-field">
                                             <span>溢出阈值</span>
@@ -381,6 +364,7 @@
                                         <span><strong>启用 R2 高水位溢出</strong><small>超过阈值后上传提示会告知用户文件已进入 S3</small></span>
                                     </label>
                                     <p id="storagePolicyHint" class="storage-policy-hint"></p>
+                                    <p id="quotaResult" class="admin-feedback is-hidden" aria-live="polite"></p>
                                 </div>
                             </section>
 

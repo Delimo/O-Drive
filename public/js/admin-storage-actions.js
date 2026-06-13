@@ -92,8 +92,6 @@ export function createAdminStorageActions({ adminConfirm }) {
           <span>${r2.quotaBytes > 0 ? `R2 已使用 ${r2.usedFormatted || '0 B'}，剩余 ${formatBytesLocal(remainingBytes)}。` : '上传不再检查全局总量，而是分别检查每个存储桶自己的配额。'}</span>
         </div>
       `;
-      const input = document.getElementById('quotaInput');
-      if (input) input.value = r2.quotaBytes > 0 ? formatGbInput(r2.quotaBytes) : '';
     },
 
     async loadStorage() {
@@ -385,30 +383,5 @@ export function createAdminStorageActions({ adminConfirm }) {
       await this.saveStorageConfig(config, `/${path} 已取消绑定。`);
     },
 
-    fillQuota(bytes) {
-      const input = document.getElementById('quotaInput');
-      if (input) input.value = bytes;
-    },
-
-    async setQuota() {
-      const saveButton = buttonByAction('set-quota');
-      const input = document.getElementById('quotaInput');
-      const value = input?.value.trim();
-      const parsed = parseCapacityLocal(value ? `${value}GB` : 0);
-      if (!parsed.ok) { setQuotaResult('请输入有效容量，或留空/填 0 表示不限制。', 'error'); return; }
-      const bytes = parsed.bytes;
-      const confirmTitle = bytes > 0 ? '保存 R2 配额？' : '取消 R2 配额限制？';
-      const confirmBody = bytes > 0 ? `R2 新的配额为 ${formatBytesLocal(bytes)}。S3 仍按各自配额独立校验。` : '取消后，R2 将不再设置硬上限；S3 仍按各自配额独立校验。';
-      if (!(await adminConfirm(confirmTitle, confirmBody))) return;
-      const config = this.readStorageBaseConfig();
-      config.r2QuotaBytes = bytes > 0 ? `${value}GB` : 0;
-      setAdminButtonBusy(saveButton, true, '保存中...');
-      try {
-        const ok = await this.saveStorageConfig(config, bytes > 0 ? `R2 配额已设为 ${formatBytesLocal(bytes)}。` : '已取消 R2 配额限制。');
-        if (ok) await this.loadQuota();
-      } finally {
-        setAdminButtonBusy(saveButton, false);
-      }
-    },
   };
 }
