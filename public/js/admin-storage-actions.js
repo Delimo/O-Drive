@@ -70,20 +70,18 @@ export function createAdminStorageActions({ adminConfirm }) {
         return;
       }
       const r2 = data?.r2 || { quotaBytes: 0, usedBytes: 0, usedFormatted: '0 B', quotaFormatted: '未设置', usedPercent: 0 };
-      const quotaLabel = r2.quotaBytes > 0 ? r2.quotaFormatted : '未设置';
       const usedPercent = r2.quotaBytes > 0 ? Math.round((r2.usedBytes / r2.quotaBytes) * 100) : 0;
       const remainingBytes = r2.quotaBytes > 0 ? Math.max(0, r2.quotaBytes - r2.usedBytes) : Infinity;
-      const remainingLabel = r2.quotaBytes > 0 ? `${formatBytesLocal(remainingBytes)} 剩余` : '按桶单独控制';
-      const quotaLimit = document.getElementById('quotaLimitValue');
-      const quotaUsed = document.getElementById('quotaUsedValue');
-      const quotaRemaining = document.getElementById('quotaRemainingValue');
+      const primaryBucket = document.getElementById('storagePrimaryBucketValue');
+      const quotaMode = document.getElementById('storageQuotaModeValue');
+      const policyStatus = document.getElementById('storagePolicyStatusValue');
       const quotaPercent = document.getElementById('quotaPercentValue');
       const quotaPercentLabel = document.getElementById('quotaPercentLabel');
       const usageBar = document.getElementById('quotaUsageBar');
       const quotaHero = document.querySelector('.storage-quota-hero');
-      if (quotaLimit) quotaLimit.textContent = quotaLabel;
-      if (quotaUsed) quotaUsed.textContent = r2.usedFormatted || '0 B';
-      if (quotaRemaining) quotaRemaining.textContent = remainingLabel;
+      if (primaryBucket) primaryBucket.textContent = 'R2';
+      if (quotaMode) quotaMode.textContent = '分桶独立';
+      if (policyStatus) policyStatus.textContent = data?.overflowEnabled ? '已启用' : '未启用';
       if (quotaPercent) quotaPercent.textContent = r2.quotaBytes > 0 ? `${usedPercent}%` : r2.usedFormatted || '0 B';
       if (quotaPercentLabel) quotaPercentLabel.textContent = r2.quotaBytes > 0 ? 'R2 已使用' : '当前按存储桶分别配额';
       if (usageBar) usageBar.style.width = `${Math.max(0, Math.min(100, usedPercent))}%`;
