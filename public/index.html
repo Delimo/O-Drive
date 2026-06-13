@@ -16,9 +16,12 @@
     <main class="container">
         <div class="mobile-shell">
             <header class="mobile-header-card">
-                <a href="/" class="brand-link flex items-center gap-2 text-lg font-bold text-slate-900 tracking-tight">
+                <a href="/" class="brand-link brand-panel flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
                     <span class="brand-mark brand-mark-header" aria-hidden="true">☁️</span>
-                    <span>O-Drive</span>
+                    <span class="brand-copy">
+                        <span class="brand-title">O-Drive</span>
+                        <span class="brand-subtitle">安全云端空间</span>
+                    </span>
                 </a>
                 <div id="authButtonsMobile" class="mobile-auth"></div>
             </header>
@@ -37,9 +40,12 @@
 
         <div class="desktop-shell page-top-stack">
         <header class="header-card">
-            <a href="/" class="brand-link flex items-center gap-2 text-lg font-bold text-slate-900 tracking-tight">
+            <a href="/" class="brand-link brand-panel flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
                 <span class="brand-mark brand-mark-header" aria-hidden="true">☁️</span>
-                <span>O-Drive</span>
+                <span class="brand-copy">
+                    <span class="brand-title">O-Drive</span>
+                    <span class="brand-subtitle">安全云端空间</span>
+                </span>
             </a>
             <div class="flex items-center gap-4">
                 <div class="search-bar hidden md:block">
@@ -53,7 +59,10 @@
 
         <div class="toolbar-card">
             <div class="tools-left">
-                <div id="breadcrumb" class="text-sm font-medium text-primary"></div>
+                <div class="drive-heading">
+                    <span class="drive-heading__label">全部文件</span>
+                    <div id="breadcrumb" class="text-sm font-medium text-primary"></div>
+                </div>
             </div>
             <div class="tools-right">
                 <div id="batchTools" class="admin-only" hidden>
@@ -100,8 +109,8 @@
 
         <div class="desktop-shell page-footer-shell">
         <footer class="footer">
-            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 作者：<a href="https://github.com/Delimo" target="_blank" class="footer-brand">Delimo</a></div>
-            <div class="footer-powered">Powered by Cloudflare Pages</div>
+            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 极简安全云端空间</div>
+            <div class="footer-powered">Powered by Cloudflare Pages · Cloudflare R2</div>
             <div class="footer-copyright">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
         </footer>
         </div>
