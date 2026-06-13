@@ -38,15 +38,22 @@ export function createPageRenderers(deps) {
 
   function getShareStatusTags(item) {
     const tags = [];
+    const isActive = isShareActive(item);
     const expiry = getExpiryStatus(item?.expiresAt);
-    tags.push({ label: expiry.label, className: expiry.className });
-    if (item?.expired) tags.push({ label: '已过期', className: 'tag-expired' });
+    if (isActive) {
+      tags.push({ label: '有效', className: 'tag-active' });
+    } else if (item?.expired) {
+      tags.push({ label: '已过期', className: 'tag-expired' });
+    } else if (item?.exhausted) {
+      tags.push({ label: '次数用尽', className: 'tag-exhausted' });
+    } else {
+      tags.push({ label: expiry.label, className: expiry.className });
+    }
     if (item?.hasPassword) tags.push({ label: '有密码', className: 'tag-password' });
     if (item?.allowPreview) tags.push({ label: '可预览', className: 'tag-preview' });
     else tags.push({ label: '禁止预览', className: 'tag-no-preview' });
     if (item?.allowDownload) tags.push({ label: '可下载', className: 'tag-download' });
     else tags.push({ label: '禁止下载', className: 'tag-no-download' });
-    if (item?.exhausted) tags.push({ label: '次数用尽', className: 'tag-exhausted' });
     return tags;
   }
 
@@ -188,14 +195,16 @@ export function createPageRenderers(deps) {
     const shareFilter = admin.shareFilter || 'all';
     const filteredShares = filterShares(shares, shareFilter);
     const totalCount = shares.length;
-    const activeCount = shares.filter(item => item && !item.expired).length;
+    const activeCount = shares.filter(item => isShareActive(item)).length;
     const expiredCount = shares.filter(item => item?.expired).length;
+    const exhaustedCount = shares.filter(item => item?.exhausted).length;
     const passwordCount = shares.filter(item => item?.hasPassword).length;
 
     const filterOptions = [
       { value: 'all', label: '全部', count: totalCount },
       { value: 'active', label: '有效', count: activeCount },
       { value: 'expired', label: '已过期', count: expiredCount },
+      { value: 'exhausted', label: '次数用尽', count: exhaustedCount },
       { value: 'password', label: '有密码', count: passwordCount },
       { value: 'preview', label: '可预览', count: shares.filter(item => item?.allowPreview).length },
       { value: 'download', label: '可下载', count: shares.filter(item => item?.allowDownload).length },
@@ -231,12 +240,12 @@ export function createPageRenderers(deps) {
             <div class="mini-stat">
               <div class="mini-stat-label">有效分享</div>
               <div class="mini-stat-value">${safeText(activeCount, '0')}</div>
-              <div class="mini-stat-meta">未过期且可正常访问</div>
+              <div class="mini-stat-meta">未过期且次数未用尽</div>
             </div>
             <div class="mini-stat">
-              <div class="mini-stat-label">已过期</div>
-              <div class="mini-stat-value">${safeText(expiredCount, '0')}</div>
-              <div class="mini-stat-meta">建议定期执行过期清理</div>
+              <div class="mini-stat-label">已失效</div>
+              <div class="mini-stat-value">${safeText(expiredCount + exhaustedCount, '0')}</div>
+              <div class="mini-stat-meta">已过期 ${expiredCount} · 次数用尽 ${exhaustedCount}</div>
             </div>
           </div>
 
@@ -273,6 +282,7 @@ export function createPageRenderers(deps) {
       all: '全部',
       active: '有效',
       expired: '已过期',
+      exhausted: '次数用尽',
       password: '有密码',
       preview: '可预览',
       download: '可下载',
@@ -312,15 +322,18 @@ export function createPageRenderers(deps) {
     const shareLink = `${window.location.origin}/share.html?token=${encodeURIComponent(token)}`;
     const statusTags = getShareStatusTags(item);
     const expiry = getExpiryStatus(item?.expiresAt);
+    const isActive = isShareActive(item);
     const isExpired = item?.expired || expiry.level === 'expired';
+    const isExhausted = item?.exhausted;
     const isExpiringSoon = expiry.level === 'soon';
     const isUnlimited = expiry.level === 'unlimited';
+    const isInactive = !isActive;
 
     return `
-      <article class="latest-item ${isExpired ? 'share-item-expired' : ''} ${isExpiringSoon ? 'share-item-expiring-soon' : ''}">
+      <article class="latest-item ${isExpired ? 'share-item-expired' : ''} ${isExhausted ? 'share-item-exhausted' : ''} ${isExpiringSoon ? 'share-item-expiring-soon' : ''}">
         <div class="status-bar" style="margin-bottom:14px;">
           <div class="status-main">
-            <span class="status-dot ${isExpired ? 'status-dot-expired' : isExpiringSoon ? 'status-dot-soon' : ''}"></span>
+            <span class="status-dot ${isExpired ? 'status-dot-expired' : isExhausted ? 'status-dot-exhausted' : isExpiringSoon ? 'status-dot-soon' : ''}"></span>
             <span>${safeText(item?.name || item?.path || token, '未命名分享')}</span>
             <span class="toolbar-tag">${safeText(token, '-')}</span>
           </div>
@@ -340,7 +353,7 @@ export function createPageRenderers(deps) {
           ${statusTags.map(tag => `<span class="toolbar-tag ${tag.className}">${escapeHtml(tag.label)}</span>`).join('')}
         </div>
 
-        ${isExpiringSoon ? `
+        ${isExpiringSoon && isActive ? `
           <div class="attention-item" data-level="warning" style="margin:12px 0;">
             <h3 class="attention-title">即将到期</h3>
             <div class="attention-copy">此分享将于 ${safeText(expiry.label)}，之后将无法访问。如需继续使用，请重新创建分享。</div>
@@ -351,6 +364,13 @@ export function createPageRenderers(deps) {
           <div class="attention-item" data-level="warning" style="margin:12px 0;">
             <h3 class="attention-title">已过期</h3>
             <div class="attention-copy">此分享已过期，无法继续访问。建议清理过期分享以释放资源。</div>
+          </div>
+        ` : ''}
+
+        ${isExhausted && !isExpired ? `
+          <div class="attention-item" data-level="warning" style="margin:12px 0;">
+            <h3 class="attention-title">下载次数已用尽</h3>
+            <div class="attention-copy">此分享的下载次数已达上限，无法继续下载。预览功能${item?.allowPreview ? '仍可使用' : '已禁用'}。</div>
           </div>
         ` : ''}
 

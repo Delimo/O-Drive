@@ -352,6 +352,24 @@ export function createThunks(deps) {
         dispatch(actions.admin.setShareBusyToken(''));
       }
     },
+    deleteShareWithModal: token => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      if (!token) return;
+
+      const modal = getState().app.modal;
+      dispatch(actions.app.setModal({ ...modal, loading: true, error: '' }));
+      try {
+        const { response, data } = await shareApi.remove(token);
+        if (!response.ok || data?.success === false) {
+          throw new Error(humanError(response, data, '删除分享失败'));
+        }
+        dispatch(actions.app.setModal(null));
+        dispatchToast('success', '分享已删除');
+        await dispatch(thunks.loadAdminShares());
+      } catch (error) {
+        dispatch(actions.app.setModal({ ...modal, loading: false, error: error.message || '删除分享失败' }));
+      }
+    },
     cleanupExpiredShares: () => async dispatch => {
       if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       dispatch(actions.admin.setShareBusyToken('__cleanup__'));
@@ -366,6 +384,23 @@ export function createThunks(deps) {
         dispatchToast('error', error.message || '清理过期分享失败');
       } finally {
         dispatch(actions.admin.setShareBusyToken(''));
+      }
+    },
+    cleanupExpiredSharesWithModal: () => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+
+      const modal = getState().app.modal;
+      dispatch(actions.app.setModal({ ...modal, loading: true, error: '' }));
+      try {
+        const { response, data } = await shareApi.cleanupExpired();
+        if (!response.ok || data?.success === false) {
+          throw new Error(humanError(response, data, '清理过期分享失败'));
+        }
+        dispatch(actions.app.setModal(null));
+        dispatchToast('success', '已清理过期分享');
+        await dispatch(thunks.loadAdminShares());
+      } catch (error) {
+        dispatch(actions.app.setModal({ ...modal, loading: false, error: error.message || '清理过期分享失败' }));
       }
     },
     restoreTrash: trashId => async dispatch => {

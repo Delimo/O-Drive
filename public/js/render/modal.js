@@ -163,13 +163,14 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作不可撤销</h3>
               <div class="attention-copy">删除后，分享链接将立即失效，所有访问者将无法再通过此链接访问文件。</div>
             </div>
-            ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除分享，请稍候...</div>' : ''}
             <div class="btn-row" style="margin-top:6px;">
-              <button class="btn btn-danger" type="button" data-action="execute-delete-share" data-key="${escapeHtml(modal.token || '')}">
+              <button class="btn btn-danger" type="button" data-action="execute-delete-share" data-key="${escapeHtml(modal.token || '')}" ${modal.loading ? 'disabled' : ''}>
                 ${icons.trash}
-                <span>确认删除</span>
+                <span>${modal.loading ? '删除中...' : '确认删除'}</span>
               </button>
-              <button class="btn" type="button" data-action="close-modal">取消</button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
             </div>
           </div>
         </div>
@@ -186,13 +187,14 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作不可撤销</h3>
               <div class="attention-copy">清理后，所有已过期的分享记录将被永久删除，相关链接将立即失效。</div>
             </div>
-            ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在清理过期分享，请稍候...</div>' : ''}
             <div class="btn-row" style="margin-top:6px;">
-              <button class="btn btn-danger" type="button" data-action="execute-cleanup-expired-shares">
+              <button class="btn btn-danger" type="button" data-action="execute-cleanup-expired-shares" ${modal.loading ? 'disabled' : ''}>
                 ${icons.trash}
-                <span>确认清理</span>
+                <span>${modal.loading ? '清理中...' : '确认清理'}</span>
               </button>
-              <button class="btn" type="button" data-action="close-modal">取消</button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
             </div>
           </div>
         </div>

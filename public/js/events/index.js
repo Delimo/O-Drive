@@ -98,14 +98,12 @@ export function registerAppEvents(deps) {
 
       if (action === 'execute-delete-share') {
         const tokenToDelete = actionNode.dataset.key || key;
-        store.dispatch(actions.app.setModal(null));
-        store.dispatch(thunks.deleteShare(tokenToDelete));
+        store.dispatch(thunks.deleteShareWithModal(tokenToDelete));
         return;
       }
 
       if (action === 'execute-cleanup-expired-shares') {
-        store.dispatch(actions.app.setModal(null));
-        store.dispatch(thunks.cleanupExpiredShares());
+        store.dispatch(thunks.cleanupExpiredSharesWithModal());
         return;
       }
 

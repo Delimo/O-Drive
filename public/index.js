@@ -178,19 +178,23 @@ style.textContent = `
     justify-content: space-between;
     gap: 16px;
     border-radius: var(--radius-xl);
-    padding: 16px 18px;
+    padding: 18px 26px;
+  }
+
+  .topbar {
+    min-height: 96px;
   }
 
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
     min-width: 0;
   }
 
   .brand-badge {
-    width: 40px;
-    height: 28px;
+    width: 34px;
+    height: 24px;
     display: grid;
     place-items: center;
     flex: 0 0 auto;
@@ -217,10 +221,10 @@ style.textContent = `
   .brand-name {
     margin: 0;
     font-family: var(--body-font);
-    font-size: clamp(22px, 2vw, 26px);
+    font-size: clamp(24px, 1.8vw, 30px);
     font-weight: 700;
     line-height: 1;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
   }
 
   .brand-meta {
@@ -231,14 +235,13 @@ style.textContent = `
     display: flex;
     align-items: center;
     gap: 18px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    margin-left: auto;
   }
 
   .search-box {
     position: relative;
-    width: min(404px, 100%);
-    min-width: 280px;
+    width: min(402px, 100%);
+    min-width: 320px;
   }
 
   .search-box input,
@@ -260,41 +263,43 @@ style.textContent = `
   }
 
   .search-box input {
-    min-height: 56px;
+    min-height: 58px;
     border-radius: 18px;
-    border-color: rgba(201, 214, 231, 0.9);
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,250,252,0.98));
-    padding: 15px 20px 15px 44px;
+    border-color: rgba(194, 208, 228, 0.92);
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,251,253,0.98));
+    padding: 14px 18px 14px 46px;
     font-size: 16px;
+    color: #8c97aa;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
   }
 
   .search-icon {
     position: absolute;
     inset: 0 auto 0 15px;
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
     margin: auto 0;
-    color: var(--muted);
+    color: #a8afbb;
+    display: inline-flex;
   }
 
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: flex-end;
   }
 
   .header-btn {
     min-width: 102px;
-    min-height: 54px;
+    min-height: 56px;
     padding: 0 28px;
-    border-radius: 18px;
-    border-color: rgba(201, 214, 231, 0.92);
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,249,252,0.98));
+    border-radius: 17px;
+    border-color: rgba(212, 220, 231, 0.96);
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,250,252,0.98));
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.94);
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .header-btn:hover {
@@ -594,7 +599,7 @@ style.textContent = `
   }
 
   .explorer-legacy .panel-body {
-    padding-top: 8px;
+    padding-top: 24px;
   }
 
   .file-grid.is-list {
@@ -657,14 +662,7 @@ style.textContent = `
   }
 
   .item-card::after {
-    content: "";
-    position: absolute;
-    inset: auto -38px -40px auto;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(14, 116, 144, 0.08), transparent 70%);
-    pointer-events: none;
+    display: none;
   }
 
   .file-grid.is-list .item-card {
@@ -676,44 +674,65 @@ style.textContent = `
   }
 
   .item-icon {
-    width: 58px;
-    height: 58px;
+    width: 54px;
+    height: 54px;
     flex: none;
-    border-radius: 20px;
+    border-radius: 18px;
     display: grid;
     place-items: center;
-    color: white;
-    background: linear-gradient(135deg, #57bdd8 0%, #0e5f79 100%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.32);
+    color: #16324f;
+    background: #f3f8fc;
+    border: 1px solid rgba(201, 214, 231, 0.92);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
   }
 
   .item-icon.folder {
-    background: linear-gradient(135deg, #f6c768 0%, #b77412 100%);
+    color: #c3891d;
+    background: #fff6e4;
+    border-color: rgba(235, 204, 142, 0.92);
   }
 
   .item-icon.pdf {
-    background: linear-gradient(135deg, #ff8575 0%, #bf3a2d 100%);
+    color: #c04b3b;
+    background: #fff1ee;
+    border-color: rgba(235, 186, 176, 0.92);
   }
 
   .item-icon.image {
-    background: linear-gradient(135deg, #7ed0d4 0%, #1a7c78 100%);
+    color: #27839a;
+    background: #ecf9fb;
+    border-color: rgba(177, 224, 233, 0.92);
   }
 
   .item-icon.video {
-    background: linear-gradient(135deg, #93a0ff 0%, #3d4fb5 100%);
+    color: #4764b2;
+    background: #eef2ff;
+    border-color: rgba(184, 196, 237, 0.92);
   }
 
   .item-icon.audio {
-    background: linear-gradient(135deg, #dda7ff 0%, #7a43b5 100%);
+    color: #8f54bf;
+    background: #f7edff;
+    border-color: rgba(220, 194, 242, 0.92);
   }
 
   .item-icon.archive {
-    background: linear-gradient(135deg, #8ab692 0%, #48754f 100%);
+    color: #527b57;
+    background: #edf7ef;
+    border-color: rgba(192, 220, 197, 0.92);
+  }
+
+  .item-icon.file,
+  .item-icon.text,
+  .item-icon.app {
+    color: #24435f;
+    background: #eef6fb;
+    border-color: rgba(190, 210, 229, 0.92);
   }
 
   .item-icon svg {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
   }
 
   .item-content {
@@ -1325,6 +1344,11 @@ style.textContent = `
     border-left: 3px solid rgba(192, 57, 43, 0.4);
   }
 
+  .share-item-exhausted {
+    opacity: 0.85;
+    border-left: 3px solid rgba(107, 70, 193, 0.4);
+  }
+
   .share-item-expiring-soon {
     border-left: 3px solid rgba(183, 110, 17, 0.4);
   }
@@ -1332,6 +1356,11 @@ style.textContent = `
   .status-dot-expired {
     background: linear-gradient(135deg, #c0392b, #991b1b);
     box-shadow: 0 0 0 4px rgba(192, 57, 43, 0.16);
+  }
+
+  .status-dot-exhausted {
+    background: linear-gradient(135deg, #6b46c1, #553c9a);
+    box-shadow: 0 0 0 4px rgba(107, 70, 193, 0.16);
   }
 
   .status-dot-soon {
@@ -1517,14 +1546,21 @@ style.textContent = `
       flex-direction: column;
     }
 
+    .topbar {
+      min-height: auto;
+      padding: 20px;
+    }
+
     .header-right,
     .toolbar-right {
       width: 100%;
       justify-content: flex-start;
+      align-items: stretch;
     }
 
     .header-actions {
       width: 100%;
+      justify-content: flex-start;
     }
 
     .search-box {
@@ -2103,7 +2139,7 @@ function renderHeader(state) {
       <div class="header-right">
         ${page === 'home' ? `
           <label class="search-box">
-            <span class="search-icon">${icons.search}</span>
+            <span class="search-icon" aria-hidden="true">${icons.search}</span>
             <input
               type="search"
               value="${escapeHtml(searchValue)}"
