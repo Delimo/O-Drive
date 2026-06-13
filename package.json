@@ -3,7 +3,7 @@
   "version": "2.1.0",
   "type": "module",
   "scripts": {
-    "build": "tailwindcss -i ./public/style.css -o ./public/main.css --minify",
+    "build": "node --check ./public/index.js",
     "dev": "wrangler pages dev public --compatibility-date=2026-06-07",
     "deploy": "npm run build && wrangler pages deploy public",
     "db:migrate:local": "wrangler d1 migrations apply o-drive-db --local",
