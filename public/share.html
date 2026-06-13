@@ -8,20 +8,28 @@
     <link rel="stylesheet" href="/main.css">
     <link rel="stylesheet" href="/explorer.css">
     <link rel="stylesheet" href="/share.css">
-    <link rel="stylesheet" href="/design.css">
     <link rel="stylesheet" href="/classic.css">
+    <link rel="stylesheet" href="/design.css">
 </head>
 <body class="share-page bg-background text-slate-900">
     <main class="share-shell">
         <header class="share-header">
-            <a href="/" class="brand-link flex items-center gap-2 text-lg font-bold text-slate-900 tracking-tight">
+            <a href="/" class="brand-link brand-panel flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
                 <span class="brand-mark brand-mark-header" aria-hidden="true">☁️</span>
-                <span>O-Drive</span>
+                <span class="brand-copy">
+                    <span class="brand-title">O-Drive</span>
+                    <span class="brand-subtitle">安全云端空间</span>
+                </span>
             </a>
         </header>
         <section id="shareCard" class="share-card">
             <div id="shareStatus" class="share-status">正在加载分享...</div>
         </section>
+        <footer class="footer share-footer">
+            <div class="footer-info">项目：<a href="https://github.com/Delimo/O-Drive" target="_blank" class="footer-brand">O-Drive</a> | 极简安全云端空间</div>
+            <div class="footer-powered">Powered by Cloudflare Pages · Cloudflare R2</div>
+            <div class="footer-copyright">© <span id="year-display"></span> O-Drive. All rights reserved.</div>
+        </footer>
     </main>
     <script type="module" src="/js/share-app.js"></script>
 </body>

@@ -3,6 +3,13 @@ import { escapeHtml } from './utils.js';
 const card = document.getElementById('shareCard');
 const params = new URLSearchParams(window.location.search);
 const token = params.get('token') || '';
+const startYear = 2026;
+const currentYear = new Date().getFullYear();
+const yearDisp = document.getElementById('year-display');
+
+if (yearDisp) {
+  yearDisp.textContent = currentYear > startYear ? `${startYear} - ${currentYear}` : startYear;
+}
 
 function renderStatus(message, tone = 'loading') {
   card.className = `share-card share-card-${tone}`;
@@ -50,10 +57,7 @@ function previewMarkup(item) {
   if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(ext)) {
     return `<audio src="${escapeHtml(src)}" controls></audio>`;
   }
-  if (ext === 'pdf') {
-    return `<iframe src="${escapeHtml(src)}" title="${escapeHtml(name)}"></iframe>`;
-  }
-  if (['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'].includes(ext)) {
+  if (ext === 'pdf' || ['txt', 'md', 'json', 'js', 'css', 'html', 'xml', 'csv', 'log', 'yml', 'yaml'].includes(ext)) {
     return `<iframe src="${escapeHtml(src)}" title="${escapeHtml(name)}"></iframe>`;
   }
   return '<div class="share-preview-empty">当前文件类型暂不支持在线预览，可直接下载。</div>';
@@ -85,6 +89,7 @@ function renderItem(item) {
   const downloadText = hasLimit
     ? `${item.downloadCount || 0} / ${item.maxDownloads}`
     : `${item.downloadCount || 0} / 不限`;
+
   card.className = 'share-card share-card-ready';
   card.innerHTML = `
     <div class="share-main">
@@ -97,8 +102,8 @@ function renderItem(item) {
     </div>
     <div class="share-meta" aria-label="分享信息">
       <div class="share-meta-item"><span>大小</span><strong>${escapeHtml(item.sizeFormatted || '0 B')}</strong></div>
-      <div class="share-meta-item"><span>过期</span><strong>${escapeHtml(formatDate(item.expiresAt))}</strong></div>
-      <div class="share-meta-item"><span>下载</span><strong>${escapeHtml(downloadText)}</strong></div>
+      <div class="share-meta-item"><span>到期时间</span><strong>${escapeHtml(formatDate(item.expiresAt))}</strong></div>
+      <div class="share-meta-item"><span>下载次数</span><strong>${escapeHtml(downloadText)}</strong></div>
     </div>
     <div class="share-actions">
       ${item.allowDownload ? `<a class="btn btn-primary" href="${escapeHtml(downloadUrl)}">下载文件</a>` : ''}
@@ -130,7 +135,7 @@ async function unlockShare(password) {
   });
   const data = await res.json().catch(() => null);
   if (!res.ok || data?.success === false) {
-    renderUnlock(data?.message || '分享密码不正确');
+    renderUnlock(data?.message || '分享密码不正确。');
     return;
   }
   await loadShare();
@@ -156,7 +161,7 @@ card.addEventListener('submit', event => {
   const input = document.getElementById('sharePasswordInput');
   const password = input?.value || '';
   if (!password) {
-    renderUnlock('请输入分享密码');
+    renderUnlock('请输入分享密码。');
     return;
   }
   unlockShare(password);
