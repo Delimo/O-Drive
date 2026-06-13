@@ -113,8 +113,12 @@ export const api = {
   renameFile(fullKey, newName) {
     return requestJson(apiFileUrl('/api/files', fullKey), { method: 'PUT', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ newName }) });
   },
-  mkdir(path, folderName) {
-    return requestJson(apiFileUrl('/api/mkdir', path), { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ folderName }) });
+  mkdir(path, folderName, options = {}) {
+    return requestJson(apiFileUrl('/api/mkdir', path), {
+      method: 'POST',
+      headers: csrfHeaders(jsonHeaders),
+      body: JSON.stringify({ folderName, storageId: options.storageId || 'r2' }),
+    });
   },
   saveText(path, content) {
     return requestJson(apiFileUrl('/api/save-text', path), { method: 'POST', headers: csrfHeaders(jsonHeaders), body: JSON.stringify({ content }) });

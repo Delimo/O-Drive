@@ -276,17 +276,9 @@
                     <div class="admin-section-head storage-console-head storage-redesign-head storage-overview-strip">
                         <div>
                             <h2>存储配额</h2>
-                            <p>统一查看容量水位、R2 安全策略、S3 扩展空间和路径绑定。</p>
+                            <p>统一查看容量水位、R2 安全策略和 S3 扩展空间。</p>
                         </div>
                     </div>
-
-                    <section class="storage-summary-strip">
-                        <div class="storage-metric-grid storage-metric-redesign">
-                            <div class="storage-metric-card"><span>当前配额</span><strong id="quotaLimitValue">-</strong></div>
-                            <div class="storage-metric-card"><span>已使用</span><strong id="quotaUsedValue">-</strong></div>
-                            <div class="storage-metric-card"><span>剩余空间</span><strong id="quotaRemainingValue">-</strong></div>
-                        </div>
-                    </section>
 
                     <section class="storage-board">
                         <div class="storage-board-column storage-board-left">
@@ -469,21 +461,6 @@
                                             </div>
                                         </div>
                                         <div id="storageSpaceList" class="access-rule-list storage-space-list"></div>
-                                    </section>
-
-                                    <section class="storage-binding-workbench storage-binding-redesign">
-                                        <div class="storage-panel-head">
-                                            <div>
-                                                <h3>文件夹绑定</h3>
-                                                <p>根目录默认使用 R2；绑定后的文件夹会写入指定空间。</p>
-                                            </div>
-                                        </div>
-                                        <div class="storage-input-row bind storage-binding-row">
-                                            <input type="text" id="bindingPathInput" placeholder="路径，如 /b" class="admin-input">
-                                            <select id="bindingStorageInput" class="admin-input"></select>
-                                            <button id="bindingSaveButton" class="btn btn-primary" data-admin-action="add-storage-binding">绑定路径</button>
-                                        </div>
-                                        <div id="storageBindingList" class="access-rule-list storage-binding-list"></div>
                                     </section>
                                 </div>
                             </div>

@@ -2865,6 +2865,134 @@ test('webhook notifications ignore legacy env settings', async () => {
   }
 });
 
+test('mkdir can bind a new folder to selected storage', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('', { status: 200 });
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const save = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/storage', {
+        method: 'PUT',
+        body: JSON.stringify({
+          spaces: [{
+            id: 's3-main',
+            name: 'S3-主存储',
+            endpoint: 'https://s3.example.com',
+            bucket: 'bucket-a',
+            accessKeyId: 'ak',
+            secretAccessKey: 'sk',
+            region: 'auto',
+            enabled: true,
+            overflowTarget: true,
+          }],
+          bindings: [],
+        }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(save.status, 200);
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'archive', storageId: 's3-main' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(mkdir.status, 200);
+    const mkdirData = await mkdir.json();
+    assert.equal(mkdirData.storageId, 's3-main');
+
+    const listed = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/storage', {
+        headers: { Cookie: cookie },
+      }),
+    });
+    const listedData = await listed.json();
+    assert.deepEqual(listedData.bindings, [{ path: 'archive', storageId: 's3-main' }]);
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
+test('mkdir can override inherited storage back to r2', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const save = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/storage', {
+      method: 'PUT',
+      body: JSON.stringify({
+        spaces: [{
+          id: 's3-main',
+          name: 'S3-主存储',
+          endpoint: 'https://s3.example.com',
+          bucket: 'bucket-a',
+          enabled: true,
+          overflowTarget: true,
+        }],
+        bindings: [{ path: 'archive', storageId: 's3-main' }],
+      }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(save.status, 200);
+
+  const mkdir = await onRequest({
+    env,
+    request: new Request('https://example.com/api/mkdir/archive', {
+      method: 'POST',
+      body: JSON.stringify({ folderName: 'local', storageId: 'r2' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(mkdir.status, 200);
+  const mkdirData = await mkdir.json();
+  assert.equal(mkdirData.storageId, 'r2');
+
+  const listed = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/storage', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const listedData = await listed.json();
+  assert.deepEqual(listedData.bindings, [
+    { path: 'archive', storageId: 's3-main' },
+    { path: 'archive/local', storageId: 'r2' },
+  ]);
+});
+
 test('admin health reports bindings and required env vars', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';

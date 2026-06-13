@@ -34,7 +34,9 @@ document.addEventListener('click', event => {
   const args = readArgs(target);
   switch (action) {
     case 'logout': return Actions.logout();
-    case 'show-modal': return UI.showModal(args[0]);
+    case 'show-modal':
+      if (args[0] === 'mkdirModal') return Actions.openMkdirModal();
+      return UI.showModal(args[0]);
     case 'close-modal': return UI.closeModal(args[0]);
     case 'close-preview': return UI.closePreview();
     case 'close-details': return UI.closeDrawer('detailsPanel');
@@ -136,6 +138,10 @@ document.addEventListener('focusin', event => {
   if (event.target?.id === 'searchInput' || event.target?.id === 'mobileSearchInput') {
     Actions.renderSearchSuggestions?.();
   }
+});
+
+document.getElementById('mkdirStorageInput')?.addEventListener('change', event => {
+  UI.syncMkdirStoragePreview(event.target.value || 'r2');
 });
 
 document.getElementById('fileInput')?.addEventListener('change', event => {

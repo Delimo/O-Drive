@@ -177,13 +177,39 @@
     </div>
 
     <div id="mkdirModal" class="fixed inset-0 bg-black/35 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 text-slate-900" role="dialog" aria-modal="true" aria-labelledby="mkdirTitle">
-        <div class="bg-surface border border-border p-6 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h1 id="mkdirTitle" class="text-lg font-bold mb-4 text-center">新建文件夹</h1>
-            <label class="sr-only" for="folderNameInput">文件夹名称</label>
-            <input type="text" id="folderNameInput" placeholder="请输入名称" data-enter-action="mkdir" aria-label="文件夹名称" class="w-full bg-background border border-border rounded-lg h-11 px-4 mb-4 outline-none focus:border-primary text-sm text-slate-900">
-            <div class="flex gap-2">
+        <div class="mkdir-modal-shell bg-surface border border-border rounded-[28px] w-full max-w-2xl shadow-2xl overflow-hidden">
+            <div class="mkdir-modal-head">
+                <div class="mkdir-modal-kicker">目录创建</div>
+                <h1 id="mkdirTitle" class="mkdir-modal-title">新建文件夹</h1>
+                <p class="mkdir-modal-subtitle">创建目录时直接指定存储桶。默认写入 Cloudflare R2，后续新增的 S3 空间也会在这里出现。</p>
+            </div>
+            <div class="mkdir-modal-body">
+                <div class="mkdir-modal-main">
+                    <label class="mkdir-field">
+                        <span>文件夹名称</span>
+                        <input type="text" id="folderNameInput" placeholder="例如：项目归档" data-enter-action="mkdir" aria-label="文件夹名称" class="w-full bg-background border border-border rounded-lg h-11 px-4 outline-none focus:border-primary text-sm text-slate-900">
+                    </label>
+                    <label class="mkdir-field">
+                        <span>绑定到存储桶</span>
+                        <select id="mkdirStorageInput" class="w-full bg-background border border-border rounded-lg h-11 px-4 outline-none focus:border-primary text-sm text-slate-900" aria-label="存储桶选择">
+                            <option value="r2">Cloudflare R2</option>
+                        </select>
+                    </label>
+                    <div class="mkdir-storage-note" id="mkdirStorageHint">默认使用 Cloudflare R2。配置新的 S3 空间后，这里会自动出现对应选项。</div>
+                </div>
+                <aside class="mkdir-storage-preview" aria-live="polite">
+                    <div class="mkdir-storage-badge" id="mkdirStorageBadge">R2 默认</div>
+                    <h2 id="mkdirStorageName">Cloudflare R2</h2>
+                    <p id="mkdirStorageMeta">适合默认目录和常规上传。未单独绑定时，系统会继续使用 R2。</p>
+                    <div class="mkdir-storage-slots" id="mkdirStorageSlots">
+                        <div class="mkdir-storage-slot is-active">Cloudflare R2</div>
+                        <div class="mkdir-storage-slot is-empty">S3 空间将在后台添加后出现在这里</div>
+                    </div>
+                </aside>
+            </div>
+            <div class="mkdir-modal-actions">
                 <button class="btn flex-1" data-action="close-modal" data-args='["mkdirModal"]'>取消</button>
-                <button class="btn btn-primary flex-1 font-bold" data-action="submit-mkdir">创建</button>
+                <button class="btn btn-primary flex-1 font-bold" data-action="submit-mkdir">创建并应用</button>
             </div>
         </div>
     </div>

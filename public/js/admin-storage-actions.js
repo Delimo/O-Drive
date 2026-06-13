@@ -98,21 +98,14 @@ export function createAdminStorageActions({ adminConfirm }) {
 
     async loadStorage() {
       const spaceList = document.getElementById('storageSpaceList');
-      const bindingList = document.getElementById('storageBindingList');
-      const bindingSelect = document.getElementById('bindingStorageInput');
       setStorageResult();
-      if (!spaceList || !bindingList || !bindingSelect) return;
+      if (!spaceList) return;
       const { res, data } = await api.adminStorage();
       if (!res.ok) {
         setStorageResult('加载存储配置失败，请稍后重试。', 'error');
         spaceList.innerHTML = renderAdminEmptyState({
           title: 'S3 空间加载失败',
           description: '当前无法读取扩展存储配置。',
-          compact: true,
-        });
-        bindingList.innerHTML = renderAdminEmptyState({
-          title: '路径绑定加载失败',
-          description: '请先恢复存储配置后再查看绑定关系。',
           compact: true,
         });
         return;
@@ -126,10 +119,6 @@ export function createAdminStorageActions({ adminConfirm }) {
       if (enabled) enabled.checked = Boolean(data.overflowEnabled);
       this.syncStoragePolicyAvailability(data);
       this.syncStorageEditorState();
-      bindingSelect.innerHTML = [
-        '<option value="r2">Cloudflare R2</option>',
-        ...(data.spaces || []).map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name || item.id)}</option>`),
-      ].join('');
       spaceList.innerHTML = (data.spaces || []).map(item => `
         <div class="access-rule-card storage-space-card ${adminState.storageEditingId === item.id ? 'is-editing' : ''}">
           <div class="access-rule-main">
@@ -153,23 +142,6 @@ export function createAdminStorageActions({ adminConfirm }) {
         description: '先添加一个扩展存储，再决定是否把它作为 R2 溢出目标。',
         primaryAction: 'new-storage-space',
         primaryLabel: '添加空间',
-        compact: true,
-      });
-      bindingList.innerHTML = (data.bindings || []).map(item => `
-        <div class="access-rule-card">
-          <div class="access-rule-main">
-            <strong>/${escapeHtml(item.path)}</strong>
-            <span>存储空间：${escapeHtml(this.storageName(item.storageId))}</span>
-          </div>
-          <div class="access-rule-actions">
-            <button class="admin-danger-btn" data-admin-action="remove-storage-binding" data-args='${escapeHtml(JSON.stringify([item.path]))}'>删除</button>
-          </div>
-        </div>
-      `).join('') || renderAdminEmptyState({
-        title: '暂无路径绑定',
-        description: '根目录默认使用 R2；你可以把指定文件夹绑定到某个 S3 空间。',
-        primaryAction: 'focus-storage-binding',
-        primaryLabel: '去填写路径',
         compact: true,
       });
     },

@@ -13,6 +13,40 @@ import {
 
 export function createFileBatchActions() {
   return {
+    async openMkdirModal() {
+      UI.showModal('mkdirModal');
+      const input = document.getElementById('folderNameInput');
+      if (input) input.value = '';
+      await this.loadStorageOptions();
+      const select = document.getElementById('mkdirStorageInput');
+      if (select) select.value = 'r2';
+      UI.syncMkdirStoragePreview('r2');
+      input?.focus();
+    },
+
+    async loadStorageOptions() {
+      const fallback = [{ id: 'r2', name: 'Cloudflare R2', provider: 'r2', hint: '默认存储桶' }];
+      try {
+        const { res, data } = await api.adminStorage();
+        if (!res.ok) throw new Error('load failed');
+        const spaces = (data?.spaces || [])
+          .filter(item => item.enabled !== false)
+          .map(item => ({
+            id: item.id,
+            name: item.name || item.id,
+            provider: item.provider || 's3',
+            hint: item.bucket ? `${item.bucket} · ${item.region || 'auto'}` : 'S3 兼容存储',
+          }));
+        state.storageOptions = [
+          { id: 'r2', name: 'Cloudflare R2', provider: 'r2', hint: '默认存储桶' },
+          ...spaces,
+        ];
+      } catch (_) {
+        state.storageOptions = fallback;
+      }
+      UI.renderMkdirStorageOptions();
+    },
+
     toggleSelect(key, el, e) {
       e.stopPropagation();
       const selected = !state.selectedPaths.includes(key);
@@ -158,16 +192,20 @@ export function createFileBatchActions() {
 
     async submitMkdir() {
       const n = document.getElementById('folderNameInput').value.trim();
+      const storageId = document.getElementById('mkdirStorageInput')?.value || 'r2';
       if (!n) return;
-      const { res, data } = await api.mkdir(state.currentPath, n);
+      const { res, data } = await api.mkdir(state.currentPath, n, { storageId });
       if (!res.ok) {
         Message.error(readableError(res, data, '创建失败'));
         return;
       }
       document.getElementById('folderNameInput').value = '';
+      const select = document.getElementById('mkdirStorageInput');
+      if (select) select.value = 'r2';
+      UI.syncMkdirStoragePreview('r2');
       UI.closeModal('mkdirModal');
       this.loadFiles();
-      Message.success('已创建');
+      Message.success(data?.bindingApplied || (data?.storageId && data.storageId !== 'r2') ? '已创建并绑定存储桶' : '已创建');
     },
   };
 }

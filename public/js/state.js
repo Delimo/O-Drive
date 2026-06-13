@@ -19,6 +19,7 @@ export const state = {
     loadingMore: false,
   },
   currentPreviewText: '',
+  storageOptions: [{ id: 'r2', name: 'Cloudflare R2', provider: 'r2', hint: '默认存储桶' }],
   filters: {
     kind: 'all',
     minSize: '',

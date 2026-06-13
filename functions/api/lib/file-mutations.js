@@ -11,7 +11,10 @@ import { checkQuota, formatBytes as formatQuotaBytes } from './storage-quota.js'
 import {
   checkStorageQuota,
   chooseUploadStorage,
+  loadStorageConfig,
+  resolveStorageIdForPath,
   resolveExistingStorageId,
+  saveStorageConfig,
   storageAbortMultipartUpload,
   storageCompleteMultipartUpload,
   storageCreateMultipartUpload,
@@ -355,17 +358,26 @@ export async function handleOperationEstimate(env, request) {
  * @returns {Promise<Response>}
  */
 export async function handleMkdir(env, request, r2Key) {
-  const { folderName } = await request.json();
+  const { folderName, storageId: requestedStorageId = 'r2' } = await request.json();
   const cleanName = normalizeName(folderName);
   const dir = r2Key ? normalizeUserKey(r2Key) + '/' : '';
   const folderKey = dir + cleanName;
   const key = folderKey + '/.folder';
   assertUserKey(key);
   await assertTargetAvailable(env, folderKey);
-  const storageId = await resolveExistingStorageId(env, folderKey);
+  const storageId = String(requestedStorageId || 'r2').trim().toLowerCase() || 'r2';
+  const config = await loadStorageConfig(env);
+  const allowed = new Set(['r2', ...(config.spaces || []).filter(item => item.enabled !== false).map(item => item.id)]);
+  if (!allowed.has(storageId)) return jsonResponse({ success: false, message: '目标存储桶不可用' }, 400);
+  const inheritedStorageId = await resolveStorageIdForPath(env, folderKey);
+  const bindingApplied = storageId !== inheritedStorageId;
+  if (storageId !== inheritedStorageId) {
+    const bindings = [...(config.bindings || []).filter(item => item.path !== folderKey), { path: folderKey, storageId }];
+    await saveStorageConfig(env, { ...config, bindings });
+  }
   await storagePut(env, storageId, key, new Uint8Array(0));
   await addLog(env, request, 'MKDIR', cleanName);
-  return jsonResponse({ success: true, key: folderKey, path: `/${folderKey}/`, storageId });
+  return jsonResponse({ success: true, key: folderKey, path: `/${folderKey}/`, storageId, bindingApplied });
 }
 
 /**

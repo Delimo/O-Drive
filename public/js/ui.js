@@ -53,6 +53,44 @@ export const UI = {
     }
   },
 
+  renderMkdirStorageOptions() {
+    const select = document.getElementById('mkdirStorageInput');
+    if (!select) return;
+    const options = state.storageOptions || [{ id: 'r2', name: 'Cloudflare R2', provider: 'r2', hint: '默认存储桶' }];
+    select.innerHTML = options.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
+    this.syncMkdirStoragePreview(select.value || 'r2');
+  },
+
+  syncMkdirStoragePreview(storageId = 'r2') {
+    const options = state.storageOptions || [];
+    const current = options.find(item => item.id === storageId) || options[0] || { id: 'r2', name: 'Cloudflare R2', provider: 'r2', hint: '默认存储桶' };
+    const badge = document.getElementById('mkdirStorageBadge');
+    const name = document.getElementById('mkdirStorageName');
+    const meta = document.getElementById('mkdirStorageMeta');
+    const hint = document.getElementById('mkdirStorageHint');
+    const slots = document.getElementById('mkdirStorageSlots');
+    if (badge) badge.textContent = current.provider === 'r2' ? 'R2 默认' : 'S3 扩展';
+    if (name) name.textContent = current.name || current.id;
+    if (meta) {
+      meta.textContent = current.provider === 'r2'
+        ? '适合默认目录和常规上传。未单独绑定时，系统会继续使用 R2。'
+        : `新建后的这个目录会直接绑定到 ${current.name || current.id}，后续上传会优先写入该空间。`;
+    }
+    if (hint) {
+      hint.textContent = current.provider === 'r2'
+        ? '默认使用 Cloudflare R2。配置新的 S3 空间后，这里会自动出现对应选项。'
+        : `当前选择 ${current.name || current.id}。创建后会自动写入一条目录绑定规则。`;
+    }
+    if (slots) {
+      slots.innerHTML = (options.length ? options : [current]).map(item => `
+        <div class="mkdir-storage-slot ${item.id === current.id ? 'is-active' : ''}">
+          <strong>${escapeHtml(item.name || item.id)}</strong>
+          <span>${escapeHtml(item.hint || (item.provider === 'r2' ? '默认存储桶' : 'S3 兼容存储'))}</span>
+        </div>
+      `).join('');
+    }
+  },
+
   closePreview() {
     const content = document.getElementById('previewContent');
     clearElement(content);
