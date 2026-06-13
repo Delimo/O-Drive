@@ -1,3 +1,5 @@
+import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem } from '../mock/index.js';
+
 export function createThunks(deps) {
   const {
     actions,
@@ -24,9 +26,15 @@ export function createThunks(deps) {
   } = deps;
 
   const page = getPage();
+  const mock = isMockMode();
 
   const thunks = {
     loadRole: () => async dispatch => {
+      if (mock) {
+        dispatch(actions.app.setRole({ role: 'admin', csrf: 'mock-csrf' }));
+        dispatch(actions.app.setBooting(false));
+        return;
+      }
       try {
         const { response, data } = await authApi.loadRole();
         if (!response.ok) {
@@ -47,6 +55,16 @@ export function createThunks(deps) {
       dispatch(actions.explorer.setSelection(''));
       const path = normalizeKey(state.explorer.path);
       const query = state.explorer.query.trim();
+
+      if (mock) {
+        dispatch(actions.explorer.setData({
+          folders: mockFolders,
+          files: mockFiles,
+          storageId: 'r2',
+        }));
+        syncHomeUrl(path, query);
+        return;
+      }
 
       try {
         if (state.explorer.trashMode) {
@@ -78,6 +96,10 @@ export function createThunks(deps) {
     },
     loadAdminStats: () => async dispatch => {
       dispatch(actions.admin.setLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setStats(mockAdminStats));
+        return;
+      }
       try {
         const { response, data } = await adminApi.stats();
         if (!response.ok) throw new Error(data?.message || '后台概览加载失败');
@@ -88,6 +110,10 @@ export function createThunks(deps) {
     },
     loadAdminShares: () => async dispatch => {
       dispatch(actions.admin.setSharesLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setShares(mockAdminShares));
+        return;
+      }
       try {
         const { response, data } = await shareApi.list();
         if (!response.ok) throw new Error(data?.message || '分享列表加载失败');
@@ -98,12 +124,17 @@ export function createThunks(deps) {
     },
     loadShare: () => async (dispatch, getState) => {
       const token = getState().share.token.trim();
-      if (!token) {
+      if (!token && !mock) {
         dispatch(actions.share.setError('请提供分享 token。'));
         return;
       }
 
       dispatch(actions.share.setLoading(true));
+      if (mock) {
+        dispatch(actions.share.setData(mockShareItem));
+        if (!token) dispatch(actions.share.setToken('mock-share-token'));
+        return;
+      }
       try {
         const { response, data } = await shareApi.info(token);
         if (response.status === 403 && data?.code === 'SHARE_PASSWORD_REQUIRED') {
@@ -117,6 +148,7 @@ export function createThunks(deps) {
       }
     },
     login: credentials => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       dispatch(actions.app.setModal({ type: 'login', loading: true, error: '', values: credentials }));
       try {
         const { response, data } = await authApi.login(credentials);
@@ -153,6 +185,7 @@ export function createThunks(deps) {
       }
     },
     logout: () => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       try {
         await authApi.logout();
         dispatch(actions.app.setRole({ role: 'guest', csrf: '' }));
@@ -171,6 +204,7 @@ export function createThunks(deps) {
       }
     },
     createFolder: folderName => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       const name = String(folderName || '').trim();
       if (!name) return;
 
@@ -192,6 +226,7 @@ export function createThunks(deps) {
       }
     },
     uploadFiles: files => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       const state = getState();
       const list = uploadService.prepareFiles(files, normalizeKey(state.explorer.path));
       if (!list.length) return;
@@ -239,6 +274,7 @@ export function createThunks(deps) {
       }
     },
     savePreviewText: content => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       const modal = getState().app.modal;
       const path = modal?.entry ? getEntryPath(modal.entry) : '';
       if (!path) return;
@@ -269,6 +305,7 @@ export function createThunks(deps) {
       }));
     },
     submitShare: values => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       const modal = getState().app.modal;
       const entry = modal?.entry;
       const path = entry ? getEntryPath(entry) : '';
@@ -298,6 +335,7 @@ export function createThunks(deps) {
       }
     },
     deleteShare: token => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!token) return;
 
       dispatch(actions.admin.setShareBusyToken(token));
@@ -315,6 +353,7 @@ export function createThunks(deps) {
       }
     },
     cleanupExpiredShares: () => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       dispatch(actions.admin.setShareBusyToken('__cleanup__'));
       try {
         const { response, data } = await shareApi.cleanupExpired();
@@ -330,6 +369,7 @@ export function createThunks(deps) {
       }
     },
     restoreTrash: trashId => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       try {
         const { response, data } = await trashApi.restore(trashId);
         if (!response.ok || data?.success === false) throw new Error(humanError(response, data, '恢复失败'));
@@ -340,6 +380,7 @@ export function createThunks(deps) {
       }
     },
     deleteTrash: trashId => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       try {
         const { response, data } = await trashApi.remove(trashId);
         if (!response.ok || data?.success === false) throw new Error(humanError(response, data, '彻底删除失败'));
@@ -350,6 +391,7 @@ export function createThunks(deps) {
       }
     },
     clearTrash: () => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       try {
         const { response, data } = await trashApi.clear();
         if (!response.ok) throw new Error(humanError(response, data, '清空回收站失败'));
@@ -360,6 +402,7 @@ export function createThunks(deps) {
       }
     },
     batchDelete: paths => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!paths?.length) return;
 
       try {
@@ -375,6 +418,7 @@ export function createThunks(deps) {
       }
     },
     renameEntry: (path, newName) => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!path || !newName) return;
 
       try {
@@ -389,6 +433,7 @@ export function createThunks(deps) {
       }
     },
     pasteClipboard: () => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       const clipboard = getState().explorer.clipboard;
       if (!clipboard?.paths?.length) return;
 
@@ -410,6 +455,7 @@ export function createThunks(deps) {
       }
     },
     batchRestoreTrash: trashIds => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!trashIds?.length) return;
 
       try {
@@ -427,6 +473,7 @@ export function createThunks(deps) {
       }
     },
     batchDeleteTrash: trashIds => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!trashIds?.length) return;
 
       try {
@@ -444,6 +491,7 @@ export function createThunks(deps) {
       }
     },
     unlockProtectedPath: password => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       const modal = getState().app.modal;
       const path = modal?.path || '';
       if (!path) return;
@@ -485,6 +533,7 @@ export function createThunks(deps) {
       }
     },
     unlockShare: password => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       const token = getState().share.token.trim();
       if (!token) return;
 

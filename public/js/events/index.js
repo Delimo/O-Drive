@@ -69,6 +69,46 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'set-share-filter') {
+        const filter = actionNode.dataset.filter || 'all';
+        store.dispatch(actions.admin.setShareFilter(filter));
+        return;
+      }
+
+      if (action === 'confirm-delete-share') {
+        const shareName = actionNode.dataset.name || key;
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-delete-share',
+          loading: false,
+          error: '',
+          token: key,
+          shareName,
+        }));
+        return;
+      }
+
+      if (action === 'confirm-cleanup-expired-shares') {
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-cleanup-expired',
+          loading: false,
+          error: '',
+        }));
+        return;
+      }
+
+      if (action === 'execute-delete-share') {
+        const tokenToDelete = actionNode.dataset.key || key;
+        store.dispatch(actions.app.setModal(null));
+        store.dispatch(thunks.deleteShare(tokenToDelete));
+        return;
+      }
+
+      if (action === 'execute-cleanup-expired-shares') {
+        store.dispatch(actions.app.setModal(null));
+        store.dispatch(thunks.cleanupExpiredShares());
+        return;
+      }
+
       if (action === 'cleanup-expired-shares') {
         store.dispatch(thunks.cleanupExpiredShares());
         return;

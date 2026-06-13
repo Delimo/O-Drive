@@ -152,6 +152,53 @@ export function createModalRenderers(deps) {
       `;
     }
 
+    if (modal.type === 'confirm-delete-share') {
+      const shareName = modal.shareName || '此分享';
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-title" data-stop-close="true">
+            <h3 id="confirm-delete-title" class="modal-title">确认删除分享</h3>
+            <p class="modal-copy">你确定要删除分享"${escapeHtml(shareName)}"吗？</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作不可撤销</h3>
+              <div class="attention-copy">删除后，分享链接将立即失效，所有访问者将无法再通过此链接访问文件。</div>
+            </div>
+            ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-delete-share" data-key="${escapeHtml(modal.token || '')}">
+                ${icons.trash}
+                <span>确认删除</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal">取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'confirm-cleanup-expired') {
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-cleanup-title" data-stop-close="true">
+            <h3 id="confirm-cleanup-title" class="modal-title">清理过期分享</h3>
+            <p class="modal-copy">你确定要清理所有已过期的分享记录吗？</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作不可撤销</h3>
+              <div class="attention-copy">清理后，所有已过期的分享记录将被永久删除，相关链接将立即失效。</div>
+            </div>
+            ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-cleanup-expired-shares">
+                ${icons.trash}
+                <span>确认清理</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal">取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     return '';
   }
 

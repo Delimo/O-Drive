@@ -7,6 +7,10 @@ import { createHomeRenderers } from './js/render/home.js';
 import { createPageRenderers } from './js/render/pages.js';
 import { createSharedRenderers } from './js/render/shared.js';
 import { registerAppEvents } from './js/events/index.js';
+import { formatBytes, formatTime, formatRelative, humanSort, humanView } from './js/utils/format.js';
+import { normalizeKey, encodeRouteKey, getInitialPath, getInitialSearch, getShareToken } from './js/utils/path.js';
+import { inferKind, iconForKind as iconForKindBase, iconClass, isProtectedEntry } from './js/utils/guards.js';
+import { escapeHtml, humanError, splitUploadTarget } from './js/utils/text.js';
 
 const root = document.getElementById('app');
 const page = document.body.dataset.page || 'home';
@@ -1220,6 +1224,139 @@ style.textContent = `
     gap: 18px;
   }
 
+  .share-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(248, 252, 255, 0.86);
+    border: 1px solid rgba(61, 90, 117, 0.12);
+  }
+
+  .share-filter-btn {
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .share-filter-active {
+    background: linear-gradient(135deg, #0e7e9d 0%, #124657 100%);
+    color: white;
+    border-color: transparent;
+  }
+
+  .share-filter-count {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  .share-filter-active .share-filter-count {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .share-status-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0;
+  }
+
+  .tag-active {
+    background: rgba(24, 121, 78, 0.12);
+    color: #18794e;
+  }
+
+  .tag-expired {
+    background: rgba(192, 57, 43, 0.12);
+    color: #c0392b;
+  }
+
+  .tag-soon {
+    background: rgba(183, 110, 17, 0.12);
+    color: #b76e11;
+  }
+
+  .tag-unlimited {
+    background: rgba(14, 116, 144, 0.12);
+    color: #0e7490;
+  }
+
+  .tag-password {
+    background: rgba(107, 70, 193, 0.12);
+    color: #6b46c1;
+  }
+
+  .tag-preview {
+    background: rgba(24, 121, 78, 0.12);
+    color: #18794e;
+  }
+
+  .tag-no-preview {
+    background: rgba(100, 116, 139, 0.12);
+    color: #64748b;
+  }
+
+  .tag-download {
+    background: rgba(14, 116, 144, 0.12);
+    color: #0e7490;
+  }
+
+  .tag-no-download {
+    background: rgba(100, 116, 139, 0.12);
+    color: #64748b;
+  }
+
+  .tag-exhausted {
+    background: rgba(192, 57, 43, 0.12);
+    color: #c0392b;
+  }
+
+  .share-item-expired {
+    opacity: 0.7;
+    border-left: 3px solid rgba(192, 57, 43, 0.4);
+  }
+
+  .share-item-expiring-soon {
+    border-left: 3px solid rgba(183, 110, 17, 0.4);
+  }
+
+  .status-dot-expired {
+    background: linear-gradient(135deg, #c0392b, #991b1b);
+    box-shadow: 0 0 0 4px rgba(192, 57, 43, 0.16);
+  }
+
+  .status-dot-soon {
+    background: linear-gradient(135deg, #b76e11, #92400e);
+    box-shadow: 0 0 0 4px rgba(183, 110, 17, 0.16);
+  }
+
+  .admin-status-row {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn-danger {
+    color: var(--danger);
+    background: rgba(192, 57, 43, 0.06);
+    border-color: rgba(192, 57, 43, 0.12);
+  }
+
+  .btn-danger:hover {
+    background: rgba(192, 57, 43, 0.12);
+    border-color: rgba(192, 57, 43, 0.24);
+  }
+
   .preview-stage {
     flex: 1;
     min-height: 320px;
@@ -1489,6 +1626,7 @@ const initialState = {
     sharesLoading: false,
     sharesError: '',
     shareBusyToken: '',
+    shareFilter: 'all',
     error: '',
   },
   share: {
@@ -1654,6 +1792,9 @@ const adminSlice = createSlice({
     setShareBusyToken(state, action) {
       return { ...state, shareBusyToken: action.payload || '' };
     },
+    setShareFilter(state, action) {
+      return { ...state, shareFilter: action.payload || 'all' };
+    },
     setError(state, action) {
       return { ...state, loading: false, error: action.payload };
     },
@@ -1714,98 +1855,9 @@ function dispatchToast(type, message) {
   }, 2600);
 }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+const iconForKind = (kind) => iconForKindBase(kind, icons);
 
-function getInitialPath() {
-  const value = new URLSearchParams(window.location.search).get('path') || '';
-  return normalizeKey(value);
-}
-
-function getInitialSearch() {
-  return new URLSearchParams(window.location.search).get('q') || '';
-}
-
-function getShareToken() {
-  const url = new URL(window.location.href);
-  return url.searchParams.get('token') || url.searchParams.get('share') || '';
-}
-
-function normalizeKey(value = '') {
-  return String(value || '').replace(/^\/+|\/+$/g, '');
-}
-
-function encodeRouteKey(value = '') {
-  return normalizeKey(value)
-    .split('/')
-    .filter(Boolean)
-    .map(segment => encodeURIComponent(segment))
-    .join('/');
-}
-
-function formatBytes(value) {
-  const size = Number(value || 0);
-  if (!Number.isFinite(size) || size <= 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const index = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
-  const scaled = size / (1024 ** index);
-  return `${scaled >= 100 || index === 0 ? scaled.toFixed(0) : scaled.toFixed(1)} ${units[index]}`;
-}
-
-function formatTimeLegacy(value) {
-  const time = Number(value || 0);
-  if (!time) return '未知时间';
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(time));
-}
-
-function formatRelativeLegacy(value) {
-  const time = Number(value || 0);
-  if (!time) return '刚刚';
-  const diff = Date.now() - time;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (diff < minute) return '刚刚';
-  if (diff < hour) return `${Math.max(1, Math.round(diff / minute))} 分钟前`;
-  if (diff < day) return `${Math.max(1, Math.round(diff / hour))} 小时前`;
-  return `${Math.max(1, Math.round(diff / day))} 天前`;
-}
-
-function inferKind(item) {
-  if (item.kind === 'folder' || item.virtual) return 'folder';
-  const key = (item.fullKey || item.path || item.name || '').toLowerCase();
-  if (/\.(png|jpe?g|gif|webp|avif|svg|bmp|ico)$/.test(key)) return 'image';
-  if (/\.(mp4|mov|webm|mkv|avi|m4v)$/.test(key)) return 'video';
-  if (/\.(mp3|wav|aac|flac|ogg|m4a)$/.test(key)) return 'audio';
-  if (/\.pdf$/.test(key)) return 'pdf';
-  if (/\.(zip|rar|7z|tar|gz|tgz)$/.test(key)) return 'archive';
-  if (/\.(js|ts|tsx|jsx|json|md|txt|csv|html|css|xml|yml|yaml)$/.test(key)) return 'text';
-  if (/\.(exe|msi|dmg|apk|ipa)$/.test(key)) return 'app';
-  return 'file';
-}
-
-function iconForKind(kind) {
-  return icons[kind] || icons.file;
-}
-
-function iconClass(kind) {
-  if (['folder', 'image', 'video', 'audio', 'pdf', 'archive'].includes(kind)) return kind;
-  return 'file';
-}
-
-async function copyTextLegacy(value, successText = '已复制') {
+async function copyText(value, successText = '已复制') {
   try {
     await navigator.clipboard.writeText(value);
     dispatchToast('success', successText);
@@ -1834,35 +1886,6 @@ async function ensureRemoteDirectoryTree(path) {
   }
 }
 
-function humanErrorLegacy(response, data, fallback) {
-  const raw = data?.failed?.[0]?.message || data?.message || '';
-  if (response?.status === 401) return '登录状态已失效，请重新登录。';
-  if (response?.status === 403) {
-    if (/csrf/i.test(raw)) return '安全校验已过期，请刷新页面后重试。';
-    return '当前没有权限执行这个操作。';
-  }
-  if (response?.status === 409) return '目标位置存在同名项目，请更换名称后重试。';
-  return raw || fallback;
-}
-
-function splitUploadTarget(file, basePath) {
-  const relative = String(file.webkitRelativePath || '');
-  const relativeParts = relative.split('/').filter(Boolean);
-  const targetName = relativeParts.length ? relativeParts[relativeParts.length - 1] : file.name;
-  const relativeDir = relativeParts.length > 1 ? relativeParts.slice(0, -1).join('/') : '';
-  const targetDir = [basePath, relativeDir].filter(Boolean).join('/');
-  return { targetName, targetDir, relativeDir };
-}
-
-function isProtectedEntry(entry) {
-  return Boolean(
-    entry?.protected
-    || entry?.isProtected
-    || entry?.locked
-    || entry?.requiresPassword,
-  );
-}
-
 function createDeferredAction(kind, payload = {}) {
   return { kind, ...payload };
 }
@@ -1875,63 +1898,6 @@ function openProtectedUnlockModal(path, deferredAction, error = '') {
     path,
     deferredAction,
   }));
-}
-
-function humanSort(mode) {
-  if (mode === 'time') return '按时间';
-  if (mode === 'size') return '按大小';
-  return '按名称';
-}
-
-function humanView(mode) {
-  return mode === 'list' ? '列表' : '网格';
-}
-
-function formatTime(value) {
-  const time = Number(value || 0);
-  if (!time) return '未知时间';
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(time));
-}
-
-function formatRelative(value) {
-  const time = Number(value || 0);
-  if (!time) return '刚刚';
-  const diff = Date.now() - time;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (diff < minute) return '刚刚';
-  if (diff < hour) return `${Math.max(1, Math.round(diff / minute))} 分钟前`;
-  if (diff < day) return `${Math.max(1, Math.round(diff / hour))} 小时前`;
-  return `${Math.max(1, Math.round(diff / day))} 天前`;
-}
-
-async function copyText(value, successText = '已复制') {
-  try {
-    await navigator.clipboard.writeText(value);
-    dispatchToast('success', successText);
-    return true;
-  } catch (_) {
-    dispatchToast('error', '复制失败');
-    return false;
-  }
-}
-
-function humanError(response, data, fallback) {
-  const raw = data?.failed?.[0]?.message || data?.message || '';
-  if (response?.status === 401) return '登录状态已失效，请重新登录。';
-  if (response?.status === 403) {
-    if (/csrf/i.test(raw)) return '安全校验已过期，请刷新页面后重试。';
-    return '当前没有权限执行这个操作。';
-  }
-  if (response?.status === 409) return '目标位置存在同名项目，请更换名称后重试。';
-  return raw || fallback;
 }
 
 const {
