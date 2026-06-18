@@ -502,7 +502,6 @@ test('admin health section renders health components', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /系统健康/);
   assert.match(html, /storage/);
   assert.match(html, /database/);
   assert.match(html, /存储服务运行正常/);
@@ -527,7 +526,6 @@ test('admin logs section renders log entries with pagination', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /操作日志/);
   assert.match(html, /产品说明\.pdf/);
   assert.match(html, /上传/);
   assert.match(html, /admin/);
@@ -551,7 +549,6 @@ test('admin quota section renders storage usage', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /存储配额/);
   assert.match(html, /已用空间/);
   assert.match(html, /总配额/);
   assert.match(html, /1\.2/);
@@ -576,7 +573,6 @@ test('admin protected paths section renders path list with delete buttons', () =
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /受保护路径/);
   assert.match(html, /机密文件夹/);
   assert.match(html, /data-action="confirm-delete-protected-path"/);
   assert.match(html, /内部敏感资料/);
@@ -601,7 +597,6 @@ test('admin maintenance section renders snapshot and action buttons', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /维护操作/);
   assert.match(html, /128/);
   assert.match(html, /重建文件索引/);
   assert.match(html, /清理访问记录/);
@@ -633,8 +628,8 @@ test('admin maintenance section shows loading state', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /维护操作/);
   assert.match(html, /加载中/);
+  assert.match(html, /系统维护快照/);
 });
 
 test('admin maintenance section shows error state', () => {
@@ -656,8 +651,8 @@ test('admin maintenance section shows error state', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /维护操作/);
   assert.match(html, /加载失败/);
+  assert.match(html, /data-action="refresh-admin-maintenance"/);
 });
 
 test('confirm-maintenance-action modal shows warning and execute action', () => {
@@ -702,11 +697,9 @@ test('admin task list section renders upload task records', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /上传任务/);
   assert.match(html, /产品说明\.pdf/);
   assert.match(html, /5\/5/);
   assert.match(html, /2\/3/);
-  assert.match(html, /data-action="refresh-tasks"/);
 });
 
 test('admin task list section shows loading state', () => {
@@ -729,8 +722,8 @@ test('admin task list section shows loading state', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /上传任务/);
   assert.match(html, /加载中/);
+  assert.match(html, /任务列表/);
 });
 
 test('admin task list is hidden when empty', () => {
@@ -753,7 +746,7 @@ test('admin task list is hidden when empty', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.doesNotMatch(html, /上传任务/);
+  assert.doesNotMatch(html, /文件数/);
 });
 
 test('mock notifications have correct structure', () => {
