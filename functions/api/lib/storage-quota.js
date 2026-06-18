@@ -8,6 +8,7 @@
  *   value: number (0 = unlimited)
  */
 
+import { formatBytes } from './common.js';
 import { indexedFileCount, syncFileIndexFromR2 } from './file-index.js';
 
 const QUOTA_CONFIG_KEY = 'storage_quota_bytes';
@@ -81,14 +82,4 @@ export async function checkQuota(target, incomingBytes = 0) {
   };
 }
 
-/**
- * Format bytes to human-readable string.
- * @param {number} bytes
- * @returns {string}
- */
-export function formatBytes(bytes) {
-  if (!bytes || bytes <= 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  return `${(bytes / 1024 ** i).toFixed(i ? 1 : 0)} ${units[i]}`;
-}
+

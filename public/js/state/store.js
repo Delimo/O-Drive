@@ -75,7 +75,6 @@ export function createRootStore({ page }) {
       filterDateFrom: '',
       filterDateTo: '',
       searchCursor: '',
-      allSearchResults: [],
       hasMore: false,
       view: 'grid',
       sort: 'smart',
@@ -86,10 +85,12 @@ export function createRootStore({ page }) {
       trashMode: false,
       selectedKey: '',
       selectedKeys: [],
+      trashSelectedKeys: [],
       clipboard: null,
       error: '',
       searching: false,
       batchBusy: false,
+      trashBatchBusy: false,
     },
     admin: {
       loading: false,
@@ -204,6 +205,12 @@ export function createRootStore({ page }) {
       setSelectedKeys(state, action) {
         return { ...state, selectedKeys: action.payload };
       },
+      setTrashSelectedKeys(state, action) {
+        return { ...state, trashSelectedKeys: action.payload };
+      },
+      setTrashBatchBusy(state, action) {
+        return { ...state, trashBatchBusy: action.payload };
+      },
       setClipboard(state, action) {
         return { ...state, clipboard: action.payload };
       },
@@ -232,7 +239,6 @@ export function createRootStore({ page }) {
           files: files || [],
           searchCursor: cursor || '',
           hasMore: hasMore || false,
-          allSearchResults: [],
           selectedKeys: [],
         };
       },

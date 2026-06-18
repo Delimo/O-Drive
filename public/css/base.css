@@ -22,6 +22,12 @@ select {
   font: inherit;
 }
 
+button,
+a,
+[data-action] {
+  touch-action: manipulation;
+}
+
 button {
   cursor: pointer;
 }

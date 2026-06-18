@@ -14,7 +14,11 @@ export function tokenSecretStatus(env) {
 }
 
 export function getTokenSecret(env) {
-  return String(env?.TOKEN_SECRET || env?.ADMIN_PASSWORD || 'o-drive');
+  const secret = env?.TOKEN_SECRET || env?.ADMIN_PASSWORD;
+  if (!secret && typeof process !== 'undefined' && process?.env?.NODE_ENV !== 'test') {
+    console.warn('[WARN] Neither TOKEN_SECRET nor ADMIN_PASSWORD is set. Falling back to insecure default key.');
+  }
+  return String(secret || 'o-drive');
 }
 
 export async function signHmac(env, value) {

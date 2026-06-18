@@ -94,7 +94,8 @@ export function createStateSelectors(deps) {
 
   function selectedEntriesFromState(state) {
     const entries = currentEntries(state);
-    return entries.filter(item => state.explorer.selectedKeys.includes(entryKey(item)));
+    const keys = state.explorer.trashMode ? state.explorer.trashSelectedKeys : state.explorer.selectedKeys;
+    return entries.filter(item => keys.includes(entryKey(item)));
   }
 
   function requiresProtectedUnlock(entry) {

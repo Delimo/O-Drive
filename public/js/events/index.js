@@ -468,8 +468,9 @@ export function registerAppEvents(deps) {
         store.dispatch(actions.explorer.setTrashMode(next));
         store.dispatch(actions.explorer.setQuery(next ? state.explorer.query : ''));
         store.dispatch(actions.explorer.setQueryDraft(next ? state.explorer.queryDraft : ''));
-        store.dispatch(actions.explorer.setPath(next ? state.explorer.path : state.explorer.path));
+        store.dispatch(actions.explorer.setPath(next ? '' : state.explorer.path));
         store.dispatch(actions.explorer.setSelectedKeys([]));
+        store.dispatch(actions.explorer.setTrashSelectedKeys([]));
         store.dispatch(actions.explorer.setClipboard(next ? null : state.explorer.clipboard));
         store.dispatch(thunks.loadExplorer());
         return;
@@ -494,10 +495,17 @@ export function registerAppEvents(deps) {
 
       if (action === 'toggle-pick') {
         event.stopPropagation();
-        const selected = new Set(state.explorer.selectedKeys);
-        if (selected.has(key)) selected.delete(key);
-        else selected.add(key);
-        store.dispatch(actions.explorer.setSelectedKeys([...selected]));
+        if (state.explorer.trashMode) {
+          const selected = new Set(state.explorer.trashSelectedKeys);
+          if (selected.has(key)) selected.delete(key);
+          else selected.add(key);
+          store.dispatch(actions.explorer.setTrashSelectedKeys([...selected]));
+        } else {
+          const selected = new Set(state.explorer.selectedKeys);
+          if (selected.has(key)) selected.delete(key);
+          else selected.add(key);
+          store.dispatch(actions.explorer.setSelectedKeys([...selected]));
+        }
         return;
       }
 
@@ -509,6 +517,7 @@ export function registerAppEvents(deps) {
       if (action === 'clear-selected') {
         store.dispatch(actions.explorer.setSelection(''));
         store.dispatch(actions.explorer.setSelectedKeys([]));
+        store.dispatch(actions.explorer.setTrashSelectedKeys([]));
         return;
       }
 
@@ -541,14 +550,14 @@ export function registerAppEvents(deps) {
 
       if (action === 'restore-selected-trash') {
         if (!state.explorer.trashMode) return;
-        const ids = state.explorer.selectedKeys;
+        const ids = state.explorer.trashSelectedKeys;
         store.dispatch(thunks.batchRestoreTrash(ids));
         return;
       }
 
       if (action === 'delete-selected-trash') {
         if (!state.explorer.trashMode) return;
-        const ids = state.explorer.selectedKeys;
+        const ids = state.explorer.trashSelectedKeys;
         store.dispatch(thunks.batchDeleteTrash(ids));
         return;
       }

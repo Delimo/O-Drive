@@ -386,32 +386,13 @@ export function createApiLayer(deps) {
     },
   };
 
-  const taskApi = {
-    create(type, payload) {
-      return request('/api/tasks', {
-        method: 'POST',
-        json: { type, payload },
-        csrf: true,
-      });
-    },
-    update(id, data) {
-      return request('/api/tasks', {
-        method: 'PATCH',
-        json: { id, ...data },
-        csrf: true,
-      });
-    },
-  };
-
   return {
     apiClient,
-    request,
     authApi,
     fileApi,
     trashApi,
     shareApi,
     adminApi,
     multipartApi,
-    taskApi,
   };
 }

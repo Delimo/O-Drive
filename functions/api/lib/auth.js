@@ -1,6 +1,6 @@
 import { jsonResponse, decodeBase64UrlJson, encodeBase64Url, ensureCoreTables } from './common.js';
 import { signHmac, verifyHmac } from './secrets.js';
-import { normalizeWebhookEndpoints, notifyLoginBurst } from './webhooks.js';
+import { loadWebhookEndpoints, notifyLoginBurst } from './webhooks.js';
 
 function createCsrfToken() {
   const bytes = new Uint8Array(24);
@@ -89,12 +89,6 @@ function waitForWebhook(context, promise) {
   if (!promise) return;
   if (typeof context?.waitUntil === 'function') context.waitUntil(promise.catch(() => {}));
   else promise.catch(() => {});
-}
-
-async function loadWebhookEndpoints(env) {
-  const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
-  const items = row?.value ? JSON.parse(row.value) : [];
-  return normalizeWebhookEndpoints(items);
 }
 
 function positiveNumber(value, fallback) {

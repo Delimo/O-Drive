@@ -1,16 +1,5 @@
-import { addLog, jsonResponse, recordSystemWarning } from './common.js';
-import { normalizeWebhookEndpoints, testWebhookEndpoint } from './webhooks.js';
-
-export async function loadWebhookEndpoints(env) {
-  let items = [];
-  try {
-    const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
-    if (row?.value) items = JSON.parse(row.value);
-  } catch (err) {
-    await recordSystemWarning(env, 'webhooks.config', err?.message || 'Webhook settings load failed');
-  }
-  return normalizeWebhookEndpoints(items);
-}
+import { addLog, jsonResponse } from './common.js';
+import { loadWebhookEndpoints, normalizeWebhookEndpoints, testWebhookEndpoint } from './webhooks.js';
 
 export async function handleAdminWebhooks(env, request, method) {
   if (method === 'GET') {

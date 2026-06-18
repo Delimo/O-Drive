@@ -6,6 +6,7 @@ export function createServices(deps) {
     splitUploadTarget,
     ensureRemoteDirectoryTree,
     fileApi,
+    multipartApi,
   } = deps;
 
   const previewService = {

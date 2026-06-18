@@ -79,11 +79,21 @@ function makeState(overrides = {}) {
       trashMode: false,
       selectedKey: '',
       selectedKeys: [],
+      trashSelectedKeys: [],
       clipboard: null,
       loading: false,
       error: '',
       searching: false,
       batchBusy: false,
+      trashBatchBusy: false,
+      showFilters: false,
+      filterKind: 'all',
+      filterMinSize: '',
+      filterMaxSize: '',
+      filterDateFrom: '',
+      filterDateTo: '',
+      searchCursor: '',
+      hasMore: false,
       ...(overrides.explorer || {}),
     },
     uploads: { items: [], ...(overrides.uploads || {}) },
@@ -115,6 +125,22 @@ test('isMarkdownName detects markdown extensions', () => {
   assert.equal(isMarkdownName('readme.md'), true);
   assert.equal(isMarkdownName('notes.markdown'), true);
   assert.equal(isMarkdownName('photo.png'), false);
+});
+
+test('markdown renders tables', () => {
+  const out = renderMarkdown('| A | B |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |');
+  assert.match(out, /<table>/);
+  assert.match(out, /<th>A<\/th>/);
+  assert.match(out, /<td>1<\/td>/);
+  assert.match(out, /<td>4<\/td>/);
+});
+
+test('markdown renders task lists', () => {
+  const out = renderMarkdown('- [ ] todo\n- [x] done');
+  assert.match(out, /<input type="checkbox" disabled>/);
+  assert.match(out, /<input type="checkbox" disabled checked>/);
+  assert.match(out, /todo/);
+  assert.match(out, /done/);
 });
 
 // ===== 路径工具 =====
@@ -221,7 +247,7 @@ test('mock text content returns markdown for .md files', () => {
 // ===== 回收站批量栏 =====
 
 test('trash batch bar shows restore and delete actions', () => {
-  const html = shared.renderTrashBatchBar(makeState(), [{}, {}]);
+  const html = shared.renderTrashBatchBar(makeState({ explorer: { trashSelectedKeys: ['a', 'b'] } }), [{}, {}], ['a', 'b'], false);
   assert.match(html, /已选中 2 项回收站记录/);
   assert.match(html, /data-action="restore-selected-trash"/);
   assert.match(html, /data-action="delete-selected-trash"/);
@@ -230,7 +256,7 @@ test('trash batch bar shows restore and delete actions', () => {
 });
 
 test('trash batch bar disables actions while busy', () => {
-  const busy = shared.renderTrashBatchBar(makeState({ explorer: { batchBusy: true } }), [{}, {}]);
+  const busy = shared.renderTrashBatchBar(makeState(), [{}, {}], ['a'], true);
   assert.match(busy, /正在处理批量操作/);
   assert.match(busy, /disabled/);
 });

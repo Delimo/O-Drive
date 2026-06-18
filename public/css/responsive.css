@@ -191,6 +191,15 @@
     border-right: 0;
     border-bottom: 1px solid rgba(255,255,255,0.16);
   }
+
+  .toolbar-right > .conflict-selector {
+    width: auto;
+  }
+
+  .toolbar-right .conflict-selector select {
+    font-size: 13px;
+    min-height: 40px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -217,12 +226,30 @@
     align-items: stretch;
   }
 
+  .batch-bar .btn-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .batch-bar .btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+    font-size: 14px;
+  }
+
   .hero-strip {
     grid-template-columns: 1fr;
   }
 
   .modal-card {
     padding: 20px;
+  }
+
+  .modal-form input,
+  .modal-form select,
+  .modal-form textarea {
+    min-height: 44px;
+    font-size: 16px;
   }
 
   .preview-modal .btn-row {
@@ -239,6 +266,39 @@
 
   .item-card {
     padding: 14px;
+    min-height: 56px;
+  }
+
+  .item-card .item-info {
+    gap: 6px;
+  }
+
+  .item-card .item-name {
+    font-size: 14px;
+  }
+
+  .item-card .item-meta {
+    font-size: 12px;
+  }
+
+  .file-grid.is-list .item-card {
+    padding: 12px 14px;
+  }
+
+  .filter-panel {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-panel > div {
+    width: 100%;
+  }
+
+  .filter-panel .inline-input,
+  .filter-panel select {
+    width: 100%;
+    min-height: 40px;
+    font-size: 14px;
   }
 
   .admin-section-title {
@@ -259,5 +319,50 @@
 
   .admin-card {
     padding: 14px;
+  }
+
+  .admin-strip-actions .btn {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrap table {
+    min-width: 480px;
+  }
+
+  .result-hint {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .result-hint .btn {
+    margin-left: 0;
+  }
+
+  .conflict-selector select {
+    min-height: 36px;
+    font-size: 14px;
+  }
+
+  .crumb-link,
+  .crumb-arrow {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .upload-row-btn {
+    min-height: 36px;
+    min-width: 44px;
+    font-size: 13px;
+  }
+
+  .uploads-status {
+    font-size: 13px;
   }
 }

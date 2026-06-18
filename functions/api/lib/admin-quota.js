@@ -1,5 +1,5 @@
-import { addLog, jsonResponse } from './common.js';
-import { getStorageQuota, setStorageQuota, getStorageUsed, formatBytes as formatQuotaBytes } from './storage-quota.js';
+import { addLog, formatBytes as formatQuotaBytes, jsonResponse } from './common.js';
+import { getStorageQuota, setStorageQuota, getStorageUsed } from './storage-quota.js';
 import { parseCapacityBytes } from './capacity.js';
 
 export async function handleAdminQuota(env, request, method) {

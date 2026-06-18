@@ -1,23 +1,31 @@
-import { readFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, extname } from 'node:path';
 
-const files = execFileSync('rg', [
-  '--files',
-  '-g', '*.js',
-  '-g', '*.mjs',
-  '-g', '*.css',
-  '-g', '*.html',
-  '-g', '*.json',
-  '-g', '*.md',
-], { encoding: 'utf8' })
-  .split(/\r?\n/)
-  .filter(Boolean);
+const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const EXTENSIONS = new Set(['.js', '.mjs', '.css', '.html', '.json', '.md']);
+const EXCLUDE_DIRS = new Set(['node_modules', '.git', '.wrangler']);
 
+function findFiles(dir, results = []) {
+  const entries = readdirSync(dir);
+  for (const entry of entries) {
+    if (EXCLUDE_DIRS.has(entry)) continue;
+    const full = join(dir, entry);
+    const stat = statSync(full);
+    if (stat.isDirectory()) {
+      findFiles(full, results);
+    } else if (EXTENSIONS.has(extname(entry))) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+const files = findFiles(ROOT);
 const failures = [];
 
 for (const file of files) {
-  const text = await readFile(file, 'utf8');
-  const lines = text.split(/\n/);
+  const text = readFileSync(file, 'utf8');
+  const lines = text.split('\n');
   lines.forEach((line, index) => {
     if (/[ \t]\r?$/.test(line)) failures.push(`${file}:${index + 1} trailing whitespace`);
   });

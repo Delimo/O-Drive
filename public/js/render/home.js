@@ -145,10 +145,12 @@ export function createHomeRenderers(deps) {
   function renderExplorerBanner(state, selectedEntries) {
     const explorer = state.explorer;
 
-    if (explorer.selectedKeys.length) {
-      return explorer.trashMode
-        ? renderTrashBatchBar(state, selectedEntries)
-        : renderBatchBar(state, selectedEntries);
+    if (explorer.trashMode) {
+      if (explorer.trashSelectedKeys.length) {
+        return renderTrashBatchBar(state, selectedEntries, explorer.trashSelectedKeys, explorer.trashBatchBusy);
+      }
+    } else if (explorer.selectedKeys.length) {
+      return renderBatchBar(state, selectedEntries);
     }
 
     if (explorer.clipboard?.paths?.length) {

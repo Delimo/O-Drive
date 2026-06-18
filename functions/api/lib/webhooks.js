@@ -5,7 +5,7 @@
  *
  * Configured from the admin Webhook settings stored in D1.
  */
-import { ensureCoreTables } from './common.js';
+import { ensureCoreTables, recordSystemWarning } from './common.js';
 
 /**
  * @typedef {object} WebhookPayload
@@ -367,6 +367,17 @@ export function notifyFolderCreated(envUrls, path) {
  */
 export function notifyFileRenamed(envUrls, oldPath, newName) {
   return notifyWebhook(envUrls, 'file.renamed', { oldPath, newName });
+}
+
+export async function loadWebhookEndpoints(env) {
+  let items = [];
+  try {
+    const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
+    if (row?.value) items = JSON.parse(row.value);
+  } catch (err) {
+    await recordSystemWarning(env, 'webhooks.config', err?.message || 'Webhook settings load failed');
+  }
+  return normalizeWebhookEndpoints(items);
 }
 
 export function notifyDownloadBurst(envUrls, alert) {

@@ -282,6 +282,11 @@ export function createThunks(deps) {
       let failed = 0;
       let cancelledItems = [];
 
+      const dirsToCreate = [...new Set(queued.filter(q => q.item.relativeDir).map(q => q.item.targetDir))];
+      for (const dir of dirsToCreate) {
+        await uploadService.ensureDirectoryTree(dir);
+      }
+
       for (const q of queued) {
         const { item, multipart } = q;
         dispatch(actions.uploads.update({ id: q.id, status: 'uploading', progress: 0 }));
@@ -290,10 +295,6 @@ export function createThunks(deps) {
           const stateNow = getState();
           const currentItem = stateNow.uploads.items.find(i => i.id === q.id);
           if (currentItem?.status === 'cancelling') throw new Error('UPLOAD_CANCELLED');
-
-          if (item.relativeDir) {
-            await uploadService.ensureDirectoryTree(item.targetDir);
-          }
 
           const conflictMode = getState().uploads.conflictMode;
 
@@ -651,7 +652,7 @@ export function createThunks(deps) {
       if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!trashIds?.length) return;
 
-      dispatch(actions.explorer.setBatchBusy(true));
+      dispatch(actions.explorer.setTrashBatchBusy(true));
       try {
         for (const id of trashIds) {
           const { response, data } = await trashApi.restore(id);
@@ -659,20 +660,20 @@ export function createThunks(deps) {
             throw new Error(humanError(response, data, '批量恢复失败'));
           }
         }
-        dispatch(actions.explorer.setSelectedKeys([]));
+        dispatch(actions.explorer.setTrashSelectedKeys([]));
         dispatchToast('success', `已恢复 ${trashIds.length} 条记录`);
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         dispatchToast('error', error.message || '批量恢复失败');
       } finally {
-        dispatch(actions.explorer.setBatchBusy(false));
+        dispatch(actions.explorer.setTrashBatchBusy(false));
       }
     },
     batchDeleteTrash: trashIds => async dispatch => {
       if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!trashIds?.length) return;
 
-      dispatch(actions.explorer.setBatchBusy(true));
+      dispatch(actions.explorer.setTrashBatchBusy(true));
       try {
         for (const id of trashIds) {
           const { response, data } = await trashApi.remove(id);
@@ -680,13 +681,13 @@ export function createThunks(deps) {
             throw new Error(humanError(response, data, '批量彻底删除失败'));
           }
         }
-        dispatch(actions.explorer.setSelectedKeys([]));
+        dispatch(actions.explorer.setTrashSelectedKeys([]));
         dispatchToast('success', `已彻底删除 ${trashIds.length} 条记录`);
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         dispatchToast('error', error.message || '批量彻底删除失败');
       } finally {
-        dispatch(actions.explorer.setBatchBusy(false));
+        dispatch(actions.explorer.setTrashBatchBusy(false));
       }
     },
     loadAdminHealth: () => async dispatch => {

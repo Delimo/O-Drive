@@ -3,7 +3,7 @@ import { handleDownloadOrPreview } from './file-reads.js';
 import { signHmac } from './secrets.js';
 import { ensureShareTable } from './schema.js';
 import { resolveExistingObjectLocation, storageHead } from './storage.js';
-import { normalizeWebhookEndpoints, notifyWebhookWithLog } from './webhooks.js';
+import { loadWebhookEndpoints, notifyWebhookWithLog } from './webhooks.js';
 
 const EXPIRED_SHARE_AUTO_DELETE_MS = 7 * 24 * 60 * 60 * 1000;
 const SHARE_ACCESS_TTL_SECONDS = 12 * 60 * 60;
@@ -159,15 +159,6 @@ async function getShare(env, token) {
 async function deleteShare(env, token) {
   await ensureShareTable(env);
   await env.D1.prepare('DELETE FROM share_links WHERE token = ?').bind(token).run();
-}
-
-async function loadWebhookEndpoints(env) {
-  let items = [];
-  try {
-    const row = await env.D1.prepare("SELECT value FROM kv_config WHERE key = 'webhooks'").first();
-    if (row?.value) items = JSON.parse(row.value);
-  } catch (_) {}
-  return normalizeWebhookEndpoints(items);
 }
 
 async function notifyShareExpiredOnce(env, row, reason = 'expired') {

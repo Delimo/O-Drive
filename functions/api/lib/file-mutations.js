@@ -61,13 +61,6 @@ function assertPathList(paths) {
   return paths.map(normalizeUserKey);
 }
 
-function estimatePathList(paths) {
-  if (!Array.isArray(paths) || paths.length === 0 || paths.length > 100) {
-    throw new Error('Invalid paths');
-  }
-  return paths.map(normalizeUserKey);
-}
-
 /**
  * Check if a key exists in R2 (as object or prefix).
  * @param {Env} env
@@ -313,7 +306,7 @@ export async function handleBatchDelete(env, request) {
  */
 export async function handleOperationEstimate(env, request) {
   const { paths } = await request.json();
-  const normalizedPaths = estimatePathList(paths);
+  const normalizedPaths = assertPathList(paths);
   const items = [];
   let totalObjects = 0;
   let truncated = false;

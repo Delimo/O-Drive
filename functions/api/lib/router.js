@@ -46,7 +46,7 @@ import { handleAdminMaintenance, handleAdminMaintenanceAction } from './admin-ma
 import { handleProtectedSettings, handleProtectedUnlock } from './protected-paths.js';
 import { handleAdminShares } from './shares.js';
 import { createFileTask, getFileTask, updateFileTask } from './tasks.js';
-import { notifyDownloadBurst, notifyFileUploaded, notifyFileDeleted, notifyFileMoved, notifyFolderCreated, notifyFileRenamed, notifyWebhookWithLog } from './webhooks.js';
+import { notifyDownloadBurst, notifyWebhookWithLog } from './webhooks.js';
 import { assertBodySize, jsonResponse, recordSystemWarning } from './common.js';
 import { checkDownloadBlocked, recordDownloadBurst } from './download-bursts.js';
 

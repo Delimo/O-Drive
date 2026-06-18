@@ -94,7 +94,7 @@ const {
   isProtectedEntry,
 });
 
-const { apiClient, request, authApi, fileApi, trashApi, shareApi, adminApi } = createApiLayer({
+const { apiClient, authApi, fileApi, trashApi, shareApi, adminApi, multipartApi } = createApiLayer({
   fetchImpl: fetch,
   getState: () => store.getState(),
   encodeRouteKey,
@@ -122,7 +122,6 @@ const thunks = createThunks({
   adminApi,
   shareApi,
   multipartApi,
-  taskApi,
   previewService,
   uploadService,
   normalizeKey,

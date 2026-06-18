@@ -91,14 +91,13 @@ export function createSharedRenderers(deps) {
     `;
   }
 
-  function renderTrashBatchBar(state, selectedEntries) {
-    const busy = state.explorer.batchBusy;
+  function renderTrashBatchBar(state, selectedEntries, trashKeys, busy) {
     const disabled = busy ? 'disabled' : '';
     return `
       <div class="batch-bar">
         <div class="status-main">
           <span class="status-dot"></span>
-          <span>${busy ? '正在处理批量操作，请稍候…' : `已选中 ${selectedEntries.length} 项回收站记录，可以恢复或彻底删除。`}</span>
+          <span>${busy ? '正在处理批量操作，请稍候…' : `已选中 ${(trashKeys || state.explorer.trashSelectedKeys).length} 项回收站记录，可以恢复或彻底删除。`}</span>
         </div>
         <div class="btn-row">
           <button class="btn" data-action="restore-selected-trash" ${disabled}>批量恢复</button>
