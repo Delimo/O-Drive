@@ -75,33 +75,37 @@ export function createSharedRenderers(deps) {
   }
 
   function renderBatchBar(state, selectedEntries) {
+    const busy = state.explorer.batchBusy;
+    const disabled = busy ? 'disabled' : '';
     return `
       <div class="batch-bar">
         <div class="status-main">
           <span class="status-dot"></span>
-          <span>已选中 ${selectedEntries.length} 项，可以批量复制、移动或删除。</span>
+          <span>${busy ? '正在处理批量操作，请稍候…' : `已选中 ${selectedEntries.length} 项，可以批量复制、移动或删除。`}</span>
         </div>
         <div class="btn-row">
-          <button class="btn" data-action="copy-selected">复制</button>
-          <button class="btn" data-action="move-selected">移动</button>
-          ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected">删除</button>` : ''}
-          <button class="btn" data-action="clear-selected">取消选择</button>
+          <button class="btn" data-action="copy-selected" ${disabled}>复制</button>
+          <button class="btn" data-action="move-selected" ${disabled}>移动</button>
+          ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected" ${disabled}>删除</button>` : ''}
+          <button class="btn" data-action="clear-selected" ${disabled}>取消选择</button>
         </div>
       </div>
     `;
   }
 
   function renderTrashBatchBar(state, selectedEntries) {
+    const busy = state.explorer.batchBusy;
+    const disabled = busy ? 'disabled' : '';
     return `
       <div class="batch-bar">
         <div class="status-main">
           <span class="status-dot"></span>
-          <span>已选中 ${selectedEntries.length} 项回收站记录，可以恢复或彻底删除。</span>
+          <span>${busy ? '正在处理批量操作，请稍候…' : `已选中 ${selectedEntries.length} 项回收站记录，可以恢复或彻底删除。`}</span>
         </div>
         <div class="btn-row">
-          <button class="btn" data-action="restore-selected-trash">批量恢复</button>
-          ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected-trash">批量彻底删除</button>` : ''}
-          <button class="btn" data-action="clear-selected">取消选择</button>
+          <button class="btn" data-action="restore-selected-trash" ${disabled}>批量恢复</button>
+          ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected-trash" ${disabled}>批量彻底删除</button>` : ''}
+          <button class="btn" data-action="clear-selected" ${disabled}>取消选择</button>
         </div>
       </div>
     `;
@@ -155,7 +159,7 @@ export function createSharedRenderers(deps) {
     const meta = state.explorer.trashMode
       ? [isFolder ? '文件夹' : '文件', formatTime(item.trashedAt || 0)]
       : [
-          isFolder ? '目录' : (item.sizeFormatted || formatBytes(item.rawSize || 0)),
+          isFolder ? '文件夹' : (item.sizeFormatted || formatBytes(item.rawSize || 0)),
           item.time ? formatRelative(item.time) : '等待同步',
         ];
 

@@ -1,4 +1,4 @@
-import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem } from '../mock/index.js';
+import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent } from '../mock/index.js';
 
 export function createThunks(deps) {
   const {
@@ -28,6 +28,10 @@ export function createThunks(deps) {
   const page = getPage();
   const mock = isMockMode();
 
+  let uploadIdSeq = 0;
+  const nextUploadId = () => `up-${Date.now()}-${(uploadIdSeq += 1)}`;
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
   const thunks = {
     loadRole: () => async dispatch => {
       if (mock) {
@@ -55,13 +59,17 @@ export function createThunks(deps) {
       dispatch(actions.explorer.setSelection(''));
       const path = normalizeKey(state.explorer.path);
       const query = state.explorer.query.trim();
+      dispatch(actions.explorer.setSearching(Boolean(query) && !state.explorer.trashMode));
 
       if (mock) {
         dispatch(actions.explorer.setData({
-          folders: mockFolders,
-          files: mockFiles,
+          folders: query ? [] : mockFolders,
+          files: query
+            ? mockFiles.filter(f => f.name.toLowerCase().includes(query.toLowerCase()))
+            : mockFiles,
           storageId: 'r2',
         }));
+        dispatch(actions.explorer.setSearching(false));
         syncHomeUrl(path, query);
         return;
       }
@@ -92,6 +100,8 @@ export function createThunks(deps) {
         syncHomeUrl(path, query);
       } catch (error) {
         dispatch(actions.explorer.setError(error.message || '加载失败'));
+      } finally {
+        dispatch(actions.explorer.setSearching(false));
       }
     },
     loadAdminStats: () => async dispatch => {
@@ -226,29 +236,69 @@ export function createThunks(deps) {
       }
     },
     uploadFiles: files => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       const state = getState();
       const list = uploadService.prepareFiles(files, normalizeKey(state.explorer.path));
       if (!list.length) return;
 
-      let uploaded = 0;
-      try {
-        for (const item of list) {
-          const { file, targetDir, relativeDir } = item;
-          if (relativeDir) {
-            await uploadService.ensureDirectoryTree(targetDir);
+      const queued = list.map(item => ({
+        item,
+        id: nextUploadId(),
+        name: item.relativeDir ? `${item.relativeDir}/${item.file.name}` : item.file.name,
+      }));
+
+      dispatch(actions.uploads.enqueue(queued.map(q => ({
+        id: q.id,
+        name: q.name,
+        status: 'pending',
+        progress: 0,
+        error: '',
+      }))));
+
+      // 设计预览模式下不打真实接口，纯客户端模拟进度，便于预览上传队列。
+      if (mock) {
+        for (const q of queued) {
+          dispatch(actions.uploads.update({ id: q.id, status: 'uploading', progress: 0 }));
+          for (const pct of [25, 55, 80, 100]) {
+            await delay(160);
+            dispatch(actions.uploads.update({ id: q.id, progress: pct }));
           }
-          const { response, data } = await uploadService.uploadSingle(item);
+          dispatch(actions.uploads.update({ id: q.id, status: 'success', progress: 100 }));
+        }
+        dispatchToast('success', `已模拟上传 ${queued.length} 个文件（设计预览模式）`);
+        return;
+      }
+
+      let uploaded = 0;
+      let failed = 0;
+      for (const q of queued) {
+        const { item } = q;
+        dispatch(actions.uploads.update({ id: q.id, status: 'uploading', progress: 0 }));
+        try {
+          if (item.relativeDir) {
+            await uploadService.ensureDirectoryTree(item.targetDir);
+          }
+          const { response, data } = await uploadService.uploadSingle(item, pct => {
+            dispatch(actions.uploads.update({ id: q.id, progress: pct }));
+          });
           if (!response.ok || !data?.success) {
-            throw new Error(data?.message || `上传 ${file.name} 失败`);
+            throw new Error(data?.message || `上传 ${item.file.name} 失败`);
           }
           uploaded += 1;
+          dispatch(actions.uploads.update({ id: q.id, status: 'success', progress: 100 }));
+        } catch (error) {
+          failed += 1;
+          dispatch(actions.uploads.update({ id: q.id, status: 'error', error: error.message || '上传失败' }));
         }
-        dispatchToast('success', `已上传 ${uploaded} 个文件`);
-        await dispatch(thunks.loadExplorer());
-      } catch (error) {
-        dispatchToast('error', error.message || '上传失败');
       }
+
+      if (failed === 0) {
+        dispatchToast('success', `已上传 ${uploaded} 个文件`);
+      } else if (uploaded === 0) {
+        dispatchToast('error', `上传失败 ${failed} 个文件`);
+      } else {
+        dispatchToast('error', `成功 ${uploaded} 个，失败 ${failed} 个`);
+      }
+      await dispatch(thunks.loadExplorer());
     },
     previewEntry: entry => async dispatch => {
       if (!entry || !getEntryPath(entry)) return;
@@ -262,6 +312,11 @@ export function createThunks(deps) {
       dispatch(actions.app.setModal(baseModal));
       if (baseModal.contentMode !== 'text') {
         dispatch(actions.app.setModal({ ...baseModal, loading: false }));
+        return;
+      }
+
+      if (mock) {
+        dispatch(actions.app.setModal({ ...baseModal, loading: false, content: mockTextContent(entry) }));
         return;
       }
 
@@ -440,6 +495,7 @@ export function createThunks(deps) {
       if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!paths?.length) return;
 
+      dispatch(actions.explorer.setBatchBusy(true));
       try {
         const { response, data } = await fileApi.batchDelete(paths);
         if ((!response.ok || data?.success === false) && !data?.completed) {
@@ -450,6 +506,8 @@ export function createThunks(deps) {
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         dispatchToast('error', error.message || '删除失败');
+      } finally {
+        dispatch(actions.explorer.setBatchBusy(false));
       }
     },
     renameEntry: (path, newName) => async dispatch => {
@@ -472,6 +530,7 @@ export function createThunks(deps) {
       const clipboard = getState().explorer.clipboard;
       if (!clipboard?.paths?.length) return;
 
+      dispatch(actions.explorer.setBatchBusy(true));
       try {
         const { response, data } = await fileApi.paste(
           clipboard.action,
@@ -487,12 +546,15 @@ export function createThunks(deps) {
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         dispatchToast('error', error.message || '粘贴失败');
+      } finally {
+        dispatch(actions.explorer.setBatchBusy(false));
       }
     },
     batchRestoreTrash: trashIds => async dispatch => {
       if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!trashIds?.length) return;
 
+      dispatch(actions.explorer.setBatchBusy(true));
       try {
         for (const id of trashIds) {
           const { response, data } = await trashApi.restore(id);
@@ -505,12 +567,15 @@ export function createThunks(deps) {
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         dispatchToast('error', error.message || '批量恢复失败');
+      } finally {
+        dispatch(actions.explorer.setBatchBusy(false));
       }
     },
     batchDeleteTrash: trashIds => async dispatch => {
       if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!trashIds?.length) return;
 
+      dispatch(actions.explorer.setBatchBusy(true));
       try {
         for (const id of trashIds) {
           const { response, data } = await trashApi.remove(id);
@@ -523,6 +588,8 @@ export function createThunks(deps) {
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         dispatchToast('error', error.message || '批量彻底删除失败');
+      } finally {
+        dispatch(actions.explorer.setBatchBusy(false));
       }
     },
     unlockProtectedPath: password => async (dispatch, getState) => {

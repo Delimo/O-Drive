@@ -122,6 +122,39 @@ export const mockAdminShares = [
   },
 ];
 
+export const mockReadme = `# O-Drive 使用说明
+
+这是 **设计预览模式** 下的 Markdown 示例内容，用于演示渲染效果。
+
+## 功能亮点
+
+- 文件上传与队列进度
+- 在线预览：图片 / 视频 / 音频 / PDF / 文本
+- *Markdown* 渲染与原文切换
+- 分享链接与后台管理
+
+## 快速开始
+
+1. 点击「上传」选择文件
+2. 在列表中点击文件进行预览
+3. 使用顶部搜索框快速定位
+
+> 提示：实际部署后，这里会显示文件的真实文本内容。
+
+\`\`\`
+GET /api/files
+Authorization: session
+\`\`\`
+
+更多说明见 [项目主页](https://example.com)。
+`;
+
+export function mockTextContent(entry) {
+  const name = entry?.name || '';
+  if (/\.(md|markdown)$/i.test(name)) return mockReadme;
+  return `这是 ${name} 的设计预览占位文本内容。\n\n实际部署后会显示文件的真实文本。`;
+}
+
 export const mockShareItem = {
   name: '产品说明.pdf',
   sizeFormatted: '2.3 MB',

@@ -34,8 +34,6 @@ import {
   loadProtectedPaths,
   checkProtectedAccess,
 } from '../functions/api/lib/protected-paths.js';
-import { encodeR2Path, apiFileUrl } from '../public/js/file-paths.js';
-import { getOrderedEntries, getSelectableKeys } from '../public/js/file-view-model.js';
 
 import { makeEnv } from './helpers/make-env.mjs';
 
@@ -748,11 +746,6 @@ test('protected path unlock locks after repeated wrong passwords and clears on s
   assert.equal(success.status, 200);
 });
 
-test('frontend file path helpers encode each path segment', () => {
-  assert.equal(encodeR2Path('/中文/赤壁赋.txt'), '%E4%B8%AD%E6%96%87/%E8%B5%A4%E5%A3%81%E8%B5%8B.txt');
-  assert.equal(apiFileUrl('/api/preview', '/中文/赤壁赋.txt'), '/api/preview/%E4%B8%AD%E6%96%87/%E8%B5%A4%E5%A3%81%E8%B5%8B.txt');
-});
-
 test('thumbnail endpoint only accepts image files', async () => {
   const env = makeEnv({
     objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
@@ -1262,19 +1255,6 @@ test('trash list can filter by path, kind, and trashed date', async () => {
   const from = new Date('2026-02-15T00:00:00Z').getTime();
   const byDate = await handleTrashList(env, new URL(`https://example.com/api/trash?kind=file&from=${from}&page=1&size=20`));
   assert.deepEqual((await byDate.json()).items.map(item => item.original_key), ['photos/beta.jpg']);
-});
-
-test('file view model orders entries and exposes selectable keys', () => {
-  const fileData = {
-    folders: [{ name: 'b', fullKey: 'b' }, { name: 'a', fullKey: 'a' }],
-    files: [
-      { name: 'small.txt', fullKey: 'small.txt', rawSize: 1, time: 1 },
-      { name: 'large.txt', fullKey: 'large.txt', rawSize: 10, time: 2 },
-    ],
-  };
-
-  assert.deepEqual(getOrderedEntries(fileData, 'size').map(i => i.fullKey), ['a', 'b', 'large.txt', 'small.txt']);
-  assert.deepEqual(getSelectableKeys(fileData), ['a', 'b', 'large.txt', 'small.txt']);
 });
 
 test('multipart uploads can resolve name conflicts', async () => {

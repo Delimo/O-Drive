@@ -106,6 +106,18 @@ export function createStateSelectors(deps) {
     return state.app.role !== 'admin' && isProtectedEntry(entry);
   }
 
+  function findEntryByKey(state, key) {
+    return currentEntries(state).find(item => entryKey(item) === key) || null;
+  }
+
+  function collectSelectedPaths(state, getEntryPathFn) {
+    return state.explorer.selectedKeys
+      .map(id => findEntryByKey(state, id))
+      .filter(Boolean)
+      .map(item => getEntryPathFn(item))
+      .filter(Boolean);
+  }
+
   return {
     currentEntries,
     getSelectedEntry,
@@ -114,6 +126,8 @@ export function createStateSelectors(deps) {
     getEntryPath,
     detectContentMode,
     findCurrentEntryByPath,
+    findEntryByKey,
+    collectSelectedPaths,
     selectedEntriesFromState,
     requiresProtectedUnlock,
   };

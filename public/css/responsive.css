@@ -1,0 +1,185 @@
+@media (max-width: 1200px) {
+  .surface,
+  .share-board {
+    grid-template-columns: 1fr;
+  }
+
+  .share-side {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.16);
+  }
+}
+
+@media (max-width: 980px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell {
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .workspace {
+    min-height: auto;
+  }
+
+  .topbar,
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .topbar {
+    min-height: auto;
+    padding: 20px;
+  }
+
+  .header-right,
+  .toolbar-right {
+    width: 100%;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .search-box {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .panel-header {
+    padding: 20px 20px 10px;
+  }
+
+  .panel-body {
+    padding: 0 20px 20px;
+  }
+
+  .hero-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-card.span-4,
+  .admin-card.span-6,
+  .admin-card.span-8,
+  .admin-card.span-12 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 720px) {
+  .brand-name {
+    font-size: 22px;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-actions .btn,
+  .header-actions a.btn {
+    width: auto;
+    flex: 1 1 0;
+  }
+
+  .btn-row,
+  .toolbar-left,
+  .toolbar-right {
+    width: 100%;
+  }
+
+  .crumbs,
+  .status-bar {
+    width: 100%;
+  }
+
+  .file-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .file-grid.is-list .item-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .details-drawer {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    border-radius: 0;
+    border: 0;
+    transform: translateX(100%);
+  }
+
+  .share-board {
+    grid-template-columns: 1fr;
+  }
+
+  .share-side {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.16);
+  }
+}
+
+@media (max-width: 480px) {
+  .app-shell {
+    padding: 10px;
+  }
+
+  .topbar,
+  .toolbar {
+    padding: 14px;
+  }
+
+  .explorer-legacy {
+    min-height: calc(100vh - 200px);
+  }
+
+  .toolbar-btn,
+  .toolbar-select {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+
+  .batch-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-strip-actions {
+    flex-direction: column;
+  }
+
+  .hero-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-card {
+    padding: 20px;
+  }
+
+  .preview-modal .btn-row {
+    flex-wrap: wrap;
+  }
+
+  .share-main {
+    padding: 16px;
+  }
+
+  .share-side {
+    padding: 20px;
+  }
+
+  .item-card {
+    padding: 14px;
+  }
+}

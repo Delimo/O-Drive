@@ -11,6 +11,7 @@ export function createHomeRenderers(deps) {
     renderBatchBar,
     renderTrashBatchBar,
     renderEmptyState,
+    escapeHtml,
   } = deps;
 
   function renderHomePage(state) {
@@ -36,7 +37,10 @@ export function createHomeRenderers(deps) {
           </select>
           ${
             state.app.role === 'admin'
-              ? `<button class="btn toolbar-btn ${explorer.trashMode ? 'toolbar-btn-active' : ''}" data-action="toggle-trash">${explorer.trashMode ? '退出回收站' : '回收站'}</button>`
+              ? `
+                <button class="btn toolbar-btn ${explorer.trashMode ? 'toolbar-btn-active' : ''}" data-action="toggle-trash">${explorer.trashMode ? '退出回收站' : '回收站'}</button>
+                ${explorer.trashMode ? '<button class="btn toolbar-btn btn-danger" data-action="clear-trash">清空回收站</button>' : ''}
+              `
               : ''
           }
         </div>
@@ -47,6 +51,20 @@ export function createHomeRenderers(deps) {
       <section class="surface surface-legacy">
         <article class="explorer glass-card explorer-legacy">
           <div class="panel-body">
+            ${
+              explorer.query && !explorer.trashMode
+                ? `
+                  <div class="result-hint">
+                    <span class="status-dot"></span>
+                    <span>${
+                      explorer.searching
+                        ? `正在搜索“${escapeHtml(explorer.query)}”…`
+                        : `找到 ${entries.length} 个匹配“${escapeHtml(explorer.query)}”的结果${explorer.filter !== 'all' ? `（已按类型筛选）` : ''}`
+                    }</span>
+                  </div>
+                `
+                : ''
+            }
             ${
               explorer.selectedKeys.length
                 ? explorer.trashMode
@@ -80,7 +98,7 @@ export function createHomeRenderers(deps) {
                       </div>
                     `
                     : renderEmptyState(
-                        explorer.query ? '没有搜索结果' : explorer.trashMode ? '回收站为空' : '这个目录还是空的',
+                         explorer.query ? '没有搜索结果' : explorer.trashMode ? '回收站为空' : '这个文件夹还是空的',
                         explorer.query
                           ? '试试换一个关键词，或者回到目录里继续找。'
                           : explorer.trashMode

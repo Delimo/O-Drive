@@ -6,6 +6,7 @@ export function createApiLayer(deps) {
     normalizeKey,
     FormDataImpl,
     HeadersImpl,
+    XhrImpl,
   } = deps;
 
   const apiClient = {
@@ -101,6 +102,40 @@ export function createApiLayer(deps) {
         method: 'POST',
         body: form,
         csrf: true,
+      });
+    },
+    uploadWithProgress(targetDir, file, targetName, onProgress) {
+      const route = targetDir ? `/api/files/${encodeRouteKey(targetDir)}?conflict=rename` : '/api/files?conflict=rename';
+      const form = new FormDataImpl();
+      form.append('file', file, targetName);
+      const csrf = getState().app.csrf;
+
+      return new Promise(resolve => {
+        const xhr = new XhrImpl();
+        xhr.open('POST', route);
+        xhr.withCredentials = true;
+        if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
+
+        xhr.upload.onprogress = event => {
+          if (typeof onProgress === 'function' && event.lengthComputable) {
+            onProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          const isJson = (xhr.getResponseHeader('content-type') || '').includes('application/json');
+          let data = null;
+          if (isJson) {
+            try { data = JSON.parse(xhr.responseText); } catch (_) { data = {}; }
+          }
+          resolve({ response: { ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status }, data });
+        };
+
+        xhr.onerror = () => {
+          resolve({ response: { ok: false, status: xhr.status || 0 }, data: null });
+        };
+
+        xhr.send(form);
       });
     },
     previewText(path) {

@@ -100,7 +100,7 @@ export function createPageRenderers(deps) {
               <div class="admin-label">文件总数</div>
               <div class="admin-value">${safeText(stats.files?.count || 0, '0')}</div>
               <div class="admin-copy">
-                总容量 ${safeText(stats.files?.totalSizeFormatted, '0 B')}，目录标记 ${safeText(stats.files?.folderMarkers || 0, '0')}。
+                总容量 ${safeText(stats.files?.totalSizeFormatted, '0 B')}，文件夹标记 ${safeText(stats.files?.folderMarkers || 0, '0')}。
               </div>
               <div class="admin-status-row">
                 <span class="toolbar-tag tag-active">存储正常</span>

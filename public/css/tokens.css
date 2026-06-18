@@ -1,0 +1,24 @@
+:root {
+  color-scheme: light;
+  --bg: #edf3f8;
+  --bg-strong: #dfeaf3;
+  --panel: rgba(255, 255, 255, 0.78);
+  --panel-strong: rgba(255, 255, 255, 0.92);
+  --line: rgba(65, 85, 109, 0.14);
+  --line-strong: rgba(45, 64, 87, 0.22);
+  --text: #102033;
+  --muted: #617387;
+  --accent: #0e7490;
+  --accent-strong: #0f4c5c;
+  --accent-soft: rgba(14, 116, 144, 0.12);
+  --success: #18794e;
+  --warning: #b76e11;
+  --danger: #c0392b;
+  --shadow: 0 26px 70px rgba(24, 53, 79, 0.14);
+  --radius-xl: 28px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --display-font: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Songti SC", serif;
+  --body-font: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+}

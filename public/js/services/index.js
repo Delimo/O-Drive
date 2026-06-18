@@ -40,8 +40,8 @@ export function createServices(deps) {
     async ensureDirectoryTree(targetDir) {
       await ensureRemoteDirectoryTree(targetDir);
     },
-    uploadSingle(item) {
-      return fileApi.upload(item.targetDir, item.file, item.targetName);
+    uploadSingle(item, onProgress) {
+      return fileApi.uploadWithProgress(item.targetDir, item.file, item.targetName, onProgress);
     },
   };
 

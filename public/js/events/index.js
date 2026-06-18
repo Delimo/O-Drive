@@ -135,6 +135,21 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'dismiss-upload') {
+        store.dispatch(actions.uploads.remove(key || ''));
+        return;
+      }
+
+      if (action === 'clear-finished-uploads') {
+        store.dispatch(actions.uploads.clearFinished());
+        return;
+      }
+
+      if (action === 'dismiss-uploads') {
+        store.dispatch(actions.uploads.clearAll());
+        return;
+      }
+
       if (action === 'open-folder-modal') {
         if (state.app.role !== 'admin') {
           dispatchToast('error', '请先登录管理员账户');
@@ -160,6 +175,8 @@ export function registerAppEvents(deps) {
         store.dispatch(actions.explorer.setTrashMode(next));
         store.dispatch(actions.explorer.setQuery(next ? state.explorer.query : ''));
         store.dispatch(actions.explorer.setPath(next ? state.explorer.path : state.explorer.path));
+        store.dispatch(actions.explorer.setSelectedKeys([]));
+        store.dispatch(actions.explorer.setClipboard(next ? null : state.explorer.clipboard));
         store.dispatch(thunks.loadExplorer());
         return;
       }
@@ -287,7 +304,14 @@ export function registerAppEvents(deps) {
       if (action === 'toggle-preview-edit') {
         const modal = state.app.modal;
         if (!modal || modal.type !== 'preview') return;
-        store.dispatch(actions.app.setModal({ ...modal, editing: !modal.editing }));
+        store.dispatch(actions.app.setModal({ ...modal, editing: !modal.editing, dirty: false }));
+        return;
+      }
+
+      if (action === 'toggle-markdown-raw') {
+        const modal = state.app.modal;
+        if (!modal || modal.type !== 'preview') return;
+        store.dispatch(actions.app.setModal({ ...modal, showRaw: !modal.showRaw }));
         return;
       }
 
@@ -309,6 +333,7 @@ export function registerAppEvents(deps) {
 
       if (action === 'clear-trash') {
         store.dispatch(thunks.clearTrash());
+        return;
       }
     }
   });
@@ -316,6 +341,16 @@ export function registerAppEvents(deps) {
   documentRef.addEventListener('input', event => {
     const state = store.getState();
     const role = event.target.dataset.role;
+
+    if (event.target.id === 'preview-edit-area') {
+      // 直接更新 DOM 上的脏标记，避免 dispatch 触发整页重渲染导致输入丢失。
+      const meta = documentRef.querySelector('.preview-edit-meta');
+      if (meta) {
+        meta.textContent = '● 未保存';
+        meta.dataset.dirty = 'true';
+      }
+      return;
+    }
 
     if (role === 'search-input') {
       const value = event.target.value;
@@ -336,6 +371,18 @@ export function registerAppEvents(deps) {
 
     if (event.target.name === 'password' && page === 'share') {
       store.dispatch(actions.share.setPassword(event.target.value));
+    }
+  });
+
+  documentRef.addEventListener('keydown', event => {
+    // Ctrl/Cmd + S 在文本编辑态下保存
+    if ((event.ctrlKey || event.metaKey) && (event.key === 's' || event.key === 'S')) {
+      const modal = store.getState().app.modal;
+      if (modal && modal.type === 'preview' && modal.editing) {
+        event.preventDefault();
+        const area = documentRef.getElementById('preview-edit-area');
+        store.dispatch(thunks.savePreviewText(area?.value || ''));
+      }
     }
   });
 

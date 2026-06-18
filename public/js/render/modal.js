@@ -4,6 +4,8 @@ export function createModalRenderers(deps) {
     escapeHtml,
     getEntryPath,
     apiClient,
+    renderMarkdown,
+    isMarkdownName,
   } = deps;
 
   function renderPreviewModalBody(modal) {
@@ -15,6 +17,9 @@ export function createModalRenderers(deps) {
     if (modal.contentMode === 'audio') return `<div class="preview-media-shell"><audio src="${previewUrl}" controls autoplay style="width:min(560px,100%);"></audio></div>`;
     if (modal.contentMode === 'pdf') return `<div class="preview-media-shell"><iframe src="${previewUrl}" title="${escapeHtml(modal.entry?.name || '')}"></iframe></div>`;
     if (modal.editing) return `<textarea class="preview-editor" id="preview-edit-area">${escapeHtml(modal.content || '')}</textarea>`;
+    if (isMarkdownName(modal.entry?.name) && !modal.showRaw) {
+      return `<div class="markdown-body">${renderMarkdown(modal.content || '')}</div>`;
+    }
     return `<pre class="preview-text">${escapeHtml(modal.content || '')}</pre>`;
   }
 
@@ -28,7 +33,7 @@ export function createModalRenderers(deps) {
         <div class="modal-wrap" data-action="close-modal-backdrop">
           <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="login-title" data-stop-close="true">
             <h3 id="login-title" class="modal-title">管理员登录</h3>
-            <p class="modal-copy">输入后台账号信息后，即可使用上传、新建目录、回收站与管理概览功能。</p>
+            <p class="modal-copy">输入后台账号信息后，即可使用上传、新建文件夹、回收站与管理概览功能。</p>
             <form class="modal-form" data-form="login">
               <input class="inline-input" name="username" placeholder="用户名" value="${escapeHtml(values.username || '')}">
               <input class="inline-input" type="password" name="password" placeholder="密码" value="${escapeHtml(values.password || '')}">
@@ -49,12 +54,12 @@ export function createModalRenderers(deps) {
         <div class="modal-wrap" data-action="close-modal-backdrop">
           <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="folder-title" data-stop-close="true">
             <h3 id="folder-title" class="modal-title">新建文件夹</h3>
-            <p class="modal-copy">当前目录下会创建一个新的资源容器，你可以随后继续上传文件或整理层级。</p>
+            <p class="modal-copy">在当前文件夹下创建一个新的文件夹，你可以随后继续上传文件或整理层级。</p>
             <form class="modal-form" data-form="folder">
               <input class="inline-input" name="folderName" placeholder="例如：品牌素材 / 2026 归档" value="${escapeHtml(values.folderName || '')}">
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">名称会直接作为目录路径的一部分，请尽量简洁清晰。</div>'}
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">名称会直接作为路径的一部分，请尽量简洁清晰。</div>'}
               <div class="btn-row" style="margin-top:6px;">
-                <button class="btn btn-primary" type="submit">创建目录</button>
+                <button class="btn btn-primary" type="submit">创建文件夹</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
               </div>
             </form>
@@ -69,7 +74,7 @@ export function createModalRenderers(deps) {
         <div class="modal-wrap" data-action="close-modal-backdrop">
           <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rename-title" data-stop-close="true">
             <h3 id="rename-title" class="modal-title">重命名资源</h3>
-            <p class="modal-copy">新的名称会直接应用到当前文件或目录。请保持名称清晰，并避免与同层级项目重名。</p>
+            <p class="modal-copy">新的名称会直接应用到当前文件或文件夹。请保持名称清晰，并避免与同层级项目重名。</p>
             <form class="modal-form" data-form="rename">
               <input class="inline-input" name="newName" placeholder="输入新的名称" value="${escapeHtml(values.newName || modal.entry?.name || '')}">
               ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">重命名会保持当前路径层级不变，只修改当前项目名称。</div>'}
@@ -118,7 +123,7 @@ export function createModalRenderers(deps) {
             <form class="modal-form" data-form="unlock-path">
               <div class="helper-text">目标路径：${escapeHtml(modal.path || '')}</div>
               <input class="inline-input" name="password" type="password" placeholder="输入访问密码">
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">验证通过后会自动继续预览、下载或进入目录。</div>'}
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">验证通过后会自动继续预览、下载或进入文件夹。</div>'}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit">解锁并继续</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -130,6 +135,7 @@ export function createModalRenderers(deps) {
     }
 
     if (modal.type === 'preview') {
+      const showMarkdownToggle = isMarkdownName(modal.entry?.name) && modal.contentMode === 'text' && !modal.loading && !modal.error && !modal.editing;
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">
           <div class="modal-card preview-modal" role="dialog" aria-modal="true" aria-labelledby="preview-title" data-stop-close="true">
@@ -139,6 +145,8 @@ export function createModalRenderers(deps) {
                 <p class="modal-copy">${escapeHtml(getEntryPath(modal.entry) || '')}</p>
               </div>
               <div class="btn-row">
+                ${modal.editable && modal.editing ? `<span class="preview-edit-meta" data-dirty="${modal.dirty ? 'true' : 'false'}">${modal.dirty ? '● 未保存' : '已是最新'}</span>` : ''}
+                ${showMarkdownToggle ? `<button class="btn" data-action="toggle-markdown-raw">${modal.showRaw ? '渲染视图' : '查看原文'}</button>` : ''}
                 ${modal.editable ? `<button class="btn" data-action="toggle-preview-edit">${modal.editing ? '退出编辑' : '编辑文本'}</button>` : ''}
                 ${modal.editable && modal.editing ? `<button class="btn btn-primary" data-action="save-preview-edit"><span class="icon">${icons.save}</span>保存</button>` : ''}
                 <button class="btn" data-action="close-modal"><span class="icon">${icons.close}</span>关闭</button>
