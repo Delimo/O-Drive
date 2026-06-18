@@ -134,15 +134,23 @@ export function createSharedRenderers(deps) {
     return current ? current[1] : '全部';
   }
 
-  function renderCrumb(item) {
+  function renderCrumb(item, index, items) {
+    const isLast = index === items.length - 1;
+    const isFirst = index === 0;
+    const separator = index > 0 ? '<span class="crumb-sep">/</span>' : '';
+
+    if (item.ellipsis) {
+      return `${separator}<button class="crumb-btn crumb-ellipsis" data-action="expand-crumbs" title="展开全部路径">...</button>`;
+    }
+
     return `
-      <button class="text-sm font-bold text-slate-800 bg-[#fafbfc] border border-slate-200 rounded-lg px-4 py-1.5 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors ${item.current ? 'bg-slate-100 border-slate-300' : ''}" data-action="crumb" data-path="${escapeHtml(item.path)}">
+      ${separator}<button class="crumb-btn ${isLast ? 'crumb-current' : ''}" data-action="crumb" data-path="${escapeHtml(item.path)}">
         ${escapeHtml(item.label)}
       </button>
     `;
   }
 
-  function buildBreadcrumbs(path) {
+  function buildBreadcrumbs(path, expanded = false) {
     const parts = normalizeKey(path).split('/').filter(Boolean);
     const crumbs = [{ label: '根目录', path: '', current: parts.length === 0 }];
     let current = '';
@@ -152,7 +160,11 @@ export function createSharedRenderers(deps) {
       crumbs.push({ label: part, path: current, current: index === parts.length - 1 });
     });
 
-    return crumbs;
+    if (expanded || crumbs.length <= 4) return crumbs;
+
+    const first = crumbs[0];
+    const last = crumbs[crumbs.length - 1];
+    return [first, { label: '...', path: '', ellipsis: true }, last];
   }
 
   function renderEntryCard(item, state) {
@@ -179,6 +191,19 @@ export function createSharedRenderers(deps) {
             ${meta.map(text => `<span class="item-chip">${escapeHtml(text)}</span>`).join('')}
           </div>
         </div>
+        ${!isFolder ? `
+        <div class="item-actions">
+          <button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">
+            ${icons.eye}
+          </button>
+          <button class="item-action-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">
+            ${icons.download}
+          </button>
+          <button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
+            ${icons.info}
+          </button>
+        </div>
+        ` : ''}
       </article>
     `;
   }

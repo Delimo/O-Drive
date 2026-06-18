@@ -87,6 +87,7 @@ export function createRootStore({ page }) {
       selectedKeys: [],
       trashSelectedKeys: [],
       clipboard: null,
+      expandedCrumbs: false,
       error: '',
       searching: false,
       batchBusy: false,
@@ -230,6 +231,9 @@ export function createRootStore({ page }) {
       },
       setClipboard(state, action) {
         return { ...state, clipboard: action.payload };
+      },
+      setExpandedCrumbs(state, action) {
+        return { ...state, expandedCrumbs: action.payload };
       },
       setTrashMode(state, action) {
         return { ...state, trashMode: action.payload };

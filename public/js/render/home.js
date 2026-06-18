@@ -23,12 +23,14 @@ export function createHomeRenderers(deps) {
       <div class="toolbar-card flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
         <div class="tools-left">
           <div class="crumbs">
-            ${breadcrumbsMarkup(explorer.path)}
+            ${breadcrumbsMarkup(explorer.path, explorer.expandedCrumbs)}
           </div>
         </div>
         <div class="tools-right flex items-center gap-2">
+          ${state.app.role === 'admin' ? `
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="upload">上传</button>
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="open-folder-modal">新建</button>
+          ` : ''}
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="toggle-view">${humanView(explorer.view)}</button>
           <div class="relative inline-block">
@@ -58,8 +60,8 @@ export function createHomeRenderers(deps) {
     `;
   }
 
-  function breadcrumbsMarkup(path) {
-    return buildBreadcrumbs(path).map(renderCrumb).join('');
+  function breadcrumbsMarkup(path, expanded) {
+    return `<div class="crumbs-bar">${buildBreadcrumbs(path, expanded).map(renderCrumb).join('')}</div>`;
   }
 
   function renderFilterPanel(explorer) {

@@ -325,7 +325,7 @@ function renderHeader(state) {
           ${
             page === 'admin'
               ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" href="/">返回云盘</a>`
-              : `${page !== 'admin' ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" href="/admin">管理</a>` : ''}${role === 'admin'
+              : `${role === 'admin' ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" href="/admin">管理</a>` : ''}${role === 'admin'
                   ? `<button class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" data-action="logout">退出</button>`
                   : `<button class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" data-action="open-login">登录</button>`}`
           }

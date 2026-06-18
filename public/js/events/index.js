@@ -139,7 +139,13 @@ export function registerAppEvents(deps) {
       }
 
       if (action === 'crumb') {
+        store.dispatch(actions.explorer.setExpandedCrumbs(false));
         navigateToExplorerPath(path || '');
+        return;
+      }
+
+      if (action === 'expand-crumbs') {
+        store.dispatch(actions.explorer.setExpandedCrumbs(true));
         return;
       }
 
