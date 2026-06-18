@@ -270,6 +270,55 @@ export function mockTextContent(entry) {
   return `这是 ${name} 的设计预览占位文本内容。\n\n实际部署后会显示文件的真实文本。`;
 }
 
+export const mockMaintenanceSnapshot = {
+  indexCount: 128,
+  indexTotalSize: 1288490188800,
+  indexTotalSizeFormatted: '1.2 GB',
+  indexFresh: true,
+  r2SampleCount: 128,
+  r2SampleTruncated: false,
+  accessAttemptCount: 0,
+  trashCount: 6,
+  logsCount: 142,
+  taskCount: 0,
+  thumbnailsPresent: true,
+};
+
+export const mockTasks = [
+  {
+    id: 'task-upload-001',
+    type: 'upload',
+    status: 'completed',
+    total: 5,
+    completed: 5,
+    failed: 0,
+    payload: { files: [
+      { name: '产品说明.pdf', size: 2457600 },
+      { name: 'banner.png', size: 1843200 },
+      { name: '宣传视频.mp4', size: 52428800 },
+      { name: 'readme.md', size: 4096 },
+      { name: 'release.zip', size: 10485760 },
+    ]},
+    createdAt: now - 30 * 60 * 1000,
+    finishedAt: now - 25 * 60 * 1000,
+  },
+  {
+    id: 'task-upload-002',
+    type: 'upload',
+    status: 'partial',
+    total: 3,
+    completed: 2,
+    failed: 1,
+    payload: { files: [
+      { name: '设计稿.fig', size: 15728640 },
+      { name: '素材包.zip', size: 8388608 },
+      { name: '损坏文件.bin', size: 123456 },
+    ]},
+    createdAt: now - 2 * hour,
+    finishedAt: now - 90 * 60 * 1000,
+  },
+];
+
 export const mockShareItem = {
   name: '产品说明.pdf',
   sizeFormatted: '2.3 MB',

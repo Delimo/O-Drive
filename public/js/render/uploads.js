@@ -51,7 +51,10 @@ export function createUploadsRenderer(deps) {
               <div class="upload-row-status">${escapeHtml(statusLabel(item))}</div>
               <div class="upload-row-actions" style="display:flex;gap:4px;">
                 ${item.status === 'uploading' || item.status === 'pending'
-                  ? `<button class="upload-row-btn" data-action="cancel-upload" data-id="${escapeHtml(item.id)}" type="button" title="取消">${icons.close}</button>`
+                  ? `<button class="upload-row-btn" data-action="pause-upload" data-id="${escapeHtml(item.id)}" type="button" title="暂停">${icons.pause}</button><button class="upload-row-btn" data-action="cancel-upload" data-id="${escapeHtml(item.id)}" type="button" title="取消">${icons.close}</button>`
+                  : ''}
+                ${item.status === 'paused'
+                  ? `<button class="upload-row-btn" data-action="resume-upload" data-id="${escapeHtml(item.id)}" type="button" title="继续">${icons.play}</button><button class="upload-row-btn" data-action="cancel-upload" data-id="${escapeHtml(item.id)}" type="button" title="取消">${icons.close}</button>`
                   : ''}
                 ${item.status === 'cancelled'
                   ? `<button class="upload-row-btn" data-action="retry-upload" data-id="${escapeHtml(item.id)}" type="button" title="重试">${icons.refresh}</button><button class="upload-row-remove" data-action="dismiss-upload" data-key="${escapeHtml(item.id)}" type="button" aria-label="移除">×</button>`

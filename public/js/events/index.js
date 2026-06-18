@@ -258,6 +258,36 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'refresh-admin-maintenance') {
+        store.dispatch(thunks.loadMaintenanceSnapshot());
+        return;
+      }
+
+      if (action === 'refresh-tasks') {
+        store.dispatch(thunks.loadTasks());
+        return;
+      }
+
+      if (action === 'confirm-maintenance-action') {
+        const maintAction = actionNode.dataset.maintenanceAction || '';
+        const maintLabel = actionNode.dataset.maintenanceLabel || '';
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-maintenance-action',
+          loading: false,
+          error: '',
+          maintenanceAction: maintAction,
+          maintenanceLabel: maintLabel,
+        }));
+        return;
+      }
+
+      if (action === 'execute-maintenance-action') {
+        const modal = store.getState().app.modal;
+        if (!modal || !modal.maintenanceAction) return;
+        store.dispatch(thunks.executeMaintenanceAction(modal.maintenanceAction));
+        return;
+      }
+
       if (action === 'show-add-webhook') {
         store.dispatch(actions.app.setModal({
           type: 'add-webhook',
@@ -424,6 +454,18 @@ export function registerAppEvents(deps) {
       if (action === 'cancel-upload') {
         const uploadId = actionNode.dataset.id || key;
         store.dispatch(thunks.cancelFileUpload(uploadId));
+        return;
+      }
+
+      if (action === 'pause-upload') {
+        const uploadId = actionNode.dataset.id || key;
+        store.dispatch(thunks.pauseFileUpload(uploadId));
+        return;
+      }
+
+      if (action === 'resume-upload') {
+        const uploadId = actionNode.dataset.id || key;
+        store.dispatch(thunks.resumeFileUpload(uploadId));
         return;
       }
 

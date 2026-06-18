@@ -11,7 +11,7 @@ import { createSharedRenderers } from '../public/js/render/shared.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
-import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries } from '../public/js/mock/index.js';
+import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
 import { createPageRenderers } from '../public/js/render/pages.js';
 
@@ -200,6 +200,20 @@ test('uploads panel shows progress and success summary', () => {
     ] },
   }));
   assert.match(done, /成功 1 个，失败 1 个/);
+});
+
+test('uploads panel shows pause button on active items and resume on paused', () => {
+  const active = uploads.renderUploadsPanel(makeState({
+    uploads: { items: [{ id: '1', name: 'a.txt', status: 'uploading', progress: 40, error: '' }] },
+  }));
+  assert.match(active, /data-action="pause-upload"/);
+  assert.match(active, /data-action="cancel-upload"/);
+
+  const paused = uploads.renderUploadsPanel(makeState({
+    uploads: { items: [{ id: '2', name: 'b.txt', status: 'paused', progress: 40, error: '' }] },
+  }));
+  assert.match(paused, /data-action="resume-upload"/);
+  assert.match(paused, /已暂停/);
 });
 
 // ===== 批量栏忙碌态 =====
@@ -566,4 +580,178 @@ test('admin protected paths section renders path list with delete buttons', () =
   assert.match(html, /机密文件夹/);
   assert.match(html, /data-action="confirm-delete-protected-path"/);
   assert.match(html, /内部敏感资料/);
+});
+
+test('admin maintenance section renders snapshot and action buttons', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /维护操作/);
+  assert.match(html, /128/);
+  assert.match(html, /重建文件索引/);
+  assert.match(html, /清理访问记录/);
+  assert.match(html, /清理缩略图缓存/);
+  assert.match(html, /清理旧操作日志/);
+  assert.match(html, /清理已完成任务/);
+  assert.match(html, /确认系统提醒/);
+  assert.match(html, /data-action="confirm-maintenance-action"/);
+  assert.match(html, /data-maintenance-action="rebuild-index"/);
+  assert.match(html, /data-maintenance-action="cleanup-warnings"/);
+});
+
+test('admin maintenance section shows loading state', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: null, maintenanceLoading: true, maintenanceError: '', maintenanceBusyAction: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /维护操作/);
+  assert.match(html, /加载中/);
+});
+
+test('admin maintenance section shows error state', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: null, maintenanceLoading: false, maintenanceError: '加载失败', maintenanceBusyAction: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /维护操作/);
+  assert.match(html, /加载失败/);
+});
+
+test('confirm-maintenance-action modal shows warning and execute action', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: { type: 'confirm-maintenance-action', loading: false, error: '', maintenanceAction: 'rebuild-index', maintenanceLabel: '重建文件索引' },
+    },
+  });
+  assert.match(html, /确认执行/);
+  assert.match(html, /重建文件索引/);
+  assert.match(html, /data-action="execute-maintenance-action"/);
+  assert.match(html, /确认执行/);
+  assert.match(html, /data-action="close-modal"/);
+});
+
+test('admin task list section renders upload task records', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: null, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      tasks: mockTasks, tasksLoading: false,
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /上传任务/);
+  assert.match(html, /产品说明\.pdf/);
+  assert.match(html, /5\/5/);
+  assert.match(html, /2\/3/);
+  assert.match(html, /data-action="refresh-tasks"/);
+});
+
+test('admin task list section shows loading state', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: null, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      tasks: [], tasksLoading: true,
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /上传任务/);
+  assert.match(html, /加载中/);
+});
+
+test('admin task list is hidden when empty', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: null, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      tasks: [], tasksLoading: false,
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.doesNotMatch(html, /上传任务/);
 });

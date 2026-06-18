@@ -94,7 +94,7 @@ const {
   isProtectedEntry,
 });
 
-const { apiClient, authApi, fileApi, trashApi, shareApi, adminApi, multipartApi } = createApiLayer({
+const { apiClient, authApi, fileApi, trashApi, shareApi, adminApi, multipartApi, maintenanceApi } = createApiLayer({
   fetchImpl: fetch,
   getState: () => store.getState(),
   encodeRouteKey,
@@ -121,6 +121,8 @@ const thunks = createThunks({
   fileApi,
   adminApi,
   shareApi,
+  maintenanceApi,
+  taskApi,
   multipartApi,
   previewService,
   uploadService,
@@ -342,6 +344,8 @@ store.dispatch(thunks.loadRole()).then(async () => {
         store.dispatch(thunks.loadAdminStorageConfig()),
         store.dispatch(thunks.loadAdminWebhooks()),
         store.dispatch(thunks.loadAdminWebhookDeliveries()),
+        store.dispatch(thunks.loadMaintenanceSnapshot()),
+        store.dispatch(thunks.loadTasks()),
       ]);
     }
   } else if (page === 'share') {

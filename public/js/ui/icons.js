@@ -31,4 +31,6 @@ export const icons = {
   edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Zm8.8-13.8 3.4 3.4"/></svg>',
   save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.75A1.75 1.75 0 0 1 6.75 3h8.38c.46 0 .9.18 1.22.5l2.15 2.15c.32.32.5.76.5 1.22v12.38A1.75 1.75 0 0 1 17.25 21H6.75A1.75 1.75 0 0 1 5 19.25V4.75Zm3 0v4.5h7v-3.5m-5 9h4"/></svg>',
   close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>',
+  play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg>',
 };

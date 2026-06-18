@@ -481,6 +481,31 @@ export function createModalRenderers(deps) {
       `;
     }
 
+    if (modal.type === 'confirm-maintenance-action') {
+      const actionLabel = modal.maintenanceLabel || '此操作';
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-maint-title" data-stop-close="true">
+            <h3 id="confirm-maint-title" class="modal-title">确认执行：${escapeHtml(actionLabel)}</h3>
+            <p class="modal-copy">你确定要执行维护操作"${escapeHtml(actionLabel)}"吗？</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作可能需要一定时间</h3>
+              <div class="attention-copy">执行过程中请勿刷新页面。操作完成后会自动刷新维护快照。</div>
+            </div>
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在执行，请稍候...</div>' : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-maintenance-action" ${modal.loading ? 'disabled' : ''}>
+                ${icons.trash}
+                <span>${modal.loading ? '执行中...' : '确认执行'}</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     if (modal.type === 'confirm-cleanup-expired') {
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">

@@ -128,6 +128,13 @@ export function createRootStore({ page }) {
       webhooksError: '',
       webhookDeliveries: [],
       webhookDeliveriesLoading: false,
+      maintenance: null,
+      maintenanceLoading: false,
+      maintenanceError: '',
+      maintenanceBusyAction: '',
+      tasks: [],
+      tasksLoading: false,
+      activeUploadTaskId: '',
     },
     share: {
       token: getShareToken(),
@@ -382,6 +389,27 @@ export function createRootStore({ page }) {
       },
       setWebhookDeliveries(state, action) {
         return { ...state, webhookDeliveriesLoading: false, webhookDeliveries: action.payload || [] };
+      },
+      setMaintenanceLoading(state, action) {
+        return { ...state, maintenanceLoading: action.payload };
+      },
+      setMaintenance(state, action) {
+        return { ...state, maintenanceLoading: false, maintenanceError: '', maintenance: action.payload };
+      },
+      setMaintenanceError(state, action) {
+        return { ...state, maintenanceLoading: false, maintenanceError: action.payload, maintenance: null };
+      },
+      setMaintenanceBusyAction(state, action) {
+        return { ...state, maintenanceBusyAction: action.payload || '' };
+      },
+      setTasksLoading(state, action) {
+        return { ...state, tasksLoading: action.payload };
+      },
+      setTasks(state, action) {
+        return { ...state, tasksLoading: false, tasks: action.payload || [] };
+      },
+      setActiveUploadTaskId(state, action) {
+        return { ...state, activeUploadTaskId: action.payload || '' };
       },
     },
   });

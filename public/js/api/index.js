@@ -386,6 +386,42 @@ export function createApiLayer(deps) {
     },
   };
 
+  const maintenanceApi = {
+    snapshot() {
+      return request('/api/admin/maintenance');
+    },
+    executeAction(action) {
+      return request('/api/admin/maintenance', {
+        method: 'POST',
+        json: { action },
+        csrf: true,
+      });
+    },
+  };
+
+  const taskApi = {
+    create(type, payload) {
+      return request('/api/tasks', {
+        method: 'POST',
+        json: { type, payload },
+        csrf: true,
+      });
+    },
+    list(limit = 20) {
+      return request(`/api/tasks?limit=${limit}`);
+    },
+    get(id) {
+      return request(`/api/tasks?id=${encodeURIComponent(id)}`);
+    },
+    update(id, data) {
+      return request(`/api/tasks?id=${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        json: data,
+        csrf: true,
+      });
+    },
+  };
+
   return {
     apiClient,
     authApi,
@@ -394,5 +430,7 @@ export function createApiLayer(deps) {
     shareApi,
     adminApi,
     multipartApi,
+    maintenanceApi,
+    taskApi,
   };
 }

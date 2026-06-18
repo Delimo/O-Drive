@@ -1,8 +1,9 @@
 import { readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const EXTENSIONS = new Set(['.js', '.mjs']);
 const EXCLUDE_DIRS = new Set(['node_modules', '.git', '.wrangler']);
 

@@ -155,6 +155,10 @@ export function createPageRenderers(deps) {
             ${icons.list}
             <span>投递记录</span>
           </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-maintenance">
+            ${icons.refresh}
+            <span>维护操作</span>
+          </button>
         </div>
       </section>
     `;
@@ -920,6 +924,180 @@ export function createPageRenderers(deps) {
     `;
   }
 
+  const MAINTENANCE_ACTIONS = [
+    { action: 'rebuild-index', label: '重建文件索引', desc: '从 R2 存储重新扫描并同步文件索引表，修复索引与存储不一致的问题。', danger: false },
+    { action: 'cleanup-access-attempts', label: '清理访问记录', desc: '删除所有路径访问失败记录，释放数据库空间。', danger: false },
+    { action: 'cleanup-thumbnails', label: '清理缩略图缓存', desc: '删除 R2 中所有缩略图缓存对象，释放存储空间。', danger: false },
+    { action: 'cleanup-logs', label: '清理旧操作日志', desc: '删除超过保留期限的操作日志记录，释放数据库空间。', danger: false },
+    { action: 'cleanup-tasks', label: '清理已完成任务', desc: '删除所有已完成的后台文件任务记录，释放数据库空间。', danger: false },
+    { action: 'cleanup-warnings', label: '确认系统提醒', desc: '将所有未确认的系统提醒标记为已确认，清除提醒标记。', danger: false },
+  ];
+
+  function renderAdminMaintenanceSection(admin) {
+    const { maintenance, maintenanceLoading, maintenanceError, maintenanceBusyAction } = admin;
+
+    if (maintenanceError) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">维护操作</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-maintenance">${icons.refresh}<span>重新加载</span></button>
+          </div>
+          <div class="empty-state">
+            <div class="empty-orb">${icons.lock}</div>
+            <p class="empty-copy">${escapeHtml(maintenanceError)}</p>
+          </div>
+        </section>
+      `;
+    }
+
+    if (maintenanceLoading || !maintenance) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">维护操作</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-maintenance">${icons.refresh}<span>刷新</span></button>
+          </div>
+          ${renderEmptyState('加载中', '正在获取系统维护快照...', icons.refresh)}
+        </section>
+      `;
+    }
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">维护操作</h2>
+            <p class="admin-section-copy">系统维护快照与一键操作，所有操作均记录到操作日志。</p>
+          </div>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-maintenance">${icons.refresh}<span>刷新</span></button>
+        </div>
+        <div class="hero-strip">
+          <div class="mini-stat">
+            <div class="mini-stat-label">索引记录</div>
+            <div class="mini-stat-value">${safeText(maintenance.indexCount, '0')}</div>
+            <div class="mini-stat-meta">${safeText(maintenance.indexTotalSizeFormatted, '0 B')}${maintenance.indexFresh ? ' · 同步中' : ' · 待同步'}</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">R2 对象</div>
+            <div class="mini-stat-value">${safeText(maintenance.r2SampleCount, '0')}</div>
+            <div class="mini-stat-meta">${maintenance.r2SampleTruncated ? '超 1000 条' : '可见对象数'}</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">访问记录</div>
+            <div class="mini-stat-value">${safeText(maintenance.accessAttemptCount, '0')}</div>
+            <div class="mini-stat-meta">失败记录数</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">回收站</div>
+            <div class="mini-stat-value">${safeText(maintenance.trashCount, '0')}</div>
+            <div class="mini-stat-meta">当前回收站项目</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">操作日志</div>
+            <div class="mini-stat-value">${safeText(maintenance.logsCount, '0')}</div>
+            <div class="mini-stat-meta">总记录数</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">后台任务</div>
+            <div class="mini-stat-value">${safeText(maintenance.taskCount, '0')}</div>
+            <div class="mini-stat-meta">待处理任务</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">缩略图缓存</div>
+            <div class="mini-stat-value">${maintenance.thumbnailsPresent ? icons.check : icons.close}</div>
+            <div class="mini-stat-meta">${maintenance.thumbnailsPresent ? '有缓存' : '无缓存'}</div>
+          </div>
+        </div>
+        <div class="admin-grid" style="margin-top:16px;">
+          ${MAINTENANCE_ACTIONS.map(item => {
+            const busy = maintenanceBusyAction === item.action;
+            return `
+              <div class="admin-card span-4">
+                <div class="admin-label">${escapeHtml(item.label)}</div>
+                <div class="admin-copy" style="margin:6px 0 14px;font-size:13px;line-height:1.6;">${escapeHtml(item.desc)}</div>
+                <button class="btn ${item.danger ? 'btn-danger' : 'btn-primary'} toolbar-btn" type="button"
+                  data-action="confirm-maintenance-action"
+                  data-maintenance-action="${escapeHtml(item.action)}"
+                  data-maintenance-label="${escapeHtml(item.label)}"
+                  ${busy ? 'disabled' : ''}>
+                  ${busy ? icons.refresh : icons.trash}
+                  <span>${busy ? '执行中...' : '执行'}</span>
+                </button>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderAdminTaskListSection(admin) {
+    const { tasks, tasksLoading } = admin;
+    if (tasksLoading) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">上传任务</h2></div>
+          </div>
+          ${renderEmptyState('加载中', '正在获取任务列表...', icons.refresh)}
+        </section>
+      `;
+    }
+    if (!tasks || !tasks.length) {
+      return '';
+    }
+    const fmtTime = ts => {
+      if (!ts) return '-';
+      const d = new Date(ts);
+      return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    };
+    const statusLabel = status => {
+      if (status === 'completed') return '<span class="badge badge-success">完成</span>';
+      if (status === 'partial') return '<span class="badge badge-warning">部分失败</span>';
+      if (status === 'failed') return '<span class="badge badge-error">失败</span>';
+      if (status === 'running') return '<span class="badge badge-info">运行中</span>';
+      return '<span class="badge">待处理</span>';
+    };
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">上传任务</h2>
+            <p class="admin-section-copy">最近的上传队列任务记录。</p>
+          </div>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-tasks">${icons.refresh}<span>刷新</span></button>
+        </div>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>文件数</th>
+                <th>进度</th>
+                <th>状态</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tasks.map(t => {
+                const files = t.payload?.files || [];
+                const fileList = files.slice(0, 3).map(f => escapeHtml(f.name)).join(', ') + (files.length > 3 ? ` 等 ${files.length} 个` : '');
+                return `
+                  <tr>
+                    <td>${escapeHtml(fileList)}</td>
+                    <td>${t.completed || 0}/${t.total || 0}</td>
+                    <td>${statusLabel(t.status)}</td>
+                    <td>${fmtTime(t.createdAt)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }
+
   function renderAdminPanelContent(admin) {
     if (admin.loading) {
       return renderEmptyState('正在加载概览', '正在统计文件数量、索引状态与回收站信息。', icons.stats);
@@ -952,6 +1130,8 @@ export function createPageRenderers(deps) {
         ${renderAdminStorageSection(admin)}
         ${renderAdminWebhooksSection(admin)}
         ${renderAdminWebhookDeliveriesSection(admin)}
+        ${renderAdminMaintenanceSection(admin)}
+        ${renderAdminTaskListSection(admin)}
         ${renderAdminSharesSection(admin)}
       </div>
     `;

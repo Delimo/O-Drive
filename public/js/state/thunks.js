@@ -1,4 +1,4 @@
-import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent, mockAdminHealth, mockAdminLogs, mockProtectedPaths, mockAdminQuota, mockHiddenPaths, mockStorageConfig, mockWebhooks, mockWebhookDeliveries } from '../mock/index.js';
+import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent, mockAdminHealth, mockAdminLogs, mockProtectedPaths, mockAdminQuota, mockHiddenPaths, mockStorageConfig, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks } from '../mock/index.js';
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
 
@@ -10,6 +10,8 @@ export function createThunks(deps) {
     fileApi,
     adminApi,
     shareApi,
+    maintenanceApi,
+    taskApi,
     previewService,
     uploadService,
     normalizeKey,
@@ -281,11 +283,33 @@ export function createThunks(deps) {
       let uploaded = 0;
       let failed = 0;
       let cancelledItems = [];
+      let uploadTaskId = '';
 
       const dirsToCreate = [...new Set(queued.filter(q => q.item.relativeDir).map(q => q.item.targetDir))];
       for (const dir of dirsToCreate) {
         await uploadService.ensureDirectoryTree(dir);
       }
+
+      try {
+        const { response, data } = await taskApi.create('upload', {
+          files: queued.map(q => ({ name: q.name, size: q.item.file.size })),
+        });
+        if (response.ok && data?.item?.id) {
+          uploadTaskId = data.item.id;
+          dispatch(actions.admin.setActiveUploadTaskId(uploadTaskId));
+        }
+      } catch (_) {}
+
+      const updateTask = async () => {
+        if (!uploadTaskId) return;
+        try {
+          await taskApi.update(uploadTaskId, {
+            total: queued.length,
+            completed: uploaded,
+            failed,
+          });
+        } catch (_) {}
+      };
 
       for (const q of queued) {
         const { item, multipart } = q;
@@ -321,6 +345,7 @@ export function createThunks(deps) {
 
           uploaded += 1;
           dispatch(actions.uploads.update({ id: q.id, status: 'success', progress: 100 }));
+          await updateTask();
         } catch (error) {
           if (error.message === 'UPLOAD_CANCELLED') {
             cancelledItems.push(q.id);
@@ -329,7 +354,16 @@ export function createThunks(deps) {
             failed += 1;
             dispatch(actions.uploads.update({ id: q.id, status: 'error', error: error.message || '上传失败' }));
           }
+          await updateTask();
         }
+      }
+
+      if (uploadTaskId) {
+        try {
+          const finalStatus = failed === 0 ? 'completed' : uploaded === 0 ? 'failed' : 'partial';
+          await taskApi.update(uploadTaskId, { status: finalStatus, finishedAt: Date.now() });
+        } catch (_) {}
+        dispatch(actions.admin.setActiveUploadTaskId(''));
       }
 
       if (failed === 0 && cancelledItems.length === 0) {
@@ -369,6 +403,17 @@ export function createThunks(deps) {
     },
     cancelFileUpload: id => async dispatch => {
       dispatch(actions.uploads.cancelItem(id));
+    },
+    pauseFileUpload: id => async dispatch => {
+      dispatch(actions.uploads.pauseItem(id));
+    },
+    resumeFileUpload: id => async (dispatch, getState) => {
+      const item = getState().uploads.items.find(i => i.id === id);
+      if (!item) return;
+      if (item.multipart) {
+        dispatchToast('info', `分片上传暂不支持断点续传，将重新开始`);
+      }
+      dispatch(actions.uploads.resumeItem({ id }));
     },
     retryFileUpload: id => async (dispatch, getState) => {
       const state = getState();
@@ -950,6 +995,49 @@ export function createThunks(deps) {
         }
       } catch (error) {
         dispatch(actions.app.setModal({ ...modal, error: error.message || '解锁失败' }));
+      }
+    },
+    loadTasks: () => async dispatch => {
+      dispatch(actions.admin.setTasksLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setTasks(mockTasks));
+        return;
+      }
+      try {
+        const { response, data } = await taskApi.list(20);
+        if (!response.ok) throw new Error(data?.message || '任务列表加载失败');
+        dispatch(actions.admin.setTasks(data.items || []));
+      } catch (_) {
+        dispatch(actions.admin.setTasksLoading(false));
+      }
+    },
+    loadMaintenanceSnapshot: () => async dispatch => {
+      dispatch(actions.admin.setMaintenanceLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setMaintenance(mockMaintenanceSnapshot));
+        return;
+      }
+      try {
+        const { response, data } = await maintenanceApi.snapshot();
+        if (!response.ok) throw new Error(data?.message || '维护快照加载失败');
+        dispatch(actions.admin.setMaintenance(data));
+      } catch (error) {
+        dispatch(actions.admin.setMaintenanceError(error.message || '维护快照加载失败'));
+      }
+    },
+    executeMaintenanceAction: action => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      dispatch(actions.admin.setMaintenanceBusyAction(action));
+      try {
+        const { response, data } = await maintenanceApi.executeAction(action);
+        if (!response.ok) throw new Error(data?.message || '执行维护操作失败');
+        dispatch(actions.app.setModal(null));
+        dispatchToast('success', data?.message || '维护操作已完成');
+        await dispatch(thunks.loadMaintenanceSnapshot());
+      } catch (error) {
+        dispatchToast('error', error.message || '执行维护操作失败');
+      } finally {
+        dispatch(actions.admin.setMaintenanceBusyAction(''));
       }
     },
     unlockShare: password => async (dispatch, getState) => {

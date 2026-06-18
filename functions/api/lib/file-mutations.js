@@ -4,10 +4,9 @@
  * @typedef {ApiError & { completed?: number, failed?: Array<{path: string, message: string}> }} BatchResult
  */
 
-import { jsonResponse, normalizeName, addLog, isReservedKey } from './common.js';
+import { formatBytes as formatQuotaBytes, jsonResponse, normalizeName, addLog, isReservedKey } from './common.js';
 import { getFileIndexEntry, upsertFileIndex } from './file-index.js';
 import { copyTree, mapWithConcurrency } from './r2-tree.js';
-import { formatBytes as formatQuotaBytes } from './storage-quota.js';
 import {
   checkStorageQuota,
   chooseUploadStorage,
