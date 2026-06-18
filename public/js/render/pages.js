@@ -1253,37 +1253,38 @@ export function createPageRenderers(deps) {
   ];
 
   function renderAdminActiveTab(admin, activeTab) {
+    let content;
     switch (activeTab) {
       case 'overview':
         if (admin.loading) return renderEmptyState('正在加载概览', '正在统计文件数量、索引状态与回收站信息。', icons.stats);
         if (admin.error) return renderAdminErrorState(admin.error);
         if (!admin.stats) return renderEmptyState('暂无概览数据', '后台接口已接通，但当前还没有可展示的概览结果。', icons.stats);
-        return `
-          <div class="admin-scroll-stack">
-            <section class="admin-section admin-section-primary">
-              <div class="admin-section-head">
-                <div>
-                  <h2 class="admin-section-title">系统统计</h2>
-                  <p class="admin-section-copy">集中查看文件、索引、回收站与资源趋势，主内容区随页面高度自适应并保持内部滚动。</p>
-                </div>
+        content = `
+          <section class="admin-section admin-section-primary">
+            <div class="admin-section-head">
+              <div>
+                <h2 class="admin-section-title">系统统计</h2>
+                <p class="admin-section-copy">集中查看文件、索引、回收站与资源趋势，主内容区随页面高度自适应并保持内部滚动。</p>
               </div>
-              ${renderAdminStatsGrid(admin.stats)}
-            </section>
-          </div>
+            </div>
+            ${renderAdminStatsGrid(admin.stats)}
+          </section>
         `;
-      case 'health': return renderAdminHealthSection(admin);
-      case 'logs': return renderAdminLogsSection(admin);
-      case 'quota': return renderAdminQuotaSection(admin);
-      case 'protected': return renderAdminProtectedPathsSection(admin);
-      case 'hidden': return renderAdminHiddenPathsSection(admin);
-      case 'storage': return renderAdminStorageSection(admin);
-      case 'webhooks': return renderAdminWebhooksSection(admin);
-      case 'deliveries': return renderAdminWebhookDeliveriesSection(admin);
-      case 'maintenance': return renderAdminMaintenanceSection(admin);
-      case 'tasks': return renderAdminTaskListSection(admin);
-      case 'shares': return renderAdminSharesSection(admin);
-      default: return '';
+        break;
+      case 'health': content = renderAdminHealthSection(admin); break;
+      case 'logs': content = renderAdminLogsSection(admin); break;
+      case 'quota': content = renderAdminQuotaSection(admin); break;
+      case 'protected': content = renderAdminProtectedPathsSection(admin); break;
+      case 'hidden': content = renderAdminHiddenPathsSection(admin); break;
+      case 'storage': content = renderAdminStorageSection(admin); break;
+      case 'webhooks': content = renderAdminWebhooksSection(admin); break;
+      case 'deliveries': content = renderAdminWebhookDeliveriesSection(admin); break;
+      case 'maintenance': content = renderAdminMaintenanceSection(admin); break;
+      case 'tasks': content = renderAdminTaskListSection(admin); break;
+      case 'shares': content = renderAdminSharesSection(admin); break;
+      default: content = '';
     }
+    return `<div class="admin-scroll-stack">${content}</div>`;
   }
 
   function renderAdminPage(state) {
