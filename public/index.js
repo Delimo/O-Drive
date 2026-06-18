@@ -275,8 +275,8 @@ function renderHeader(state) {
   const searchPlaceholder = page === 'home' ? '搜索文件...' : '';
 
   return `
-    <header class="flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
-      <a href="/" class="flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
+    <header class="header-card flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+      <a href="/" class="brand-link flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
         <svg class="w-8 h-8 text-[#b9c6d2]" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
         </svg>

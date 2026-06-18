@@ -20,13 +20,13 @@ export function createHomeRenderers(deps) {
     const selectedEntries = selectedEntriesFromState(state);
 
     return `
-      <div class="flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm gap-4 flex-wrap">
-        <div class="flex items-center gap-2 flex-wrap">
+      <div class="toolbar-card flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+        <div class="tools-left">
           <div class="crumbs">
             ${breadcrumbsMarkup(explorer.path)}
           </div>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="tools-right flex items-center gap-2">
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="upload">上传</button>
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="open-folder-modal">新建</button>
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
@@ -52,7 +52,7 @@ export function createHomeRenderers(deps) {
         <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory>
       </div>
 
-      <div class="flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
+      <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col" id="explorerCard">
         ${renderExplorerContent(state, entries, selectedEntries)}
       </div>
     `;

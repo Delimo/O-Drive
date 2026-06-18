@@ -136,7 +136,7 @@ export function createSharedRenderers(deps) {
 
   function renderCrumb(item) {
     return `
-      <button class="crumb ${item.current ? 'is-current' : ''}" data-action="crumb" data-path="${escapeHtml(item.path)}">
+      <button class="text-sm font-bold text-slate-800 bg-[#fafbfc] border border-slate-200 rounded-lg px-4 py-1.5 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors ${item.current ? 'bg-slate-100 border-slate-300' : ''}" data-action="crumb" data-path="${escapeHtml(item.path)}">
         ${escapeHtml(item.label)}
       </button>
     `;
