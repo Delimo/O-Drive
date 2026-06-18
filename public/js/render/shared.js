@@ -194,11 +194,11 @@ export function createSharedRenderers(deps) {
 
     return `
       <article class="item-card item-card-legacy" data-action="open-entry" data-key="${escapeHtml(key)}">
+        <button class="item-pick ${picked ? 'is-active' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
+          ${picked ? icons.check : ''}
+        </button>
         <div class="item-icon ${iconClass(kind)} ${isImage ? 'item-icon-image' : ''}">
           ${iconContent}
-          <button class="item-pick ${picked ? 'is-active' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
-            ${picked ? icons.check : ''}
-          </button>
         </div>
         <div class="item-content">
           <h3 class="item-title">${escapeHtml(item.name || '未命名项目')}</h3>

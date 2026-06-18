@@ -364,15 +364,16 @@
 
 .item-pick {
   position: absolute;
-  bottom: 4px;
-  right: 4px;
+  top: 6px;
+  left: 6px;
   z-index: 2;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: none;
-  background: var(--accent);
-  color: white;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  color: var(--accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -380,17 +381,19 @@
   opacity: 0;
   transform: scale(0.6);
   transition: opacity 160ms ease, transform 160ms ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .item-card:hover .item-pick {
-  opacity: 0.5;
+  opacity: 0.6;
   transform: scale(1);
 }
 
 .item-pick.is-active {
   opacity: 1;
   transform: scale(1);
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
 }
 
 .item-pick.is-active svg {
@@ -747,42 +750,43 @@
   width: min(1080px, 100%);
   max-height: min(88vh, 980px);
   display: flex;
-  flex-direction: row;
-  overflow: hidden;
+  flex-direction: column;
 }
 
-.preview-modal .modal-sidebar {
-  width: 200px;
-  flex-shrink: 0;
-  padding: 24px;
+.preview-modal .modal-header {
   display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--line);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.preview-modal .modal-header-title {
+  min-width: 0;
+  flex: 1;
 }
 
 .preview-modal .modal-header-title .modal-title {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .preview-modal .modal-header-title .modal-copy {
   margin-top: 4px;
   font-size: 13px;
-  word-break: break-word;
 }
 
 .preview-modal .modal-header-actions {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
-  margin-top: auto;
-}
-
-.preview-modal .modal-header-actions .btn {
-  width: 100%;
-  justify-content: center;
+  flex-shrink: 0;
 }
 
 .preview-modal-body {
