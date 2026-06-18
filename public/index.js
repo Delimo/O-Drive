@@ -94,7 +94,7 @@ const {
   isProtectedEntry,
 });
 
-const { apiClient, authApi, fileApi, trashApi, shareApi, adminApi, multipartApi, maintenanceApi } = createApiLayer({
+const { apiClient, authApi, fileApi, trashApi, shareApi, adminApi, multipartApi, maintenanceApi, taskApi } = createApiLayer({
   fetchImpl: fetch,
   getState: () => store.getState(),
   encodeRouteKey,
