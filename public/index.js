@@ -283,21 +283,22 @@ function renderHeader(state) {
         </svg>
         <span class="text-xl font-bold text-slate-800">O-Drive</span>
       </a>
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-3">
         ${page === 'home' ? `
           <div class="search-bar relative">
-            <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400">🔍</span>
-            <input type="search" value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(searchPlaceholder)}" data-role="search-input" class="w-72 pl-10 pr-4 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all" ${searchDisabled ? 'disabled' : ''}>
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+            <input type="search" value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(searchPlaceholder)}" data-role="search-input" class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all" ${searchDisabled ? 'disabled' : ''}>
           </div>
         ` : `
           <div class="search-bar relative">
-            <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400">🔍</span>
-            <input type="search" value="" placeholder="搜索文件..." class="w-72 pl-10 pr-4 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+            <input type="search" value="" placeholder="搜索文件..." class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
           </div>
         `}
-        <button class="header-theme-btn px-3 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
+        <button class="header-theme-btn p-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
+        ${role === 'admin' ? `
         <div class="relative" data-component="notifications">
-          <button class="px-3 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors notif-bell" data-action="toggle-notifications" aria-label="通知">
+          <button class="p-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors notif-bell" data-action="toggle-notifications" aria-label="通知">
             <span class="icon">${icons.bell}</span>
             <span class="notif-badge" data-role="notif-count" style="display:${state.admin.notificationsUnread ? '' : 'none'}">${state.admin.notificationsUnread}</span>
           </button>
@@ -322,6 +323,7 @@ function renderHeader(state) {
             </div>
           </div>
         </div>
+        ` : ''}
         <div class="flex items-center gap-2">
           ${
             page === 'admin'
