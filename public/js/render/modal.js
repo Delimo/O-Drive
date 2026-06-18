@@ -536,39 +536,48 @@ export function createModalRenderers(deps) {
       const conflictMode = modal.conflictMode || 'rename';
       const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
       const fileList = files.map((f, idx) => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--panel-soft);border:1px solid var(--line);border-radius:8px;font-size:13px;">
-          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">${escapeHtml(f.name)}</span>
-          <span style="flex-shrink:0;margin-left:8px;color:var(--muted);">${formatBytes(f.size || 0)}</span>
-          <button class="upload-row-remove" data-action="remove-pending-file" data-index="${idx}" type="button" style="flex-shrink:0;margin-left:8px;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:2px 4px;border-radius:4px;font-size:16px;line-height:1;" aria-label="移除">×</button>
-        </div>
+        <li style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:${idx % 2 === 0 ? 'var(--panel-soft)' : 'transparent'};transition:background .15s;" onmouseenter="this.style.background='var(--hover-bg)'" onmouseleave="this.style.background='${idx % 2 === 0 ? 'var(--panel-soft)' : 'transparent'}'">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:500;color:var(--text);">${escapeHtml(f.name)}</span>
+          <span style="flex-shrink:0;font-size:12px;color:var(--muted);">${formatBytes(f.size || 0)}</span>
+          <button class="upload-row-remove" data-action="remove-pending-file" data-index="${idx}" type="button" style="flex-shrink:0;width:22px;height:22px;border:0;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;border-radius:6px;font-size:15px;line-height:1;transition:all .15s;" onmouseenter="this.style.background='rgba(192,57,43,0.08)';this.style.color='var(--danger)'" onmouseleave="this.style.background='transparent';this.style.color='var(--muted)'" aria-label="移除">×</button>
+        </li>
       `).join('');
 
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">
-          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="upload-confirm-title" data-stop-close="true" style="max-width:520px;">
-            <h3 id="upload-confirm-title" class="modal-title">确认上传</h3>
-            <p class="modal-copy" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span>你选择了 ${files.length} 个文件，共 ${formatBytes(totalSize)}。请确认上传内容和冲突策略。</span>
-              <button class="btn btn-small" type="button" data-action="add-more-files" style="flex-shrink:0;">+ 添加更多</button>
-            </p>
-            <div style="margin:16px 0;display:grid;gap:6px;max-height:320px;overflow-y:auto;">
-              ${fileList}
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="upload-confirm-title" data-stop-close="true" style="max-width:480px;padding:0;">
+            <div style="padding:24px 24px 0;">
+              <h3 id="upload-confirm-title" class="modal-title" style="margin:0;">确认上传</h3>
+              <p class="modal-copy" style="margin:8px 0 0;">请确认上传内容和冲突策略。</p>
             </div>
-            <div style="margin:12px 0;">
-              <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:6px;">同名文件冲突时：</label>
-              <select class="inline-input" data-action="set-upload-conflict-mode" style="width:100%;min-height:40px;">
-                <option value="rename" ${conflictMode === 'rename' ? 'selected' : ''}>自动重命名（推荐）</option>
-                <option value="overwrite" ${conflictMode === 'overwrite' ? 'selected' : ''}>覆盖已有文件</option>
-                <option value="skip" ${conflictMode === 'skip' ? 'selected' : ''}>跳过该文件</option>
-              </select>
+            <div style="padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;background:var(--accent-soft);color:var(--accent-strong);font-size:12px;font-weight:600;">${files.length} 个文件</span>
+                <span style="font-size:13px;color:var(--muted);">${formatBytes(totalSize)}</span>
+              </div>
+              <button class="btn btn-small btn-ghost" type="button" data-action="add-more-files" style="gap:4px;">+ 添加更多</button>
             </div>
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
-            <div class="btn-row" style="margin-top:6px;">
-              <button class="btn btn-primary" type="button" data-action="confirm-upload" ${modal.loading || !files.length ? 'disabled' : ''}>
+            <div style="padding:0 24px;max-height:300px;overflow-y:auto;">
+              <ul style="list-style:none;margin:0;padding:0;display:grid;gap:2px;">
+                ${fileList}
+              </ul>
+            </div>
+            <div style="padding:16px 24px;border-top:1px solid var(--line);margin-top:16px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <label style="flex-shrink:0;font-size:13px;color:var(--muted);">冲突策略</label>
+                <select class="inline-input" data-action="set-upload-conflict-mode" style="flex:1;min-height:38px;font-size:13px;">
+                  <option value="rename" ${conflictMode === 'rename' ? 'selected' : ''}>自动重命名</option>
+                  <option value="overwrite" ${conflictMode === 'overwrite' ? 'selected' : ''}>覆盖已有</option>
+                  <option value="skip" ${conflictMode === 'skip' ? 'selected' : ''}>跳过</option>
+                </select>
+              </div>
+            </div>
+            <div style="padding:0 24px 20px;display:flex;gap:10px;">
+              <button class="btn btn-primary" type="button" data-action="confirm-upload" style="flex:1;min-height:42px;" ${modal.loading || !files.length ? 'disabled' : ''}>
                 ${modal.loading ? icons.refresh : ''}
                 <span>${modal.loading ? '上传中...' : '开始上传'}</span>
               </button>
-              <button class="btn" type="button" data-action="cancel-upload-confirm" ${modal.loading ? 'disabled' : ''}>取消</button>
+              <button class="btn" type="button" data-action="cancel-upload-confirm" style="min-height:42px;" ${modal.loading ? 'disabled' : ''}>取消</button>
             </div>
           </div>
         </div>
