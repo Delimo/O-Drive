@@ -76,6 +76,7 @@ export function createSharedRenderers(deps) {
   function renderBatchBar(state, selectedEntries) {
     const busy = state.explorer.batchBusy;
     const disabled = busy ? 'disabled' : '';
+    const singleKey = selectedEntries.length === 1 ? selectedEntries[0]?.fullKey || '' : '';
     return `
       <div class="batch-bar">
         <div class="status-main">
@@ -83,6 +84,7 @@ export function createSharedRenderers(deps) {
           <span>${busy ? '正在处理批量操作，请稍候…' : `已选中 ${selectedEntries.length} 项，可以批量复制、移动或删除。`}</span>
         </div>
         <div class="btn-row">
+          ${singleKey ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(singleKey)}" ${disabled}>重命名</button>` : ''}
           <button class="btn" data-action="copy-selected" ${disabled}>复制</button>
           <button class="btn" data-action="move-selected" ${disabled}>移动</button>
           ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected" ${disabled}>删除</button>` : ''}
@@ -192,10 +194,12 @@ export function createSharedRenderers(deps) {
 
     return `
       <article class="item-card item-card-legacy" data-action="open-entry" data-key="${escapeHtml(key)}">
-        <button class="item-pick ${picked ? 'is-active' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
-          ${picked ? icons.check : ''}
-        </button>
-        <div class="item-icon ${iconClass(kind)} ${isImage ? 'item-icon-image' : ''}">${iconContent}</div>
+        <div class="item-icon ${iconClass(kind)} ${isImage ? 'item-icon-image' : ''}">
+          ${iconContent}
+          <button class="item-pick ${picked ? 'is-active' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
+            ${picked ? icons.check : ''}
+          </button>
+        </div>
         <div class="item-content">
           <h3 class="item-title">${escapeHtml(item.name || '未命名项目')}</h3>
           <div class="item-meta">

@@ -140,12 +140,12 @@ export function createModalRenderers(deps) {
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">
           <div class="modal-card preview-modal" role="dialog" aria-modal="true" aria-labelledby="preview-title" data-stop-close="true">
-            <div class="modal-header">
+            <div class="modal-sidebar">
               <div class="modal-header-title">
                 <h3 id="preview-title" class="modal-title">${escapeHtml(modal.entry?.name || '在线预览')}</h3>
                 <p class="modal-copy">${escapeHtml(getEntryPath(modal.entry) || '')}</p>
               </div>
-              <div class="modal-header-actions btn-row">
+              <div class="modal-header-actions">
                 ${modal.editable && modal.editing ? `<span class="preview-edit-meta" data-dirty="${modal.dirty ? 'true' : 'false'}">${modal.dirty ? '● 未保存' : '已是最新'}</span>` : ''}
                 ${showMarkdownToggle ? `<button class="btn" data-action="toggle-markdown-raw">${modal.showRaw ? '渲染视图' : '查看原文'}</button>` : ''}
                 ${modal.editable ? `<button class="btn" data-action="toggle-preview-edit">${modal.editing ? '退出编辑' : '编辑文本'}</button>` : ''}
@@ -200,8 +200,7 @@ export function createModalRenderers(deps) {
             ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在清空回收站，请稍候...</div>' : ''}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-clear-trash" ${modal.loading ? 'disabled' : ''}>
-                ${icons.trash}
-                <span>${modal.loading ? '清空中...' : '确认清空'}</span>
+                ${modal.loading ? '清空中...' : '确认清空'}
               </button>
               <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
             </div>
