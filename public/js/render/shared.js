@@ -207,17 +207,16 @@ export function createSharedRenderers(deps) {
             ${meta.map(text => `<span class="item-chip">${escapeHtml(text)}</span>`).join('')}
           </div>
         </div>
-        ${!isFolder && canPreview(item) ? `
+        ${!isFolder ? `
         <div class="item-actions">
-          <button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">
-            ${icons.eye}
-          </button>
+          ${canPreview(item) ? `<button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ''}
           <button class="item-action-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">
             ${icons.download}
           </button>
           <button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
             ${icons.info}
-          </div>
+          </button>
+        </div>
         ` : ''}
       </article>
     `;
