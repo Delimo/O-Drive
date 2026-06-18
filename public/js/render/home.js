@@ -1,5 +1,6 @@
 export function createHomeRenderers(deps) {
   const {
+    icons,
     currentEntries,
     selectedEntriesFromState,
     buildBreadcrumbs,
@@ -28,13 +29,13 @@ export function createHomeRenderers(deps) {
         </div>
         <div class="tools-right flex items-center gap-2">
           ${state.app.role === 'admin' ? `
-          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="upload">上传</button>
-          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="open-folder-modal">新建</button>
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="upload">上传</button>
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="open-folder-modal">新建</button>
           ` : ''}
-          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
-          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="toggle-view">${humanView(explorer.view)}</button>
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="toggle-view">${humanView(explorer.view)}</button>
           <div class="relative inline-block">
-            <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white filter-popup-trigger" data-action="toggle-filter-popup" aria-label="文件类型筛选">
+            <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors filter-popup-trigger" data-action="toggle-filter-popup" aria-label="文件类型筛选">
               ${renderKindOptions(explorer.filter, explorer.trashMode)}
             </button>
             <div class="filter-popup" data-role="kind-filter-popup" style="display:none">
@@ -44,8 +45,8 @@ export function createHomeRenderers(deps) {
           ${
             state.app.role === 'admin'
               ? `
-                <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white ${explorer.trashMode ? 'bg-slate-100 border-slate-300' : ''}" data-action="toggle-trash">${explorer.trashMode ? '退出回收站' : '回收站'}</button>
-                ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors bg-white" data-action="confirm-clear-trash">清空回收站</button>' : ''}
+                <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors ${explorer.trashMode ? 'bg-slate-100 border-slate-300' : ''}" data-action="toggle-trash">${explorer.trashMode ? '退出回收站' : '回收站'}</button>
+                ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" data-action="confirm-clear-trash">清空回收站</button>' : ''}
               `
               : ''
           }

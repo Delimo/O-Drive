@@ -779,7 +779,7 @@ export function registerAppEvents(deps) {
       if (action === 'info') {
         const entry = findEntryByKey(key);
         if (entry) {
-          store.dispatch(actions.explorer.setSelectedKey(key));
+          store.dispatch(actions.explorer.setSelection(key));
         }
         return;
       }

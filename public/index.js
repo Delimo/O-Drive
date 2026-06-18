@@ -295,16 +295,16 @@ function renderHeader(state) {
             <input type="search" value="" placeholder="搜索文件..." class="w-72 pl-10 pr-4 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
           </div>
         `}
-        <button class="header-theme-btn px-3 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
+        <button class="header-theme-btn px-3 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
         <div class="relative" data-component="notifications">
-          <button class="px-3 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white notif-bell" data-action="toggle-notifications" aria-label="通知">
+          <button class="px-3 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors notif-bell" data-action="toggle-notifications" aria-label="通知">
             <span class="icon">${icons.bell}</span>
             <span class="notif-badge" data-role="notif-count" style="display:${state.admin.notificationsUnread ? '' : 'none'}">${state.admin.notificationsUnread}</span>
           </button>
           <div class="notif-dropdown" data-role="notif-dropdown" style="display:${state.admin.notifOpen ? '' : 'none'}">
             <div class="notif-dropdown-head">
               <span class="notif-dropdown-title">通知</span>
-              <button class="px-3 py-1 text-xs font-semibold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors bg-white" data-action="mark-all-notifications-read" ${state.admin.notificationsUnread ? '' : 'disabled'}>全部已读</button>
+              <button class="px-3 py-1 text-xs font-semibold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors" data-action="mark-all-notifications-read" ${state.admin.notificationsUnread ? '' : 'disabled'}>全部已读</button>
             </div>
             <div class="notif-dropdown-body">
               ${state.admin.notifications.length
@@ -325,10 +325,10 @@ function renderHeader(state) {
         <div class="flex items-center gap-2">
           ${
             page === 'admin'
-              ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" href="/">返回云盘</a>`
-              : `${role === 'admin' ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" href="/admin">管理</a>` : ''}${role === 'admin'
-                  ? `<button class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" data-action="logout">退出</button>`
-                  : `<button class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" data-action="open-login">登录</button>`}`
+              ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" href="/">返回云盘</a>`
+              : `${role === 'admin' ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" href="/admin">管理</a>` : ''}${role === 'admin'
+                  ? `<button class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" data-action="logout">退出</button>`
+                  : `<button class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" data-action="open-login">登录</button>`}`
           }
         </div>
       </div>
