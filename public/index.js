@@ -297,6 +297,7 @@ function renderHeader(state) {
             >
           </label>
         ` : ''}
+        <button class="btn header-btn header-theme-btn" data-action="toggle-theme" aria-label="切换主题">${icons.sun}${icons.moon}</button>
         <div class="header-actions">
           ${
             page === 'admin'

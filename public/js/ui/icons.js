@@ -31,6 +31,8 @@ export const icons = {
   edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Zm8.8-13.8 3.4 3.4"/></svg>',
   save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.75A1.75 1.75 0 0 1 6.75 3h8.38c.46 0 .9.18 1.22.5l2.15 2.15c.32.32.5.76.5 1.22v12.38A1.75 1.75 0 0 1 17.25 21H6.75A1.75 1.75 0 0 1 5 19.25V4.75Zm3 0v4.5h7v-3.5m-5 9h4"/></svg>',
   close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2m-1.78-7.78-1.42 1.42M5.64 17.64l-1.42 1.42"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13.5A8.5 8.5 0 1 1 11 2.5c4.5 2 6 6.5 6 6.5s2.5 2 3.5 4.5Z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>',
   play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg>',
 };

@@ -13,7 +13,10 @@ body {
   font-family: var(--body-font);
   color: var(--text);
   background-color: var(--bg);
-  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+  line-height: 1.5;
+  transition: background-color 280ms ease, color 280ms ease;
 }
 
 button,

@@ -55,6 +55,15 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'toggle-theme') {
+        const root = document.documentElement;
+        const current = root.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (_) {}
+        return;
+      }
+
       if (action === 'crumb') {
         navigateToExplorerPath(path || '');
         return;
@@ -959,6 +968,14 @@ export function registerAppEvents(deps) {
       const updatedBindings = [...(config.bindings || []), binding];
       store.dispatch(thunks.saveAdminStorageConfig({ ...config, bindings: updatedBindings }));
       return;
+    }
+  });
+
+  const mq = windowRef.matchMedia('(prefers-color-scheme: dark)');
+  mq.addEventListener('change', e => {
+    if (!localStorage.getItem('theme')) {
+      const root = documentRef.documentElement;
+      root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
     }
   });
 }
