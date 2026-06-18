@@ -10,7 +10,7 @@ import { createUploadsRenderer } from './js/render/uploads.js';
 import { registerAppEvents } from './js/events/index.js';
 import { formatBytes, formatTime, formatRelative, humanSort, humanView } from './js/utils/format.js';
 import { normalizeKey, encodeRouteKey } from './js/utils/path.js';
-import { inferKind, iconForKind as iconForKindBase, iconClass, isProtectedEntry } from './js/utils/guards.js';
+import { inferKind, iconForKind as iconForKindBase, iconClass, isProtectedEntry, canPreview } from './js/utils/guards.js';
 import { escapeHtml, humanError, splitUploadTarget } from './js/utils/text.js';
 import { renderMarkdown, isMarkdownName } from './js/utils/markdown.js';
 import { icons } from './js/ui/icons.js';
@@ -165,6 +165,7 @@ const {
   icons,
   escapeHtml,
   inferKind,
+  canPreview,
   formatTime,
   formatRelative,
   formatBytes,
@@ -221,6 +222,7 @@ registerAppEvents({
   findEntryByKey: (key) => findEntryByKey(store.getState(), key),
   getEntryPath,
   inferKind,
+  canPreview,
   requiresProtectedUnlock,
   openProtectedUnlockModal,
   createDeferredAction,
@@ -295,10 +297,10 @@ function renderHeader(state) {
             <input type="search" value="" placeholder="搜索文件..." class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
           </div>
         `}
-        <button class="header-theme-btn p-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
+        <button class="header-icon-btn header-theme-btn" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
         ${role === 'admin' ? `
         <div class="relative" data-component="notifications">
-          <button class="p-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors notif-bell" data-action="toggle-notifications" aria-label="通知">
+          <button class="header-icon-btn notif-bell" data-action="toggle-notifications" aria-label="通知">
             <span class="icon">${icons.bell}</span>
             <span class="notif-badge" data-role="notif-count" style="display:${state.admin.notificationsUnread ? '' : 'none'}">${state.admin.notificationsUnread}</span>
           </button>

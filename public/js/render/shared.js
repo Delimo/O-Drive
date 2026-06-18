@@ -3,6 +3,7 @@ export function createSharedRenderers(deps) {
     icons,
     escapeHtml,
     inferKind,
+    canPreview,
     formatTime,
     formatRelative,
     formatBytes,
@@ -25,7 +26,7 @@ export function createSharedRenderers(deps) {
 
     const kind = selected.kind || inferKind(selected);
     const isFolder = kind === 'folder';
-    const canPreview = kind !== 'folder' && !state.explorer.trashMode;
+    const previewable = !isFolder && !state.explorer.trashMode && canPreview(selected);
     const canDownload = kind !== 'folder' && !state.explorer.trashMode;
     const pathValue = selected.fullKey || selected.original_key || selected.path || selected.name || '';
 
@@ -62,7 +63,7 @@ export function createSharedRenderers(deps) {
               `
               : `
                 ${isFolder ? `<button class="btn" data-action="open-entry" data-key="${escapeHtml(entryKey(selected))}">打开文件夹</button>` : ''}
-                ${canPreview ? `<button class="btn" data-action="preview-entry" data-key="${escapeHtml(entryKey(selected))}">预览</button>` : ''}
+                ${previewable ? `<button class="btn" data-action="preview-entry" data-key="${escapeHtml(entryKey(selected))}">预览</button>` : ''}
                 ${canDownload ? `<button class="btn" data-action="download-entry" data-key="${escapeHtml(entryKey(selected))}">下载</button>` : ''}
                 ${!isFolder && state.app.role === 'admin' ? `<button class="btn" data-action="open-share-modal" data-key="${escapeHtml(entryKey(selected))}">分享</button>` : ''}
                 ${state.app.role === 'admin' ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(entryKey(selected))}">重命名</button>` : ''}
@@ -206,7 +207,7 @@ export function createSharedRenderers(deps) {
             ${meta.map(text => `<span class="item-chip">${escapeHtml(text)}</span>`).join('')}
           </div>
         </div>
-        ${!isFolder ? `
+        ${!isFolder && canPreview(item) ? `
         <div class="item-actions">
           <button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">
             ${icons.eye}
@@ -216,8 +217,7 @@ export function createSharedRenderers(deps) {
           </button>
           <button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
             ${icons.info}
-          </button>
-        </div>
+          </div>
         ` : ''}
       </article>
     `;

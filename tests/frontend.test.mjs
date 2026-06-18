@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { renderMarkdown, isMarkdownName } from '../public/js/utils/markdown.js';
 import { normalizeKey, encodeRouteKey } from '../public/js/utils/path.js';
 import { formatBytes, formatTime, formatRelative, humanSort, humanView } from '../public/js/utils/format.js';
-import { inferKind, iconForKind, iconClass, isProtectedEntry } from '../public/js/utils/guards.js';
+import { inferKind, iconForKind, iconClass, isProtectedEntry, canPreview } from '../public/js/utils/guards.js';
 import { escapeHtml } from '../public/js/utils/text.js';
 import { createStateSelectors } from '../public/js/state/selectors.js';
 import { createSharedRenderers } from '../public/js/render/shared.js';
@@ -24,6 +24,7 @@ const shared = createSharedRenderers({
   icons,
   escapeHtml,
   inferKind,
+  canPreview,
   formatTime,
   formatRelative,
   formatBytes,

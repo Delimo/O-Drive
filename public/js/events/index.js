@@ -12,6 +12,7 @@ export function registerAppEvents(deps) {
     findEntryByKey,
     getEntryPath,
     inferKind,
+    canPreview,
     requiresProtectedUnlock,
     openProtectedUnlockModal,
     createDeferredAction,
@@ -734,7 +735,7 @@ export function registerAppEvents(deps) {
             return;
           }
           navigateToExplorerPath(entry.fullKey || '');
-        } else {
+        } else if (canPreview(entry)) {
           store.dispatch(thunks.previewEntry(entry));
         }
         return;

@@ -11,6 +11,13 @@ export function inferKind(item) {
   return 'file';
 }
 
+const PREVIEWABLE_KINDS = new Set(['image', 'video', 'audio', 'pdf', 'text']);
+
+export function canPreview(entry) {
+  const kind = entry.kind || inferKind(entry);
+  return PREVIEWABLE_KINDS.has(kind);
+}
+
 export function iconForKind(kind, icons) {
   return icons[kind] || icons.file;
 }
