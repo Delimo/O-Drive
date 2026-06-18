@@ -94,6 +94,7 @@ export function createRootStore({ page }) {
     },
     admin: {
       loading: false,
+      activeTab: 'overview',
       stats: null,
       shares: [],
       sharesLoading: false,
@@ -294,6 +295,9 @@ export function createRootStore({ page }) {
     name: 'admin',
     initialState: initialState.admin,
     reducers: {
+      setActiveTab(state, action) {
+        return { ...state, activeTab: action.payload || 'overview' };
+      },
       setLoading(state, action) {
         return { ...state, loading: action.payload };
       },

@@ -488,7 +488,7 @@ test('admin health section renders health components', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'health', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: mockAdminHealth, healthError: '',
@@ -513,7 +513,7 @@ test('admin logs section renders log entries with pagination', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'logs', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -537,7 +537,7 @@ test('admin quota section renders storage usage', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'quota', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -562,7 +562,7 @@ test('admin protected paths section renders path list with delete buttons', () =
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'protected', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -586,7 +586,7 @@ test('admin maintenance section renders snapshot and action buttons', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -618,7 +618,7 @@ test('admin maintenance section shows loading state', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -641,7 +641,7 @@ test('admin maintenance section shows error state', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -686,7 +686,7 @@ test('admin task list section renders upload task records', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'tasks', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -713,7 +713,7 @@ test('admin task list section shows loading state', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'tasks', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -737,7 +737,7 @@ test('admin task list is hidden when empty', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'tasks', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',

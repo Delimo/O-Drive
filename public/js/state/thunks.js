@@ -171,7 +171,8 @@ export function createThunks(deps) {
     },
     login: credentials => async dispatch => {
       if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
-      dispatch(actions.app.setModal({ type: 'login', loading: true, error: '', values: credentials }));
+      const values = { username: credentials.username };
+      dispatch(actions.app.setModal({ type: 'login', loading: true, error: '', values }));
       try {
         const { response, data } = await authApi.login(credentials);
         if (!response.ok || !data?.success) {
@@ -179,7 +180,7 @@ export function createThunks(deps) {
             type: 'login',
             loading: false,
             error: data?.message || '用户名或密码错误',
-            values: credentials,
+            values,
           }));
           return;
         }
@@ -202,7 +203,7 @@ export function createThunks(deps) {
           type: 'login',
           loading: false,
           error: '登录请求失败',
-          values: credentials,
+          values,
         }));
       }
     },

@@ -1086,6 +1086,46 @@
   gap: 18px;
 }
 
+.admin-toolbar-bar {
+  min-height: auto;
+  padding: 8px 16px;
+}
+
+.admin-tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-tab-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.admin-tab-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.admin-tab-active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.admin-tab-active:hover {
+  background: var(--accent-hover);
+  color: var(--on-accent);
+}
+
 .admin-card {
   padding: 16px;
   border-radius: var(--radius-xl);
