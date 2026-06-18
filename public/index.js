@@ -111,6 +111,7 @@ const { previewService, uploadService } = createServices({
   splitUploadTarget,
   ensureRemoteDirectoryTree,
   fileApi,
+  multipartApi,
 });
 
 const thunks = createThunks({
@@ -120,6 +121,8 @@ const thunks = createThunks({
   fileApi,
   adminApi,
   shareApi,
+  multipartApi,
+  taskApi,
   previewService,
   uploadService,
   normalizeKey,

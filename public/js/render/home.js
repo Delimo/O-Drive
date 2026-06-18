@@ -31,11 +31,24 @@ export function createHomeRenderers(deps) {
           <div class="toolbar-right toolbar-actions-legacy">
             <button class="btn toolbar-btn" data-action="upload">上传</button>
             <button class="btn toolbar-btn" data-action="open-folder-modal">新建文件夹</button>
+            <span class="conflict-selector" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);">
+              <label style="cursor:pointer;">冲突:</label>
+              <select data-action="set-conflict-mode" style="font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface);">
+                <option value="rename" ${state.uploads.conflictMode === 'rename' ? 'selected' : ''}>重命名</option>
+                <option value="overwrite" ${state.uploads.conflictMode === 'overwrite' ? 'selected' : ''}>覆盖</option>
+                <option value="skip" ${state.uploads.conflictMode === 'skip' ? 'selected' : ''}>跳过</option>
+              </select>
+            </span>
             <button class="btn toolbar-btn" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
             <button class="btn toolbar-btn" data-action="toggle-view">${humanView(explorer.view)}</button>
-            <select id="kind-filter" class="inline-select toolbar-select" data-role="kind-filter" aria-label="文件类型筛选">
-              ${renderKindOptions(explorer.filter, explorer.trashMode)}
-            </select>
+             <div class="filter-popup-wrap">
+              <button class="btn toolbar-btn filter-popup-trigger" data-action="toggle-filter-popup" aria-label="文件类型筛选">
+                ${renderKindOptions(explorer.filter, explorer.trashMode)}
+              </button>
+              <div class="filter-popup" data-role="kind-filter-popup" style="display:none">
+                ${renderKindOptions(explorer.filter, explorer.trashMode, true)}
+              </div>
+            </div>
             ${
               state.app.role === 'admin'
                 ? `
@@ -62,6 +75,47 @@ export function createHomeRenderers(deps) {
     return buildBreadcrumbs(path).map(renderCrumb).join('');
   }
 
+  function renderFilterPanel(explorer) {
+    if (!explorer.showFilters) return '';
+    const kindOptions = ['all', 'image', 'video', 'audio', 'pdf', 'text', 'archive', 'file'];
+    return `
+      <div class="filter-panel" style="padding:12px 16px;margin-bottom:12px;background:var(--surface);border-radius:12px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:end;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:var(--muted);">类型</label>
+          <select class="inline-input" data-role="filter-kind" style="padding:4px 8px;font-size:13px;">
+            ${kindOptions.map(k => `<option value="${k}" ${explorer.filterKind === k ? 'selected' : ''}>${k === 'all' ? '全部' : k}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:var(--muted);">最小大小 (KB)</label>
+          <input class="inline-input" type="number" min="0" data-role="filter-min-size" value="${escapeHtml(explorer.filterMinSize)}" style="padding:4px 8px;font-size:13px;width:100px;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:var(--muted);">最大大小 (KB)</label>
+          <input class="inline-input" type="number" min="0" data-role="filter-max-size" value="${escapeHtml(explorer.filterMaxSize)}" style="padding:4px 8px;font-size:13px;width:100px;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:var(--muted);">修改日期从</label>
+          <input class="inline-input" type="date" data-role="filter-date-from" value="${escapeHtml(explorer.filterDateFrom)}" style="padding:4px 8px;font-size:13px;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:var(--muted);">到</label>
+          <input class="inline-input" type="date" data-role="filter-date-to" value="${escapeHtml(explorer.filterDateTo)}" style="padding:4px 8px;font-size:13px;">
+        </div>
+        <button class="btn toolbar-btn" data-action="clear-search-filters" type="button" style="font-size:13px;padding:4px 12px;">清除筛选</button>
+      </div>
+    `;
+  }
+
+  function renderLoadMore(explorer) {
+    if (!explorer.hasMore || explorer.loading) return '';
+    return `
+      <div style="text-align:center;padding:16px;">
+        <button class="btn toolbar-btn" data-action="load-more-search" type="button">加载更多结果</button>
+      </div>
+    `;
+  }
+
   function renderExplorerContent(state, entries, selectedEntries) {
     const explorer = state.explorer;
 
@@ -74,14 +128,17 @@ export function createHomeRenderers(deps) {
               <span>${
                 explorer.searching
                   ? `正在搜索“${escapeHtml(explorer.query)}”…`
-                  : `找到 ${entries.length} 个匹配“${escapeHtml(explorer.query)}”的结果${explorer.filter !== 'all' ? `（已按类型筛选）` : ''}`
+                  : `找到 ${entries.length} 个匹配“${escapeHtml(explorer.query)}”的结果${explorer.filter !== 'all' || explorer.filterKind !== 'all' ? `（已应用筛选）` : ''}`
               }</span>
+              <button class="btn toolbar-btn" data-action="toggle-search-filters" type="button" style="font-size:12px;padding:2px 8px;margin-left:8px;">${explorer.showFilters ? '收起筛选' : '筛选'}</button>
             </div>
+            ${renderFilterPanel(explorer)}
           `
           : ''
       }
       ${renderExplorerBanner(state, selectedEntries)}
       ${renderExplorerBody(state, entries)}
+      ${explorer.query ? renderLoadMore(explorer) : ''}
     `;
   }
 

@@ -1,5 +1,7 @@
 import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent, mockAdminHealth, mockAdminLogs, mockProtectedPaths, mockAdminQuota, mockHiddenPaths, mockStorageConfig, mockWebhooks, mockWebhookDeliveries } from '../mock/index.js';
 
+const CHUNK_SIZE = 5 * 1024 * 1024;
+
 export function createThunks(deps) {
   const {
     actions,
@@ -84,9 +86,16 @@ export function createThunks(deps) {
 
         if (query) {
           const scope = path ? `/${path}` : '/';
-          const { response, data } = await fileApi.search(query, scope);
+          const { filterKind, filterMinSize, filterMaxSize, filterDateFrom, filterDateTo } = state.explorer;
+          const { response, data } = await fileApi.search(query, scope, '', {
+            kind: filterKind !== 'all' ? filterKind : '',
+            minSize: filterMinSize || '',
+            maxSize: filterMaxSize || '',
+            modifiedAfter: filterDateFrom || '',
+            modifiedBefore: filterDateTo || '',
+          });
           if (!response.ok) throw new Error(data?.message || '搜索失败');
-          dispatch(actions.explorer.setData({ folders: [], files: data.files || [] }));
+          dispatch(actions.explorer.setSearchData({ files: data.files || [], cursor: data.nextCursor || '', hasMore: Boolean(data.nextCursor) }));
           return;
         }
 
@@ -244,6 +253,7 @@ export function createThunks(deps) {
         item,
         id: nextUploadId(),
         name: item.relativeDir ? `${item.relativeDir}/${item.file.name}` : item.file.name,
+        multipart: item.file.size > CHUNK_SIZE,
       }));
 
       dispatch(actions.uploads.enqueue(queued.map(q => ({
@@ -252,9 +262,9 @@ export function createThunks(deps) {
         status: 'pending',
         progress: 0,
         error: '',
+        multipart: q.multipart,
       }))));
 
-      // 设计预览模式下不打真实接口，纯客户端模拟进度，便于预览上传队列。
       if (mock) {
         for (const q of queued) {
           dispatch(actions.uploads.update({ id: q.id, status: 'uploading', progress: 0 }));
@@ -270,35 +280,107 @@ export function createThunks(deps) {
 
       let uploaded = 0;
       let failed = 0;
+      let cancelledItems = [];
+
       for (const q of queued) {
-        const { item } = q;
+        const { item, multipart } = q;
         dispatch(actions.uploads.update({ id: q.id, status: 'uploading', progress: 0 }));
+
         try {
+          const stateNow = getState();
+          const currentItem = stateNow.uploads.items.find(i => i.id === q.id);
+          if (currentItem?.status === 'cancelling') throw new Error('UPLOAD_CANCELLED');
+
           if (item.relativeDir) {
             await uploadService.ensureDirectoryTree(item.targetDir);
           }
-          const { response, data } = await uploadService.uploadSingle(item, pct => {
-            dispatch(actions.uploads.update({ id: q.id, progress: pct }));
-          });
-          if (!response.ok || !data?.success) {
-            throw new Error(data?.message || `上传 ${item.file.name} 失败`);
+
+          const conflictMode = getState().uploads.conflictMode;
+
+          if (multipart) {
+            let cancelled = false;
+            await uploadService.multipartUpload(item, pct => {
+              const s = getState();
+              const ci = s.uploads.items.find(i => i.id === q.id);
+              if (ci?.status === 'cancelling') { cancelled = true; return; }
+              dispatch(actions.uploads.update({ id: q.id, progress: pct }));
+            }, null, conflictMode);
+            if (cancelled) throw new Error('UPLOAD_CANCELLED');
+          } else {
+            const { response, data } = await uploadService.uploadSingle(item, pct => {
+              const s = getState();
+              const ci = s.uploads.items.find(i => i.id === q.id);
+              if (ci?.status === 'cancelling') throw new Error('UPLOAD_CANCELLED');
+              dispatch(actions.uploads.update({ id: q.id, progress: pct }));
+            }, conflictMode);
+            if (!response.ok || !data?.success) {
+              throw new Error(data?.message || `上传 ${item.file.name} 失败`);
+            }
           }
+
           uploaded += 1;
           dispatch(actions.uploads.update({ id: q.id, status: 'success', progress: 100 }));
         } catch (error) {
-          failed += 1;
-          dispatch(actions.uploads.update({ id: q.id, status: 'error', error: error.message || '上传失败' }));
+          if (error.message === 'UPLOAD_CANCELLED') {
+            cancelledItems.push(q.id);
+            dispatch(actions.uploads.setCancelled(q.id));
+          } else {
+            failed += 1;
+            dispatch(actions.uploads.update({ id: q.id, status: 'error', error: error.message || '上传失败' }));
+          }
         }
       }
 
-      if (failed === 0) {
+      if (failed === 0 && cancelledItems.length === 0) {
         dispatchToast('success', `已上传 ${uploaded} 个文件`);
+      } else if (uploaded === 0 && failed === 0) {
+        dispatchToast('info', `已取消 ${cancelledItems.length} 个文件`);
       } else if (uploaded === 0) {
         dispatchToast('error', `上传失败 ${failed} 个文件`);
       } else {
         dispatchToast('error', `成功 ${uploaded} 个，失败 ${failed} 个`);
       }
       await dispatch(thunks.loadExplorer());
+    },
+    loadMoreSearchResults: () => async (dispatch, getState) => {
+      const state = getState();
+      const cursor = state.explorer.searchCursor;
+      if (!cursor || state.explorer.loading) return;
+      const query = state.explorer.query.trim();
+      const path = normalizeKey(state.explorer.path);
+      const scope = path ? `/${path}` : '/';
+      const { filterKind, filterMinSize, filterMaxSize, filterDateFrom, filterDateTo } = state.explorer;
+      dispatch(actions.explorer.setLoading(true));
+      try {
+        const { response, data } = await fileApi.search(query, scope, cursor, {
+          kind: filterKind !== 'all' ? filterKind : '',
+          minSize: filterMinSize || '',
+          maxSize: filterMaxSize || '',
+          modifiedAfter: filterDateFrom || '',
+          modifiedBefore: filterDateTo || '',
+        });
+        if (!response.ok) throw new Error(data?.message || '搜索失败');
+        dispatch(actions.explorer.appendSearchResults({ files: data.files || [], cursor: data.nextCursor || '', hasMore: Boolean(data.nextCursor) }));
+      } catch (error) {
+        dispatchToast('error', error.message || '加载更多结果失败');
+        dispatch(actions.explorer.setLoading(false));
+      }
+    },
+    cancelFileUpload: id => async dispatch => {
+      dispatch(actions.uploads.cancelItem(id));
+    },
+    retryFileUpload: id => async (dispatch, getState) => {
+      const state = getState();
+      const item = state.uploads.items.find(i => i.id === id);
+      if (!item) return;
+      dispatch(actions.uploads.retryItem(id));
+      const files = state.explorer.files || [];
+      const folders = state.explorer.folders || [];
+      const entry = [...folders, ...files].find(e => e.name === item.name);
+      if (entry) {
+        dispatchToast('info', `重新上传 ${item.name}`);
+        return;
+      }
     },
     previewEntry: entry => async dispatch => {
       if (!entry || !getEntryPath(entry)) return;

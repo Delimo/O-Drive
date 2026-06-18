@@ -68,6 +68,15 @@ export function createRootStore({ page }) {
       loading: false,
       query: getInitialSearch(),
       queryDraft: getInitialSearch(),
+      showFilters: false,
+      filterKind: 'all',
+      filterMinSize: '',
+      filterMaxSize: '',
+      filterDateFrom: '',
+      filterDateTo: '',
+      searchCursor: '',
+      allSearchResults: [],
+      hasMore: false,
       view: 'grid',
       sort: 'smart',
       filter: 'all',
@@ -129,6 +138,7 @@ export function createRootStore({ page }) {
     },
     uploads: {
       items: [],
+      conflictMode: 'rename',
     },
   };
 
@@ -211,6 +221,51 @@ export function createRootStore({ page }) {
           storageId: action.payload.storageId || state.storageId,
           selectedKeys: [],
         };
+      },
+      setSearchData(state, action) {
+        const { files, cursor, hasMore } = action.payload || {};
+        return {
+          ...state,
+          loading: false,
+          error: '',
+          folders: [],
+          files: files || [],
+          searchCursor: cursor || '',
+          hasMore: hasMore || false,
+          allSearchResults: [],
+          selectedKeys: [],
+        };
+      },
+      appendSearchResults(state, action) {
+        const { files, cursor, hasMore } = action.payload || {};
+        const existing = state.files || [];
+        return {
+          ...state,
+          loading: false,
+          error: '',
+          files: [...existing, ...(files || [])],
+          searchCursor: cursor || '',
+          hasMore: hasMore || false,
+          selectedKeys: [],
+        };
+      },
+      setShowFilters(state, action) {
+        return { ...state, showFilters: action.payload };
+      },
+      setFilterKind(state, action) {
+        return { ...state, filterKind: action.payload };
+      },
+      setFilterMinSize(state, action) {
+        return { ...state, filterMinSize: action.payload };
+      },
+      setFilterMaxSize(state, action) {
+        return { ...state, filterMaxSize: action.payload };
+      },
+      setFilterDateFrom(state, action) {
+        return { ...state, filterDateFrom: action.payload };
+      },
+      setFilterDateTo(state, action) {
+        return { ...state, filterDateTo: action.payload };
       },
       setError(state, action) {
         return { ...state, loading: false, error: action.payload };
@@ -369,6 +424,25 @@ export function createRootStore({ page }) {
       },
       clearAll(state) {
         return { ...state, items: [] };
+      },
+      cancelItem(state, action) {
+        return { ...state, items: state.items.map(item => item.id === action.payload ? { ...item, status: 'cancelling' } : item) };
+      },
+      setCancelled(state, action) {
+        return { ...state, items: state.items.map(item => item.id === action.payload ? { ...item, status: 'cancelled', progress: 0 } : item) };
+      },
+      pauseItem(state, action) {
+        return { ...state, items: state.items.map(item => item.id === action.payload ? { ...item, status: 'paused' } : item) };
+      },
+      resumeItem(state, action) {
+        const resumeData = action.payload?.resumeData;
+        return { ...state, items: state.items.map(item => item.id === action.payload?.id ? { ...item, status: 'pending', ...(resumeData || {}) } : item) };
+      },
+      retryItem(state, action) {
+        return { ...state, items: state.items.map(item => item.id === action.payload ? { ...item, status: 'pending', progress: 0, error: '' } : item) };
+      },
+      setConflictMode(state, action) {
+        return { ...state, conflictMode: action.payload || 'rename' };
       },
     },
   });

@@ -83,8 +83,15 @@ export function createApiLayer(deps) {
       const route = path ? `/api/files/${encodeRouteKey(path)}` : '/api/files';
       return request(route);
     },
-    search(query, scope) {
-      return request(`/api/search?q=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}&limit=60`);
+    search(query, scope, cursor = '', filters = {}) {
+      const params = new URLSearchParams({ q: query, scope, limit: '60' });
+      if (cursor) params.set('cursor', cursor);
+      if (filters.kind) params.set('kind', filters.kind);
+      if (filters.minSize) params.set('minSize', filters.minSize);
+      if (filters.maxSize) params.set('maxSize', filters.maxSize);
+      if (filters.modifiedAfter) params.set('modifiedAfter', filters.modifiedAfter);
+      if (filters.modifiedBefore) params.set('modifiedBefore', filters.modifiedBefore);
+      return request(`/api/search?${params.toString()}`);
     },
     createFolder(parentPath, folderName, storageId) {
       const route = parentPath ? `/api/mkdir/${encodeRouteKey(parentPath)}` : '/api/mkdir';
@@ -104,8 +111,8 @@ export function createApiLayer(deps) {
         csrf: true,
       });
     },
-    uploadWithProgress(targetDir, file, targetName, onProgress) {
-      const route = targetDir ? `/api/files/${encodeRouteKey(targetDir)}?conflict=rename` : '/api/files?conflict=rename';
+    uploadWithProgress(targetDir, file, targetName, onProgress, conflict = 'rename') {
+      const route = targetDir ? `/api/files/${encodeRouteKey(targetDir)}?conflict=${conflict}` : `/api/files?conflict=${conflict}`;
       const form = new FormDataImpl();
       form.append('file', file, targetName);
       const csrf = getState().app.csrf;
@@ -331,6 +338,71 @@ export function createApiLayer(deps) {
     },
   };
 
+  const multipartApi = {
+    create(params) {
+      return request('/api/upload-multipart/create', {
+        method: 'POST',
+        json: params,
+        csrf: true,
+      });
+    },
+    _xhrUpload(url, blob, onProgress) {
+      return new Promise(resolve => {
+        const xhr = new XhrImpl();
+        xhr.open('PUT', url);
+        xhr.withCredentials = true;
+        const csrf = getState().app.csrf;
+        if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
+
+        if (typeof onProgress === 'function') {
+          xhr.upload.onprogress = event => {
+            if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+          };
+        }
+
+        xhr.onload = () => resolve({ response: { ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status }, data: xhr.responseText ? JSON.parse(xhr.responseText) : null });
+        xhr.onerror = () => resolve({ response: { ok: false, status: 0 }, data: null });
+        xhr.send(blob);
+      });
+    },
+    uploadPart(key, uploadId, partNumber, blob, storageId, onProgress) {
+      const params = new URLSearchParams({ key, uploadId, partNumber: String(partNumber) });
+      if (storageId) params.set('storageId', storageId);
+      return multipartApi._xhrUpload(`/api/upload-multipart/part?${params.toString()}`, blob, onProgress);
+    },
+    complete(params) {
+      return request('/api/upload-multipart/complete', {
+        method: 'POST',
+        json: params,
+        csrf: true,
+      });
+    },
+    abort(params) {
+      return request('/api/upload-multipart/abort', {
+        method: 'POST',
+        json: params,
+        csrf: true,
+      });
+    },
+  };
+
+  const taskApi = {
+    create(type, payload) {
+      return request('/api/tasks', {
+        method: 'POST',
+        json: { type, payload },
+        csrf: true,
+      });
+    },
+    update(id, data) {
+      return request('/api/tasks', {
+        method: 'PATCH',
+        json: { id, ...data },
+        csrf: true,
+      });
+    },
+  };
+
   return {
     apiClient,
     request,
@@ -339,5 +411,7 @@ export function createApiLayer(deps) {
     trashApi,
     shareApi,
     adminApi,
+    multipartApi,
+    taskApi,
   };
 }

@@ -30,6 +30,12 @@ export function registerAppEvents(deps) {
 
     if (!actionNode && stopClose) return;
 
+    const filterPopup = documentRef.querySelector('[data-role="kind-filter-popup"]');
+    const clickInPopup = event.target.closest('.filter-popup-wrap');
+    if (filterPopup && filterPopup.style.display !== 'none' && !clickInPopup) {
+      filterPopup.style.display = 'none';
+    }
+
     if (actionNode) {
       const { action, key, path } = actionNode.dataset;
 
@@ -208,6 +214,26 @@ export function registerAppEvents(deps) {
         const updatedBindings = (config.bindings || []).filter(b => b.path !== modal.path);
         store.dispatch(actions.app.setModal(null));
         store.dispatch(thunks.saveAdminStorageConfig({ ...config, bindings: updatedBindings }));
+        return;
+      }
+
+      if (action === 'toggle-search-filters') {
+        store.dispatch(actions.explorer.setShowFilters(!store.getState().explorer.showFilters));
+        return;
+      }
+
+      if (action === 'clear-search-filters') {
+        store.dispatch(actions.explorer.setFilterKind('all'));
+        store.dispatch(actions.explorer.setFilterMinSize(''));
+        store.dispatch(actions.explorer.setFilterMaxSize(''));
+        store.dispatch(actions.explorer.setFilterDateFrom(''));
+        store.dispatch(actions.explorer.setFilterDateTo(''));
+        store.dispatch(thunks.loadExplorer());
+        return;
+      }
+
+      if (action === 'load-more-search') {
+        store.dispatch(thunks.loadMoreSearchResults());
         return;
       }
 
@@ -395,6 +421,18 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'cancel-upload') {
+        const uploadId = actionNode.dataset.id || key;
+        store.dispatch(thunks.cancelFileUpload(uploadId));
+        return;
+      }
+
+      if (action === 'retry-upload') {
+        const uploadId = actionNode.dataset.id || key;
+        store.dispatch(thunks.retryFileUpload(uploadId));
+        return;
+      }
+
       if (action === 'clear-finished-uploads') {
         store.dispatch(actions.uploads.clearFinished());
         return;
@@ -434,6 +472,23 @@ export function registerAppEvents(deps) {
         store.dispatch(actions.explorer.setSelectedKeys([]));
         store.dispatch(actions.explorer.setClipboard(next ? null : state.explorer.clipboard));
         store.dispatch(thunks.loadExplorer());
+        return;
+      }
+
+      if (action === 'toggle-filter-popup') {
+        const popup = documentRef.querySelector('[data-role="kind-filter-popup"]');
+        if (popup) {
+          const isVisible = popup.style.display !== 'none';
+          popup.style.display = isVisible ? 'none' : '';
+        }
+        return;
+      }
+
+      if (action === 'set-kind-filter') {
+        const value = actionNode.dataset.value;
+        store.dispatch(actions.explorer.setFilter(value));
+        const popup = documentRef.querySelector('[data-role="kind-filter-popup"]');
+        if (popup) popup.style.display = 'none';
         return;
       }
 
@@ -639,11 +694,6 @@ export function registerAppEvents(deps) {
       return;
     }
 
-    if (event.target.dataset.role === 'kind-filter') {
-      store.dispatch(actions.explorer.setFilter(event.target.value));
-      return;
-    }
-
     if (event.target.name === 'password' && page === 'share') {
       store.dispatch(actions.share.setPassword(event.target.value));
     }
@@ -662,7 +712,44 @@ export function registerAppEvents(deps) {
   });
 
   documentRef.addEventListener('change', event => {
+    const action = event.target.dataset.action;
+    const role = event.target.dataset.role;
     const actionChange = event.target.dataset.actionChange;
+
+    if (action === 'set-conflict-mode') {
+      store.dispatch(actions.uploads.setConflictMode(event.target.value));
+      return;
+    }
+
+    if (role === 'filter-kind') {
+      store.dispatch(actions.explorer.setFilterKind(event.target.value));
+      if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
+      return;
+    }
+
+    if (role === 'filter-min-size') {
+      store.dispatch(actions.explorer.setFilterMinSize(event.target.value));
+      if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
+      return;
+    }
+
+    if (role === 'filter-max-size') {
+      store.dispatch(actions.explorer.setFilterMaxSize(event.target.value));
+      if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
+      return;
+    }
+
+    if (role === 'filter-date-from') {
+      store.dispatch(actions.explorer.setFilterDateFrom(event.target.value));
+      if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
+      return;
+    }
+
+    if (role === 'filter-date-to') {
+      store.dispatch(actions.explorer.setFilterDateTo(event.target.value));
+      if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
+      return;
+    }
 
     if (actionChange === 'set-logs-filter') {
       const key = event.target.dataset.key || 'q';

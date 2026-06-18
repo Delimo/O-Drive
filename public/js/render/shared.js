@@ -109,22 +109,30 @@ export function createSharedRenderers(deps) {
     `;
   }
 
-  function renderKindOptions(selected) {
-    const options = [
-      ['all', '全部'],
-      ['folder', '文件夹'],
-      ['image', '图片'],
-      ['video', '视频'],
-      ['audio', '音频'],
-      ['pdf', 'PDF'],
-      ['text', '文本'],
-      ['archive', '压缩包'],
-      ['file', '其他'],
-    ];
+  const kindOptions = [
+    ['all', '全部'],
+    ['folder', '文件夹'],
+    ['image', '图片'],
+    ['video', '视频'],
+    ['audio', '音频'],
+    ['pdf', 'PDF'],
+    ['text', '文本'],
+    ['archive', '压缩包'],
+    ['file', '其他'],
+  ];
 
-    return options
-      .map(([value, label]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`)
-      .join('');
+  function renderKindOptions(selected, trashMode, popup) {
+    if (popup) {
+      return kindOptions
+        .map(([value, label]) => `
+          <button class="filter-popup-item${selected === value ? ' is-active' : ''}" data-action="set-kind-filter" data-value="${value}">
+            ${label}
+          </button>`)
+        .join('');
+    }
+
+    const current = kindOptions.find(([v]) => v === selected);
+    return current ? current[1] : '全部';
   }
 
   function renderCrumb(item) {
