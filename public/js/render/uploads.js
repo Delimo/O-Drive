@@ -30,7 +30,7 @@ export function createUploadsRenderer(deps) {
         : `上传完成：${done} 个文件`;
 
     return `
-      <div class="upload-panel glass-card">
+      <div class="upload-panel">
         <div class="upload-panel-head">
           <span class="upload-panel-title">${escapeHtml(title)}</span>
           <div class="upload-panel-tools">

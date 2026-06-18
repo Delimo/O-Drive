@@ -466,10 +466,10 @@
   right: 18px;
   bottom: 18px;
   width: min(360px, calc(100vw - 36px));
-  border-radius: var(--radius-xl);
+  border-radius: 16px;
   background: var(--panel);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transform: translateX(calc(100% + 24px));
   transition: transform 220ms ease;
   display: flex;
@@ -1081,10 +1081,10 @@
 .modal-card {
   width: min(460px, 100%);
   padding: 28px;
-  border-radius: var(--radius-xl);
+  border-radius: 16px;
   background: var(--panel);
-  border: 1px solid var(--line);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .modal-title {
@@ -1191,10 +1191,10 @@
   min-width: 280px;
   max-width: min(520px, calc(100vw - 32px));
   padding: 14px 18px;
-  border-radius: 12px;
+  border-radius: 16px;
   color: white;
   background: var(--toast-bg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .toast[data-type="success"] {
@@ -1211,11 +1211,11 @@
   bottom: 24px;
   z-index: 60;
   width: min(380px, calc(100vw - 32px));
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
+  padding: 16px;
+  border-radius: 16px;
   background: var(--panel);
-  border: 1px solid var(--line);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .upload-panel-head {
