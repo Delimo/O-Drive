@@ -714,6 +714,41 @@
   flex-direction: column;
 }
 
+.preview-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.preview-modal .modal-header-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.preview-modal .modal-header-title .modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-modal .modal-header-title .modal-copy {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.preview-modal .modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .preview-modal-body {
   min-height: 0;
   flex: 1;
