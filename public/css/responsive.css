@@ -34,7 +34,7 @@
 
 @media (max-width: 980px) {
   .app-shell {
-    min-height: 100vh;
+    height: 100vh;
     padding: 14px;
   }
 

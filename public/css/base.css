@@ -9,7 +9,8 @@ body {
 }
 
 body {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   font-family: var(--body-font);
   color: var(--text);
   background-color: var(--bg);
