@@ -91,6 +91,33 @@ export function createRootStore({ page }) {
       shareBusyToken: '',
       shareFilter: 'all',
       error: '',
+      health: null,
+      healthLoading: false,
+      healthError: '',
+      logs: [],
+      logsLoading: false,
+      logsError: '',
+      logsPage: 1,
+      logsTotalPages: 0,
+      logsFilter: { q: '', action: '', from: '', to: '' },
+      quota: null,
+      quotaLoading: false,
+      quotaError: '',
+      protectedPaths: [],
+      protectedPathsLoading: false,
+      protectedPathsError: '',
+      hiddenPaths: [],
+      hiddenPathsLoading: false,
+      hiddenPathsError: '',
+      storageConfig: null,
+      storageConfigLoading: false,
+      storageConfigError: '',
+      storageConfigSaving: false,
+      webhooks: [],
+      webhooksLoading: false,
+      webhooksError: '',
+      webhookDeliveries: [],
+      webhookDeliveriesLoading: false,
     },
     share: {
       token: getShareToken(),
@@ -219,6 +246,82 @@ export function createRootStore({ page }) {
       setError(state, action) {
         return { ...state, loading: false, error: action.payload };
       },
+      setHealthLoading(state, action) {
+        return { ...state, healthLoading: action.payload };
+      },
+      setHealth(state, action) {
+        return { ...state, healthLoading: false, healthError: '', health: action.payload };
+      },
+      setHealthError(state, action) {
+        return { ...state, healthLoading: false, healthError: action.payload, health: null };
+      },
+      setLogsLoading(state, action) {
+        return { ...state, logsLoading: action.payload };
+      },
+      setLogs(state, action) {
+        const { items, page, totalPages } = action.payload || {};
+        return { ...state, logsLoading: false, logsError: '', logs: items || [], logsPage: page || 1, logsTotalPages: totalPages || 0 };
+      },
+      setLogsError(state, action) {
+        return { ...state, logsLoading: false, logsError: action.payload, logs: [] };
+      },
+      setLogsFilter(state, action) {
+        return { ...state, logsFilter: { ...state.logsFilter, ...(action.payload || {}) } };
+      },
+      setQuotaLoading(state, action) {
+        return { ...state, quotaLoading: action.payload };
+      },
+      setQuota(state, action) {
+        return { ...state, quotaLoading: false, quotaError: '', quota: action.payload };
+      },
+      setQuotaError(state, action) {
+        return { ...state, quotaLoading: false, quotaError: action.payload, quota: null };
+      },
+      setProtectedPathsLoading(state, action) {
+        return { ...state, protectedPathsLoading: action.payload };
+      },
+      setProtectedPaths(state, action) {
+        return { ...state, protectedPathsLoading: false, protectedPathsError: '', protectedPaths: action.payload || [] };
+      },
+      setProtectedPathsError(state, action) {
+        return { ...state, protectedPathsLoading: false, protectedPathsError: action.payload, protectedPaths: [] };
+      },
+      setHiddenPathsLoading(state, action) {
+        return { ...state, hiddenPathsLoading: action.payload };
+      },
+      setHiddenPaths(state, action) {
+        return { ...state, hiddenPathsLoading: false, hiddenPathsError: '', hiddenPaths: action.payload || [] };
+      },
+      setHiddenPathsError(state, action) {
+        return { ...state, hiddenPathsLoading: false, hiddenPathsError: action.payload, hiddenPaths: [] };
+      },
+      setStorageConfigLoading(state, action) {
+        return { ...state, storageConfigLoading: action.payload };
+      },
+      setStorageConfig(state, action) {
+        return { ...state, storageConfigLoading: false, storageConfigError: '', storageConfigSaving: false, storageConfig: action.payload };
+      },
+      setStorageConfigError(state, action) {
+        return { ...state, storageConfigLoading: false, storageConfigError: action.payload, storageConfig: null, storageConfigSaving: false };
+      },
+      setStorageConfigSaving(state, action) {
+        return { ...state, storageConfigSaving: action.payload };
+      },
+      setWebhooksLoading(state, action) {
+        return { ...state, webhooksLoading: action.payload };
+      },
+      setWebhooks(state, action) {
+        return { ...state, webhooksLoading: false, webhooksError: '', webhooks: action.payload || [] };
+      },
+      setWebhooksError(state, action) {
+        return { ...state, webhooksLoading: false, webhooksError: action.payload, webhooks: [] };
+      },
+      setWebhookDeliveriesLoading(state, action) {
+        return { ...state, webhookDeliveriesLoading: action.payload };
+      },
+      setWebhookDeliveries(state, action) {
+        return { ...state, webhookDeliveriesLoading: false, webhookDeliveries: action.payload || [] };
+      },
     },
   });
 
@@ -242,7 +345,7 @@ export function createRootStore({ page }) {
         return { ...state, loading: false, requiresPassword: true, error: action.payload || '' };
       },
       setError(state, action) {
-        return { ...state, loading: false, error: action.payload, item: null };
+        return { ...state, loading: false, error: action.payload };
       },
     },
   });

@@ -332,6 +332,14 @@ store.dispatch(thunks.loadRole()).then(async () => {
       await Promise.all([
         store.dispatch(thunks.loadAdminStats()),
         store.dispatch(thunks.loadAdminShares()),
+        store.dispatch(thunks.loadAdminHealth()),
+        store.dispatch(thunks.loadAdminLogs(1)),
+        store.dispatch(thunks.loadAdminQuota()),
+        store.dispatch(thunks.loadAdminProtectedPaths()),
+        store.dispatch(thunks.loadAdminHiddenPaths()),
+        store.dispatch(thunks.loadAdminStorageConfig()),
+        store.dispatch(thunks.loadAdminWebhooks()),
+        store.dispatch(thunks.loadAdminWebhookDeliveries()),
       ]);
     }
   } else if (page === 'share') {

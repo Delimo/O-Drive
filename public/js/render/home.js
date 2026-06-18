@@ -99,7 +99,7 @@ export function createHomeRenderers(deps) {
         <div class="batch-bar">
           <div class="status-main">
             <span class="status-dot"></span>
-            <span>剪贴板中有 ${explorer.clipboard.paths.length} 项，准备${explorer.clipboard.action === 'move' ? '移动' : '复制'}到当前目录。</span>
+            <span>剪贴板中有 ${explorer.clipboard.paths.length} 项，准备${explorer.clipboard.action === 'move' ? '移动' : '复制'}到当前文件夹。</span>
           </div>
           <div class="btn-row">
             <button class="btn btn-primary" data-action="paste-clipboard">粘贴到这里</button>
@@ -134,7 +134,7 @@ export function createHomeRenderers(deps) {
     return renderEmptyState(
       explorer.query ? '没有搜索结果' : explorer.trashMode ? '回收站为空' : '这个文件夹还是空的',
       explorer.query
-        ? '试试换一个关键词，或者回到目录里继续找。'
+        ? '试试换一个关键词，或者回到文件夹里继续找。'
         : explorer.trashMode
           ? '当前没有已删除项目。'
           : '可以直接上传文件，或者先新建一个文件夹。',

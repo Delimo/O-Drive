@@ -122,6 +122,121 @@ export const mockAdminShares = [
   },
 ];
 
+export const mockAdminHealth = {
+  components: {
+    storage: { status: 'ok', message: '存储服务运行正常' },
+    database: { status: 'ok', message: '数据库连接正常' },
+    index: { status: 'ok', message: '索引服务运行正常' },
+    cache: { status: 'ok', message: '缓存服务运行正常' },
+  },
+};
+
+export function mockAdminLogs(page = 1) {
+  const allItems = [
+    { action: 'upload', path: '/产品说明.pdf', user: 'admin', ip: '192.168.1.10', createdAt: Date.now() - 60000, detail: '上传文件 (1.2 MB)' },
+    { action: 'create', path: '/项目文档', user: 'admin', ip: '192.168.1.10', createdAt: Date.now() - 120000, detail: '新建文件夹' },
+    { action: 'share', path: '/产品说明.pdf', user: 'admin', ip: '192.168.1.10', createdAt: Date.now() - 180000, detail: '创建分享链接' },
+    { action: 'delete', path: '/旧文档.docx', user: 'admin', ip: '10.0.0.5', createdAt: Date.now() - 3600000, detail: '移入回收站' },
+    { action: 'login', path: '/', user: 'admin', ip: '192.168.1.10', createdAt: Date.now() - 7200000, detail: '管理员登录' },
+    { action: 'update', path: '/readme.md', user: 'admin', ip: '192.168.1.10', createdAt: Date.now() - 86400000, detail: '编辑文件内容' },
+    { action: 'upload', path: '/banner.png', user: 'admin', ip: '172.16.0.20', createdAt: Date.now() - 2 * 86400000, detail: '上传文件 (1.8 MB)' },
+    { action: 'share', path: '/设计素材', user: 'admin', ip: '10.0.0.5', createdAt: Date.now() - 3 * 86400000, detail: '创建文件夹分享' },
+    { action: 'delete', path: '/临时文件.txt', user: 'admin', ip: '192.168.1.10', createdAt: Date.now() - 5 * 86400000, detail: '移入回收站' },
+    { action: 'upload', path: '/release.zip', user: 'admin', ip: '172.16.0.20', createdAt: Date.now() - 7 * 86400000, detail: '上传文件 (10 MB)' },
+  ];
+  const size = 5;
+  const start = (page - 1) * size;
+  const items = allItems.slice(start, start + size);
+  return { items, page, totalPages: Math.ceil(allItems.length / size) };
+}
+
+export const mockAdminQuota = {
+  used: 1288490188,
+  total: 5368709120,
+  count: 128,
+};
+
+export const mockProtectedPaths = [
+  { path: '/私密文档', password: '***', note: '内部敏感资料', showName: '机密文件夹' },
+  { path: '/客户合同', password: '***', note: '仅限管理层访问', showName: '' },
+];
+
+export const mockHiddenPaths = [
+  { path: '/.env' },
+  { path: '/config' },
+  { path: '/内部资料/薪酬' },
+];
+
+export const mockWebhooks = [
+  {
+    id: 'wh-1',
+    name: '文件事件通知',
+    msgtype: 'json',
+    url: 'https://hooks.example.com/odrive',
+    method: 'POST',
+    contentType: 'application/json',
+    headers: { 'X-Source': 'odrive' },
+    body: '',
+    events: ['file.uploaded', 'file.deleted', 'file.renamed'],
+    enabled: true,
+  },
+  {
+    id: 'wh-2',
+    name: '管理告警',
+    msgtype: 'markdown',
+    url: 'https://chat.example.com/hooks/abc123',
+    method: 'POST',
+    contentType: 'application/json',
+    headers: {},
+    body: '{"text":"{{message}}"}',
+    events: ['admin.login_failure', 'download.burst'],
+    enabled: false,
+  },
+];
+
+export const mockWebhookDeliveries = [
+  { id: 1, event: 'file.uploaded', endpoint: '文件事件通知', url: 'https://hooks.example.com/odrive', ok: 1, status: 200, error: '', duration_ms: 342, created_at: new Date(Date.now() - 60000).toISOString() },
+  { id: 2, event: 'file.deleted', endpoint: '文件事件通知', url: 'https://hooks.example.com/odrive', ok: 1, status: 200, error: '', duration_ms: 287, created_at: new Date(Date.now() - 300000).toISOString() },
+  { id: 3, event: 'admin.login_failure', endpoint: '管理告警', url: 'https://chat.example.com/hooks/abc123', ok: 0, status: 0, error: 'Connection timeout', duration_ms: 5000, created_at: new Date(Date.now() - 3600000).toISOString() },
+];
+
+export const mockStorageConfig = {
+  r2: {
+    id: 'r2',
+    name: 'Cloudflare R2',
+    provider: 'r2',
+    quotaBytes: 10737418240,
+    quotaFormatted: '10 GB',
+    usedBytes: 3221225472,
+    usedFormatted: '3.0 GB',
+    usedPercent: 30,
+  },
+  overflowEnabled: true,
+  overflowThresholdPercent: 85,
+  spaces: [
+    {
+      id: 'backup-s3',
+      name: 'Backup S3',
+      provider: 's3',
+      endpoint: 'https://s3.us-east-1.amazonaws.com',
+      region: 'us-east-1',
+      bucket: 'my-backup-bucket',
+      prefix: 'odrive/',
+      quotaBytes: 53687091200,
+      quotaFormatted: '50 GB',
+      usedBytes: 10737418240,
+      usedFormatted: '10 GB',
+      usedPercent: 20,
+      enabled: true,
+      overflowTarget: true,
+      hasSecret: true,
+    },
+  ],
+  bindings: [
+    { path: '/backup', storageId: 'backup-s3' },
+  ],
+};
+
 export const mockReadme = `# O-Drive 使用说明
 
 这是 **设计预览模式** 下的 Markdown 示例内容，用于演示渲染效果。

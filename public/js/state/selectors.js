@@ -81,11 +81,6 @@ export function createStateSelectors(deps) {
     return currentEntries(state).find(item => entryKey(item) === key) || null;
   }
 
-  function hasPreview(entry) {
-    const kind = entry.kind || inferKind(entry);
-    return kind !== 'folder' && ['image', 'video', 'audio', 'pdf', 'text', 'file', 'app', 'archive'].includes(kind);
-  }
-
   function detectContentMode(entry) {
     const kind = entry.kind || inferKind(entry);
     if (kind === 'image' || kind === 'video' || kind === 'audio' || kind === 'pdf') return kind;
@@ -102,8 +97,8 @@ export function createStateSelectors(deps) {
     return entries.filter(item => state.explorer.selectedKeys.includes(entryKey(item)));
   }
 
-  function requiresProtectedUnlock(entry, state) {
-    return state.app.role !== 'admin' && isProtectedEntry(entry);
+  function requiresProtectedUnlock(entry) {
+    return isProtectedEntry(entry);
   }
 
   function findEntryByKey(state, key) {
@@ -122,7 +117,6 @@ export function createStateSelectors(deps) {
     currentEntries,
     getSelectedEntry,
     entryKey,
-    hasPreview,
     getEntryPath,
     detectContentMode,
     findCurrentEntryByPath,

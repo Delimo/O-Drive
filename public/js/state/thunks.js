@@ -1,4 +1,4 @@
-import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent } from '../mock/index.js';
+import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent, mockAdminHealth, mockAdminLogs, mockProtectedPaths, mockAdminQuota, mockHiddenPaths, mockStorageConfig, mockWebhooks, mockWebhookDeliveries } from '../mock/index.js';
 
 export function createThunks(deps) {
   const {
@@ -605,6 +605,226 @@ export function createThunks(deps) {
         dispatchToast('error', error.message || '批量彻底删除失败');
       } finally {
         dispatch(actions.explorer.setBatchBusy(false));
+      }
+    },
+    loadAdminHealth: () => async dispatch => {
+      dispatch(actions.admin.setHealthLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setHealth(mockAdminHealth));
+        return;
+      }
+      try {
+        const { response, data } = await adminApi.health();
+        if (!response.ok) throw new Error(data?.message || '健康检查加载失败');
+        dispatch(actions.admin.setHealth(data));
+      } catch (error) {
+        dispatch(actions.admin.setHealthError(error.message || '健康检查加载失败'));
+      }
+    },
+    loadAdminLogs: (page = 1) => async (dispatch, getState) => {
+      dispatch(actions.admin.setLogsLoading(true));
+      const filter = getState().admin.logsFilter;
+      if (mock) {
+        dispatch(actions.admin.setLogs(mockAdminLogs(page)));
+        return;
+      }
+      try {
+        const params = { page, size: 20, ...filter };
+        const { response, data } = await adminApi.logs(params);
+        if (!response.ok) throw new Error(data?.message || '操作日志加载失败');
+        dispatch(actions.admin.setLogs({ items: data.items || [], page: data.page || 1, totalPages: data.totalPages || 0 }));
+      } catch (error) {
+        dispatch(actions.admin.setLogsError(error.message || '操作日志加载失败'));
+      }
+    },
+    loadAdminQuota: () => async dispatch => {
+      dispatch(actions.admin.setQuotaLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setQuota(mockAdminQuota));
+        return;
+      }
+      try {
+        const { response, data } = await adminApi.quota();
+        if (!response.ok) throw new Error(data?.message || '存储配额加载失败');
+        dispatch(actions.admin.setQuota(data));
+      } catch (error) {
+        dispatch(actions.admin.setQuotaError(error.message || '存储配额加载失败'));
+      }
+    },
+    setAdminQuota: bytes => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      try {
+        const { response, data } = await adminApi.setQuota(bytes);
+        if (!response.ok) throw new Error(data?.message || '设置存储配额失败');
+        dispatchToast('success', '存储配额已更新');
+        await dispatch(thunks.loadAdminQuota());
+      } catch (error) {
+        dispatchToast('error', error.message || '设置存储配额失败');
+      }
+    },
+    loadAdminProtectedPaths: () => async dispatch => {
+      dispatch(actions.admin.setProtectedPathsLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setProtectedPaths(mockProtectedPaths));
+        return;
+      }
+      try {
+        const { response, data } = await adminApi.protectedPaths();
+        if (!response.ok) throw new Error(data?.message || '受保护路径加载失败');
+        dispatch(actions.admin.setProtectedPaths(data.items || []));
+      } catch (error) {
+        dispatch(actions.admin.setProtectedPathsError(error.message || '受保护路径加载失败'));
+      }
+    },
+    createAdminProtectedPath: path => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      const modal = getStore().getState().app.modal;
+      if (!modal) return;
+      try {
+        const { response, data } = await adminApi.createProtectedPath(path, modal.password, modal.note, modal.showName);
+        if (!response.ok) throw new Error(data?.message || '创建受保护路径失败');
+        dispatch(actions.app.setModal(null));
+        dispatchToast('success', '受保护路径已创建');
+        await dispatch(thunks.loadAdminProtectedPaths());
+      } catch (error) {
+        dispatch(actions.app.setModal({ ...modal, error: error.message || '创建受保护路径失败' }));
+      }
+    },
+    deleteAdminProtectedPath: path => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      try {
+        const { response, data } = await adminApi.deleteProtectedPath(path);
+        if (!response.ok) throw new Error(data?.message || '删除受保护路径失败');
+        dispatchToast('success', '受保护路径已删除');
+        await dispatch(thunks.loadAdminProtectedPaths());
+      } catch (error) {
+        dispatchToast('error', error.message || '删除受保护路径失败');
+      }
+    },
+    loadAdminHiddenPaths: () => async dispatch => {
+      dispatch(actions.admin.setHiddenPathsLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setHiddenPaths(mockHiddenPaths));
+        return;
+      }
+      try {
+        const { response, data } = await adminApi.hiddenPaths();
+        if (!response.ok) throw new Error(data?.message || '隐藏路径加载失败');
+        dispatch(actions.admin.setHiddenPaths(data.list || []));
+      } catch (error) {
+        dispatch(actions.admin.setHiddenPathsError(error.message || '隐藏路径加载失败'));
+      }
+    },
+    createAdminHiddenPath: targetPath => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      try {
+        const { response, data } = await adminApi.createHiddenPath(targetPath);
+        if (!response.ok) throw new Error(data?.message || '添加隐藏路径失败');
+        dispatchToast('success', '隐藏路径已添加');
+        await dispatch(thunks.loadAdminHiddenPaths());
+      } catch (error) {
+        dispatchToast('error', error.message || '添加隐藏路径失败');
+      }
+    },
+    deleteAdminHiddenPath: path => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      try {
+        const { response, data } = await adminApi.deleteHiddenPath(path);
+        if (!response.ok) throw new Error(data?.message || '删除隐藏路径失败');
+        dispatchToast('success', '隐藏路径已删除');
+        await dispatch(thunks.loadAdminHiddenPaths());
+      } catch (error) {
+        dispatchToast('error', error.message || '删除隐藏路径失败');
+      }
+    },
+    loadAdminStorageConfig: () => async dispatch => {
+      dispatch(actions.admin.setStorageConfigLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setStorageConfig(mockStorageConfig));
+        return;
+      }
+      try {
+        const { response, data } = await adminApi.storageConfig();
+        if (!response.ok) throw new Error(data?.message || '存储配置加载失败');
+        dispatch(actions.admin.setStorageConfig(data));
+      } catch (error) {
+        dispatch(actions.admin.setStorageConfigError(error.message || '存储配置加载失败'));
+      }
+    },
+    saveAdminStorageConfig: config => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      dispatch(actions.admin.setStorageConfigSaving(true));
+      try {
+        const { response, data } = await adminApi.saveStorageConfig(config);
+        if (!response.ok) throw new Error(data?.message || '保存存储配置失败');
+        dispatchToast('success', '存储配置已更新');
+        dispatch(actions.admin.setStorageConfig(data));
+      } catch (error) {
+        dispatchToast('error', error.message || '保存存储配置失败');
+        dispatch(actions.admin.setStorageConfigSaving(false));
+      }
+    },
+    testAdminStorageSpace: space => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      try {
+        const { response, data } = await adminApi.testStorageSpace(space);
+        if (!response.ok) throw new Error(data?.message || '连接测试失败');
+        dispatchToast(data.success ? 'success' : 'error', data.success ? `连接成功（${data.durationMs}ms）` : `连接失败: ${data.error || ''}`);
+      } catch (error) {
+        dispatchToast('error', error.message || '连接测试失败');
+      }
+    },
+    loadAdminWebhooks: () => async dispatch => {
+      dispatch(actions.admin.setWebhooksLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setWebhooks(mockWebhooks));
+        return;
+      }
+      try {
+        const { response, data } = await adminApi.webhooks();
+        if (!response.ok) throw new Error(data?.message || 'Webhook 配置加载失败');
+        dispatch(actions.admin.setWebhooks(data.items || []));
+      } catch (error) {
+        dispatch(actions.admin.setWebhooksError(error.message || 'Webhook 配置加载失败'));
+      }
+    },
+    saveAdminWebhooks: items => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      try {
+        const { response, data } = await adminApi.saveWebhooks(items);
+        if (!response.ok) throw new Error(data?.message || '保存 Webhook 配置失败');
+        dispatchToast('success', 'Webhook 配置已更新');
+        dispatch(actions.admin.setWebhooks(data.items || []));
+      } catch (error) {
+        dispatchToast('error', error.message || '保存 Webhook 配置失败');
+      }
+    },
+    testAdminWebhook: endpoint => async dispatch => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      try {
+        const { response, data } = await adminApi.testWebhook(endpoint);
+        if (!response.ok) throw new Error(data?.message || '测试投递失败');
+        dispatchToast(data.success ? 'success' : 'error',
+          data.success
+            ? `${data.name || 'Webhook'} 测试成功（${data.durationMs || 0}ms）：${data.message || ''}`
+            : `测试失败：${data.message || data.error || '未知错误'}`);
+      } catch (error) {
+        dispatchToast('error', error.message || '测试投递失败');
+      }
+    },
+    loadAdminWebhookDeliveries: () => async dispatch => {
+      dispatch(actions.admin.setWebhookDeliveriesLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setWebhookDeliveries(mockWebhookDeliveries));
+        return;
+      }
+      try {
+        const { response, data } = await adminApi.webhookDeliveries();
+        if (!response.ok) throw new Error(data?.message || '投递记录加载失败');
+        dispatch(actions.admin.setWebhookDeliveries(data.items || []));
+      } catch (error) {
+        dispatch(actions.admin.setWebhookDeliveriesLoading(false));
+        dispatchToast('error', error.message || '投递记录加载失败');
       }
     },
     unlockProtectedPath: password => async (dispatch, getState) => {

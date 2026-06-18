@@ -237,6 +237,98 @@ export function createApiLayer(deps) {
     stats() {
       return request('/api/admin/stats');
     },
+    health() {
+      return request('/api/admin/health');
+    },
+    logs(params = {}) {
+      const q = new URLSearchParams();
+      if (params.page) q.set('page', params.page);
+      if (params.size) q.set('size', params.size);
+      if (params.q) q.set('q', params.q);
+      if (params.action) q.set('action', params.action);
+      if (params.from) q.set('from', params.from);
+      if (params.to) q.set('to', params.to);
+      return request(`/api/admin/logs?${q.toString()}`);
+    },
+    quota() {
+      return request('/api/admin/settings/quota');
+    },
+    setQuota(bytes) {
+      return request('/api/admin/settings/quota', {
+        method: 'PUT',
+        json: { bytes },
+        csrf: true,
+      });
+    },
+    protectedPaths() {
+      return request('/api/admin/settings/protected');
+    },
+    createProtectedPath(path, password, note, showName) {
+      return request('/api/admin/settings/protected', {
+        method: 'POST',
+        json: { path, password, note, showName },
+        csrf: true,
+      });
+    },
+    deleteProtectedPath(path) {
+      return request(`/api/admin/settings/protected?path=${encodeURIComponent(path)}`, {
+        method: 'DELETE',
+        csrf: true,
+      });
+    },
+    hiddenPaths() {
+      return request('/api/admin/settings/hidden');
+    },
+    createHiddenPath(targetPath) {
+      return request('/api/admin/settings/hidden', {
+        method: 'POST',
+        json: { targetPath },
+        csrf: true,
+      });
+    },
+    deleteHiddenPath(path) {
+      return request(`/api/admin/settings/hidden?path=${encodeURIComponent(path)}`, {
+        method: 'DELETE',
+        csrf: true,
+      });
+    },
+    storageConfig() {
+      return request('/api/admin/settings/storage');
+    },
+    saveStorageConfig(config) {
+      return request('/api/admin/settings/storage', {
+        method: 'PUT',
+        json: config,
+        csrf: true,
+      });
+    },
+    testStorageSpace(space) {
+      return request('/api/admin/settings/storage/test', {
+        method: 'POST',
+        json: space,
+        csrf: true,
+      });
+    },
+    webhooks() {
+      return request('/api/admin/settings/webhooks');
+    },
+    saveWebhooks(items) {
+      return request('/api/admin/settings/webhooks', {
+        method: 'PUT',
+        json: { items },
+        csrf: true,
+      });
+    },
+    testWebhook(endpoint) {
+      return request('/api/admin/settings/webhooks?test=1', {
+        method: 'POST',
+        json: { endpoint },
+        csrf: true,
+      });
+    },
+    webhookDeliveries() {
+      return request('/api/admin/webhook-deliveries');
+    },
   };
 
   return {

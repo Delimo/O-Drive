@@ -209,6 +209,278 @@ export function createModalRenderers(deps) {
       `;
     }
 
+    if (modal.type === 'add-protected-path') {
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-protected-title" data-stop-close="true">
+            <h3 id="add-protected-title" class="modal-title">添加受保护路径</h3>
+            <p class="modal-copy">设置需要密码才能访问的文件夹，增强数据安全。</p>
+            <form class="modal-form" data-form="add-protected-path">
+              <input class="inline-input" name="path" placeholder="路径，例如 /文档/私密" value="${escapeHtml(modal.path || '')}" required>
+              <input class="inline-input" type="password" name="password" placeholder="访问密码" value="${escapeHtml(modal.password || '')}" required>
+              <input class="inline-input" name="showName" placeholder="显示名称（可选）" value="${escapeHtml(modal.showName || '')}">
+              <input class="inline-input" name="note" placeholder="备注说明（可选）" value="${escapeHtml(modal.note || '')}">
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">设置后，访问该路径需要输入密码。</div>'}
+              <div class="btn-row" style="margin-top:6px;">
+                <button class="btn btn-primary" type="submit" ${modal.loading ? 'disabled' : ''}>${modal.loading ? '创建中...' : '创建'}</button>
+                <button class="btn" type="button" data-action="close-modal">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'confirm-delete-protected-path') {
+      const delPath = modal.path || '';
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-del-protected-title" data-stop-close="true">
+            <h3 id="confirm-del-protected-title" class="modal-title">确认删除受保护路径</h3>
+            <p class="modal-copy">你确定要删除路径"${escapeHtml(delPath)}"的访问保护吗？</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作可恢复</h3>
+              <div class="attention-copy">删除后，该路径将不再需要密码即可访问。如果需要重新保护，可以再次添加。</div>
+            </div>
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除，请稍候...</div>' : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-delete-protected-path" data-path="${escapeHtml(delPath)}" ${modal.loading ? 'disabled' : ''}>
+                ${icons.trash}
+                <span>${modal.loading ? '删除中...' : '确认删除'}</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'add-hidden-path') {
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-hidden-title" data-stop-close="true">
+            <h3 id="add-hidden-title" class="modal-title">添加隐藏路径</h3>
+            <p class="modal-copy">被隐藏的路径对游客不可见，但管理员仍可正常访问。</p>
+            <form class="modal-form" data-form="add-hidden-path">
+              <input class="inline-input" name="path" placeholder="例如 /.env 或 /config" value="${escapeHtml(modal.path || '')}" required>
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">输入相对于根目录的路径，支持文件和文件夹。</div>'}
+              <div class="btn-row" style="margin-top:6px;">
+                <button class="btn btn-primary" type="submit" ${modal.loading ? 'disabled' : ''}>${modal.loading ? '添加中...' : '添加'}</button>
+                <button class="btn" type="button" data-action="close-modal">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'confirm-delete-hidden-path') {
+      const delPath = modal.path || '';
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-del-hidden-title" data-stop-close="true">
+            <h3 id="confirm-del-hidden-title" class="modal-title">确认取消隐藏路径</h3>
+            <p class="modal-copy">你确定要取消路径"${escapeHtml(delPath)}"的隐藏状态吗？</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作可恢复</h3>
+              <div class="attention-copy">取消隐藏后，该路径将对游客重新可见。如果需要再次隐藏，可以重新添加。</div>
+            </div>
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除，请稍候...</div>' : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-delete-hidden-path" data-path="${escapeHtml(delPath)}" ${modal.loading ? 'disabled' : ''}>
+                ${icons.trash}
+                <span>${modal.loading ? '删除中...' : '确认取消隐藏'}</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'edit-storage-quota') {
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-quota-title" data-stop-close="true">
+            <h3 id="edit-quota-title" class="modal-title">编辑 R2 存储配额</h3>
+            <p class="modal-copy">设置 Cloudflare R2 的总存储容量上限。</p>
+            <form class="modal-form" data-form="edit-storage-quota">
+              <input class="inline-input" name="r2QuotaBytes" type="number" min="0" placeholder="配额（字节）" value="${escapeHtml(String(modal.r2QuotaBytes || ''))}">
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">设置为 0 表示不限制。保存后对所有上传生效。</div>'}
+              <div class="btn-row" style="margin-top:6px;">
+                <button class="btn btn-primary" type="submit" ${modal.loading ? 'disabled' : ''}>${modal.loading ? '保存中...' : '保存'}</button>
+                <button class="btn" type="button" data-action="close-modal">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'add-storage-space') {
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-space-title" data-stop-close="true">
+            <h3 id="add-space-title" class="modal-title">添加 S3 存储空间</h3>
+            <p class="modal-copy">配置兼容 S3 协议的外部存储空间。</p>
+            <form class="modal-form" data-form="add-storage-space">
+              <input class="inline-input" name="name" placeholder="名称（必填）" value="${escapeHtml(modal.name || '')}" required>
+              <input class="inline-input" name="endpoint" placeholder="Endpoint URL" value="${escapeHtml(modal.endpoint || '')}">
+              <input class="inline-input" name="region" placeholder="Region（默认 auto）" value="${escapeHtml(modal.region || 'auto')}">
+              <input class="inline-input" name="bucket" placeholder="Bucket（必填）" value="${escapeHtml(modal.bucket || '')}" required>
+              <input class="inline-input" name="accessKeyId" placeholder="Access Key ID" value="${escapeHtml(modal.accessKeyId || '')}">
+              <input class="inline-input" type="password" name="secretAccessKey" placeholder="Secret Access Key" value="${escapeHtml(modal.secretAccessKey || '')}">
+              <input class="inline-input" name="prefix" placeholder="前缀（可选，如 odrive/）" value="${escapeHtml(modal.prefix || '')}">
+              <input class="inline-input" name="quotaBytes" type="number" min="0" placeholder="配额字节数（0 为不限制）" value="${escapeHtml(String(modal.quotaBytes || ''))}">
+              <label class="check-row"><input type="checkbox" name="enabled" ${modal.enabled !== false ? 'checked' : ''}>启用</label>
+              <label class="check-row"><input type="checkbox" name="overflowTarget" ${modal.overflowTarget ? 'checked' : ''}>允许溢出写入</label>
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">建议先测试连接再保存。</div>'}
+              <div class="btn-row" style="margin-top:6px;">
+                <button class="btn btn-primary" type="submit" ${modal.loading ? 'disabled' : ''}>${modal.loading ? '添加中...' : '添加'}</button>
+                <button class="btn" type="button" data-action="close-modal">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'confirm-delete-storage-space') {
+      const spaceName = modal.name || modal.id || '';
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-del-space-title" data-stop-close="true">
+            <h3 id="confirm-del-space-title" class="modal-title">确认删除存储空间</h3>
+            <p class="modal-copy">你确定要删除存储空间"${escapeHtml(spaceName)}"吗？</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作不可撤销</h3>
+              <div class="attention-copy">删除后，该空间的配置信息将被移除，关联的路径绑定也会一并清除。文件本身不会被删除。</div>
+            </div>
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除，请稍候...</div>' : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-delete-storage-space" ${modal.loading ? 'disabled' : ''}>
+                ${icons.trash}
+                <span>${modal.loading ? '删除中...' : '确认删除'}</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'add-storage-binding') {
+      const options = modal.storageOptions || [];
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-binding-title" data-stop-close="true">
+            <h3 id="add-binding-title" class="modal-title">添加路径绑定</h3>
+            <p class="modal-copy">将指定路径的文件路由到对应的存储空间。</p>
+            <form class="modal-form" data-form="add-storage-binding">
+              <input class="inline-input" name="path" placeholder="路径，例如 /backup" value="${escapeHtml(modal.path || '')}" required>
+              <select class="inline-input" name="storageId" required>
+                ${options.map(opt => `<option value="${escapeHtml(opt.id)}" ${modal.storageId === opt.id ? 'selected' : ''}>${escapeHtml(opt.name)}</option>`).join('')}
+              </select>
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">绑定后，该路径下的新文件将存储在选定的空间。</div>'}
+              <div class="btn-row" style="margin-top:6px;">
+                <button class="btn btn-primary" type="submit" ${modal.loading ? 'disabled' : ''}>${modal.loading ? '添加中...' : '添加'}</button>
+                <button class="btn" type="button" data-action="close-modal">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'confirm-delete-storage-binding') {
+      const bindPath = modal.path || '';
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-del-binding-title" data-stop-close="true">
+            <h3 id="confirm-del-binding-title" class="modal-title">确认删除路径绑定</h3>
+            <p class="modal-copy">你确定要删除路径"${escapeHtml(bindPath)}"的存储绑定吗？</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作可恢复</h3>
+              <div class="attention-copy">删除后，该路径下的新文件将使用默认存储（R2）。已有文件不受影响。</div>
+            </div>
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除，请稍候...</div>' : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-delete-storage-binding" ${modal.loading ? 'disabled' : ''}>
+                ${icons.trash}
+                <span>${modal.loading ? '删除中...' : '确认删除'}</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'add-webhook' || modal.type === 'edit-webhook') {
+      const isEdit = modal.type === 'edit-webhook';
+      const eventOptions = ['file.uploaded', 'file.deleted', 'file.renamed', 'file.moved', 'file.copied', 'folder.created', 'trash.restored', 'admin.login_failure', 'download.burst', 'share.created', 'share.deleted'];
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" data-stop-close="true" style="width:560px;">
+            <h3 class="modal-title">${isEdit ? '编辑' : '添加'} Webhook</h3>
+            <p class="modal-copy">配置事件通知的投递端点。</p>
+            <form class="modal-form" data-form="${isEdit ? 'edit' : 'add'}-webhook">
+              <input class="inline-input" name="name" placeholder="名称" value="${escapeHtml(modal.name || '')}" required>
+              <input class="inline-input" name="url" placeholder="Webhook URL" value="${escapeHtml(modal.url || '')}" required>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <select class="inline-input" name="msgtype">
+                  ${['json', 'text', 'markdown'].map(t => `<option value="${t}" ${modal.msgtype === t ? 'selected' : ''}>${t}</option>`).join('')}
+                </select>
+                <select class="inline-input" name="method">
+                  ${['POST', 'PUT', 'PATCH', 'GET', 'DELETE'].map(m => `<option value="${m}" ${modal.method === m ? 'selected' : ''}>${m}</option>`).join('')}
+                </select>
+              </div>
+              <input class="inline-input" name="contentType" placeholder="Content-Type" value="${escapeHtml(modal.contentType || 'application/json')}">
+              <textarea class="inline-input" name="headers" placeholder="自定义 Headers (JSON)" rows="2" style="resize:vertical;">${escapeHtml(modal.headers || '')}</textarea>
+              <textarea class="inline-input" name="body" placeholder="请求体模板（可选）" rows="2" style="resize:vertical;">${escapeHtml(modal.body || '')}</textarea>
+              <input class="inline-input" name="events" placeholder="事件类型（逗号分隔）" value="${escapeHtml((modal.events || []).join(', '))}">
+              <div style="font-size:12px;color:var(--muted);margin:-4px 0 8px;">可选事件：${eventOptions.join(', ')}</div>
+              <label class="check-row"><input type="checkbox" name="enabled" ${modal.enabled !== false ? 'checked' : ''}>启用</label>
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">支持事件变量：{{event}}、{{message}}、{{path}} 等。</div>'}
+              <div class="btn-row" style="margin-top:6px;">
+                <button class="btn btn-primary" type="submit" ${modal.loading ? 'disabled' : ''}>${modal.loading ? '保存中...' : (isEdit ? '保存' : '添加')}</button>
+                <button class="btn" type="button" data-action="close-modal">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'confirm-delete-webhook') {
+      const whName = modal.name || modal.id || '';
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-del-wh-title" data-stop-close="true">
+            <h3 id="confirm-del-wh-title" class="modal-title">确认删除 Webhook</h3>
+            <p class="modal-copy">你确定要删除 Webhook"${escapeHtml(whName)}"吗？</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作不可撤销</h3>
+              <div class="attention-copy">删除后，该 Webhook 将立即停止投递事件通知。</div>
+            </div>
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除，请稍候...</div>' : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-delete-webhook" ${modal.loading ? 'disabled' : ''}>
+                ${icons.trash}
+                <span>${modal.loading ? '删除中...' : '确认删除'}</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     if (modal.type === 'confirm-cleanup-expired') {
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">

@@ -69,6 +69,261 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'refresh-admin-health') {
+        store.dispatch(thunks.loadAdminHealth());
+        return;
+      }
+
+      if (action === 'refresh-admin-logs') {
+        store.dispatch(thunks.loadAdminLogs(1));
+        return;
+      }
+
+      if (action === 'refresh-admin-quota') {
+        store.dispatch(thunks.loadAdminQuota());
+        return;
+      }
+
+      if (action === 'refresh-admin-protected-paths') {
+        store.dispatch(thunks.loadAdminProtectedPaths());
+        return;
+      }
+
+      if (action === 'refresh-admin-hidden-paths') {
+        store.dispatch(thunks.loadAdminHiddenPaths());
+        return;
+      }
+
+      if (action === 'show-add-hidden-path') {
+        store.dispatch(actions.app.setModal({
+          type: 'add-hidden-path',
+          loading: false,
+          error: '',
+          path: '',
+        }));
+        return;
+      }
+
+      if (action === 'confirm-delete-hidden-path') {
+        const delPath = actionNode.dataset.path || key;
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-delete-hidden-path',
+          loading: false,
+          error: '',
+          path: delPath,
+        }));
+        return;
+      }
+
+      if (action === 'execute-delete-hidden-path') {
+        const delPath = actionNode.dataset.path || key;
+        store.dispatch(thunks.deleteAdminHiddenPath(delPath));
+        return;
+      }
+
+      if (action === 'refresh-admin-storage-config') {
+        store.dispatch(thunks.loadAdminStorageConfig());
+        return;
+      }
+
+      if (action === 'show-edit-storage-quota') {
+        const config = store.getState().admin.storageConfig;
+        store.dispatch(actions.app.setModal({
+          type: 'edit-storage-quota',
+          loading: false,
+          error: '',
+          r2QuotaBytes: config?.r2?.quotaBytes || 0,
+        }));
+        return;
+      }
+
+      if (action === 'show-add-storage-space') {
+        store.dispatch(actions.app.setModal({
+          type: 'add-storage-space',
+          loading: false,
+          error: '',
+          name: '', endpoint: '', region: 'auto', bucket: '', accessKeyId: '', secretAccessKey: '', prefix: '', quotaBytes: '', enabled: true, overflowTarget: false,
+        }));
+        return;
+      }
+
+      if (action === 'confirm-delete-storage-space') {
+        const spaceId = actionNode.dataset.id || key;
+        const spaceName = actionNode.dataset.name || spaceId;
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-delete-storage-space',
+          loading: false,
+          error: '',
+          id: spaceId,
+          name: spaceName,
+        }));
+        return;
+      }
+
+      if (action === 'execute-delete-storage-space') {
+        const modal = store.getState().app.modal;
+        if (!modal) return;
+        const config = store.getState().admin.storageConfig;
+        if (!config) return;
+        const updatedSpaces = (config.spaces || []).filter(s => s.id !== modal.id);
+        const updatedBindings = (config.bindings || []).filter(b => b.storageId !== modal.id);
+        store.dispatch(actions.app.setModal(null));
+        store.dispatch(thunks.saveAdminStorageConfig({ ...config, spaces: updatedSpaces, bindings: updatedBindings }));
+        return;
+      }
+
+      if (action === 'show-add-storage-binding') {
+        const config = store.getState().admin.storageConfig;
+        const storageOptions = [
+          { id: 'r2', name: 'Cloudflare R2' },
+          ...(config?.spaces || []).map(s => ({ id: s.id, name: s.name })),
+        ];
+        store.dispatch(actions.app.setModal({
+          type: 'add-storage-binding',
+          loading: false,
+          error: '',
+          path: '',
+          storageId: storageOptions[0]?.id || '',
+          storageOptions,
+        }));
+        return;
+      }
+
+      if (action === 'confirm-delete-storage-binding') {
+        const bindPath = actionNode.dataset.path || key;
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-delete-storage-binding',
+          loading: false,
+          error: '',
+          path: bindPath,
+        }));
+        return;
+      }
+
+      if (action === 'execute-delete-storage-binding') {
+        const modal = store.getState().app.modal;
+        if (!modal) return;
+        const config = store.getState().admin.storageConfig;
+        if (!config) return;
+        const updatedBindings = (config.bindings || []).filter(b => b.path !== modal.path);
+        store.dispatch(actions.app.setModal(null));
+        store.dispatch(thunks.saveAdminStorageConfig({ ...config, bindings: updatedBindings }));
+        return;
+      }
+
+      if (action === 'test-storage-space') {
+        const spaceId = actionNode.dataset.id || key;
+        const config = store.getState().admin.storageConfig;
+        const space = (config?.spaces || []).find(s => s.id === spaceId);
+        if (space) {
+          dispatchToast('info', `正在测试 ${space.name} 的连接...`);
+          store.dispatch(thunks.testAdminStorageSpace(space));
+        }
+        return;
+      }
+
+      if (action === 'refresh-admin-webhooks') {
+        store.dispatch(thunks.loadAdminWebhooks());
+        return;
+      }
+
+      if (action === 'refresh-admin-webhook-deliveries') {
+        store.dispatch(thunks.loadAdminWebhookDeliveries());
+        return;
+      }
+
+      if (action === 'show-add-webhook') {
+        store.dispatch(actions.app.setModal({
+          type: 'add-webhook',
+          loading: false,
+          error: '',
+          name: '', url: '', msgtype: 'json', method: 'POST', contentType: 'application/json',
+          headers: '', body: '', events: [], enabled: true,
+        }));
+        return;
+      }
+
+      if (action === 'edit-webhook') {
+        const whId = actionNode.dataset.id || key;
+        const webhooks = store.getState().admin.webhooks || [];
+        const wh = webhooks.find(w => w.id === whId);
+        if (!wh) return;
+        store.dispatch(actions.app.setModal({
+          type: 'edit-webhook',
+          loading: false,
+          error: '',
+          ...wh,
+          headers: wh.headers ? JSON.stringify(wh.headers, null, 2) : '',
+        }));
+        return;
+      }
+
+      if (action === 'confirm-delete-webhook') {
+        const whId = actionNode.dataset.id || key;
+        const whName = actionNode.dataset.name || whId;
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-delete-webhook',
+          loading: false,
+          error: '',
+          id: whId,
+          name: whName,
+        }));
+        return;
+      }
+
+      if (action === 'execute-delete-webhook') {
+        const modal = store.getState().app.modal;
+        if (!modal) return;
+        const webhooks = (store.getState().admin.webhooks || []).filter(w => w.id !== modal.id);
+        store.dispatch(actions.app.setModal(null));
+        store.dispatch(thunks.saveAdminWebhooks(webhooks));
+        return;
+      }
+
+      if (action === 'test-webhook') {
+        const whId = actionNode.dataset.id || key;
+        const webhooks = store.getState().admin.webhooks || [];
+        const wh = webhooks.find(w => w.id === whId);
+        if (wh) store.dispatch(thunks.testAdminWebhook(wh));
+        return;
+      }
+
+      if (action === 'show-add-protected-path') {
+        store.dispatch(actions.app.setModal({
+          type: 'add-protected-path',
+          loading: false,
+          error: '',
+          path: '',
+          password: '',
+          note: '',
+          showName: '',
+        }));
+        return;
+      }
+
+      if (action === 'confirm-delete-protected-path') {
+        const delPath = actionNode.dataset.path || key;
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-delete-protected-path',
+          loading: false,
+          error: '',
+          path: delPath,
+        }));
+        return;
+      }
+
+      if (action === 'execute-delete-protected-path') {
+        const delPath = actionNode.dataset.path || key;
+        store.dispatch(thunks.deleteAdminProtectedPath(delPath));
+        return;
+      }
+
+      if (action === 'set-logs-page') {
+        const page = parseInt(actionNode.dataset.page, 10);
+        if (page > 0) store.dispatch(thunks.loadAdminLogs(page));
+        return;
+      }
+
       if (action === 'set-share-filter') {
         const filter = actionNode.dataset.filter || 'all';
         store.dispatch(actions.admin.setShareFilter(filter));
@@ -356,6 +611,13 @@ export function registerAppEvents(deps) {
   documentRef.addEventListener('input', event => {
     const state = store.getState();
     const role = event.target.dataset.role;
+    const actionInput = event.target.dataset.actionInput;
+
+    if (actionInput === 'set-logs-filter') {
+      const key = event.target.dataset.key || 'q';
+      store.dispatch(actions.admin.setLogsFilter({ [key]: event.target.value }));
+      return;
+    }
 
     if (event.target.id === 'preview-edit-area') {
       const modal = store.getState().app.modal;
@@ -400,6 +662,15 @@ export function registerAppEvents(deps) {
   });
 
   documentRef.addEventListener('change', event => {
+    const actionChange = event.target.dataset.actionChange;
+
+    if (actionChange === 'set-logs-filter') {
+      const key = event.target.dataset.key || 'q';
+      store.dispatch(actions.admin.setLogsFilter({ [key]: event.target.value }));
+      store.dispatch(thunks.loadAdminLogs(1));
+      return;
+    }
+
     if (event.target.id === 'upload-input') {
       if (store.getState().app.role !== 'admin') {
         dispatchToast('error', '请先登录管理员账户');
@@ -466,6 +737,90 @@ export function registerAppEvents(deps) {
 
     if (form === 'share-password') {
       store.dispatch(thunks.unlockShare(String(data.get('password') || '')));
+    }
+
+    if (form === 'add-protected-path') {
+      store.dispatch(thunks.createAdminProtectedPath(String(data.get('path') || '').trim()));
+      return;
+    }
+
+    if (form === 'add-hidden-path') {
+      store.dispatch(thunks.createAdminHiddenPath(String(data.get('path') || '').trim()));
+      return;
+    }
+
+    if (form === 'edit-storage-quota') {
+      const config = store.getState().admin.storageConfig;
+      if (!config) return;
+      const r2QuotaBytes = parseInt(String(data.get('r2QuotaBytes') || '0'), 10);
+      store.dispatch(thunks.saveAdminStorageConfig({ ...config, r2QuotaBytes: isNaN(r2QuotaBytes) ? 0 : r2QuotaBytes }));
+      return;
+    }
+
+    if (form === 'add-storage-space') {
+      const config = store.getState().admin.storageConfig;
+      if (!config) return;
+      const space = {
+        name: String(data.get('name') || '').trim(),
+        endpoint: String(data.get('endpoint') || '').trim(),
+        region: String(data.get('region') || 'auto').trim(),
+        bucket: String(data.get('bucket') || '').trim(),
+        accessKeyId: String(data.get('accessKeyId') || '').trim(),
+        secretAccessKey: String(data.get('secretAccessKey') || '').trim(),
+        prefix: String(data.get('prefix') || '').trim(),
+        quotaBytes: parseInt(String(data.get('quotaBytes') || '0'), 10),
+        enabled: data.get('enabled') === 'on',
+        overflowTarget: data.get('overflowTarget') === 'on',
+      };
+      if (!space.name || !space.bucket) { dispatchToast('error', '名称和存储桶为必填项'); return; }
+      store.dispatch(actions.app.setModal(null));
+      const updatedSpaces = [...(config.spaces || []), space];
+      store.dispatch(thunks.saveAdminStorageConfig({ ...config, spaces: updatedSpaces }));
+      return;
+    }
+
+    if (form === 'add-webhook' || form === 'edit-webhook') {
+      const modal = store.getState().app.modal;
+      if (!modal) return;
+      const isEdit = form === 'edit-webhook';
+      let headers = {};
+      try {
+        const h = String(data.get('headers') || '').trim();
+        if (h) headers = JSON.parse(h);
+      } catch { dispatchToast('error', 'Headers 格式错误，需为有效 JSON'); return; }
+      const events = String(data.get('events') || '').split(',').map(s => s.trim()).filter(Boolean);
+      const webhook = {
+        id: isEdit ? modal.id : `wh-${Date.now()}`,
+        name: String(data.get('name') || '').trim(),
+        msgtype: String(data.get('msgtype') || 'json'),
+        url: String(data.get('url') || '').trim(),
+        method: String(data.get('method') || 'POST'),
+        contentType: String(data.get('contentType') || 'application/json'),
+        headers,
+        body: String(data.get('body') || ''),
+        events,
+        enabled: data.get('enabled') === 'on',
+      };
+      if (!webhook.name || !webhook.url) { dispatchToast('error', '名称和 URL 为必填项'); return; }
+      store.dispatch(actions.app.setModal(null));
+      const existing = store.getState().admin.webhooks || [];
+      const updated = isEdit ? existing.map(w => w.id === webhook.id ? webhook : w) : [...existing, webhook];
+      store.dispatch(thunks.saveAdminWebhooks(updated));
+      return;
+    }
+
+    if (form === 'add-storage-binding') {
+      const config = store.getState().admin.storageConfig;
+      if (!config) return;
+      const binding = {
+        path: String(data.get('path') || '').trim(),
+        storageId: String(data.get('storageId') || '').trim(),
+      };
+      if (!binding.path || !binding.storageId) { dispatchToast('error', '路径和存储空间为必填项'); return; }
+      store.dispatch(actions.app.setModal(null));
+      const updatedBindings = [...(config.bindings || []), binding];
+      store.dispatch(thunks.saveAdminStorageConfig({ ...config, bindings: updatedBindings }));
+      return;
     }
   });
 }

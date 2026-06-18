@@ -123,6 +123,38 @@ export function createPageRenderers(deps) {
             ${icons.share}
             <span>刷新分享</span>
           </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-health">
+            ${icons.eye}
+            <span>健康检查</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-logs">
+            ${icons.list}
+            <span>操作日志</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-quota">
+            ${icons.stats}
+            <span>存储配额</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-protected-paths">
+            ${icons.lock}
+            <span>受保护路径</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-hidden-paths">
+            ${icons.eye}
+            <span>隐藏路径</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-storage-config">
+            ${icons.stats}
+            <span>存储空间</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">
+            ${icons.link}
+            <span>Webhook</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhook-deliveries">
+            ${icons.list}
+            <span>投递记录</span>
+          </button>
         </div>
       </section>
     `;
@@ -312,6 +344,582 @@ export function createPageRenderers(deps) {
     `;
   }
 
+  function renderAdminHealthSection(admin) {
+    const health = admin.health;
+    const loading = admin.healthLoading;
+    const error = admin.healthError;
+
+    if (error) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">系统健康</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-health">${icons.eye}<span>重新加载</span></button>
+          </div>
+          <div class="empty-state">
+            <div class="empty-orb">${icons.lock}</div>
+            <p class="empty-copy">${escapeHtml(error)}</p>
+          </div>
+        </section>
+      `;
+    }
+
+    if (loading || !health) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">系统健康</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-health">${icons.eye}<span>刷新</span></button>
+          </div>
+          ${renderEmptyState('加载中', '正在检查各服务组件运行状态...', icons.eye)}
+        </section>
+      `;
+    }
+
+    const items = Object.entries(health.components || health).filter(([, v]) => typeof v === 'object');
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">系统健康</h2>
+            <p class="admin-section-copy">各服务组件运行状态一览。</p>
+          </div>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-health">${icons.eye}<span>刷新</span></button>
+        </div>
+        <div class="hero-strip">
+          ${items.map(([key, value]) => {
+            const status = String(value?.status || 'unknown');
+            const ok = status === 'ok' || status === 'healthy';
+            return `
+              <div class="mini-stat">
+                <div class="mini-stat-label">${safeText(key)}</div>
+                <div class="mini-stat-value">${ok ? icons.check : icons.close}</div>
+                <div class="mini-stat-meta">${safeText(value?.message || status, '未知')}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderAdminLogsSection(admin) {
+    const { logs, logsLoading, logsError, logsPage, logsTotalPages, logsFilter } = admin;
+
+    if (logsError) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">操作日志</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-logs">${icons.refresh}<span>重新加载</span></button>
+          </div>
+          <div class="empty-state">
+            <div class="empty-orb">${icons.lock}</div>
+            <p class="empty-copy">${escapeHtml(logsError)}</p>
+          </div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">操作日志</h2>
+            <p class="admin-section-copy">查看系统操作记录，支持按关键字筛选和分页浏览。</p>
+          </div>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-logs">${icons.refresh}<span>刷新</span></button>
+        </div>
+        <div class="admin-filter-bar" style="margin-bottom:14px;">
+          <input class="input" type="text" placeholder="搜索关键字..." value="${escapeHtml(logsFilter.q || '')}" data-action-input="set-logs-filter" data-key="q" style="flex:1;min-width:120px;">
+          <select class="input" data-action-change="set-logs-filter" data-key="action" style="width:auto;">
+            <option value="">全部类型</option>
+            <option value="create" ${logsFilter.action === 'create' ? 'selected' : ''}>创建</option>
+            <option value="delete" ${logsFilter.action === 'delete' ? 'selected' : ''}>删除</option>
+            <option value="update" ${logsFilter.action === 'update' ? 'selected' : ''}>更新</option>
+            <option value="share" ${logsFilter.action === 'share' ? 'selected' : ''}>分享</option>
+            <option value="login" ${logsFilter.action === 'login' ? 'selected' : ''}>登录</option>
+            <option value="upload" ${logsFilter.action === 'upload' ? 'selected' : ''}>上传</option>
+          </select>
+        </div>
+        ${
+          logsLoading
+            ? renderEmptyState('正在加载日志', '正在获取系统操作记录。', icons.refresh)
+            : logs.length === 0
+              ? renderEmptyState('暂无操作日志', '系统中还没有操作记录。', icons.list)
+              : `
+                <div class="latest-list">
+                  ${logs.map(item => `
+                    <article class="latest-item">
+                      <div class="latest-title">${safeText(item.action || '操作')} · ${safeText(item.path || '/')}</div>
+                      <div class="latest-copy">
+                        ${item.user ? `用户 ${escapeHtml(item.user)}` : ''}
+                        ${item.ip ? ` · IP ${escapeHtml(item.ip)}` : ''}
+                        ${item.createdAt ? ` · ${formatTime(item.createdAt)} (${formatRelative(item.createdAt)})` : ''}
+                      </div>
+                      ${item.detail ? `<div class="latest-copy" style="margin-top:4px;color:var(--muted);font-size:13px;">${escapeHtml(item.detail)}</div>` : ''}
+                    </article>
+                  `).join('')}
+                </div>
+                <div class="admin-pagination" style="display:flex;align-items:center;gap:8px;margin-top:16px;">
+                  <button class="btn btn-muted" type="button" data-action="set-logs-page" data-page="${logsPage - 1}" ${logsPage <= 1 ? 'disabled' : ''}>上一页</button>
+                  <span style="font-size:13px;color:var(--muted);">第 ${logsPage} / ${logsTotalPages || 1} 页</span>
+                  <button class="btn btn-muted" type="button" data-action="set-logs-page" data-page="${logsPage + 1}" ${logsPage >= logsTotalPages ? 'disabled' : ''}>下一页</button>
+                </div>
+              `
+        }
+      </section>
+    `;
+  }
+
+  function renderAdminQuotaSection(admin) {
+    const { quota, quotaLoading, quotaError } = admin;
+
+    if (quotaError) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">存储配额</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-quota">${icons.refresh}<span>重新加载</span></button>
+          </div>
+          <div class="empty-state">
+            <div class="empty-orb">${icons.lock}</div>
+            <p class="empty-copy">${escapeHtml(quotaError)}</p>
+          </div>
+        </section>
+      `;
+    }
+
+    if (quotaLoading || !quota) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">存储配额</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-quota">${icons.refresh}<span>刷新</span></button>
+          </div>
+          ${renderEmptyState('加载中', '正在获取存储配额信息...', icons.stats)}
+        </section>
+      `;
+    }
+
+    const usedFormatted = formatBytes(quota.used || 0);
+    const totalFormatted = formatBytes(quota.total || quota.limit || 0);
+    const pct = quota.used && (quota.total || quota.limit)
+      ? Math.round((quota.used / (quota.total || quota.limit)) * 100)
+      : 0;
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">存储配额</h2>
+            <p class="admin-section-copy">已用 ${usedFormatted} / ${totalFormatted}（${pct}%）</p>
+          </div>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-quota">${icons.refresh}<span>刷新</span></button>
+        </div>
+        <div class="hero-strip">
+          <div class="mini-stat">
+            <div class="mini-stat-label">已用空间</div>
+            <div class="mini-stat-value">${usedFormatted}</div>
+            <div class="mini-stat-meta">占总额的 ${pct}%</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">总配额</div>
+            <div class="mini-stat-value">${totalFormatted}</div>
+            <div class="mini-stat-meta">${quota.count ? `共 ${quota.count} 个文件` : ''}</div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderAdminProtectedPathsSection(admin) {
+    const { protectedPaths, protectedPathsLoading, protectedPathsError } = admin;
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">受保护路径</h2>
+            <p class="admin-section-copy">设置需要密码才能访问的文件夹，增强数据安全。</p>
+          </div>
+          <div class="btn-row">
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-protected-paths">${icons.refresh}<span>刷新</span></button>
+            <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-protected-path">${icons.plus}<span>添加路径</span></button>
+          </div>
+        </div>
+        ${
+          protectedPathsLoading
+            ? renderEmptyState('正在加载受保护路径', '正在获取路径列表。', icons.lock)
+            : protectedPathsError
+              ? `
+                <div class="empty-state">
+                  <div class="empty-orb">${icons.lock}</div>
+                  <p class="empty-copy">${escapeHtml(protectedPathsError)}</p>
+                </div>
+              `
+              : protectedPaths.length === 0
+                ? renderEmptyState('暂无受保护路径', '还没有设置任何受保护路径。点击上方按钮添加。', icons.lock)
+                : `
+                  <div class="latest-list">
+                    ${protectedPaths.map(item => {
+                      const path = String(item?.path || item?.folder || '/');
+                      const note = item?.note || '';
+                      const showName = item?.showName || '';
+                      return `
+                        <article class="latest-item">
+                          <div class="status-bar" style="margin-bottom:8px;">
+                            <div class="status-main">
+                              <span class="status-dot"></span>
+                              <span>${safeText(showName || path)}</span>
+                              <span class="toolbar-tag">${safeText(path)}</span>
+                            </div>
+                            <button class="btn btn-danger" type="button" data-action="confirm-delete-protected-path" data-path="${escapeHtml(path)}">
+                              ${icons.trash}<span>删除</span>
+                            </button>
+                          </div>
+                          ${note ? `<div class="latest-copy">${escapeHtml(note)}</div>` : ''}
+                        </article>
+                      `;
+                    }).join('')}
+                  </div>
+                `
+        }
+      </section>
+    `;
+  }
+
+  function renderAdminHiddenPathsSection(admin) {
+    const { hiddenPaths, hiddenPathsLoading, hiddenPathsError } = admin;
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">隐藏路径</h2>
+            <p class="admin-section-copy">被隐藏的路径对游客不可见，管理员仍可正常访问。</p>
+          </div>
+          <div class="btn-row">
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-hidden-paths">${icons.refresh}<span>刷新</span></button>
+            <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-hidden-path">${icons.plus}<span>添加路径</span></button>
+          </div>
+        </div>
+        ${
+          hiddenPathsLoading
+            ? renderEmptyState('正在加载隐藏路径', '正在获取隐藏路径列表。', icons.eye)
+            : hiddenPathsError
+              ? `
+                <div class="empty-state">
+                  <div class="empty-orb">${icons.eye}</div>
+                  <p class="empty-copy">${escapeHtml(hiddenPathsError)}</p>
+                </div>
+              `
+              : hiddenPaths.length === 0
+                ? renderEmptyState('暂无隐藏路径', '还没有设置任何隐藏路径。点击上方按钮添加。', icons.eye)
+                : `
+                  <div class="latest-list">
+                    ${hiddenPaths.map(item => {
+                      const path = String(item?.path || '/');
+                      return `
+                        <article class="latest-item">
+                          <div class="status-bar" style="margin-bottom:8px;">
+                            <div class="status-main">
+                              <span class="status-dot"></span>
+                              <span>${safeText(path)}</span>
+                            </div>
+                            <button class="btn btn-danger" type="button" data-action="confirm-delete-hidden-path" data-path="${escapeHtml(path)}">
+                              ${icons.trash}<span>取消隐藏</span>
+                            </button>
+                          </div>
+                        </article>
+                      `;
+                    }).join('')}
+                  </div>
+                `
+        }
+      </section>
+    `;
+  }
+
+  function renderAdminStorageSection(admin) {
+    const { storageConfig, storageConfigLoading, storageConfigError, storageConfigSaving } = admin;
+
+    if (storageConfigError) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">存储空间</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-storage-config">${icons.refresh}<span>重新加载</span></button>
+          </div>
+          <div class="empty-state">
+            <div class="empty-orb">${icons.stats}</div>
+            <p class="empty-copy">${escapeHtml(storageConfigError)}</p>
+          </div>
+        </section>
+      `;
+    }
+
+    if (storageConfigLoading || !storageConfig) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">存储空间</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-storage-config">${icons.refresh}<span>刷新</span></button>
+          </div>
+          ${renderEmptyState('加载中', '正在加载存储空间配置...', icons.stats)}
+        </section>
+      `;
+    }
+
+    const r2 = storageConfig.r2 || {};
+    const spaces = storageConfig.spaces || [];
+    const bindings = storageConfig.bindings || [];
+    const usagePercent = r2.usedPercent || 0;
+    const usageBarColor = usagePercent >= 90 ? 'var(--danger)' : usagePercent >= 75 ? 'var(--warning)' : 'var(--primary)';
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">存储空间</h2>
+            <p class="admin-section-copy">管理 R2 与 S3 兼容存储空间及路径绑定。</p>
+          </div>
+          <div class="btn-row">
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-storage-config" ${storageConfigSaving ? 'disabled' : ''}>${icons.refresh}<span>刷新</span></button>
+          </div>
+        </div>
+
+        <div class="admin-grid">
+          <div class="admin-card span-6">
+            <div class="mini-stat">
+              <div class="mini-stat-label">${escapeHtml(r2.name || 'Cloudflare R2')}</div>
+              <div class="mini-stat-value">${escapeHtml(r2.usedFormatted || '0')} / ${escapeHtml(r2.quotaFormatted || '未设置')}</div>
+              <div style="margin:8px 0;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${Math.min(usagePercent, 100)}%;background:${usageBarColor};border-radius:3px;transition:width .3s;"></div>
+              </div>
+              <div class="mini-stat-meta">已用 ${usagePercent}%</div>
+            </div>
+            <div class="btn-row" style="margin-top:8px;">
+              <button class="btn toolbar-btn" type="button" data-action="show-edit-storage-quota" ${storageConfigSaving ? 'disabled' : ''}>${icons.edit}<span>编辑配额</span></button>
+            </div>
+          </div>
+
+          <div class="admin-card span-6">
+            <div class="mini-stat">
+              <div class="mini-stat-label">溢出策略</div>
+              <div class="mini-stat-value">${storageConfig.overflowEnabled ? '已启用' : '已禁用'}</div>
+              <div class="mini-stat-meta">阈值：${storageConfig.overflowThresholdPercent || 85}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-section-head" style="margin-top:24px;">
+          <div>
+            <h3 class="admin-section-title" style="font-size:18px;">S3 存储空间</h3>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-storage-space" ${storageConfigSaving ? 'disabled' : ''}>${icons.plus}<span>添加空间</span></button>
+          </div>
+        </div>
+        ${
+          spaces.length === 0
+            ? renderEmptyState('暂无 S3 空间', '还没有配置任何外部存储空间。', icons.stats)
+            : `
+              <div class="latest-list">
+                ${spaces.map(item => {
+                  const pct = item.usedPercent || 0;
+                  const barColor = pct >= 90 ? 'var(--danger)' : pct >= 75 ? 'var(--warning)' : 'var(--primary)';
+                  return `
+                    <article class="latest-item">
+                      <div class="status-bar" style="margin-bottom:4px;">
+                        <div class="status-main">
+                          <span class="status-dot" style="background:${item.enabled ? 'var(--primary)' : 'var(--muted)'}"></span>
+                          <span>${safeText(item.name)}</span>
+                          <span class="toolbar-tag">${safeText(item.bucket)}</span>
+                          ${!item.enabled ? '<span class="toolbar-tag tag-expired">已禁用</span>' : ''}
+                          ${item.overflowTarget ? '<span class="toolbar-tag tag-unlimited">溢出目标</span>' : ''}
+                        </div>
+                        <div class="btn-row">
+                          <button class="btn toolbar-btn" type="button" data-action="test-storage-space" data-id="${escapeHtml(item.id)}" ${storageConfigSaving ? 'disabled' : ''}>${icons.eye}<span>测试</span></button>
+                          <button class="btn btn-danger" type="button" data-action="confirm-delete-storage-space" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}" ${storageConfigSaving ? 'disabled' : ''}>${icons.trash}<span>删除</span></button>
+                        </div>
+                      </div>
+                      <div style="font-size:13px;color:var(--muted);">
+                        ${escapeHtml(item.usedFormatted || '0')} / ${escapeHtml(item.quotaFormatted || '未设置')}
+                        <span style="margin:0 8px;">·</span>
+                        <span style="color:${barColor};">${pct}%</span>
+                        <span style="margin:0 8px;">·</span>
+                        ${escapeHtml(item.endpoint || 'N/A')}
+                      </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            `
+        }
+
+        <div class="admin-section-head" style="margin-top:24px;">
+          <div>
+            <h3 class="admin-section-title" style="font-size:18px;">路径绑定</h3>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-storage-binding" ${storageConfigSaving ? 'disabled' : ''}>${icons.plus}<span>添加绑定</span></button>
+          </div>
+        </div>
+        ${
+          bindings.length === 0
+            ? renderEmptyState('暂无路径绑定', '还没有配置任何路径与存储空间的绑定。', icons.link)
+            : `
+              <div class="latest-list">
+                ${bindings.map(item => {
+                  const storageName = item.storageId === 'r2' ? 'Cloudflare R2' : (spaces.find(s => s.id === item.storageId)?.name || item.storageId);
+                  return `
+                    <article class="latest-item">
+                      <div class="status-bar" style="margin-bottom:4px;">
+                        <div class="status-main">
+                          <span class="status-dot"></span>
+                          <span>${safeText(item.path)}</span>
+                          <span class="toolbar-tag">${escapeHtml(storageName)}</span>
+                        </div>
+                        <button class="btn btn-danger" type="button" data-action="confirm-delete-storage-binding" data-path="${escapeHtml(item.path)}" ${storageConfigSaving ? 'disabled' : ''}>
+                          ${icons.trash}<span>删除</span>
+                        </button>
+                      </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            `
+        }
+      </section>
+    `;
+  }
+
+  function renderAdminWebhooksSection(admin) {
+    const { webhooks, webhooksLoading, webhooksError } = admin;
+
+    if (webhooksError) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">Webhook 配置</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">${icons.refresh}<span>重新加载</span></button>
+          </div>
+          <div class="empty-state">
+            <div class="empty-orb">${icons.link}</div>
+            <p class="empty-copy">${escapeHtml(webhooksError)}</p>
+          </div>
+        </section>
+      `;
+    }
+
+    if (webhooksLoading) {
+      return `
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <div><h2 class="admin-section-title">Webhook 配置</h2></div>
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">${icons.refresh}<span>刷新</span></button>
+          </div>
+          ${renderEmptyState('加载中', '正在加载 Webhook 配置...', icons.link)}
+        </section>
+      `;
+    }
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">Webhook 配置</h2>
+            <p class="admin-section-copy">配置事件通知的投递端点，支持 JSON / Text / Markdown 格式。</p>
+          </div>
+          <div class="btn-row">
+            <button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">${icons.refresh}<span>刷新</span></button>
+            <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-webhook">${icons.plus}<span>添加 Webhook</span></button>
+          </div>
+        </div>
+        ${
+          webhooks.length === 0
+            ? renderEmptyState('暂无 Webhook', '还没有配置任何 Webhook。添加后可在文件操作或管理事件时收到通知。', icons.link)
+            : `
+              <div class="latest-list">
+                ${webhooks.map(item => `
+                  <article class="latest-item">
+                    <div class="status-bar" style="margin-bottom:4px;">
+                      <div class="status-main">
+                        <span class="status-dot" style="background:${item.enabled ? 'var(--primary)' : 'var(--muted)'}"></span>
+                        <span>${safeText(item.name)}</span>
+                        <span class="toolbar-tag">${safeText(item.msgtype)}</span>
+                        <span class="toolbar-tag">${safeText(item.method)}</span>
+                        ${!item.enabled ? '<span class="toolbar-tag tag-expired">已禁用</span>' : ''}
+                      </div>
+                      <div class="btn-row">
+                        <button class="btn toolbar-btn" type="button" data-action="test-webhook" data-id="${escapeHtml(item.id)}">${icons.eye}<span>测试</span></button>
+                        <button class="btn toolbar-btn" type="button" data-action="edit-webhook" data-id="${escapeHtml(item.id)}">${icons.edit}<span>编辑</span></button>
+                        <button class="btn btn-danger" type="button" data-action="confirm-delete-webhook" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">${icons.trash}<span>删除</span></button>
+                      </div>
+                    </div>
+                    <div style="font-size:13px;color:var(--muted);">
+                      ${escapeHtml(item.url)}
+                      <span style="margin:0 8px;">·</span>
+                      ${(item.events || []).map(e => `<span class="toolbar-tag">${escapeHtml(e)}</span>`).join(' ')}
+                    </div>
+                  </article>
+                `).join('')}
+              </div>
+            `
+        }
+      </section>
+    `;
+  }
+
+  function renderAdminWebhookDeliveriesSection(admin) {
+    const { webhookDeliveries, webhookDeliveriesLoading } = admin;
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">Webhook 投递记录</h2>
+            <p class="admin-section-copy">最近 20 条投递记录，包括成功和失败。</p>
+          </div>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhook-deliveries">${icons.refresh}<span>刷新</span></button>
+        </div>
+        ${
+          webhookDeliveriesLoading
+            ? renderEmptyState('加载中', '正在加载投递记录...', icons.list)
+            : webhookDeliveries.length === 0
+              ? renderEmptyState('暂无投递记录', '还没有任何 Webhook 投递记录。', icons.list)
+              : `
+                <div class="latest-list">
+                  ${webhookDeliveries.map(item => {
+                    const ok = item.ok === 1 || item.ok === true;
+                    return `
+                      <article class="latest-item">
+                        <div class="status-bar" style="margin-bottom:4px;">
+                          <div class="status-main">
+                            <span class="status-dot" style="background:${ok ? 'var(--primary)' : 'var(--danger)'}"></span>
+                            <span>${safeText(item.event)}</span>
+                            <span class="toolbar-tag">${safeText(item.endpoint)}</span>
+                            <span class="toolbar-tag ${ok ? 'tag-unlimited' : 'tag-expired'}">${ok ? '成功' : '失败'}</span>
+                          </div>
+                        </div>
+                        <div style="font-size:13px;color:var(--muted);">
+                          ${ok ? `<span>HTTP ${escapeHtml(String(item.status))}</span>` : `<span>${escapeHtml(item.error || '未知错误')}</span>`}
+                          <span style="margin:0 8px;">·</span>
+                          <span>${escapeHtml(item.duration_ms || 0)}ms</span>
+                          <span style="margin:0 8px;">·</span>
+                          <span>${escapeHtml(formatRelative(item.created_at) || '')}</span>
+                        </div>
+                      </article>
+                    `;
+                  }).join('')}
+                </div>
+              `
+        }
+      </section>
+    `;
+  }
+
   function renderAdminPanelContent(admin) {
     if (admin.loading) {
       return renderEmptyState('正在加载概览', '正在统计文件数量、索引状态与回收站信息。', icons.stats);
@@ -336,6 +944,14 @@ export function createPageRenderers(deps) {
           </div>
           ${renderAdminStatsGrid(admin.stats)}
         </section>
+        ${renderAdminHealthSection(admin)}
+        ${renderAdminLogsSection(admin)}
+        ${renderAdminQuotaSection(admin)}
+        ${renderAdminProtectedPathsSection(admin)}
+        ${renderAdminHiddenPathsSection(admin)}
+        ${renderAdminStorageSection(admin)}
+        ${renderAdminWebhooksSection(admin)}
+        ${renderAdminWebhookDeliveriesSection(admin)}
         ${renderAdminSharesSection(admin)}
       </div>
     `;

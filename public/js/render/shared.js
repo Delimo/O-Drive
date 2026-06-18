@@ -26,9 +26,7 @@ export function createSharedRenderers(deps) {
     const isFolder = kind === 'folder';
     const canPreview = kind !== 'folder' && !state.explorer.trashMode;
     const canDownload = kind !== 'folder' && !state.explorer.trashMode;
-    const pathValue = state.explorer.trashMode
-      ? selected.original_key || ''
-      : selected.fullKey || selected.path || selected.name || '';
+    const pathValue = selected.fullKey || selected.original_key || selected.path || selected.name || '';
 
     return `
       <div class="details-panel-shell">
@@ -139,7 +137,7 @@ export function createSharedRenderers(deps) {
 
   function buildBreadcrumbs(path) {
     const parts = normalizeKey(path).split('/').filter(Boolean);
-    const crumbs = [{ label: '根目录', path: '', current: parts.length === 0 }];
+    const crumbs = [{ label: '根文件夹', path: '', current: parts.length === 0 }];
     let current = '';
 
     parts.forEach((part, index) => {

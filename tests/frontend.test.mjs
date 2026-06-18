@@ -11,8 +11,9 @@ import { createSharedRenderers } from '../public/js/render/shared.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
-import { mockTextContent, mockReadme } from '../public/js/mock/index.js';
+import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
+import { createPageRenderers } from '../public/js/render/pages.js';
 
 // 任意图标都返回占位 SVG，避免在测试里维护完整图标表
 const icons = new Proxy({}, { get: () => '<svg></svg>' });
@@ -49,6 +50,15 @@ const home = createHomeRenderers({
   renderTrashBatchBar: shared.renderTrashBatchBar,
   renderEmptyState: shared.renderEmptyState,
   formatBytes,
+});
+
+const pages = createPageRenderers({
+  icons,
+  escapeHtml,
+  renderEmptyState: shared.renderEmptyState,
+  formatBytes,
+  formatTime,
+  formatRelative,
 });
 
 const uploads = createUploadsRenderer({ icons, escapeHtml });
@@ -139,10 +149,9 @@ test('selectors filter by kind', () => {
   assert.deepEqual(selectors.currentEntries(state).map(e => e.fullKey), ['dir']);
 });
 
-test('selectors detect content mode and preview capability', () => {
+test('selectors detect content mode', () => {
   assert.equal(selectors.detectContentMode({ name: 'a.png' }), 'image');
   assert.equal(selectors.detectContentMode({ name: 'a.txt' }), 'text');
-  assert.equal(selectors.hasPreview({ kind: 'folder' }), false);
 });
 
 // ===== 上传面板渲染 =====
@@ -390,4 +399,145 @@ test('confirm-clear-trash modal shows loading state', () => {
   });
   assert.match(html, /清空中\.\.\./);
   assert.match(html, /disabled/);
+});
+
+test('add-protected-path modal renders form fields', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: { type: 'add-protected-path', loading: false, error: '', path: '', password: '', note: '', showName: '' },
+    },
+  });
+  assert.match(html, /添加受保护路径/);
+  assert.match(html, /data-form="add-protected-path"/);
+  assert.match(html, /name="path"/);
+  assert.match(html, /name="password"/);
+  assert.match(html, /name="showName"/);
+  assert.match(html, /name="note"/);
+});
+
+test('confirm-delete-protected-path modal shows warning', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: { type: 'confirm-delete-protected-path', loading: false, error: '', path: '/test/path' },
+    },
+  });
+  assert.match(html, /确认删除受保护路径/);
+  assert.match(html, /data-action="execute-delete-protected-path"/);
+  assert.match(html, /\/test\/path/);
+});
+
+test('admin health section renders health components', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: mockAdminHealth, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: mockAdminQuota, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: mockProtectedPaths, protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: mockHiddenPaths, hiddenPathsError: '',
+      webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /系统健康/);
+  assert.match(html, /storage/);
+  assert.match(html, /database/);
+  assert.match(html, /存储服务运行正常/);
+});
+
+test('admin logs section renders log entries with pagination', () => {
+  const logs = mockAdminLogs(1);
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: logs.items, logsError: '', logsPage: logs.page, logsTotalPages: logs.totalPages, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /操作日志/);
+  assert.match(html, /产品说明\.pdf/);
+  assert.match(html, /上传/);
+  assert.match(html, /admin/);
+});
+
+test('admin quota section renders storage usage', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: mockAdminQuota, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /存储配额/);
+  assert.match(html, /已用空间/);
+  assert.match(html, /总配额/);
+  assert.match(html, /1\.2/);
+  assert.match(html, /5\.0/);
+});
+
+test('admin protected paths section renders path list with delete buttons', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: mockProtectedPaths, protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /受保护路径/);
+  assert.match(html, /机密文件夹/);
+  assert.match(html, /data-action="confirm-delete-protected-path"/);
+  assert.match(html, /内部敏感资料/);
 });
