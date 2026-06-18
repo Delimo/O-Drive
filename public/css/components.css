@@ -1938,6 +1938,53 @@
   transform: scale(0.97);
 }
 
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+  background: var(--hover-bg);
+}
+
+.notif-table-row-unread {
+  background: var(--accent-soft);
+}
+
+.table-tag {
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--hover-bg);
+  color: var(--muted);
+}
+
+.table-tag-unread {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
 .modal-wrap {
   animation: fadeIn 180ms ease;
 }

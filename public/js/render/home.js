@@ -31,14 +31,6 @@ export function createHomeRenderers(deps) {
           <div class="toolbar-right toolbar-actions-legacy">
             <button class="btn toolbar-btn" data-action="upload">上传</button>
             <button class="btn toolbar-btn" data-action="open-folder-modal">新建文件夹</button>
-            <span class="conflict-selector" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);">
-              <label style="cursor:pointer;">冲突:</label>
-              <select data-action="set-conflict-mode" style="font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface);">
-                <option value="rename" ${state.uploads.conflictMode === 'rename' ? 'selected' : ''}>重命名</option>
-                <option value="overwrite" ${state.uploads.conflictMode === 'overwrite' ? 'selected' : ''}>覆盖</option>
-                <option value="skip" ${state.uploads.conflictMode === 'skip' ? 'selected' : ''}>跳过</option>
-              </select>
-            </span>
             <button class="btn toolbar-btn" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
             <button class="btn toolbar-btn" data-action="toggle-view">${humanView(explorer.view)}</button>
              <div class="filter-popup-wrap">

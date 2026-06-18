@@ -2,6 +2,30 @@ import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mo
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
 
+function showNotificationAlert(message) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch (_) {}
+  try {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'granted') {
+      new Notification('O-Drive 通知', { body: message, icon: '/favicon.ico' });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  } catch (_) {}
+}
+
 export function createThunks(deps) {
   const {
     actions,
@@ -1058,7 +1082,7 @@ export function createThunks(deps) {
         dispatch(actions.share.setPasswordRequired(error.message || '密码错误'));
       }
     },
-    loadNotifications: () => async dispatch => {
+    loadNotifications: () => async (dispatch, getState) => {
       dispatch(actions.admin.setNotificationsLoading(true));
       if (mock) {
         const unread = mockNotifications.filter(n => !n.read).length;
@@ -1068,7 +1092,18 @@ export function createThunks(deps) {
       try {
         const { response, data } = await notificationApi.list(20);
         if (!response.ok) throw new Error(data?.message || '通知列表加载失败');
+        const state = getState();
+        const oldIds = state.admin.lastNotifIds;
+        const newIds = (data.items || []).map(n => n.id);
+        if (state.admin.notifInitialized && newIds.length && oldIds.length) {
+          const newUnread = (data.items || []).filter(n => !n.read && !oldIds.includes(n.id));
+          newUnread.forEach(n => showNotificationAlert(n.message));
+        }
         dispatch(actions.admin.setNotifications(data));
+        dispatch(actions.admin.setLastNotifIds(newIds));
+        if (!state.admin.notifInitialized) {
+          dispatch(actions.admin.setNotifInitialized(true));
+        }
       } catch (_) {
         dispatch(actions.admin.setNotificationsLoading(false));
       }
@@ -1092,6 +1127,20 @@ export function createThunks(deps) {
         await notificationApi.markAllRead();
         await dispatch(thunks.loadNotifications());
       } catch (_) {}
+    },
+    loadAdminNotifications: () => async dispatch => {
+      dispatch(actions.admin.setAdminNotifHistoryLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setAdminNotifHistory({ items: mockNotifications, unread: mockNotifications.filter(n => !n.read).length }));
+        return;
+      }
+      try {
+        const { response, data } = await notificationApi.list(50);
+        if (!response.ok) throw new Error(data?.message || '通知历史加载失败');
+        dispatch(actions.admin.setAdminNotifHistory(data));
+      } catch (_) {
+        dispatch(actions.admin.setAdminNotifHistoryLoading(false));
+      }
     },
   };
 

@@ -55,6 +55,48 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'confirm-upload') {
+        const modal = store.getState().app.modal;
+        if (modal && modal.type === 'upload-confirm' && modal.files) {
+          store.dispatch(actions.uploads.setConflictMode(modal.conflictMode || 'rename'));
+          store.dispatch(thunks.uploadFiles(modal.files));
+          store.dispatch(actions.app.setModal(null));
+        }
+        return;
+      }
+
+      if (action === 'cancel-upload-confirm') {
+        store.dispatch(actions.app.setModal(null));
+        return;
+      }
+
+      if (action === 'remove-pending-file') {
+        const modal = store.getState().app.modal;
+        if (modal && modal.type === 'upload-confirm' && modal.files) {
+          const idx = parseInt(actionNode.dataset.index, 10);
+          const newFiles = modal.files.filter((_, i) => i !== idx);
+          store.dispatch(actions.app.setModal({ ...modal, files: newFiles }));
+        }
+        return;
+      }
+
+      if (action === 'add-more-files') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.addEventListener('change', () => {
+          const modal = store.getState().app.modal;
+          if (modal && modal.type === 'upload-confirm') {
+            const newFiles = Array.from(input.files || []);
+            if (newFiles.length) {
+              store.dispatch(actions.app.setModal({ ...modal, files: [...modal.files, ...newFiles] }));
+            }
+          }
+        });
+        input.click();
+        return;
+      }
+
       if (action === 'logout') {
         store.dispatch(thunks.logout());
         return;
@@ -62,10 +104,19 @@ export function registerAppEvents(deps) {
 
       if (action === 'toggle-theme') {
         const root = document.documentElement;
-        const current = root.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        root.setAttribute('data-theme', next);
-        try { localStorage.setItem('theme', next); } catch (_) {}
+        const stored = localStorage.getItem('theme');
+        if (!stored) {
+          const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          try { localStorage.setItem('theme', next); } catch (_) {}
+        } else if (stored === 'light') {
+          root.setAttribute('data-theme', 'dark');
+          try { localStorage.setItem('theme', 'dark'); } catch (_) {}
+        } else {
+          try { localStorage.removeItem('theme'); } catch (_) {}
+          const prefersDark = windowRef.matchMedia('(prefers-color-scheme: dark)').matches;
+          root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        }
         return;
       }
 
@@ -111,6 +162,7 @@ export function registerAppEvents(deps) {
         if (tab === 'deliveries' && admin.webhookDeliveries.length === 0) { store.dispatch(thunks.loadAdminWebhookDeliveries()); return; }
         if (tab === 'maintenance' && !admin.maintenance) { store.dispatch(thunks.loadMaintenanceSnapshot()); return; }
         if (tab === 'tasks' && admin.tasks.length === 0) { store.dispatch(thunks.loadTasks()); return; }
+        if (tab === 'notifications') { store.dispatch(thunks.loadAdminNotifications()); return; }
         return;
       }
 
@@ -314,6 +366,20 @@ export function registerAppEvents(deps) {
 
       if (action === 'refresh-tasks') {
         store.dispatch(thunks.loadTasks());
+        return;
+      }
+
+      if (action === 'refresh-admin-notifications') {
+        store.dispatch(thunks.loadAdminNotifications());
+        return;
+      }
+
+      if (action === 'admin-mark-notif-read') {
+        const id = actionNode.dataset.notifId;
+        if (id) {
+          store.dispatch(thunks.markNotificationRead(Number(id)));
+          store.dispatch(thunks.loadAdminNotifications());
+        }
         return;
       }
 
@@ -821,6 +887,14 @@ export function registerAppEvents(deps) {
       return;
     }
 
+    if (action === 'set-upload-conflict-mode') {
+      const modal = store.getState().app.modal;
+      if (modal && modal.type === 'upload-confirm') {
+        store.dispatch(actions.app.setModal({ ...modal, conflictMode: event.target.value }));
+      }
+      return;
+    }
+
     if (role === 'filter-kind') {
       store.dispatch(actions.explorer.setFilterKind(event.target.value));
       if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
@@ -864,7 +938,16 @@ export function registerAppEvents(deps) {
         event.target.value = '';
         return;
       }
-      store.dispatch(thunks.uploadFiles(event.target.files));
+      const files = Array.from(event.target.files || []);
+      if (files.length) {
+        store.dispatch(actions.app.setModal({
+          type: 'upload-confirm',
+          files,
+          conflictMode: store.getState().uploads.conflictMode,
+          loading: false,
+          error: '',
+        }));
+      }
       event.target.value = '';
       return;
     }
@@ -875,7 +958,16 @@ export function registerAppEvents(deps) {
         event.target.value = '';
         return;
       }
-      store.dispatch(thunks.uploadFiles(event.target.files));
+      const files = Array.from(event.target.files || []);
+      if (files.length) {
+        store.dispatch(actions.app.setModal({
+          type: 'upload-confirm',
+          files,
+          conflictMode: store.getState().uploads.conflictMode,
+          loading: false,
+          error: '',
+        }));
+      }
       event.target.value = '';
     }
   });
@@ -1014,8 +1106,7 @@ export function registerAppEvents(deps) {
   const mq = windowRef.matchMedia('(prefers-color-scheme: dark)');
   mq.addEventListener('change', e => {
     if (!localStorage.getItem('theme')) {
-      const root = documentRef.documentElement;
-      root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      documentRef.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
     }
   });
 }

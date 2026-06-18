@@ -52,14 +52,17 @@
 - 上传暂停 / 继续 UI
 - 上传任务持久化（前端创建 / 更新 task 记录）
 - 站内通知系统（D1 notifications 表 + 前端铃铛 + 下拉面板 + 30s 轮询）
-- 暗色模式（`[data-theme="dark"]` + `localStorage` + `prefers-color-scheme`）
+- 通知桌面提醒（新通知推送浏览器 Notification API + Web Audio 双音效）
+- 后台通知历史管理页面（「通知」tab / 表格展示 / 标记已读 / 刷选）
+- 暗色模式（`[data-theme="dark"]` + `localStorage` + `prefers-color-scheme` 自动跟随 + light→dark→auto 三态循环）
 - CSS 动画过渡（卡片抬升、modal scale-in、toast 滑入、prefers-reduced-motion）
+- 深色模式跟随系统（toggle 循环 light → dark → auto，清除 localStorage 恢复自动跟随）
 
 **缺失或未完全恢复**
 所有原计划功能均已补齐，暂无缺失项。
 
 **当前明显问题**
-暂无明显问题。
+暂无明显问题。后台管理已扩展至 11 个模块（新增通知历史面板）。前端修饰器拆分已完成，持续可扩展。
 
 **一句话结论**
-所有规划功能已补齐，测试 126/126 通过，无已知缺失项。
+所有规划功能已补齐，测试 126/126 通过，无已知缺失项。后续规划见 Phase VII–X（测试基建 → 功能扩展 → 体验优化 → 生态集成）。

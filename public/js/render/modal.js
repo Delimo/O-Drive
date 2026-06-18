@@ -6,6 +6,7 @@ export function createModalRenderers(deps) {
     apiClient,
     renderMarkdown,
     isMarkdownName,
+    formatBytes,
   } = deps;
 
   function renderPreviewModalBody(modal) {
@@ -524,6 +525,50 @@ export function createModalRenderers(deps) {
                 <span>${modal.loading ? '清理中...' : '确认清理'}</span>
               </button>
               <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'upload-confirm') {
+      const files = modal.files || [];
+      const conflictMode = modal.conflictMode || 'rename';
+      const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
+      const fileList = files.map((f, idx) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--panel-soft);border:1px solid var(--line);border-radius:8px;font-size:13px;">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">${escapeHtml(f.name)}</span>
+          <span style="flex-shrink:0;margin-left:8px;color:var(--muted);">${formatBytes(f.size || 0)}</span>
+          <button class="upload-row-remove" data-action="remove-pending-file" data-index="${idx}" type="button" style="flex-shrink:0;margin-left:8px;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:2px 4px;border-radius:4px;font-size:16px;line-height:1;" aria-label="移除">×</button>
+        </div>
+      `).join('');
+
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="upload-confirm-title" data-stop-close="true" style="max-width:520px;">
+            <h3 id="upload-confirm-title" class="modal-title">确认上传</h3>
+            <p class="modal-copy">你选择了 ${files.length} 个文件，共 ${formatBytes(totalSize)}。请确认上传内容和冲突策略。</p>
+            <div style="margin:16px 0;display:grid;gap:6px;max-height:320px;overflow-y:auto;">
+              ${fileList}
+            </div>
+            <button class="btn" type="button" data-action="add-more-files" style="width:100%;margin-bottom:12px;">
+              ${icons.plus || '+'} 添加更多文件
+            </button>
+            <div style="margin:12px 0;">
+              <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:6px;">同名文件冲突时：</label>
+              <select class="inline-input" data-action="set-upload-conflict-mode" style="width:100%;min-height:40px;">
+                <option value="rename" ${conflictMode === 'rename' ? 'selected' : ''}>自动重命名（推荐）</option>
+                <option value="overwrite" ${conflictMode === 'overwrite' ? 'selected' : ''}>覆盖已有文件</option>
+                <option value="skip" ${conflictMode === 'skip' ? 'selected' : ''}>跳过该文件</option>
+              </select>
+            </div>
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-primary" type="button" data-action="confirm-upload" ${modal.loading || !files.length ? 'disabled' : ''}>
+                ${modal.loading ? icons.refresh : ''}
+                <span>${modal.loading ? '上传中...' : '开始上传'}</span>
+              </button>
+              <button class="btn" type="button" data-action="cancel-upload-confirm" ${modal.loading ? 'disabled' : ''}>取消</button>
             </div>
           </div>
         </div>

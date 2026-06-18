@@ -140,6 +140,10 @@ export function createRootStore({ page }) {
       notificationsUnread: 0,
       notificationsLoading: false,
       notifOpen: false,
+      adminNotifHistory: [],
+      adminNotifHistoryLoading: false,
+      lastNotifIds: [],
+      notifInitialized: false,
     },
     share: {
       token: getShareToken(),
@@ -152,6 +156,7 @@ export function createRootStore({ page }) {
     uploads: {
       items: [],
       conflictMode: 'rename',
+      pendingFiles: null,
     },
   };
 
@@ -434,6 +439,18 @@ export function createRootStore({ page }) {
       setNotifOpen(state, action) {
         return { ...state, notifOpen: !!action.payload };
       },
+      setAdminNotifHistory(state, action) {
+        return { ...state, adminNotifHistoryLoading: false, adminNotifHistory: action.payload?.items || [], notificationsUnread: action.payload?.unread ?? state.notificationsUnread };
+      },
+      setAdminNotifHistoryLoading(state, action) {
+        return { ...state, adminNotifHistoryLoading: action.payload || false };
+      },
+      setLastNotifIds(state, action) {
+        return { ...state, lastNotifIds: action.payload || [] };
+      },
+      setNotifInitialized(state, action) {
+        return { ...state, notifInitialized: !!action.payload };
+      },
     },
   });
 
@@ -500,6 +517,12 @@ export function createRootStore({ page }) {
       },
       setConflictMode(state, action) {
         return { ...state, conflictMode: action.payload || 'rename' };
+      },
+      setPendingFiles(state, action) {
+        return { ...state, pendingFiles: action.payload };
+      },
+      clearPendingFiles(state) {
+        return { ...state, pendingFiles: null };
       },
     },
   });

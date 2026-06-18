@@ -149,6 +149,7 @@ const { renderModal: modalRenderer, renderToast: toastRenderer } = createModalRe
   apiClient,
   renderMarkdown,
   isMarkdownName,
+  formatBytes,
 });
 
 const {
