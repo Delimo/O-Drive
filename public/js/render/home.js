@@ -66,7 +66,7 @@ export function createHomeRenderers(deps) {
     if (!explorer.showFilters) return '';
     const kindOptions = ['all', 'image', 'video', 'audio', 'pdf', 'text', 'archive', 'file'];
     return `
-      <div class="filter-panel" style="padding:12px 16px;margin-bottom:12px;background:var(--surface);border-radius:12px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:end;">
+      <div class="filter-panel">
         <div style="display:flex;flex-direction:column;gap:4px;">
           <label style="font-size:12px;color:var(--muted);">类型</label>
           <select class="inline-input" data-role="filter-kind" style="padding:4px 8px;font-size:13px;">
