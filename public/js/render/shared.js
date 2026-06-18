@@ -157,7 +157,6 @@ export function createSharedRenderers(deps) {
 
   function renderEntryCard(item, state) {
     const key = entryKey(item);
-    const selected = state.explorer.selectedKey === key;
     const picked = state.explorer.selectedKeys.includes(key);
     const kind = item.kind || inferKind(item);
     const isFolder = kind === 'folder';
@@ -169,7 +168,7 @@ export function createSharedRenderers(deps) {
         ];
 
     return `
-      <article class="item-card item-card-legacy ${selected ? 'is-selected' : ''}" data-action="select-entry" data-key="${escapeHtml(key)}">
+      <article class="item-card item-card-legacy" data-action="open-entry" data-key="${escapeHtml(key)}">
         <button class="item-pick ${picked ? 'is-active' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
           ${picked ? icons.check : ''}
         </button>
