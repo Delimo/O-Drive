@@ -758,6 +758,32 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'preview') {
+        const entry = findEntryByKey(key);
+        if (entry) store.dispatch(thunks.previewEntry(entry));
+        return;
+      }
+
+      if (action === 'download') {
+        const entry = findEntryByKey(key);
+        if (entry) {
+          if (requiresProtectedUnlock(entry)) {
+            openProtectedUnlockModal(getEntryPath(entry), createDeferredAction('download', { path: getEntryPath(entry) }));
+            return;
+          }
+          openDownload(entry);
+        }
+        return;
+      }
+
+      if (action === 'info') {
+        const entry = findEntryByKey(key);
+        if (entry) {
+          store.dispatch(actions.explorer.setSelectedKey(key));
+        }
+        return;
+      }
+
       if (action === 'open-share-modal') {
         const entry = findEntryByKey(key);
         if (entry) store.dispatch(thunks.createShare(entry));

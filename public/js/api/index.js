@@ -49,6 +49,10 @@ export function createApiLayer(deps) {
       const key = encodeRouteKey(path || '');
       return key ? `/api/preview/${key}` : '';
     },
+    thumbnailUrl(path, width = 320, height = 240) {
+      const key = encodeRouteKey(path || '');
+      return key ? `/api/thumbnail/${key}?w=${width}&h=${height}` : '';
+    },
     downloadUrl(path) {
       const key = encodeRouteKey(path || '');
       return key ? `/api/download/${key}` : '';

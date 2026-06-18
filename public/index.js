@@ -172,6 +172,7 @@ const {
   iconForKind,
   iconClass,
   normalizeKey,
+  thumbnailUrl: apiClient.thumbnailUrl,
 });
 
 const { renderHomePage: homeRenderer } = createHomeRenderers({

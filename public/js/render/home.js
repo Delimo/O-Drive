@@ -168,11 +168,25 @@ export function createHomeRenderers(deps) {
     }
 
     if (explorer.error) {
+      if (explorer.error === 'Unauthorized') {
+        return renderEmptyState('访客访问未开启', '当前站点未开放访客浏览，请联系管理员或登录后查看。', icons.lock);
+      }
       return renderEmptyState('加载失败', explorer.error, '<span></span>');
     }
 
+    const parentPath = explorer.path ? explorer.path.split('/').slice(0, -1).join('/') : '';
+    const showBackButton = explorer.path && !explorer.trashMode;
+
     if (entries.length) {
       return `
+        ${showBackButton ? `
+        <div class="back-to-parent">
+          <button class="btn" data-action="crumb" data-path="${escapeHtml(parentPath)}">
+            <span class="icon">${icons.arrowLeft}</span>
+            返回上一层
+          </button>
+        </div>
+        ` : ''}
         <div class="file-grid ${explorer.view === 'list' ? 'is-list' : ''}">
           ${entries.map(item => renderEntryCard(item, state)).join('')}
         </div>

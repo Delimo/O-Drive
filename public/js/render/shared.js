@@ -10,6 +10,7 @@ export function createSharedRenderers(deps) {
     iconForKind,
     iconClass,
     normalizeKey,
+    thumbnailUrl,
   } = deps;
 
   function renderInspector(selected, state) {
@@ -163,8 +164,12 @@ export function createSharedRenderers(deps) {
     if (expanded || crumbs.length <= 4) return crumbs;
 
     const first = crumbs[0];
+    const parent = crumbs.length > 2 ? crumbs[crumbs.length - 2] : null;
     const last = crumbs[crumbs.length - 1];
-    return [first, { label: '...', path: '', ellipsis: true }, last];
+    const result = [first, { label: '...', path: '', ellipsis: true }];
+    if (parent) result.push(parent);
+    result.push(last);
+    return result;
   }
 
   function renderEntryCard(item, state) {
@@ -172,6 +177,8 @@ export function createSharedRenderers(deps) {
     const picked = state.explorer.selectedKeys.includes(key);
     const kind = item.kind || inferKind(item);
     const isFolder = kind === 'folder';
+    const isImage = kind === 'image';
+    const path = item.fullKey || item.original_key || item.path || item.name || '';
     const meta = state.explorer.trashMode
       ? [isFolder ? '文件夹' : '文件', formatTime(item.trashedAt || 0)]
       : [
@@ -179,12 +186,16 @@ export function createSharedRenderers(deps) {
           item.time ? formatRelative(item.time) : '等待同步',
         ];
 
+    const iconContent = isImage && thumbnailUrl
+      ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('item-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
+      : iconForKind(kind);
+
     return `
       <article class="item-card item-card-legacy" data-action="open-entry" data-key="${escapeHtml(key)}">
         <button class="item-pick ${picked ? 'is-active' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
           ${picked ? icons.check : ''}
         </button>
-        <div class="item-icon ${iconClass(kind)}">${iconForKind(kind)}</div>
+        <div class="item-icon ${iconClass(kind)} ${isImage ? 'item-icon-image' : ''}">${iconContent}</div>
         <div class="item-content">
           <h3 class="item-title">${escapeHtml(item.name || '未命名项目')}</h3>
           <div class="item-meta">
