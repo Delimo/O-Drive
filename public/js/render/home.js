@@ -18,48 +18,43 @@ export function createHomeRenderers(deps) {
     const explorer = state.explorer;
     const entries = currentEntries(state);
     const selectedEntries = selectedEntriesFromState(state);
-    const toolbarClass = `toolbar glass-card page-bar toolbar-legacy${explorer.trashMode ? ' is-trash-mode' : ''}`;
 
     return `
-      <section class="page-stack home-page">
-        <section class="${toolbarClass}">
-          <div class="toolbar-left">
-            <div class="crumbs crumbs-legacy">
-              ${breadcrumbsMarkup(explorer.path)}
+      <div class="flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm gap-4 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="crumbs">
+            ${breadcrumbsMarkup(explorer.path)}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="upload">上传</button>
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="open-folder-modal">新建</button>
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white" data-action="toggle-view">${humanView(explorer.view)}</button>
+          <div class="relative inline-block">
+            <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white filter-popup-trigger" data-action="toggle-filter-popup" aria-label="文件类型筛选">
+              ${renderKindOptions(explorer.filter, explorer.trashMode)}
+            </button>
+            <div class="filter-popup" data-role="kind-filter-popup" style="display:none">
+              ${renderKindOptions(explorer.filter, explorer.trashMode, true)}
             </div>
           </div>
-          <div class="toolbar-right toolbar-actions-legacy">
-            <button class="btn toolbar-btn" data-action="upload">上传</button>
-            <button class="btn toolbar-btn" data-action="open-folder-modal">新建文件夹</button>
-            <button class="btn toolbar-btn" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
-            <button class="btn toolbar-btn" data-action="toggle-view">${humanView(explorer.view)}</button>
-             <div class="filter-popup-wrap">
-              <button class="btn toolbar-btn filter-popup-trigger" data-action="toggle-filter-popup" aria-label="文件类型筛选">
-                ${renderKindOptions(explorer.filter, explorer.trashMode)}
-              </button>
-              <div class="filter-popup" data-role="kind-filter-popup" style="display:none">
-                ${renderKindOptions(explorer.filter, explorer.trashMode, true)}
-              </div>
-            </div>
-            ${
-              state.app.role === 'admin'
-                ? `
-                  <button class="btn toolbar-btn ${explorer.trashMode ? 'toolbar-btn-active' : ''}" data-action="toggle-trash">${explorer.trashMode ? '退出回收站' : '回收站'}</button>
-                  ${explorer.trashMode ? '<button class="btn toolbar-btn btn-danger" data-action="confirm-clear-trash">清空回收站</button>' : ''}
-                `
-                : ''
-            }
-          </div>
-          <input class="sr-only" id="upload-input" type="file" multiple>
-          <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory>
-        </section>
+          ${
+            state.app.role === 'admin'
+              ? `
+                <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors bg-white ${explorer.trashMode ? 'bg-slate-100 border-slate-300' : ''}" data-action="toggle-trash">${explorer.trashMode ? '退出回收站' : '回收站'}</button>
+                ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors bg-white" data-action="confirm-clear-trash">清空回收站</button>' : ''}
+              `
+              : ''
+          }
+        </div>
+        <input class="sr-only" id="upload-input" type="file" multiple>
+        <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory>
+      </div>
 
-        <section class="page-panel explorer glass-card home-explorer-panel">
-          <div class="page-panel-body explorer-body">
-            ${renderExplorerContent(state, entries, selectedEntries)}
-          </div>
-        </section>
-      </section>
+      <div class="flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
+        ${renderExplorerContent(state, entries, selectedEntries)}
+      </div>
     `;
   }
 

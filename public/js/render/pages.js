@@ -997,36 +997,28 @@ export function createPageRenderers(deps) {
 
     if (role !== 'admin') {
       return `
-        <section class="page-stack admin-page">
-          <section class="page-panel auth-board glass-card admin-auth-panel">
-            <div class="page-panel-body admin-panel-scroll">
-              ${renderEmptyState('需要管理员登录', '登录后即可查看文件统计、索引状态、分享记录和后续管理模块。', icons.lock)}
-            </div>
-          </section>
-        </section>
+        <div class="flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
+          ${renderEmptyState('需要管理员登录', '登录后即可查看文件统计、索引状态、分享记录和后续管理模块。', icons.lock)}
+        </div>
       `;
     }
 
     return `
-      <section class="page-stack admin-page">
-        <section class="toolbar glass-card page-bar admin-bar admin-toolbar-bar">
-          <div class="admin-tab-bar">
-            ${ADMIN_TABS.map(tab => `
-              <button class="btn toolbar-btn admin-tab-btn${activeTab === tab.id ? ' admin-tab-active' : ''}"
-                      type="button"
-                      data-action="set-admin-tab"
-                      data-tab="${tab.id}">
-                ${tab.label}
-              </button>
-            `).join('')}
-          </div>
-        </section>
-        <section class="page-panel admin-board glass-card admin-main-panel">
-          <div class="page-panel-body admin-panel-scroll">
-            ${renderAdminActiveTab(admin, activeTab)}
-          </div>
-        </section>
-      </section>
+      <div class="flex-shrink-0 flex items-center bg-white border border-slate-200/60 rounded-2xl p-3 shadow-sm">
+        <div class="admin-tab-bar">
+          ${ADMIN_TABS.map(tab => `
+            <button class="admin-tab-btn${activeTab === tab.id ? ' admin-tab-active' : ''}"
+                    type="button"
+                    data-action="set-admin-tab"
+                    data-tab="${tab.id}">
+              ${tab.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
+        ${renderAdminActiveTab(admin, activeTab)}
+      </div>
     `;
   }
 
@@ -1071,20 +1063,26 @@ export function createPageRenderers(deps) {
     const item = share.item;
 
     return `
-      <section class="share-board glass-card">
-        <aside class="share-side">
-          <span class="toolbar-tag">安全分享入口</span>
-          <div style="margin-top:18px;">
-            <h2 class="panel-title">分享访问页</h2>
-            <p class="panel-copy">这里展示分享信息、访问状态和预览内容。</p>
+      <div class="flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-y-auto flex">
+        <aside class="w-[380px] flex-shrink-0 p-7 border-r border-slate-200/60 bg-[#0f4c5c] text-white rounded-l-2xl">
+          <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/20 text-white text-sm font-semibold">安全分享入口</span>
+          <div class="mt-5">
+            <h2 class="text-2xl font-bold">分享访问页</h2>
+            <p class="mt-2 text-sm text-white/70">这里展示分享信息、访问状态和预览内容。</p>
           </div>
-          <div class="stack" style="margin-top:28px;">
-            ${renderInfoBlock('分享 Token', safeText(share.token || '未提供'))}
-            ${renderInfoBlock('访问状态', share.requiresPassword ? '需要密码' : item ? '可访问' : share.error ? '加载失败' : '等待读取')}
+          <div class="mt-7 grid gap-4">
+            <div>
+              <div class="text-xs uppercase tracking-wider text-white/50">分享 Token</div>
+              <div class="mt-2 text-sm">${safeText(share.token || '未提供')}</div>
+            </div>
+            <div>
+              <div class="text-xs uppercase tracking-wider text-white/50">访问状态</div>
+              <div class="mt-2 text-sm">${share.requiresPassword ? '需要密码' : item ? '可访问' : share.error ? '加载失败' : '等待读取'}</div>
+            </div>
           </div>
         </aside>
 
-        <div class="share-main">
+        <div class="flex-1 min-w-0 flex flex-col p-7 gap-5">
           ${
             share.loading
               ? renderEmptyState('正在读取分享', '正在加载分享文件信息与预览权限。', icons.refresh)
@@ -1092,34 +1090,32 @@ export function createPageRenderers(deps) {
                 ? renderEmptyState('分享不可用', share.error, icons.lock)
                 : share.requiresPassword
                   ? `
-                    <div class="empty-state" style="min-height:100%;">
+                    <div class="flex-1 flex flex-col items-center justify-center text-slate-400 min-h-[280px]">
                       <div>
-                        <div class="empty-orb">${icons.lock}</div>
-                        <h3 class="empty-title">请输入访问密码</h3>
-                        <p class="empty-copy">${safeText(share.error || '该分享资源启用了额外保护，输入正确密码后即可查看内容。')}</p>
-                        <form class="modal-form" data-form="share-password" style="max-width:340px; margin:22px auto 0;">
-                          <input class="inline-input" type="password" name="password" value="${escapeHtml(share.password)}" placeholder="输入分享密码">
-                          <button class="btn btn-primary" type="submit">解锁分享</button>
+                        <div class="w-18 h-18 mx-auto mb-4 rounded-xl grid place-items-center bg-sky-100 text-sky-600">${icons.lock}</div>
+                        <h3 class="text-2xl font-bold text-center text-slate-800">请输入访问密码</h3>
+                        <p class="mt-2 text-sm text-slate-500 text-center max-w-md mx-auto">${safeText(share.error || '该分享资源启用了额外保护，输入正确密码后即可查看内容。')}</p>
+                        <form data-form="share-password" class="mt-6 max-w-xs mx-auto grid gap-3">
+                          <input class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-sky-500 text-slate-800" type="password" name="password" value="${escapeHtml(share.password)}" placeholder="输入分享密码">
+                          <button class="w-full px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors" type="submit">解锁分享</button>
                         </form>
                       </div>
                     </div>
                   `
                   : item
                     ? `
-                      <div class="status-bar">
-                        <div class="status-main">
-                          <span class="status-dot"></span>
-                          <span>${safeText(item.name)} · ${safeText(item.sizeFormatted)}</span>
-                        </div>
+                      <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <span class="w-2 h-2 rounded-full bg-sky-600"></span>
+                        <span class="text-sm font-semibold text-slate-800">${safeText(item.name)} · ${safeText(item.sizeFormatted)}</span>
                       </div>
-                      <div class="preview-stage">
+                      <div class="flex-1 min-h-[320px] rounded-xl overflow-hidden bg-slate-50 border border-slate-200">
                         ${renderSharePreview(share.token, item)}
                       </div>
                     `
                     : renderEmptyState('等待分享链接', '当前页面没有读取到分享 token，可通过 share.html?token=你的分享码 打开。', icons.file)
           }
         </div>
-      </section>
+      </div>
     `;
   }
 

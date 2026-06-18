@@ -1,20 +1,10 @@
 @media (max-width: 1200px) {
-  .surface,
-  .share-board {
+  .surface {
     grid-template-columns: 1fr;
-  }
-
-  .share-side {
-    border-right: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.16);
   }
 }
 
 @media (max-width: 1024px) {
-  .app-shell {
-    padding: 16px;
-  }
-
   .admin-value {
     font-size: 26px;
   }
@@ -33,61 +23,6 @@
 }
 
 @media (max-width: 980px) {
-  .app-shell {
-    height: 100vh;
-    padding: 14px;
-  }
-
-  .workspace,
-  .page-stack {
-    min-height: 0;
-  }
-
-  .topbar,
-  .toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .topbar {
-    min-height: auto;
-    padding: 20px;
-  }
-
-  .header-right,
-  .toolbar-right,
-  .admin-toolbar-stack {
-    width: 100%;
-    justify-content: flex-start;
-    align-items: stretch;
-  }
-
-  .header-actions,
-  .admin-strip-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .search-box {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .panel-header {
-    padding: 20px 20px 10px;
-  }
-
-  .panel-body,
-  .explorer-body,
-  .admin-panel-scroll {
-    padding: 0 20px 20px;
-  }
-
-  .explorer-body,
-  .admin-panel-scroll {
-    padding-top: 20px;
-  }
-
   .hero-strip {
     grid-template-columns: 1fr;
   }
@@ -101,10 +36,6 @@
 }
 
 @media (max-width: 768px) {
-  .app-shell {
-    padding: 12px;
-  }
-
   .admin-grid {
     gap: 12px;
   }
@@ -135,32 +66,7 @@
 }
 
 @media (max-width: 720px) {
-  .brand-name {
-    font-size: 22px;
-  }
-
-  .btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .header-actions .btn,
-  .header-actions a.btn {
-    width: auto;
-    flex: 1 1 0;
-  }
-
-  .btn-row,
-  .toolbar-left,
-  .toolbar-right,
-  .admin-toolbar-actions,
-  .admin-toolbar-stack {
-    width: 100%;
-  }
-
-  .crumbs,
-  .status-bar,
-  .admin-filter-bar {
+  .btn-row {
     width: 100%;
   }
 
@@ -182,46 +88,10 @@
     border: 0;
     transform: translateX(100%);
   }
-
-  .share-board {
-    grid-template-columns: 1fr;
-  }
-
-  .share-side {
-    border-right: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.16);
-  }
-
-  .toolbar-right > .conflict-selector {
-    width: auto;
-  }
-
-  .toolbar-right .conflict-selector select {
-    font-size: 13px;
-    min-height: 40px;
-  }
 }
 
 @media (max-width: 480px) {
-  .app-shell {
-    padding: 10px;
-  }
-
-  .topbar,
-  .toolbar {
-    padding: 14px;
-  }
-
-  .toolbar-btn,
-  .toolbar-select {
-    min-width: 0;
-    min-height: 44px;
-    padding: 0 14px;
-    font-size: 14px;
-  }
-
-  .batch-bar,
-  .admin-strip-actions {
+  .batch-bar {
     flex-direction: column;
     align-items: stretch;
   }
@@ -254,14 +124,6 @@
 
   .preview-modal .btn-row {
     flex-wrap: wrap;
-  }
-
-  .share-main {
-    padding: 16px;
-  }
-
-  .share-side {
-    padding: 20px;
   }
 
   .item-card {

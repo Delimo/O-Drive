@@ -237,35 +237,31 @@ function render() {
   const state = store.getState();
   const selected = page === 'home' ? getSelectedEntry(state) : null;
   const html = `
-    <div class="app-shell">
-      <div class="workspace">
-        ${renderHeader(state)}
-        ${renderMain(state)}
-      </div>
-      ${
-        page === 'home'
-          ? `
-            <div class="details-drawer-wrap ${selected ? 'is-open' : ''}">
-              <div class="details-drawer-backdrop" data-action="clear-selected"></div>
-              <aside class="details-drawer ${selected ? 'is-open' : ''}">
-                <div class="details-drawer-head">
-                  <div>
-                    <h3 class="details-panel-title">文件详细</h3>
-                  </div>
-                  <button class="details-close" data-action="clear-selected">×</button>
+    ${renderHeader(state)}
+    ${renderMain(state)}
+    ${
+      page === 'home'
+        ? `
+          <div class="details-drawer-wrap ${selected ? 'is-open' : ''}">
+            <div class="details-drawer-backdrop" data-action="clear-selected"></div>
+            <aside class="details-drawer ${selected ? 'is-open' : ''}">
+              <div class="details-drawer-head">
+                <div>
+                  <h3 class="details-panel-title">文件详细</h3>
                 </div>
-                <div class="details-drawer-body">
-                  ${sharedRenderInspector(selected, state)}
-                </div>
-              </aside>
-            </div>
-          `
-          : ''
-      }
-      ${modalRenderer(state)}
-      ${toastRenderer(state)}
-      ${page === 'home' ? renderUploadsPanel(state) : ''}
-    </div>
+                <button class="details-close" data-action="clear-selected">×</button>
+              </div>
+              <div class="details-drawer-body">
+                ${sharedRenderInspector(selected, state)}
+              </div>
+            </aside>
+          </div>
+        `
+        : ''
+    }
+    ${modalRenderer(state)}
+    ${toastRenderer(state)}
+    ${page === 'home' ? renderUploadsPanel(state) : ''}
   `;
   const next = root.cloneNode(false);
   next.innerHTML = html;
@@ -276,39 +272,38 @@ function renderHeader(state) {
   const { role } = state.app;
   const searchValue = page === 'home' ? state.explorer.queryDraft : '';
   const searchDisabled = page !== 'home';
-  const searchPlaceholder = page === 'home' ? '搜索文件...' : page === 'admin' ? '' : '当前页面无需搜索';
+  const searchPlaceholder = page === 'home' ? '搜索文件...' : '';
 
   return `
-    <header class="topbar glass-card">
-      <a class="brand" href="/">
-        <span class="brand-badge">${icons.cloud}</span>
-        <span>
-          <h1 class="brand-name">O-Drive</h1>
-        </span>
+    <header class="flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+      <a href="/" class="flex items-center gap-3 text-lg font-bold text-slate-900 tracking-tight">
+        <svg class="w-8 h-8 text-[#b9c6d2]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+        </svg>
+        <span class="text-xl font-bold text-slate-800">O-Drive</span>
       </a>
-      <div class="header-right">
+      <div class="flex items-center gap-4">
         ${page === 'home' ? `
-          <label class="search-box">
-            <span class="search-icon" aria-hidden="true">${icons.search}</span>
-            <input
-              type="search"
-              value="${escapeHtml(searchValue)}"
-              placeholder="${escapeHtml(searchPlaceholder)}"
-              data-role="search-input"
-              ${searchDisabled ? 'disabled' : ''}
-            >
-          </label>
-        ` : ''}
-        <button class="btn header-btn header-theme-btn" data-action="toggle-theme" aria-label="切换主题">${icons.sun}${icons.moon}</button>
-        <div class="notif-wrap" data-component="notifications">
-          <button class="btn header-btn notif-bell" data-action="toggle-notifications" aria-label="通知">
-            ${icons.bell}
+          <div class="relative">
+            <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400 icon">${icons.search}</span>
+            <input type="search" value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(searchPlaceholder)}" data-role="search-input" class="w-72 pl-10 pr-4 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all" ${searchDisabled ? 'disabled' : ''}>
+          </div>
+        ` : `
+          <div class="relative">
+            <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400 icon">${icons.search}</span>
+            <input type="search" value="" placeholder="搜索文件..." class="w-72 pl-10 pr-4 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
+          </div>
+        `}
+        <button class="header-theme-btn px-3 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
+        <div class="relative" data-component="notifications">
+          <button class="px-3 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white notif-bell" data-action="toggle-notifications" aria-label="通知">
+            <span class="icon">${icons.bell}</span>
             <span class="notif-badge" data-role="notif-count" style="display:${state.admin.notificationsUnread ? '' : 'none'}">${state.admin.notificationsUnread}</span>
           </button>
           <div class="notif-dropdown" data-role="notif-dropdown" style="display:${state.admin.notifOpen ? '' : 'none'}">
             <div class="notif-dropdown-head">
               <span class="notif-dropdown-title">通知</span>
-              <button class="btn btn-small btn-ghost" data-action="mark-all-notifications-read" ${state.admin.notificationsUnread ? '' : 'disabled'}>全部已读</button>
+              <button class="px-3 py-1 text-xs font-semibold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors bg-white" data-action="mark-all-notifications-read" ${state.admin.notificationsUnread ? '' : 'disabled'}>全部已读</button>
             </div>
             <div class="notif-dropdown-body">
               ${state.admin.notifications.length
@@ -326,13 +321,13 @@ function renderHeader(state) {
             </div>
           </div>
         </div>
-        <div class="header-actions">
+        <div class="flex items-center gap-2">
           ${
             page === 'admin'
-              ? `<a class="btn header-btn" href="/">返回云盘</a>`
-              : `${page !== 'admin' ? `<a class="btn header-btn" href="/admin">管理</a>` : ''}${role === 'admin'
-                  ? `<button class="btn header-btn" data-action="logout">退出</button>`
-                  : `<button class="btn header-btn" data-action="open-login">登录</button>`}`
+              ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" href="/">返回云盘</a>`
+              : `${page !== 'admin' ? `<a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" href="/admin">管理</a>` : ''}${role === 'admin'
+                  ? `<button class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" data-action="logout">退出</button>`
+                  : `<button class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors bg-white" data-action="open-login">登录</button>`}`
           }
         </div>
       </div>
