@@ -547,13 +547,13 @@ export function createModalRenderers(deps) {
         <div class="modal-wrap" data-action="close-modal-backdrop">
           <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="upload-confirm-title" data-stop-close="true" style="max-width:520px;">
             <h3 id="upload-confirm-title" class="modal-title">确认上传</h3>
-            <p class="modal-copy">你选择了 ${files.length} 个文件，共 ${formatBytes(totalSize)}。请确认上传内容和冲突策略。</p>
+            <p class="modal-copy" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span>你选择了 ${files.length} 个文件，共 ${formatBytes(totalSize)}。请确认上传内容和冲突策略。</span>
+              <button class="btn btn-small" type="button" data-action="add-more-files" style="flex-shrink:0;">+ 添加更多</button>
+            </p>
             <div style="margin:16px 0;display:grid;gap:6px;max-height:320px;overflow-y:auto;">
               ${fileList}
             </div>
-            <button class="btn" type="button" data-action="add-more-files" style="width:100%;margin-bottom:12px;">
-              ${icons.plus || '+'} 添加更多文件
-            </button>
             <div style="margin:12px 0;">
               <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:6px;">同名文件冲突时：</label>
               <select class="inline-input" data-action="set-upload-conflict-mode" style="width:100%;min-height:40px;">
