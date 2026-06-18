@@ -337,7 +337,8 @@ export function createThunks(deps) {
       try {
         const { response, data } = await fileApi.saveText(path, content);
         if (!response.ok || data?.success === false) throw new Error(humanError(response, data, '保存失败'));
-        dispatch(actions.app.setModal({ ...modal, editing: false, content }));
+        const { draftContent: _, ...cleanModal } = modal;
+        dispatch(actions.app.setModal({ ...cleanModal, editing: false, content }));
         dispatchToast('success', '文本内容已保存');
       } catch (error) {
         dispatchToast('error', error.message || '保存失败');
@@ -489,6 +490,20 @@ export function createThunks(deps) {
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         dispatchToast('error', error.message || '清空回收站失败');
+      }
+    },
+    clearTrashWithModal: () => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+
+      try {
+        const { response, data } = await trashApi.clear();
+        if (!response.ok) throw new Error(humanError(response, data, '清空回收站失败'));
+        dispatch(actions.app.setModal(null));
+        dispatchToast('success', '回收站已清空');
+        await dispatch(thunks.loadExplorer());
+      } catch (error) {
+        const modal = getState().app.modal;
+        dispatch(actions.app.setModal({ ...modal, loading: false, error: error.message || '清空回收站失败' }));
       }
     },
     batchDelete: paths => async dispatch => {

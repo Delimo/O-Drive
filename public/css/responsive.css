@@ -11,17 +11,14 @@
 }
 
 @media (max-width: 980px) {
-  body {
-    overflow: auto;
-  }
-
   .app-shell {
-    min-height: auto;
+    min-height: 100vh;
     padding: 14px;
   }
 
-  .workspace {
-    min-height: auto;
+  .workspace,
+  .page-stack {
+    min-height: 0;
   }
 
   .topbar,
@@ -36,13 +33,15 @@
   }
 
   .header-right,
-  .toolbar-right {
+  .toolbar-right,
+  .admin-toolbar-stack {
     width: 100%;
     justify-content: flex-start;
     align-items: stretch;
   }
 
-  .header-actions {
+  .header-actions,
+  .admin-strip-actions {
     width: 100%;
     justify-content: flex-start;
   }
@@ -56,8 +55,15 @@
     padding: 20px 20px 10px;
   }
 
-  .panel-body {
+  .panel-body,
+  .explorer-body,
+  .admin-panel-scroll {
     padding: 0 20px 20px;
+  }
+
+  .explorer-body,
+  .admin-panel-scroll {
+    padding-top: 20px;
   }
 
   .hero-strip {
@@ -90,12 +96,15 @@
 
   .btn-row,
   .toolbar-left,
-  .toolbar-right {
+  .toolbar-right,
+  .admin-toolbar-actions,
+  .admin-toolbar-stack {
     width: 100%;
   }
 
   .crumbs,
-  .status-bar {
+  .status-bar,
+  .admin-filter-bar {
     width: 100%;
   }
 
@@ -138,10 +147,6 @@
     padding: 14px;
   }
 
-  .explorer-legacy {
-    min-height: calc(100vh - 200px);
-  }
-
   .toolbar-btn,
   .toolbar-select {
     min-width: 0;
@@ -150,13 +155,10 @@
     font-size: 14px;
   }
 
-  .batch-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
+  .batch-bar,
   .admin-strip-actions {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .hero-strip {
@@ -181,5 +183,9 @@
 
   .item-card {
     padding: 14px;
+  }
+
+  .admin-section-title {
+    font-size: 24px;
   }
 }

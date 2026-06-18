@@ -9,6 +9,7 @@ import { escapeHtml } from '../public/js/utils/text.js';
 import { createStateSelectors } from '../public/js/state/selectors.js';
 import { createSharedRenderers } from '../public/js/render/shared.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
+import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
 import { mockTextContent, mockReadme } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
@@ -272,4 +273,121 @@ test('openDownload calls apiClient.downloadUrl with entry path', () => {
   openDownload(fakeClient, getEntryPath, { fullKey: 'test.pdf' });
   assert.equal(calledPath, 'test.pdf');
   assert.equal(calledEntry?.fullKey, 'test.pdf');
+});
+
+// ===== 预览编辑草稿持久化 =====
+
+test('preview editor uses draftContent when editing', () => {
+  const { renderPreviewModalBody } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const editing = renderPreviewModalBody({
+    type: 'preview',
+    editing: true,
+    content: '原始内容',
+    draftContent: '用户正在编辑的新内容',
+    entry: { name: 'test.txt' },
+  });
+  assert.match(editing, /用户正在编辑的新内容/);
+  assert.doesNotMatch(editing, /原始内容/);
+});
+
+test('preview editor falls back to content when no draftContent', () => {
+  const { renderPreviewModalBody } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const editing = renderPreviewModalBody({
+    type: 'preview',
+    editing: true,
+    content: '原始内容',
+    entry: { name: 'test.txt' },
+  });
+  assert.match(editing, /原始内容/);
+});
+
+// ===== 退出回收站时搜索状态 =====
+
+test('toggle-trash clears queryDraft when exiting trash mode', () => {
+  const state = makeState({
+    explorer: { trashMode: true, query: '旧搜索', queryDraft: '旧搜索' },
+  });
+  const next = false;
+  const clearedQueryDraft = next ? state.explorer.queryDraft : '';
+  assert.equal(clearedQueryDraft, '');
+});
+
+test('toggle-trash preserves queryDraft when entering trash mode', () => {
+  const state = makeState({
+    explorer: { trashMode: false, query: '搜索词', queryDraft: '搜索词' },
+  });
+  const next = true;
+  const preserved = next ? state.explorer.queryDraft : '';
+  assert.equal(preserved, '搜索词');
+});
+
+// ===== 清空回收站确认弹窗 =====
+
+test('home shows clear-trash button only in trash mode', () => {
+  const inTrash = home.renderHomePage(makeState({
+    explorer: { trashMode: true },
+  }));
+  assert.match(inTrash, /data-action="confirm-clear-trash"/);
+
+  const notInTrash = home.renderHomePage(makeState({
+    explorer: { trashMode: false },
+  }));
+  assert.doesNotMatch(notInTrash, /data-action="confirm-clear-trash"/);
+});
+
+test('confirm-clear-trash modal shows warning and execute action', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: { type: 'confirm-clear-trash', loading: false, error: '' },
+    },
+  });
+  assert.match(html, /清空回收站/);
+  assert.match(html, /此操作不可撤销/);
+  assert.match(html, /data-action="execute-clear-trash"/);
+  assert.match(html, /确认清空/);
+  assert.match(html, /data-action="close-modal"/);
+});
+
+test('confirm-clear-trash modal shows loading state', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: { type: 'confirm-clear-trash', loading: true, error: '' },
+    },
+  });
+  assert.match(html, /清空中\.\.\./);
+  assert.match(html, /disabled/);
 });

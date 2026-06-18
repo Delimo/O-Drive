@@ -16,7 +16,7 @@ export function createModalRenderers(deps) {
     if (modal.contentMode === 'video') return `<div class="preview-media-shell"><video src="${previewUrl}" controls autoplay playsinline></video></div>`;
     if (modal.contentMode === 'audio') return `<div class="preview-media-shell"><audio src="${previewUrl}" controls autoplay style="width:min(560px,100%);"></audio></div>`;
     if (modal.contentMode === 'pdf') return `<div class="preview-media-shell"><iframe src="${previewUrl}" title="${escapeHtml(modal.entry?.name || '')}"></iframe></div>`;
-    if (modal.editing) return `<textarea class="preview-editor" id="preview-edit-area">${escapeHtml(modal.content || '')}</textarea>`;
+    if (modal.editing) return `<textarea class="preview-editor" id="preview-edit-area">${escapeHtml(modal.draftContent ?? modal.content ?? '')}</textarea>`;
     if (isMarkdownName(modal.entry?.name) && !modal.showRaw) {
       return `<div class="markdown-body">${renderMarkdown(modal.content || '')}</div>`;
     }
@@ -177,6 +177,30 @@ export function createModalRenderers(deps) {
               <button class="btn btn-danger" type="button" data-action="execute-delete-share" data-key="${escapeHtml(modal.token || '')}" ${modal.loading ? 'disabled' : ''}>
                 ${icons.trash}
                 <span>${modal.loading ? '删除中...' : '确认删除'}</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (modal.type === 'confirm-clear-trash') {
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-clear-title" data-stop-close="true">
+            <h3 id="confirm-clear-title" class="modal-title">清空回收站</h3>
+            <p class="modal-copy">你确定要清空回收站中的所有项目吗？此操作将永久删除所有回收站中的文件和文件夹。</p>
+            <div class="attention-item" data-level="warning" style="margin:16px 0;">
+              <h3 class="attention-title">此操作不可撤销</h3>
+              <div class="attention-copy">清空后，所有回收站中的项目将被永久删除，无法恢复。请确认你不再需要这些文件。</div>
+            </div>
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ''}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在清空回收站，请稍候...</div>' : ''}
+            <div class="btn-row" style="margin-top:6px;">
+              <button class="btn btn-danger" type="button" data-action="execute-clear-trash" ${modal.loading ? 'disabled' : ''}>
+                ${icons.trash}
+                <span>${modal.loading ? '清空中...' : '确认清空'}</span>
               </button>
               <button class="btn" type="button" data-action="close-modal" ${modal.loading ? 'disabled' : ''}>取消</button>
             </div>

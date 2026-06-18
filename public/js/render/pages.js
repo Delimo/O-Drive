@@ -77,206 +77,6 @@ export function createPageRenderers(deps) {
     });
   }
 
-  function renderAdminStats(stats) {
-    const breakdown = Object.entries(stats.breakdown || {});
-    const latest = stats.latest || [];
-    const attention = stats.attention || [];
-
-    return `
-      <section class="admin-frame">
-        <section class="admin-strip glass-card">
-          <div class="status-main">
-            <span class="status-dot"></span>
-            <span>后台概览</span>
-          </div>
-          <div class="admin-strip-actions">
-            <span class="toolbar-tag">${safeText(stats.index?.recommendation, '正常')}</span>
-          </div>
-        </section>
-
-        <section class="admin-content glass-card">
-          <div class="admin-grid">
-            <div class="admin-card span-4">
-              <div class="admin-label">文件总数</div>
-              <div class="admin-value">${safeText(stats.files?.count || 0, '0')}</div>
-              <div class="admin-copy">
-                总容量 ${safeText(stats.files?.totalSizeFormatted, '0 B')}，文件夹标记 ${safeText(stats.files?.folderMarkers || 0, '0')}。
-              </div>
-              <div class="admin-status-row">
-                <span class="toolbar-tag tag-active">存储正常</span>
-              </div>
-            </div>
-
-            <div class="admin-card span-4">
-              <div class="admin-label">回收站项目</div>
-              <div class="admin-value">${safeText(stats.trash?.count || 0, '0')}</div>
-              <div class="admin-copy">
-                累计 ${safeText(stats.trash?.sizeFormatted, '0 B')}，约占文件总量 ${safeText(stats.trash?.percentOfFiles || 0, '0')}%。
-              </div>
-              <div class="admin-status-row">
-                ${(stats.trash?.count || 0) > 0
-                  ? '<span class="toolbar-tag tag-soon">建议清理</span>'
-                  : '<span class="toolbar-tag tag-active">已清空</span>'}
-              </div>
-            </div>
-
-            <div class="admin-card span-4">
-              <div class="admin-label">索引状态</div>
-              <div class="admin-value">${safeText(stats.index?.recommendation, '等待初始化')}</div>
-              <div class="admin-copy">
-                索引记录 ${safeText(stats.index?.count || 0, '0')} 条，最近更新
-                ${safeText(stats.index?.latestUpdatedAt ? formatTime(stats.index.latestUpdatedAt) : '未知')}。
-              </div>
-              <div class="admin-status-row">
-                <span class="toolbar-tag tag-active">${safeText(stats.index?.recommendation, '正常')}</span>
-              </div>
-            </div>
-
-            <div class="admin-card span-6">
-              <div class="admin-label">类型分布</div>
-              <div class="latest-list">
-                ${
-                  breakdown.length
-                    ? breakdown.map(([key, value]) => `
-                      <article class="latest-item">
-                        <h3 class="latest-title">${safeText(key)}</h3>
-                        <div class="latest-copy">
-                          ${safeText(value.count || 0, '0')} 项 · ${safeText(value.sizeFormatted || formatBytes(value.size || 0), '0 B')}
-                        </div>
-                      </article>
-                    `).join('')
-                    : '<div class="muted">暂无分类数据</div>'
-                }
-              </div>
-            </div>
-
-            <div class="admin-card span-6">
-              <div class="admin-label">系统提醒</div>
-              <div class="attention-list">
-                ${
-                  attention.length
-                    ? attention.map(item => `
-                      <article class="attention-item" data-level="${safeText(item.level || 'info')}">
-                        <h3 class="attention-title">${safeText(item.title || '系统提示')}</h3>
-                        <div class="attention-copy">${safeText(item.body || '')}</div>
-                      </article>
-                    `).join('')
-                    : '<div class="muted">暂无系统提醒</div>'
-                }
-              </div>
-            </div>
-
-            <div class="admin-card span-12">
-              <div class="admin-label">最近资源</div>
-              <div class="latest-list">
-                ${
-                  latest.length
-                    ? latest.map(item => `
-                      <article class="latest-item">
-                        <h3 class="latest-title">${safeText(item.key || '')}</h3>
-                        <div class="latest-copy">
-                          ${safeText(item.sizeFormatted || formatBytes(item.size || 0), '0 B')} · ${safeText(formatRelative(item.uploaded || 0), '刚刚')}
-                        </div>
-                      </article>
-                    `).join('')
-                    : '<div class="muted">暂无最近资源记录</div>'
-                }
-              </div>
-            </div>
-          </div>
-        </section>
-      </section>
-    `;
-  }
-
-  function renderAdminShares(admin) {
-    const shares = admin.shares || [];
-    const busyToken = admin.shareBusyToken || '';
-    const shareFilter = admin.shareFilter || 'all';
-    const filteredShares = filterShares(shares, shareFilter);
-    const totalCount = shares.length;
-    const activeCount = shares.filter(item => isShareActive(item)).length;
-    const expiredCount = shares.filter(item => item?.expired).length;
-    const exhaustedCount = shares.filter(item => item?.exhausted).length;
-    const passwordCount = shares.filter(item => item?.hasPassword).length;
-
-    const filterOptions = [
-      { value: 'all', label: '全部', count: totalCount },
-      { value: 'active', label: '有效', count: activeCount },
-      { value: 'expired', label: '已过期', count: expiredCount },
-      { value: 'exhausted', label: '次数用尽', count: exhaustedCount },
-      { value: 'password', label: '有密码', count: passwordCount },
-      { value: 'preview', label: '可预览', count: shares.filter(item => item?.allowPreview).length },
-      { value: 'download', label: '可下载', count: shares.filter(item => item?.allowDownload).length },
-    ];
-
-    return `
-      <section class="admin-frame" style="margin-top:18px;">
-        <section class="admin-strip glass-card">
-          <div class="status-main">
-            <span class="status-dot"></span>
-            <span>分享管理</span>
-            <span class="toolbar-tag">${totalCount} 条记录</span>
-          </div>
-          <div class="btn-row admin-strip-actions">
-            <button class="btn btn-muted" type="button" data-action="refresh-admin-shares">
-              ${icons.refresh}
-              <span>刷新分享</span>
-            </button>
-            <button class="btn ${busyToken === '__cleanup__' ? 'btn-primary' : 'btn-muted'}" type="button" data-action="confirm-cleanup-expired-shares">
-              ${icons.trash}
-              <span>${busyToken === '__cleanup__' ? '清理中...' : '清理过期'}</span>
-            </button>
-          </div>
-        </section>
-
-        <section class="admin-content glass-card">
-          <div class="hero-strip">
-            <div class="mini-stat">
-              <div class="mini-stat-label">分享总数</div>
-              <div class="mini-stat-value">${safeText(totalCount, '0')}</div>
-              <div class="mini-stat-meta">当前可管理的全部分享条目</div>
-            </div>
-            <div class="mini-stat">
-              <div class="mini-stat-label">有效分享</div>
-              <div class="mini-stat-value">${safeText(activeCount, '0')}</div>
-              <div class="mini-stat-meta">未过期且次数未用尽</div>
-            </div>
-            <div class="mini-stat">
-              <div class="mini-stat-label">已失效</div>
-              <div class="mini-stat-value">${safeText(expiredCount + exhaustedCount, '0')}</div>
-              <div class="mini-stat-meta">已过期 ${expiredCount} · 次数用尽 ${exhaustedCount}</div>
-            </div>
-          </div>
-
-          <div class="share-filter-bar">
-            ${filterOptions.map(opt => `
-              <button class="btn share-filter-btn ${shareFilter === opt.value ? 'share-filter-active' : ''}"
-                      type="button"
-                      data-action="set-share-filter"
-                      data-filter="${escapeHtml(opt.value)}">
-                ${escapeHtml(opt.label)}
-                <span class="share-filter-count">${safeText(opt.count, '0')}</span>
-              </button>
-            `).join('')}
-          </div>
-
-          ${
-            admin.sharesLoading
-              ? renderEmptyState('正在加载分享列表', '正在获取已创建的分享记录和访问状态。', icons.refresh)
-              : admin.sharesError
-                ? renderShareErrorState(admin.sharesError)
-                : shares.length === 0
-                  ? renderEmptyState('暂无分享记录', '系统中还没有创建任何分享。您可以在文件管理页面选择文件并创建分享链接。', icons.share)
-                  : filteredShares.length === 0
-                    ? renderEmptyState('筛选结果为空', `当前筛选条件"${getFilterLabel(shareFilter)}"没有匹配的分享记录，请尝试其他筛选条件。`, icons.search)
-                    : renderShareList(filteredShares, busyToken)
-          }
-        </section>
-      </section>
-    `;
-  }
-
   function getFilterLabel(filter) {
     const labels = {
       all: '全部',
@@ -288,6 +88,257 @@ export function createPageRenderers(deps) {
       download: '可下载',
     };
     return labels[filter] || filter;
+  }
+
+  function getShareFilterOptions(shares) {
+    return [
+      { value: 'all', label: '全部', count: shares.length },
+      { value: 'active', label: '有效', count: shares.filter(item => isShareActive(item)).length },
+      { value: 'expired', label: '已过期', count: shares.filter(item => item?.expired).length },
+      { value: 'exhausted', label: '次数用尽', count: shares.filter(item => item?.exhausted).length },
+      { value: 'password', label: '有密码', count: shares.filter(item => item?.hasPassword).length },
+      { value: 'preview', label: '可预览', count: shares.filter(item => item?.allowPreview).length },
+      { value: 'download', label: '可下载', count: shares.filter(item => item?.allowDownload).length },
+    ];
+  }
+
+  function renderAdminOverviewStrip(admin) {
+    const recommendation = safeText(admin.stats?.index?.recommendation, '正常');
+    return `
+      <section class="toolbar glass-card page-bar admin-bar">
+        <div class="toolbar-left admin-toolbar-main">
+          <div class="status-main">
+            <span class="status-dot"></span>
+            <span>后台概览</span>
+            <span class="toolbar-tag">统一三段式后台</span>
+          </div>
+        </div>
+        <div class="toolbar-right admin-toolbar-actions">
+          <span class="toolbar-tag">${recommendation}</span>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin">
+            ${icons.refresh}
+            <span>刷新概览</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-shares">
+            ${icons.share}
+            <span>刷新分享</span>
+          </button>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderAdminControlStrip(admin) {
+    const shares = admin.shares || [];
+    const busyToken = admin.shareBusyToken || '';
+    const shareFilter = admin.shareFilter || 'all';
+    const filterOptions = getShareFilterOptions(shares);
+
+    return `
+      <section class="toolbar glass-card page-bar admin-bar admin-bar-secondary">
+        <div class="toolbar-left admin-toolbar-main">
+          <div class="status-main">
+            <span class="status-dot"></span>
+            <span>分享管理</span>
+            <span class="toolbar-tag">${safeText(shares.length, '0')} 条记录</span>
+          </div>
+        </div>
+        <div class="toolbar-right admin-toolbar-stack">
+          <div class="btn-row admin-strip-actions">
+            <button class="btn toolbar-btn" type="button" data-action="confirm-cleanup-expired-shares">
+              ${icons.trash}
+              <span>${busyToken === '__cleanup__' ? '清理中...' : '清理过期'}</span>
+            </button>
+          </div>
+          <div class="share-filter-bar admin-filter-bar">
+            ${filterOptions.map(opt => `
+              <button class="btn share-filter-btn ${shareFilter === opt.value ? 'share-filter-active' : ''}"
+                      type="button"
+                      data-action="set-share-filter"
+                      data-filter="${escapeHtml(opt.value)}">
+                ${escapeHtml(opt.label)}
+                <span class="share-filter-count">${safeText(opt.count, '0')}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderAdminStatsGrid(stats) {
+    const breakdown = Object.entries(stats.breakdown || {});
+    const latest = stats.latest || [];
+    const attention = stats.attention || [];
+
+    return `
+      <div class="admin-grid">
+        <div class="admin-card span-4">
+          <div class="admin-label">文件总数</div>
+          <div class="admin-value">${safeText(stats.files?.count || 0, '0')}</div>
+          <div class="admin-copy">
+            总容量 ${safeText(stats.files?.totalSizeFormatted, '0 B')}，文件夹标记 ${safeText(stats.files?.folderMarkers || 0, '0')}。
+          </div>
+          <div class="admin-status-row">
+            <span class="toolbar-tag tag-active">存储正常</span>
+          </div>
+        </div>
+
+        <div class="admin-card span-4">
+          <div class="admin-label">回收站项目</div>
+          <div class="admin-value">${safeText(stats.trash?.count || 0, '0')}</div>
+          <div class="admin-copy">
+            累计 ${safeText(stats.trash?.sizeFormatted, '0 B')}，约占文件总量 ${safeText(stats.trash?.percentOfFiles || 0, '0')}%。
+          </div>
+          <div class="admin-status-row">
+            ${(stats.trash?.count || 0) > 0
+              ? '<span class="toolbar-tag tag-soon">建议清理</span>'
+              : '<span class="toolbar-tag tag-active">已清空</span>'}
+          </div>
+        </div>
+
+        <div class="admin-card span-4">
+          <div class="admin-label">索引状态</div>
+          <div class="admin-value">${safeText(stats.index?.recommendation, '等待初始化')}</div>
+          <div class="admin-copy">
+            索引记录 ${safeText(stats.index?.count || 0, '0')} 条，最近更新
+            ${safeText(stats.index?.latestUpdatedAt ? formatTime(stats.index.latestUpdatedAt) : '未知')}。
+          </div>
+          <div class="admin-status-row">
+            <span class="toolbar-tag tag-active">${safeText(stats.index?.recommendation, '正常')}</span>
+          </div>
+        </div>
+
+        <div class="admin-card span-6">
+          <div class="admin-label">类型分布</div>
+          <div class="latest-list">
+            ${
+              breakdown.length
+                ? breakdown.map(([key, value]) => `
+                  <article class="latest-item">
+                    <h3 class="latest-title">${safeText(key)}</h3>
+                    <div class="latest-copy">
+                      ${safeText(value.count || 0, '0')} 项 · ${safeText(value.sizeFormatted || formatBytes(value.size || 0), '0 B')}
+                    </div>
+                  </article>
+                `).join('')
+                : '<div class="muted">暂无分类数据</div>'
+            }
+          </div>
+        </div>
+
+        <div class="admin-card span-6">
+          <div class="admin-label">系统提醒</div>
+          <div class="attention-list">
+            ${
+              attention.length
+                ? attention.map(item => `
+                  <article class="attention-item" data-level="${safeText(item.level || 'info')}">
+                    <h3 class="attention-title">${safeText(item.title || '系统提示')}</h3>
+                    <div class="attention-copy">${safeText(item.body || '')}</div>
+                  </article>
+                `).join('')
+                : '<div class="muted">暂无系统提醒</div>'
+            }
+          </div>
+        </div>
+
+        <div class="admin-card span-12">
+          <div class="admin-label">最近资源</div>
+          <div class="latest-list">
+            ${
+              latest.length
+                ? latest.map(item => `
+                  <article class="latest-item">
+                    <h3 class="latest-title">${safeText(item.key || '')}</h3>
+                    <div class="latest-copy">
+                      ${safeText(item.sizeFormatted || formatBytes(item.size || 0), '0 B')} · ${safeText(formatRelative(item.uploaded || 0), '刚刚')}
+                    </div>
+                  </article>
+                `).join('')
+                : '<div class="muted">暂无最近资源记录</div>'
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAdminSharesSection(admin) {
+    const shares = admin.shares || [];
+    const busyToken = admin.shareBusyToken || '';
+    const shareFilter = admin.shareFilter || 'all';
+    const filteredShares = filterShares(shares, shareFilter);
+    const expiredCount = shares.filter(item => item?.expired).length;
+    const exhaustedCount = shares.filter(item => item?.exhausted).length;
+
+    return `
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <div>
+            <h2 class="admin-section-title">分享总览</h2>
+            <p class="admin-section-copy">用统一的三段式结构管理分享状态、筛选条件与访问记录。</p>
+          </div>
+        </div>
+        <div class="hero-strip">
+          <div class="mini-stat">
+            <div class="mini-stat-label">分享总数</div>
+            <div class="mini-stat-value">${safeText(shares.length, '0')}</div>
+            <div class="mini-stat-meta">当前可管理的全部分享条目</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">有效分享</div>
+            <div class="mini-stat-value">${safeText(shares.filter(item => isShareActive(item)).length, '0')}</div>
+            <div class="mini-stat-meta">未过期且次数未用尽</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-label">已失效</div>
+            <div class="mini-stat-value">${safeText(expiredCount + exhaustedCount, '0')}</div>
+            <div class="mini-stat-meta">已过期 ${expiredCount} · 次数用尽 ${exhaustedCount}</div>
+          </div>
+        </div>
+        ${
+          admin.sharesLoading
+            ? renderEmptyState('正在加载分享列表', '正在获取已创建的分享记录和访问状态。', icons.refresh)
+            : admin.sharesError
+              ? renderShareErrorState(admin.sharesError)
+              : shares.length === 0
+                ? renderEmptyState('暂无分享记录', '系统中还没有创建任何分享。您可以在文件管理页面选择文件并创建分享链接。', icons.share)
+                : filteredShares.length === 0
+                  ? renderEmptyState('筛选结果为空', `当前筛选条件“${getFilterLabel(shareFilter)}”没有匹配的分享记录，请尝试其他筛选条件。`, icons.search)
+                  : renderShareList(filteredShares, busyToken)
+        }
+      </section>
+    `;
+  }
+
+  function renderAdminPanelContent(admin) {
+    if (admin.loading) {
+      return renderEmptyState('正在加载概览', '正在统计文件数量、索引状态与回收站信息。', icons.stats);
+    }
+
+    if (admin.error) {
+      return renderAdminErrorState(admin.error);
+    }
+
+    if (!admin.stats) {
+      return renderEmptyState('暂无概览数据', '后台接口已接通，但当前还没有可展示的概览结果。', icons.stats);
+    }
+
+    return `
+      <div class="admin-scroll-stack">
+        <section class="admin-section admin-section-primary">
+          <div class="admin-section-head">
+            <div>
+              <h2 class="admin-section-title">系统统计</h2>
+              <p class="admin-section-copy">集中查看文件、索引、回收站与资源趋势，主内容区随页面高度自适应并保持内部滚动。</p>
+            </div>
+          </div>
+          ${renderAdminStatsGrid(admin.stats)}
+        </section>
+        ${renderAdminSharesSection(admin)}
+      </div>
+    `;
   }
 
   function renderShareErrorState(error) {
@@ -327,7 +378,6 @@ export function createPageRenderers(deps) {
     const isExhausted = item?.exhausted;
     const isExpiringSoon = expiry.level === 'soon';
     const isUnlimited = expiry.level === 'unlimited';
-    const isInactive = !isActive;
 
     return `
       <article class="latest-item ${isExpired ? 'share-item-expired' : ''} ${isExhausted ? 'share-item-exhausted' : ''} ${isExpiringSoon ? 'share-item-expiring-soon' : ''}">
@@ -397,24 +447,25 @@ export function createPageRenderers(deps) {
 
     if (role !== 'admin') {
       return `
-        <section class="auth-board glass-card admin-content">
-          ${renderEmptyState('需要管理员登录', '登录后即可查看文件统计、索引状态、分享记录和后续管理模块。', icons.lock)}
+        <section class="page-stack admin-page">
+          <section class="page-panel auth-board glass-card admin-auth-panel">
+            <div class="page-panel-body admin-panel-scroll">
+              ${renderEmptyState('需要管理员登录', '登录后即可查看文件统计、索引状态、分享记录和后续管理模块。', icons.lock)}
+            </div>
+          </section>
         </section>
       `;
     }
 
     return `
-      <section class="admin-board">
-        ${
-          admin.loading
-            ? renderEmptyState('正在加载概览', '正在统计文件数量、索引状态与回收站信息。', icons.stats)
-            : admin.error
-              ? renderAdminErrorState(admin.error)
-              : admin.stats
-                ? renderAdminStats(admin.stats)
-                : renderEmptyState('暂无概览数据', '后台接口已接通，但当前还没有可展示的概览结果。', icons.stats)
-        }
-        ${renderAdminShares(admin)}
+      <section class="page-stack admin-page">
+        ${renderAdminOverviewStrip(admin)}
+        ${renderAdminControlStrip(admin)}
+        <section class="page-panel admin-board glass-card admin-main-panel">
+          <div class="page-panel-body admin-panel-scroll">
+            ${renderAdminPanelContent(admin)}
+          </div>
+        </section>
       </section>
     `;
   }

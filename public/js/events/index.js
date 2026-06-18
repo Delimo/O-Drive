@@ -174,6 +174,7 @@ export function registerAppEvents(deps) {
         const next = !state.explorer.trashMode;
         store.dispatch(actions.explorer.setTrashMode(next));
         store.dispatch(actions.explorer.setQuery(next ? state.explorer.query : ''));
+        store.dispatch(actions.explorer.setQueryDraft(next ? state.explorer.queryDraft : ''));
         store.dispatch(actions.explorer.setPath(next ? state.explorer.path : state.explorer.path));
         store.dispatch(actions.explorer.setSelectedKeys([]));
         store.dispatch(actions.explorer.setClipboard(next ? null : state.explorer.clipboard));
@@ -304,7 +305,8 @@ export function registerAppEvents(deps) {
       if (action === 'toggle-preview-edit') {
         const modal = state.app.modal;
         if (!modal || modal.type !== 'preview') return;
-        store.dispatch(actions.app.setModal({ ...modal, editing: !modal.editing, dirty: false }));
+        const { draftContent: _, ...cleanModal } = modal;
+        store.dispatch(actions.app.setModal({ ...cleanModal, editing: !modal.editing, dirty: false }));
         return;
       }
 
@@ -331,8 +333,21 @@ export function registerAppEvents(deps) {
         return;
       }
 
-      if (action === 'clear-trash') {
-        store.dispatch(thunks.clearTrash());
+      if (action === 'confirm-clear-trash') {
+        store.dispatch(actions.app.setModal({
+          type: 'confirm-clear-trash',
+          loading: false,
+          error: '',
+        }));
+        return;
+      }
+
+      if (action === 'execute-clear-trash') {
+        const modal = state.app.modal;
+        if (modal && modal.type === 'confirm-clear-trash') {
+          store.dispatch(actions.app.setModal({ ...modal, loading: true, error: '' }));
+        }
+        store.dispatch(thunks.clearTrashWithModal());
         return;
       }
     }
@@ -343,11 +358,9 @@ export function registerAppEvents(deps) {
     const role = event.target.dataset.role;
 
     if (event.target.id === 'preview-edit-area') {
-      // 直接更新 DOM 上的脏标记，避免 dispatch 触发整页重渲染导致输入丢失。
-      const meta = documentRef.querySelector('.preview-edit-meta');
-      if (meta) {
-        meta.textContent = '● 未保存';
-        meta.dataset.dirty = 'true';
+      const modal = store.getState().app.modal;
+      if (modal && modal.type === 'preview' && modal.editing) {
+        store.dispatch(actions.app.setModal({ ...modal, draftContent: event.target.value, dirty: true }));
       }
       return;
     }
