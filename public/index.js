@@ -284,13 +284,13 @@ function renderHeader(state) {
       </a>
       <div class="flex items-center gap-4">
         ${page === 'home' ? `
-          <div class="relative">
-            <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400 icon">${icons.search}</span>
+          <div class="search-bar relative">
+            <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400">🔍</span>
             <input type="search" value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(searchPlaceholder)}" data-role="search-input" class="w-72 pl-10 pr-4 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all" ${searchDisabled ? 'disabled' : ''}>
           </div>
         ` : `
-          <div class="relative">
-            <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400 icon">${icons.search}</span>
+          <div class="search-bar relative">
+            <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400">🔍</span>
             <input type="search" value="" placeholder="搜索文件..." class="w-72 pl-10 pr-4 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
           </div>
         `}

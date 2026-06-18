@@ -144,7 +144,7 @@ export function createSharedRenderers(deps) {
 
   function buildBreadcrumbs(path) {
     const parts = normalizeKey(path).split('/').filter(Boolean);
-    const crumbs = [{ label: '根文件夹', path: '', current: parts.length === 0 }];
+    const crumbs = [{ label: '根目录', path: '', current: parts.length === 0 }];
     let current = '';
 
     parts.forEach((part, index) => {
