@@ -11,7 +11,7 @@ import { createSharedRenderers } from '../public/js/render/shared.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
-import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks } from '../public/js/mock/index.js';
+import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockNotifications } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
 import { createPageRenderers } from '../public/js/render/pages.js';
 
@@ -754,4 +754,18 @@ test('admin task list is hidden when empty', () => {
   };
   const html = pages.renderAdminPage(state);
   assert.doesNotMatch(html, /上传任务/);
+});
+
+test('mock notifications have correct structure', () => {
+  assert.ok(Array.isArray(mockNotifications));
+  assert.ok(mockNotifications.length >= 3);
+  for (const n of mockNotifications) {
+    assert.equal(typeof n.id, 'number');
+    assert.equal(typeof n.event, 'string');
+    assert.equal(typeof n.message, 'string');
+    assert.equal(typeof n.read, 'number');
+    assert.equal(typeof n.created_at, 'number');
+  }
+  const unread = mockNotifications.filter(n => !n.read);
+  assert.ok(unread.length > 0);
 });

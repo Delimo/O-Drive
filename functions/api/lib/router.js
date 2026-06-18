@@ -39,6 +39,7 @@ import {
   handleAdminQuota,
   handleAdminWebhooks,
   handleAdminWebhookDeliveries,
+  handleAdminNotifications,
   loadWebhookEndpoints,
 } from './admin.js';
 import { handleAdminStorage, handleAdminStorageTest } from './storage.js';
@@ -105,6 +106,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
   if (path === '/api/admin/settings/webhooks') return await handleAdminWebhooks(env, request, method);
   if (path === '/api/admin/webhook-deliveries') return await handleAdminWebhookDeliveries(env);
   if (path === '/api/admin/shares') return await handleAdminShares(env, request, method, url);
+  if (path === '/api/notifications') return await handleAdminNotifications(request, env);
   if (path === '/api/tasks' && method === 'POST') return await createFileTask(env, request, context);
   if (path === '/api/tasks' && method === 'PATCH') return await updateFileTask(env, request, url);
   if (path === '/api/tasks' && method === 'GET') return await getFileTask(env, url);

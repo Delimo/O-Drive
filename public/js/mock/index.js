@@ -319,6 +319,15 @@ export const mockTasks = [
   },
 ];
 
+const notifNow = Date.now();
+export const mockNotifications = [
+  { id: 1, event: 'file.uploaded', message: '上传: /产品说明.pdf', path: '/产品说明.pdf', read: 0, created_at: notifNow - 60000 },
+  { id: 2, event: 'file.deleted', message: '删除: /旧文档.docx', path: '/旧文档.docx', read: 0, created_at: notifNow - 300000 },
+  { id: 3, event: 'file.renamed', message: '重命名: /banner.png → /新banner.png', path: '/新banner.png', read: 0, created_at: notifNow - 3600000 },
+  { id: 4, event: 'folder.created', message: '新建文件夹: /项目文档', path: '/项目文档', read: 1, created_at: notifNow - 7200000 },
+  { id: 5, event: 'share.expired', message: '分享链接到期: /宣传视频.mp4', path: '/宣传视频.mp4', read: 1, created_at: notifNow - 86400000 },
+];
+
 export const mockShareItem = {
   name: '产品说明.pdf',
   sizeFormatted: '2.3 MB',

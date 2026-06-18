@@ -1,4 +1,4 @@
-import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent, mockAdminHealth, mockAdminLogs, mockProtectedPaths, mockAdminQuota, mockHiddenPaths, mockStorageConfig, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks } from '../mock/index.js';
+import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent, mockAdminHealth, mockAdminLogs, mockProtectedPaths, mockAdminQuota, mockHiddenPaths, mockStorageConfig, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockNotifications } from '../mock/index.js';
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
 
@@ -12,6 +12,7 @@ export function createThunks(deps) {
     shareApi,
     maintenanceApi,
     taskApi,
+    notificationApi,
     previewService,
     uploadService,
     normalizeKey,
@@ -1055,6 +1056,41 @@ export function createThunks(deps) {
       } catch (error) {
         dispatch(actions.share.setPasswordRequired(error.message || '密码错误'));
       }
+    },
+    loadNotifications: () => async dispatch => {
+      dispatch(actions.admin.setNotificationsLoading(true));
+      if (mock) {
+        const unread = mockNotifications.filter(n => !n.read).length;
+        dispatch(actions.admin.setNotifications({ items: mockNotifications, unread }));
+        return;
+      }
+      try {
+        const { response, data } = await notificationApi.list(20);
+        if (!response.ok) throw new Error(data?.message || '通知列表加载失败');
+        dispatch(actions.admin.setNotifications(data));
+      } catch (_) {
+        dispatch(actions.admin.setNotificationsLoading(false));
+      }
+    },
+    markNotificationRead: id => async dispatch => {
+      if (mock) {
+        dispatch(actions.admin.setNotificationsUnread(Math.max(0, mockNotifications.filter(n => !n.read).length - 1)));
+        return;
+      }
+      try {
+        await notificationApi.markRead(id);
+        await dispatch(thunks.loadNotifications());
+      } catch (_) {}
+    },
+    markAllNotificationsRead: () => async dispatch => {
+      if (mock) {
+        dispatch(actions.admin.setNotificationsUnread(0));
+        return;
+      }
+      try {
+        await notificationApi.markAllRead();
+        await dispatch(thunks.loadNotifications());
+      } catch (_) {}
     },
   };
 

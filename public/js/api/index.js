@@ -399,6 +399,26 @@ export function createApiLayer(deps) {
     },
   };
 
+  const notificationApi = {
+    list(limit = 20) {
+      return request(`/api/notifications?limit=${limit}`);
+    },
+    markRead(id) {
+      return request('/api/notifications', {
+        method: 'POST',
+        json: { action: 'mark-read', id },
+        csrf: true,
+      });
+    },
+    markAllRead() {
+      return request('/api/notifications', {
+        method: 'POST',
+        json: { action: 'mark-all-read' },
+        csrf: true,
+      });
+    },
+  };
+
   const taskApi = {
     create(type, payload) {
       return request('/api/tasks', {
@@ -431,6 +451,7 @@ export function createApiLayer(deps) {
     adminApi,
     multipartApi,
     maintenanceApi,
+    notificationApi,
     taskApi,
   };
 }

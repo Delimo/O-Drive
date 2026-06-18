@@ -36,6 +36,11 @@ export function registerAppEvents(deps) {
       filterPopup.style.display = 'none';
     }
 
+    const notifWrap = documentRef.querySelector('[data-component="notifications"]');
+    if (notifWrap && !notifWrap.contains(event.target) && store.getState().admin.notifOpen) {
+      store.dispatch(actions.admin.setNotifOpen(false));
+    }
+
     if (actionNode) {
       const { action, key, path } = actionNode.dataset;
 
@@ -61,6 +66,24 @@ export function registerAppEvents(deps) {
         const next = current === 'dark' ? 'light' : 'dark';
         root.setAttribute('data-theme', next);
         try { localStorage.setItem('theme', next); } catch (_) {}
+        return;
+      }
+
+      if (action === 'toggle-notifications') {
+        const current = store.getState().admin.notifOpen;
+        store.dispatch(actions.admin.setNotifOpen(!current));
+        if (!current) store.dispatch(thunks.loadNotifications());
+        return;
+      }
+
+      if (action === 'mark-notification-read') {
+        const id = actionNode.dataset.notifId;
+        if (id) store.dispatch(thunks.markNotificationRead(Number(id)));
+        return;
+      }
+
+      if (action === 'mark-all-notifications-read') {
+        store.dispatch(thunks.markAllNotificationsRead());
         return;
       }
 

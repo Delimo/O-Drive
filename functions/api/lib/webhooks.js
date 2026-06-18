@@ -6,6 +6,7 @@
  * Configured from the admin Webhook settings stored in D1.
  */
 import { ensureCoreTables, recordSystemWarning } from './common.js';
+import { createNotification } from './notifications.js';
 
 /**
  * @typedef {object} WebhookPayload
@@ -311,6 +312,12 @@ export async function notifyWebhookWithLog(env, envUrls, event, data = {}) {
     await recordDelivery(env, endpoint, event, result);
     return result;
   })));
+
+  const msg = eventLabel(event) || event;
+  const path = data?.path || data?.paths?.[0] || '';
+  const eventMessage = path ? `${msg}: ${path}` : msg;
+  createNotification(env, { event, message: eventMessage, path }).catch(() => {});
+
   return results.map(result => Boolean(result.ok));
 }
 

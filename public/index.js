@@ -94,7 +94,7 @@ const {
   isProtectedEntry,
 });
 
-const { apiClient, authApi, fileApi, trashApi, shareApi, adminApi, multipartApi, maintenanceApi, taskApi } = createApiLayer({
+const { apiClient, authApi, fileApi, trashApi, shareApi, adminApi, multipartApi, maintenanceApi, taskApi, notificationApi } = createApiLayer({
   fetchImpl: fetch,
   getState: () => store.getState(),
   encodeRouteKey,
@@ -123,6 +123,7 @@ const thunks = createThunks({
   shareApi,
   maintenanceApi,
   taskApi,
+  notificationApi,
   multipartApi,
   previewService,
   uploadService,
@@ -298,6 +299,32 @@ function renderHeader(state) {
           </label>
         ` : ''}
         <button class="btn header-btn header-theme-btn" data-action="toggle-theme" aria-label="切换主题">${icons.sun}${icons.moon}</button>
+        <div class="notif-wrap" data-component="notifications">
+          <button class="btn header-btn notif-bell" data-action="toggle-notifications" aria-label="通知">
+            ${icons.bell}
+            <span class="notif-badge" data-role="notif-count" style="display:${state.admin.notificationsUnread ? '' : 'none'}">${state.admin.notificationsUnread}</span>
+          </button>
+          <div class="notif-dropdown" data-role="notif-dropdown" style="display:${state.admin.notifOpen ? '' : 'none'}">
+            <div class="notif-dropdown-head">
+              <span class="notif-dropdown-title">通知</span>
+              <button class="btn btn-small btn-ghost" data-action="mark-all-notifications-read" ${state.admin.notificationsUnread ? '' : 'disabled'}>全部已读</button>
+            </div>
+            <div class="notif-dropdown-body">
+              ${state.admin.notifications.length
+                ? state.admin.notifications.map(n => `
+                  <div class="notif-item ${n.read ? '' : 'notif-item-unread'}" data-notif-id="${n.id}">
+                    <div class="notif-item-main">
+                      <div class="notif-item-msg">${escapeHtml(n.message)}</div>
+                      <div class="notif-item-time">${formatRelative(n.created_at)}</div>
+                    </div>
+                    ${n.read ? '' : `<button class="notif-item-dismiss" data-action="mark-notification-read" data-notif-id="${n.id}" aria-label="标记已读">${icons.close}</button>`}
+                  </div>
+                `).join('')
+                : `<div class="notif-empty">暂无通知</div>`
+              }
+            </div>
+          </div>
+        </div>
         <div class="header-actions">
           ${
             page === 'admin'
@@ -325,6 +352,14 @@ function navigateToExplorerPath(path = '') {
   store.dispatch(thunks.loadExplorer());
 }
 
+let notifPollTimer = null;
+function startNotificationPolling(store, thunks) {
+  if (notifPollTimer) clearInterval(notifPollTimer);
+  notifPollTimer = setInterval(() => {
+    store.dispatch(thunks.loadNotifications());
+  }, 30000);
+}
+
 store.subscribe(render);
 render();
 
@@ -347,7 +382,9 @@ store.dispatch(thunks.loadRole()).then(async () => {
         store.dispatch(thunks.loadAdminWebhookDeliveries()),
         store.dispatch(thunks.loadMaintenanceSnapshot()),
         store.dispatch(thunks.loadTasks()),
+        store.dispatch(thunks.loadNotifications()),
       ]);
+      startNotificationPolling(store, thunks);
     }
   } else if (page === 'share') {
     await store.dispatch(thunks.loadShare());
