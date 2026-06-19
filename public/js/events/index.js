@@ -159,17 +159,28 @@ export function registerAppEvents(deps) {
         const tab = actionNode.dataset.tab || 'overview';
         store.dispatch(actions.admin.setActiveTab(tab));
         const admin = store.getState().admin;
-        if (tab === 'health' && !admin.health) { store.dispatch(thunks.loadAdminHealth()); return; }
+        if (tab === 'system') {
+          if (!admin.health) store.dispatch(thunks.loadAdminHealth());
+          if (!admin.quota) store.dispatch(thunks.loadAdminQuota());
+          if (!admin.storageConfig) store.dispatch(thunks.loadAdminStorageConfig());
+          return;
+        }
         if (tab === 'logs' && admin.logs.length === 0) { store.dispatch(thunks.loadAdminLogs(1)); return; }
-        if (tab === 'quota' && !admin.quota) { store.dispatch(thunks.loadAdminQuota()); return; }
-        if (tab === 'protected' && admin.protectedPaths.length === 0) { store.dispatch(thunks.loadAdminProtectedPaths()); return; }
-        if (tab === 'hidden' && admin.hiddenPaths.length === 0) { store.dispatch(thunks.loadAdminHiddenPaths()); return; }
-        if (tab === 'storage' && !admin.storageConfig) { store.dispatch(thunks.loadAdminStorageConfig()); return; }
-        if (tab === 'webhooks' && admin.webhooks.length === 0) { store.dispatch(thunks.loadAdminWebhooks()); return; }
-        if (tab === 'deliveries' && admin.webhookDeliveries.length === 0) { store.dispatch(thunks.loadAdminWebhookDeliveries()); return; }
-        if (tab === 'maintenance' && !admin.maintenance) { store.dispatch(thunks.loadMaintenanceSnapshot()); return; }
-        if (tab === 'tasks' && admin.tasks.length === 0) { store.dispatch(thunks.loadTasks()); return; }
-        if (tab === 'notifications') { store.dispatch(thunks.loadAdminNotifications()); return; }
+        if (tab === 'paths') {
+          if (admin.protectedPaths.length === 0) store.dispatch(thunks.loadAdminProtectedPaths());
+          if (admin.hiddenPaths.length === 0) store.dispatch(thunks.loadAdminHiddenPaths());
+          return;
+        }
+        if (tab === 'webhooks') {
+          if (admin.webhooks.length === 0) store.dispatch(thunks.loadAdminWebhooks());
+          if (admin.webhookDeliveries.length === 0) store.dispatch(thunks.loadAdminWebhookDeliveries());
+          return;
+        }
+        if (tab === 'maintenance') {
+          if (!admin.maintenance) store.dispatch(thunks.loadMaintenanceSnapshot());
+          if (admin.tasks.length === 0) store.dispatch(thunks.loadTasks());
+          return;
+        }
         return;
       }
 
