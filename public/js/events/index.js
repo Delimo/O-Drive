@@ -162,6 +162,10 @@ export function registerAppEvents(deps) {
         if (tab === 'system') {
           if (!admin.health) store.dispatch(thunks.loadAdminHealth());
           if (!admin.quota) store.dispatch(thunks.loadAdminQuota());
+          if (!admin.maintenance) store.dispatch(thunks.loadMaintenanceSnapshot());
+          return;
+        }
+        if (tab === 'storage') {
           if (!admin.storageConfig) store.dispatch(thunks.loadAdminStorageConfig());
           return;
         }

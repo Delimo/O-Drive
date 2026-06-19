@@ -1202,6 +1202,184 @@
   font-weight: 600;
 }
 
+.sys-status-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sys-status-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.sys-status-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sys-status-desc {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sys-status-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.sys-status-card {
+  padding: 14px 16px;
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.sys-status-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sys-status-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sys-status-card-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.env-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.env-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.env-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.env-item-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.env-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.env-status-ok {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+
+.env-status-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.env-item-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.maint-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.maint-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.maint-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.maint-item-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.maint-item-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.maint-item-time {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.maint-item-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.maint-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quota-bar-wrap {
+  margin-top: 4px;
+}
+
+.quota-bar-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.quota-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.quota-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+
 .admin-label {
   font-size: 12px;
   color: var(--muted);
