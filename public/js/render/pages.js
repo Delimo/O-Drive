@@ -111,9 +111,12 @@ export function createPageRenderers(deps) {
     const attention = stats.attention || [];
 
     return `
-      <div class="admin-grid admin-grid-overview">
+      <div class="admin-grid" style="gap:12px;">
         <div class="admin-card span-4">
-          <div class="admin-label">文件总数</div>
+          <div class="admin-card-header">
+            <span class="admin-card-icon">${icons.stats}</span>
+            <span class="admin-label">文件总数</span>
+          </div>
           <div class="admin-value">${safeText(stats.files?.count || 0, '0')}</div>
           <div class="admin-copy">
             总容量 ${safeText(stats.files?.totalSizeFormatted, '0 B')}，文件夹 ${safeText(stats.files?.folderMarkers || 0, '0')}。
@@ -124,7 +127,10 @@ export function createPageRenderers(deps) {
         </div>
 
         <div class="admin-card span-4">
-          <div class="admin-label">回收站项目</div>
+          <div class="admin-card-header">
+            <span class="admin-card-icon">${icons.trash}</span>
+            <span class="admin-label">回收站项目</span>
+          </div>
           <div class="admin-value">${safeText(stats.trash?.count || 0, '0')}</div>
           <div class="admin-copy">
             累计 ${safeText(stats.trash?.sizeFormatted, '0 B')}，约占 ${safeText(stats.trash?.percentOfFiles || 0, '0')}%。
@@ -137,7 +143,10 @@ export function createPageRenderers(deps) {
         </div>
 
         <div class="admin-card span-4">
-          <div class="admin-label">索引状态</div>
+          <div class="admin-card-header">
+            <span class="admin-card-icon">${icons.eye}</span>
+            <span class="admin-label">索引状态</span>
+          </div>
           <div class="admin-value">${safeText(stats.index?.recommendation, '等待初始化')}</div>
           <div class="admin-copy">
             索引 ${safeText(stats.index?.count || 0, '0')} 条，更新于
@@ -149,7 +158,10 @@ export function createPageRenderers(deps) {
         </div>
 
         <div class="admin-card span-8">
-          <div class="admin-label">类型分布</div>
+          <div class="admin-card-header">
+            <span class="admin-card-icon">${icons.grid}</span>
+            <span class="admin-label">类型分布</span>
+          </div>
           <div class="type-grid">
             ${
               breakdown.length
@@ -159,14 +171,17 @@ export function createPageRenderers(deps) {
                     <span class="type-chip-meta">${safeText(value.count || 0, '0')} 项 · ${safeText(value.sizeFormatted || formatBytes(value.size || 0), '0 B')}</span>
                   </div>
                 `).join('')
-                : '<div class="muted">暂无分类数据</div>'
+                : '<div class="muted" style="font-size:13px;padding:8px 0;">暂无分类数据</div>'
             }
           </div>
         </div>
 
         <div class="admin-card span-4">
-          <div class="admin-label">系统提醒</div>
-          <div class="attention-list attention-list-compact">
+          <div class="admin-card-header">
+            <span class="admin-card-icon">${icons.bell}</span>
+            <span class="admin-label">系统提醒</span>
+          </div>
+          <div class="attention-list-compact">
             ${
               attention.length
                 ? attention.map(item => `
@@ -175,13 +190,16 @@ export function createPageRenderers(deps) {
                     <div class="attention-copy">${safeText(item.body || '')}</div>
                   </article>
                 `).join('')
-                : '<div class="muted">暂无系统提醒</div>'
+                : '<div class="muted" style="font-size:13px;padding:8px 0;">暂无系统提醒</div>'
             }
           </div>
         </div>
 
         <div class="admin-card span-12">
-          <div class="admin-label">最近资源</div>
+          <div class="admin-card-header">
+            <span class="admin-card-icon">${icons.list}</span>
+            <span class="admin-label">最近资源</span>
+          </div>
           <div class="latest-grid">
             ${
               latest.length
@@ -193,7 +211,7 @@ export function createPageRenderers(deps) {
                     </div>
                   </article>
                 `).join('')
-                : '<div class="muted">暂无最近资源记录</div>'
+                : '<div class="muted" style="font-size:13px;padding:8px 0;">暂无最近资源记录</div>'
             }
           </div>
         </div>
@@ -735,14 +753,14 @@ export function createPageRenderers(deps) {
             <div class="mini-stat-meta">${maintenance.thumbnailsPresent ? '有缓存' : '无缓存'}</div>
           </div>
         </div>
-        <div class="admin-grid" style="margin-top:12px;gap:10px;">
+        <div class="admin-action-grid">
           ${MAINTENANCE_ACTIONS.map(item => {
             const busy = maintenanceBusyAction === item.action;
             return `
-              <div class="admin-card span-4" style="padding:10px 14px;">
+              <div class="admin-action-card">
                 <div class="admin-label">${escapeHtml(item.label)}</div>
-                <div class="admin-copy" style="margin:4px 0 10px;font-size:12px;line-height:1.5;">${escapeHtml(item.desc)}</div>
-                <button class="btn ${item.danger ? 'btn-danger' : 'btn-primary'} toolbar-btn" type="button"
+                <div class="admin-copy">${escapeHtml(item.desc)}</div>
+                <button class="btn ${item.danger ? 'btn-danger' : 'btn-primary'}" type="button" style="min-height:32px;padding:0 12px;font-size:12px;"
                   data-action="confirm-maintenance-action"
                   data-maintenance-action="${escapeHtml(item.action)}"
                   data-maintenance-label="${escapeHtml(item.label)}"
@@ -951,20 +969,19 @@ export function createPageRenderers(deps) {
 
     return `
       <article class="latest-item-compact ${isExpired ? 'share-item-expired' : ''} ${isExhausted ? 'share-item-exhausted' : ''} ${isExpiringSoon ? 'share-item-expiring-soon' : ''}">
-        <div class="status-bar" style="margin-bottom:8px;">
+        <div class="status-bar">
           <div class="status-main">
             <span class="status-dot ${isExpired ? 'status-dot-expired' : isExhausted ? 'status-dot-exhausted' : isExpiringSoon ? 'status-dot-soon' : ''}"></span>
-            <span>${safeText(item?.name || item?.path || token, '未命名分享')}</span>
+            <span style="font-weight:600;color:var(--text);">${safeText(item?.name || item?.path || token, '未命名分享')}</span>
             <span class="toolbar-tag">${safeText(token, '-')}</span>
           </div>
           <div class="btn-row">
-            <button class="btn btn-muted" type="button" data-action="copy-share-link" data-key="${escapeHtml(token)}">
-              ${icons.link}
-              <span>复制链接</span>
+            <button class="btn toolbar-btn" type="button" style="min-height:32px;padding:0 10px;font-size:12px;" data-action="copy-share-link" data-key="${escapeHtml(token)}">
+              ${icons.link}<span>复制链接</span>
             </button>
-            <button class="btn ${deleting ? 'btn-primary' : 'btn-danger'}" type="button" data-action="confirm-delete-share" data-key="${escapeHtml(token)}" data-name="${escapeHtml(item?.name || token)}">
+            <button class="btn ${deleting ? 'btn-primary' : 'btn-danger'}" type="button" style="min-height:32px;padding:0 10px;font-size:12px;" data-action="confirm-delete-share" data-key="${escapeHtml(token)}" data-name="${escapeHtml(item?.name || token)}">
               ${icons.trash}
-              <span>${deleting ? '删除中...' : '删除分享'}</span>
+              <span>${deleting ? '删除中...' : '删除'}</span>
             </button>
           </div>
         </div>
@@ -974,38 +991,33 @@ export function createPageRenderers(deps) {
         </div>
 
         ${isExpiringSoon && isActive ? `
-          <div class="attention-item" data-level="warning" style="margin:8px 0;">
+          <div class="attention-item" data-level="warning" style="margin:6px 0;">
             <h3 class="attention-title">即将到期</h3>
-            <div class="attention-copy">此分享将于 ${safeText(expiry.label)}，之后将无法访问。如需继续使用，请重新创建分享。</div>
+            <div class="attention-copy">此分享将于 ${safeText(expiry.label)}，之后将无法访问。</div>
           </div>
         ` : ''}
 
         ${isExpired ? `
-          <div class="attention-item" data-level="warning" style="margin:8px 0;">
+          <div class="attention-item" data-level="warning" style="margin:6px 0;">
             <h3 class="attention-title">已过期</h3>
             <div class="attention-copy">此分享已过期，无法继续访问。建议清理过期分享以释放资源。</div>
           </div>
         ` : ''}
 
         ${isExhausted && !isExpired ? `
-          <div class="attention-item" data-level="warning" style="margin:8px 0;">
+          <div class="attention-item" data-level="warning" style="margin:6px 0;">
             <h3 class="attention-title">下载次数已用尽</h3>
-            <div class="attention-copy">此分享的下载次数已达上限，无法继续下载。预览功能${item?.allowPreview ? '仍可使用' : '已禁用'}。</div>
+            <div class="attention-copy">此分享的下载次数已达上限${item?.allowPreview ? '，预览功能仍可使用' : ''}。</div>
           </div>
         ` : ''}
 
-        <div class="latest-copy" style="margin-top:8px; line-height:1.8;">
-          ${renderShareMetaLine('路径', safeText(item?.path || '/'))}
-          ${renderShareMetaLine('分享链接', `<a href="${escapeHtml(shareLink)}" target="_blank" rel="noreferrer">${escapeHtml(shareLink)}</a>`)}
-          ${renderShareMetaLine('到期时间', isUnlimited
-            ? '<span class="toolbar-tag tag-unlimited">不限期</span>'
-            : safeText(item?.expiresAt ? `${formatTime(item.expiresAt)} (${expiry.label})` : '不限'))}
-          ${item?.autoDeleteAt ? renderShareMetaLine('自动删除', safeText(formatTime(item.autoDeleteAt))) : ''}
-          ${renderShareMetaLine('下载次数', `${safeText(item?.downloadCount || 0, '0')} / ${safeText(item?.maxDownloads || '不限', '不限')}`)}
-          ${renderShareMetaLine('预览权限', item?.allowPreview ? '<span class="toolbar-tag tag-preview">允许预览</span>' : '<span class="toolbar-tag tag-no-preview">禁止预览</span>')}
-          ${renderShareMetaLine('下载权限', item?.allowDownload ? '<span class="toolbar-tag tag-download">允许下载</span>' : '<span class="toolbar-tag tag-no-download">禁止下载</span>')}
-          ${renderShareMetaLine('最近访问', safeText(item?.lastAccessedAt ? `${formatTime(item.lastAccessedAt)} (${formatRelative(item.lastAccessedAt)})` : '暂无'))}
-          ${renderShareMetaLine('访问 IP', safeText(item?.lastAccessIp || '暂无'))}
+        <div class="latest-copy" style="margin-top:6px;line-height:1.7;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;">
+          <span style="color:var(--muted);font-size:12px;">路径</span><span style="font-size:13px;">${safeText(item?.path || '/')}</span>
+          <span style="color:var(--muted);font-size:12px;">链接</span><span style="font-size:13px;"><a href="${escapeHtml(shareLink)}" target="_blank" rel="noreferrer" style="color:var(--accent);text-decoration:none;">${escapeHtml(shareLink)}</a></span>
+          <span style="color:var(--muted);font-size:12px;">到期</span><span style="font-size:13px;">${isUnlimited ? '<span class="toolbar-tag tag-unlimited">不限期</span>' : safeText(item?.expiresAt ? `${formatTime(item.expiresAt)} (${expiry.label})` : '不限')}</span>
+          <span style="color:var(--muted);font-size:12px;">下载</span><span style="font-size:13px;">${safeText(item?.downloadCount || 0, '0')} / ${safeText(item?.maxDownloads || '不限', '不限')}</span>
+          <span style="color:var(--muted);font-size:12px;">状态</span><span style="font-size:13px;">${item?.allowPreview ? '允许预览' : '禁止预览'} · ${item?.allowDownload ? '允许下载' : '禁止下载'}</span>
+          <span style="color:var(--muted);font-size:12px;">访问</span><span style="font-size:13px;">${safeText(item?.lastAccessedAt ? `${formatTime(item.lastAccessedAt)}` : '暂无')}${item?.lastAccessIp ? ` · ${safeText(item.lastAccessIp)}` : ''}</span>
         </div>
       </article>
     `;
@@ -1015,11 +1027,11 @@ export function createPageRenderers(deps) {
     { id: 'overview', label: '概览' },
     { id: 'system', label: '系统状态' },
     { id: 'storage', label: '存储' },
-    { id: 'logs', label: '日志' },
+    { id: 'shares', label: '分享' },
     { id: 'paths', label: '路径管理' },
     { id: 'webhooks', label: 'Webhook' },
+    { id: 'logs', label: '日志' },
     { id: 'maintenance', label: '维护' },
-    { id: 'shares', label: '分享' },
   ];
 
   function renderSystemStatusSection(admin) {

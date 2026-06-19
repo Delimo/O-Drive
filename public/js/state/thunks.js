@@ -786,7 +786,7 @@ export function createThunks(deps) {
         const params = { page, size: 20, ...filter };
         const { response, data } = await adminApi.logs(params);
         if (!response.ok) throw new Error(data?.message || '操作日志加载失败');
-        dispatch(actions.admin.setLogs({ items: data.items || [], page: data.page || 1, totalPages: data.totalPages || 0 }));
+        dispatch(actions.admin.setLogs({ items: data.logs || [], page: data.currentPage || 1, totalPages: data.totalPages || 0 }));
       } catch (error) {
         dispatch(actions.admin.setLogsError(error.message || '操作日志加载失败'));
       }
@@ -825,7 +825,7 @@ export function createThunks(deps) {
       try {
         const { response, data } = await adminApi.protectedPaths();
         if (!response.ok) throw new Error(data?.message || '受保护路径加载失败');
-        dispatch(actions.admin.setProtectedPaths(data.items || []));
+        dispatch(actions.admin.setProtectedPaths(data.list || data.items || []));
       } catch (error) {
         dispatch(actions.admin.setProtectedPathsError(error.message || '受保护路径加载失败'));
       }
