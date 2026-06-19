@@ -33,9 +33,9 @@ export function formatRelative(value) {
 }
 
 export function humanSort(mode) {
-  if (mode === 'time') return '按时间';
-  if (mode === 'size') return '按大小';
-  return '按名称';
+  if (mode === 'time') return '时间';
+  if (mode === 'size') return '大小';
+  return '名称';
 }
 
 export function humanView(mode) {

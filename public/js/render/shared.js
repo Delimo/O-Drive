@@ -186,7 +186,7 @@ export function createSharedRenderers(deps) {
       ? [isFolder ? '文件夹' : '文件', formatTime(item.trashedAt || 0)]
       : [
           isFolder ? '文件夹' : (item.sizeFormatted || formatBytes(item.rawSize || 0)),
-          item.time ? formatRelative(item.time) : '等待同步',
+          item.time ? formatTime(item.time) : '等待同步',
         ];
 
     const iconContent = isImage && thumbnailUrl
