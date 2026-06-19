@@ -100,16 +100,16 @@
   height: 36px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--panel);
-  color: var(--muted);
+  color: var(--text);
+  font-size: 15px;
   cursor: pointer;
   transition: all 160ms ease;
 }
 
 .header-icon-btn:hover {
-  color: var(--text);
-  background: var(--bg);
+  background: var(--hover-bg);
 }
 
 .crumbs {
