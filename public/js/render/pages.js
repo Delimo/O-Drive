@@ -3,6 +3,7 @@ export function createPageRenderers(deps) {
     icons,
     escapeHtml,
     renderEmptyState,
+    renderEmptyStateCompact,
     formatBytes,
     formatTime,
     formatRelative,
@@ -106,16 +107,16 @@ export function createPageRenderers(deps) {
 
   function renderAdminStatsGrid(stats) {
     const breakdown = Object.entries(stats.breakdown || {});
-    const latest = stats.latest || [];
+    const latest = (stats.latest || []).slice(0, 6);
     const attention = stats.attention || [];
 
     return `
-      <div class="admin-grid">
+      <div class="admin-grid admin-grid-overview">
         <div class="admin-card span-4">
           <div class="admin-label">文件总数</div>
           <div class="admin-value">${safeText(stats.files?.count || 0, '0')}</div>
           <div class="admin-copy">
-            总容量 ${safeText(stats.files?.totalSizeFormatted, '0 B')}，文件夹标记 ${safeText(stats.files?.folderMarkers || 0, '0')}。
+            总容量 ${safeText(stats.files?.totalSizeFormatted, '0 B')}，文件夹 ${safeText(stats.files?.folderMarkers || 0, '0')}。
           </div>
           <div class="admin-status-row">
             <span class="toolbar-tag tag-active">存储正常</span>
@@ -126,7 +127,7 @@ export function createPageRenderers(deps) {
           <div class="admin-label">回收站项目</div>
           <div class="admin-value">${safeText(stats.trash?.count || 0, '0')}</div>
           <div class="admin-copy">
-            累计 ${safeText(stats.trash?.sizeFormatted, '0 B')}，约占文件总量 ${safeText(stats.trash?.percentOfFiles || 0, '0')}%。
+            累计 ${safeText(stats.trash?.sizeFormatted, '0 B')}，约占 ${safeText(stats.trash?.percentOfFiles || 0, '0')}%。
           </div>
           <div class="admin-status-row">
             ${(stats.trash?.count || 0) > 0
@@ -139,7 +140,7 @@ export function createPageRenderers(deps) {
           <div class="admin-label">索引状态</div>
           <div class="admin-value">${safeText(stats.index?.recommendation, '等待初始化')}</div>
           <div class="admin-copy">
-            索引记录 ${safeText(stats.index?.count || 0, '0')} 条，最近更新
+            索引 ${safeText(stats.index?.count || 0, '0')} 条，更新于
             ${safeText(stats.index?.latestUpdatedAt ? formatTime(stats.index.latestUpdatedAt) : '未知')}。
           </div>
           <div class="admin-status-row">
@@ -147,27 +148,25 @@ export function createPageRenderers(deps) {
           </div>
         </div>
 
-        <div class="admin-card span-6">
+        <div class="admin-card span-8">
           <div class="admin-label">类型分布</div>
-          <div class="latest-list">
+          <div class="type-grid">
             ${
               breakdown.length
                 ? breakdown.map(([key, value]) => `
-                  <article class="latest-item">
-                    <h3 class="latest-title">${safeText(key)}</h3>
-                    <div class="latest-copy">
-                      ${safeText(value.count || 0, '0')} 项 · ${safeText(value.sizeFormatted || formatBytes(value.size || 0), '0 B')}
-                    </div>
-                  </article>
+                  <div class="type-chip">
+                    <span class="type-chip-name">${safeText(key)}</span>
+                    <span class="type-chip-meta">${safeText(value.count || 0, '0')} 项 · ${safeText(value.sizeFormatted || formatBytes(value.size || 0), '0 B')}</span>
+                  </div>
                 `).join('')
                 : '<div class="muted">暂无分类数据</div>'
             }
           </div>
         </div>
 
-        <div class="admin-card span-6">
+        <div class="admin-card span-4">
           <div class="admin-label">系统提醒</div>
-          <div class="attention-list">
+          <div class="attention-list attention-list-compact">
             ${
               attention.length
                 ? attention.map(item => `
@@ -183,13 +182,13 @@ export function createPageRenderers(deps) {
 
         <div class="admin-card span-12">
           <div class="admin-label">最近资源</div>
-          <div class="latest-list">
+          <div class="latest-grid">
             ${
               latest.length
                 ? latest.map(item => `
-                  <article class="latest-item">
-                    <h3 class="latest-title">${safeText(item.key || '')}</h3>
-                    <div class="latest-copy">
+                  <article class="latest-chip">
+                    <h3 class="latest-chip-name">${safeText(item.key || '')}</h3>
+                    <div class="latest-chip-meta">
                       ${safeText(item.sizeFormatted || formatBytes(item.size || 0), '0 B')} · ${safeText(formatRelative(item.uploaded || 0), '刚刚')}
                     </div>
                   </article>
@@ -211,18 +210,18 @@ export function createPageRenderers(deps) {
     const exhaustedCount = shares.filter(item => item?.exhausted).length;
 
     return `
-      <div class="hero-strip">
-        <div class="mini-stat">
+      <div class="hero-strip-compact">
+        <div class="mini-stat-compact">
           <div class="mini-stat-label">分享总数</div>
           <div class="mini-stat-value">${safeText(shares.length, '0')}</div>
           <div class="mini-stat-meta">当前可管理的全部分享条目</div>
         </div>
-        <div class="mini-stat">
+        <div class="mini-stat-compact">
           <div class="mini-stat-label">有效分享</div>
           <div class="mini-stat-value">${safeText(shares.filter(item => isShareActive(item)).length, '0')}</div>
           <div class="mini-stat-meta">未过期且次数未用尽</div>
         </div>
-        <div class="mini-stat">
+        <div class="mini-stat-compact">
           <div class="mini-stat-label">已失效</div>
           <div class="mini-stat-value">${safeText(expiredCount + exhaustedCount, '0')}</div>
           <div class="mini-stat-meta">已过期 ${expiredCount} · 次数用尽 ${exhaustedCount}</div>
@@ -230,13 +229,13 @@ export function createPageRenderers(deps) {
       </div>
       ${
         admin.sharesLoading
-          ? renderEmptyState('正在加载分享列表', '正在获取已创建的分享记录和访问状态。', icons.refresh)
+          ? renderEmptyStateCompact('正在加载分享列表', '正在获取已创建的分享记录和访问状态。', icons.refresh)
           : admin.sharesError
             ? renderShareErrorState(admin.sharesError)
             : shares.length === 0
-              ? renderEmptyState('暂无分享记录', '系统中还没有创建任何分享。您可以在文件管理页面选择文件并创建分享链接。', icons.share)
+              ? renderEmptyStateCompact('暂无分享记录', '系统中还没有创建任何分享。您可以在文件管理页面选择文件并创建分享链接。', icons.share)
               : filteredShares.length === 0
-                ? renderEmptyState('筛选结果为空', `当前筛选条件“${getFilterLabel(shareFilter)}”没有匹配的分享记录，请尝试其他筛选条件。`, icons.search)
+                ? renderEmptyStateCompact('筛选结果为空', `当前筛选条件"${getFilterLabel(shareFilter)}"没有匹配的分享记录，请尝试其他筛选条件。`, icons.search)
                 : renderShareList(filteredShares, busyToken)
       }
     `;
@@ -293,7 +292,7 @@ export function createPageRenderers(deps) {
     }
 
     return `
-      <div class="admin-filter-bar" style="margin-bottom:14px;">
+      <div class="admin-filter-bar" style="margin-bottom:10px;">
         <input class="input" type="text" placeholder="搜索关键字..." value="${escapeHtml(logsFilter.q || '')}" data-action-input="set-logs-filter" data-key="q" style="flex:1;min-width:120px;">
         <select class="input" data-action-change="set-logs-filter" data-key="action" style="width:auto;">
           <option value="">全部类型</option>
@@ -307,26 +306,26 @@ export function createPageRenderers(deps) {
       </div>
       ${
         logsLoading
-          ? renderEmptyState('正在加载日志', '正在获取系统操作记录。', icons.refresh)
+          ? renderEmptyStateCompact('正在加载日志', '正在获取系统操作记录。', icons.refresh)
           : logs.length === 0
-            ? renderEmptyState('暂无操作日志', '系统中还没有操作记录。', icons.list)
+            ? renderEmptyStateCompact('暂无操作日志', '系统中还没有操作记录。', icons.list)
             : `
-              <div class="latest-list">
+              <div class="latest-list-compact">
                 ${logs.map(item => `
-                  <article class="latest-item">
+                  <article class="latest-item-compact">
                     <div class="latest-title">${safeText(item.action || '操作')} · ${safeText(item.path || '/')}</div>
                     <div class="latest-copy">
                       ${item.user ? `用户 ${escapeHtml(item.user)}` : ''}
                       ${item.ip ? ` · IP ${escapeHtml(item.ip)}` : ''}
                       ${item.createdAt ? ` · ${formatTime(item.createdAt)} (${formatRelative(item.createdAt)})` : ''}
                     </div>
-                    ${item.detail ? `<div class="latest-copy" style="margin-top:4px;color:var(--muted);font-size:13px;">${escapeHtml(item.detail)}</div>` : ''}
+                    ${item.detail ? `<div class="latest-copy" style="margin-top:2px;color:var(--muted);font-size:12px;">${escapeHtml(item.detail)}</div>` : ''}
                   </article>
                 `).join('')}
               </div>
-              <div class="admin-pagination" style="display:flex;align-items:center;gap:8px;margin-top:16px;">
+              <div class="admin-pagination" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
                 <button class="btn btn-muted" type="button" data-action="set-logs-page" data-page="${logsPage - 1}" ${logsPage <= 1 ? 'disabled' : ''}>上一页</button>
-                <span style="font-size:13px;color:var(--muted);">第 ${logsPage} / ${logsTotalPages || 1} 页</span>
+                <span style="font-size:12px;color:var(--muted);">第 ${logsPage} / ${logsTotalPages || 1} 页</span>
                 <button class="btn btn-muted" type="button" data-action="set-logs-page" data-page="${logsPage + 1}" ${logsPage >= logsTotalPages ? 'disabled' : ''}>下一页</button>
               </div>
             `
@@ -348,7 +347,7 @@ export function createPageRenderers(deps) {
     }
 
     if (quotaLoading || !quota) {
-      return renderEmptyState('加载中', '正在获取存储配额信息...', icons.stats);
+      return renderEmptyStateCompact('加载中', '正在获取存储配额信息...', icons.stats);
     }
 
     const usedFormatted = formatBytes(quota.used || 0);
@@ -379,7 +378,7 @@ export function createPageRenderers(deps) {
     return `
       ${
         protectedPathsLoading
-          ? renderEmptyState('正在加载受保护路径', '正在获取受保护路径列表。', icons.lock)
+          ? renderEmptyStateCompact('正在加载受保护路径', '正在获取受保护路径列表。', icons.lock)
           : protectedPathsError
             ? `
               <div class="empty-state">
@@ -388,7 +387,7 @@ export function createPageRenderers(deps) {
               </div>
             `
             : protectedPaths.length === 0
-              ? renderEmptyState('暂无受保护路径', '还没有设置任何受保护路径。点击上方按钮添加。', icons.lock)
+              ? renderEmptyStateCompact('暂无受保护路径', '还没有设置任何受保护路径。点击上方按钮添加。', icons.lock)
               : `
                 <div class="latest-list">
                   ${protectedPaths.map(item => {
@@ -423,7 +422,7 @@ export function createPageRenderers(deps) {
     return `
       ${
         hiddenPathsLoading
-          ? renderEmptyState('正在加载隐藏路径', '正在获取隐藏路径列表。', icons.eye)
+          ? renderEmptyStateCompact('正在加载隐藏路径', '正在获取隐藏路径列表。', icons.eye)
           : hiddenPathsError
             ? `
               <div class="empty-state">
@@ -432,7 +431,7 @@ export function createPageRenderers(deps) {
               </div>
             `
             : hiddenPaths.length === 0
-              ? renderEmptyState('暂无隐藏路径', '还没有设置任何隐藏路径。点击上方按钮添加。', icons.eye)
+              ? renderEmptyStateCompact('暂无隐藏路径', '还没有设置任何隐藏路径。点击上方按钮添加。', icons.eye)
               : `
                 <div class="latest-list">
                   ${hiddenPaths.map(item => {
@@ -696,53 +695,53 @@ export function createPageRenderers(deps) {
         </div>
       `;
     } else if (maintenanceLoading || !maintenance) {
-      maintenanceHtml = renderEmptyState('加载中', '正在获取系统维护快照...', icons.refresh);
+      maintenanceHtml = renderEmptyStateCompact('加载中', '正在获取系统维护快照...', icons.refresh);
     } else {
       maintenanceHtml = `
-        <div class="hero-strip">
-          <div class="mini-stat">
+        <div class="hero-strip-compact">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">索引记录</div>
             <div class="mini-stat-value">${safeText(maintenance.indexCount, '0')}</div>
             <div class="mini-stat-meta">${safeText(maintenance.indexTotalSizeFormatted, '0 B')}${maintenance.indexFresh ? ' · 同步中' : ' · 待同步'}</div>
           </div>
-          <div class="mini-stat">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">R2 对象</div>
             <div class="mini-stat-value">${safeText(maintenance.r2SampleCount, '0')}</div>
             <div class="mini-stat-meta">${maintenance.r2SampleTruncated ? '超 1000 条' : '可见对象数'}</div>
           </div>
-          <div class="mini-stat">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">访问记录</div>
             <div class="mini-stat-value">${safeText(maintenance.accessAttemptCount, '0')}</div>
             <div class="mini-stat-meta">失败记录数</div>
           </div>
-          <div class="mini-stat">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">回收站</div>
             <div class="mini-stat-value">${safeText(maintenance.trashCount, '0')}</div>
             <div class="mini-stat-meta">当前回收站项目</div>
           </div>
-          <div class="mini-stat">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">操作日志</div>
             <div class="mini-stat-value">${safeText(maintenance.logsCount, '0')}</div>
             <div class="mini-stat-meta">总记录数</div>
           </div>
-          <div class="mini-stat">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">后台任务</div>
             <div class="mini-stat-value">${safeText(maintenance.taskCount, '0')}</div>
             <div class="mini-stat-meta">待处理任务</div>
           </div>
-          <div class="mini-stat">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">缩略图缓存</div>
             <div class="mini-stat-value">${maintenance.thumbnailsPresent ? icons.check : icons.close}</div>
             <div class="mini-stat-meta">${maintenance.thumbnailsPresent ? '有缓存' : '无缓存'}</div>
           </div>
         </div>
-        <div class="admin-grid" style="margin-top:16px;">
+        <div class="admin-grid" style="margin-top:12px;gap:10px;">
           ${MAINTENANCE_ACTIONS.map(item => {
             const busy = maintenanceBusyAction === item.action;
             return `
-              <div class="admin-card span-4">
+              <div class="admin-card span-4" style="padding:10px 14px;">
                 <div class="admin-label">${escapeHtml(item.label)}</div>
-                <div class="admin-copy" style="margin:6px 0 14px;font-size:13px;line-height:1.6;">${escapeHtml(item.desc)}</div>
+                <div class="admin-copy" style="margin:4px 0 10px;font-size:12px;line-height:1.5;">${escapeHtml(item.desc)}</div>
                 <button class="btn ${item.danger ? 'btn-danger' : 'btn-primary'} toolbar-btn" type="button"
                   data-action="confirm-maintenance-action"
                   data-maintenance-action="${escapeHtml(item.action)}"
@@ -760,9 +759,9 @@ export function createPageRenderers(deps) {
 
     let tasksHtml = '';
     if (tasksLoading) {
-      tasksHtml = renderEmptyState('加载中', '正在获取任务列表...', icons.refresh);
+      tasksHtml = renderEmptyStateCompact('加载中', '正在获取任务列表...', icons.refresh);
     } else if (!tasks || !tasks.length) {
-      tasksHtml = renderEmptyState('暂无任务', '当前没有后台任务在运行。', icons.list);
+      tasksHtml = renderEmptyStateCompact('暂无任务', '当前没有后台任务在运行。', icons.list);
     } else {
       const fmtTime = ts => {
         if (!ts) return '-';
@@ -778,7 +777,7 @@ export function createPageRenderers(deps) {
       };
       tasksHtml = `
         <div class="table-wrap">
-          <table class="data-table">
+          <table class="data-table-compact">
             <thead>
               <tr>
                 <th>文件数</th>
@@ -807,13 +806,13 @@ export function createPageRenderers(deps) {
     }
 
     return `
-      <div style="display:flex;flex-direction:column;gap:24px;">
+      <div class="admin-section-compact">
         <section>
-          <h3 style="margin:0 0 16px;font-size:18px;font-weight:700;">维护操作</h3>
+          <h3>维护操作</h3>
           ${maintenanceHtml}
         </section>
         <section>
-          <h3 style="margin:0 0 16px;font-size:18px;font-weight:700;">后台任务</h3>
+          <h3>后台任务</h3>
           ${tasksHtml}
         </section>
       </div>
@@ -823,7 +822,7 @@ export function createPageRenderers(deps) {
   function renderAdminTaskListSection(admin) {
     const { tasks, tasksLoading } = admin;
     if (tasksLoading) {
-      return renderEmptyState('加载中', '正在获取任务列表...', icons.refresh);
+      return renderEmptyStateCompact('加载中', '正在获取任务列表...', icons.refresh);
     }
     if (!tasks || !tasks.length) {
       return '';
@@ -873,7 +872,7 @@ export function createPageRenderers(deps) {
   function renderAdminNotificationsSection(admin) {
     const { adminNotifHistory, adminNotifHistoryLoading, notificationsUnread } = admin;
     if (adminNotifHistoryLoading) {
-      return renderEmptyState('加载中', '正在获取通知历史...', icons.bell);
+      return renderEmptyStateCompact('加载中', '正在获取通知历史...', icons.bell);
     }
     const items = adminNotifHistory || [];
     return `
@@ -883,7 +882,7 @@ export function createPageRenderers(deps) {
       </div>
       ${
         items.length === 0
-          ? renderEmptyState('暂无通知', '目前还没有任何通知记录。', icons.bell)
+          ? renderEmptyStateCompact('暂无通知', '目前还没有任何通知记录。', icons.bell)
           : `
             <div class="table-wrap">
               <table class="data-table">
@@ -932,7 +931,7 @@ export function createPageRenderers(deps) {
 
   function renderShareList(shares, busyToken) {
     return `
-      <div class="latest-list">
+      <div class="latest-list-compact">
         ${shares.map(item => renderShareItem(item, busyToken)).join('')}
       </div>
     `;
@@ -951,8 +950,8 @@ export function createPageRenderers(deps) {
     const isUnlimited = expiry.level === 'unlimited';
 
     return `
-      <article class="latest-item ${isExpired ? 'share-item-expired' : ''} ${isExhausted ? 'share-item-exhausted' : ''} ${isExpiringSoon ? 'share-item-expiring-soon' : ''}">
-        <div class="status-bar" style="margin-bottom:14px;">
+      <article class="latest-item-compact ${isExpired ? 'share-item-expired' : ''} ${isExhausted ? 'share-item-exhausted' : ''} ${isExpiringSoon ? 'share-item-expiring-soon' : ''}">
+        <div class="status-bar" style="margin-bottom:8px;">
           <div class="status-main">
             <span class="status-dot ${isExpired ? 'status-dot-expired' : isExhausted ? 'status-dot-exhausted' : isExpiringSoon ? 'status-dot-soon' : ''}"></span>
             <span>${safeText(item?.name || item?.path || token, '未命名分享')}</span>
@@ -975,27 +974,27 @@ export function createPageRenderers(deps) {
         </div>
 
         ${isExpiringSoon && isActive ? `
-          <div class="attention-item" data-level="warning" style="margin:12px 0;">
+          <div class="attention-item" data-level="warning" style="margin:8px 0;">
             <h3 class="attention-title">即将到期</h3>
             <div class="attention-copy">此分享将于 ${safeText(expiry.label)}，之后将无法访问。如需继续使用，请重新创建分享。</div>
           </div>
         ` : ''}
 
         ${isExpired ? `
-          <div class="attention-item" data-level="warning" style="margin:12px 0;">
+          <div class="attention-item" data-level="warning" style="margin:8px 0;">
             <h3 class="attention-title">已过期</h3>
             <div class="attention-copy">此分享已过期，无法继续访问。建议清理过期分享以释放资源。</div>
           </div>
         ` : ''}
 
         ${isExhausted && !isExpired ? `
-          <div class="attention-item" data-level="warning" style="margin:12px 0;">
+          <div class="attention-item" data-level="warning" style="margin:8px 0;">
             <h3 class="attention-title">下载次数已用尽</h3>
             <div class="attention-copy">此分享的下载次数已达上限，无法继续下载。预览功能${item?.allowPreview ? '仍可使用' : '已禁用'}。</div>
           </div>
         ` : ''}
 
-        <div class="latest-copy" style="margin-top:12px; line-height:1.9;">
+        <div class="latest-copy" style="margin-top:8px; line-height:1.8;">
           ${renderShareMetaLine('路径', safeText(item?.path || '/'))}
           ${renderShareMetaLine('分享链接', `<a href="${escapeHtml(shareLink)}" target="_blank" rel="noreferrer">${escapeHtml(shareLink)}</a>`)}
           ${renderShareMetaLine('到期时间', isUnlimited
@@ -1038,16 +1037,16 @@ export function createPageRenderers(deps) {
         </div>
       `;
     } else if (healthLoading || !health) {
-      healthHtml = renderEmptyState('加载中', '正在检查服务组件状态...', icons.eye);
+      healthHtml = renderEmptyStateCompact('加载中', '正在检查服务组件状态...', icons.eye);
     } else {
       const items = Object.entries(health.components || health).filter(([, v]) => typeof v === 'object');
       healthHtml = `
-        <div class="hero-strip">
+        <div class="hero-strip-compact">
           ${items.map(([key, value]) => {
             const status = String(value?.status || 'unknown');
             const ok = status === 'ok' || status === 'healthy';
             return `
-              <div class="mini-stat">
+              <div class="mini-stat-compact">
                 <div class="mini-stat-label">${safeText(key)}</div>
                 <div class="mini-stat-value">${ok ? icons.check : icons.close}</div>
                 <div class="mini-stat-meta">${safeText(value?.message || status, '未知')}</div>
@@ -1062,7 +1061,7 @@ export function createPageRenderers(deps) {
     if (quotaError) {
       quotaHtml = `<div class="empty-state"><p class="empty-copy">${escapeHtml(quotaError)}</p></div>`;
     } else if (quotaLoading || !quota) {
-      quotaHtml = renderEmptyState('加载中', '正在获取存储配额信息...', icons.stats);
+      quotaHtml = renderEmptyStateCompact('加载中', '正在获取存储配额信息...', icons.stats);
     } else {
       const usedFormatted = formatBytes(quota.used || 0);
       const totalFormatted = formatBytes(quota.total || quota.limit || 0);
@@ -1070,13 +1069,13 @@ export function createPageRenderers(deps) {
         ? Math.round((quota.used / (quota.total || quota.limit)) * 100)
         : 0;
       quotaHtml = `
-        <div class="hero-strip">
-          <div class="mini-stat">
+        <div class="hero-strip-compact">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">已用空间</div>
             <div class="mini-stat-value">${usedFormatted}</div>
             <div class="mini-stat-meta">占总额的 ${pct}%</div>
           </div>
-          <div class="mini-stat">
+          <div class="mini-stat-compact">
             <div class="mini-stat-label">总配额</div>
             <div class="mini-stat-value">${totalFormatted}</div>
             <div class="mini-stat-meta">${quota.count ? `共 ${quota.count} 个文件` : ''}</div>
@@ -1089,7 +1088,7 @@ export function createPageRenderers(deps) {
     if (storageConfigError) {
       storageHtml = `<div class="empty-state"><p class="empty-copy">${escapeHtml(storageConfigError)}</p></div>`;
     } else if (storageConfigLoading || !storageConfig) {
-      storageHtml = renderEmptyState('加载中', '正在加载存储空间配置...', icons.stats);
+      storageHtml = renderEmptyStateCompact('加载中', '正在加载存储空间配置...', icons.stats);
     } else {
       const r2 = storageConfig.r2 || {};
       const spaces = storageConfig.spaces || [];
@@ -1097,45 +1096,45 @@ export function createPageRenderers(deps) {
       const usagePercent = r2.usedPercent || 0;
       const usageBarColor = usagePercent >= 90 ? 'var(--danger)' : usagePercent >= 75 ? 'var(--warning)' : 'var(--primary)';
       storageHtml = `
-        <div class="admin-grid">
-          <div class="admin-card span-6">
-            <div class="mini-stat">
+        <div class="admin-grid" style="gap:10px;">
+          <div class="admin-card span-6" style="padding:10px 14px;">
+            <div class="mini-stat-compact">
               <div class="mini-stat-label">${escapeHtml(r2.name || 'Cloudflare R2')}</div>
               <div class="mini-stat-value">${escapeHtml(r2.usedFormatted || '0')} / ${escapeHtml(r2.quotaFormatted || '未设置')}</div>
-              <div style="margin:8px 0;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+              <div style="margin:6px 0;height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
                 <div style="height:100%;width:${Math.min(usagePercent, 100)}%;background:${usageBarColor};border-radius:3px;transition:width .3s;"></div>
               </div>
               <div class="mini-stat-meta">已用 ${usagePercent}%</div>
             </div>
-            <div class="btn-row" style="margin-top:8px;">
+            <div class="btn-row" style="margin-top:6px;">
               <button class="btn toolbar-btn" type="button" data-action="show-edit-storage-quota" ${storageConfigSaving ? 'disabled' : ''}>${icons.edit}<span>编辑配额</span></button>
             </div>
           </div>
-          <div class="admin-card span-6">
-            <div class="mini-stat">
+          <div class="admin-card span-6" style="padding:10px 14px;">
+            <div class="mini-stat-compact">
               <div class="mini-stat-label">溢出策略</div>
               <div class="mini-stat-value">${storageConfig.overflowEnabled ? '已启用' : '已禁用'}</div>
               <div class="mini-stat-meta">阈值：${storageConfig.overflowThresholdPercent || 85}%</div>
             </div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;">
-          <h3 style="margin:0;font-size:18px;font-weight:700;">S3 存储空间</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+          <h3 style="margin:0;font-size:15px;font-weight:700;">S3 存储空间</h3>
           <div class="btn-row">
             <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-storage-space" ${storageConfigSaving ? 'disabled' : ''}>${icons.plus}<span>添加空间</span></button>
           </div>
         </div>
         ${
           spaces.length === 0
-            ? renderEmptyState('暂无 S3 空间', '还没有配置任何外部存储空间。', icons.stats)
+            ? renderEmptyStateCompact('暂无 S3 空间', '还没有配置任何外部存储空间。', icons.stats)
             : `
-              <div class="latest-list">
+              <div class="latest-list-compact">
                 ${spaces.map(item => {
                   const pct = item.usedPercent || 0;
                   const barColor = pct >= 90 ? 'var(--danger)' : pct >= 75 ? 'var(--warning)' : 'var(--primary)';
                   return `
-                    <article class="latest-item">
-                      <div class="status-bar" style="margin-bottom:4px;">
+                    <article class="latest-item-compact">
+                      <div class="status-bar">
                         <div class="status-main">
                           <span class="status-dot" style="background:${item.enabled ? 'var(--primary)' : 'var(--muted)'}"></span>
                           <span>${safeText(item.name)}</span>
@@ -1148,11 +1147,11 @@ export function createPageRenderers(deps) {
                           <button class="btn btn-danger" type="button" data-action="confirm-delete-storage-space" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}" ${storageConfigSaving ? 'disabled' : ''}>${icons.trash}<span>删除</span></button>
                         </div>
                       </div>
-                      <div style="font-size:13px;color:var(--muted);">
+                      <div class="latest-copy">
                         ${escapeHtml(item.usedFormatted || '0')} / ${escapeHtml(item.quotaFormatted || '未设置')}
-                        <span style="margin:0 8px;">·</span>
+                        <span style="margin:0 6px;">·</span>
                         <span style="color:${barColor};">${pct}%</span>
-                        <span style="margin:0 8px;">·</span>
+                        <span style="margin:0 6px;">·</span>
                         ${escapeHtml(item.endpoint || 'N/A')}
                       </div>
                     </article>
@@ -1161,22 +1160,22 @@ export function createPageRenderers(deps) {
               </div>
             `
         }
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;">
-          <h3 style="margin:0;font-size:18px;font-weight:700;">路径绑定</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+          <h3 style="margin:0;font-size:15px;font-weight:700;">路径绑定</h3>
           <div class="btn-row">
             <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-storage-binding" ${storageConfigSaving ? 'disabled' : ''}>${icons.plus}<span>添加绑定</span></button>
           </div>
         </div>
         ${
           bindings.length === 0
-            ? renderEmptyState('暂无路径绑定', '还没有配置任何路径与存储空间的绑定。', icons.link)
+            ? renderEmptyStateCompact('暂无路径绑定', '还没有配置任何路径与存储空间的绑定。', icons.link)
             : `
-              <div class="latest-list">
+              <div class="latest-list-compact">
                 ${bindings.map(item => {
                   const storageName = item.storageId === 'r2' ? 'Cloudflare R2' : (spaces.find(s => s.id === item.storageId)?.name || item.storageId);
                   return `
-                    <article class="latest-item">
-                      <div class="status-bar" style="margin-bottom:4px;">
+                    <article class="latest-item-compact">
+                      <div class="status-bar">
                         <div class="status-main">
                           <span class="status-dot"></span>
                           <span>${safeText(item.path)}</span>
@@ -1196,17 +1195,17 @@ export function createPageRenderers(deps) {
     }
 
     return `
-      <div style="display:flex;flex-direction:column;gap:24px;">
+      <div class="admin-section-compact">
         <section>
-          <h3 style="margin:0 0 16px;font-size:18px;font-weight:700;">服务状态</h3>
+          <h3>服务状态</h3>
           ${healthHtml}
         </section>
         <section>
-          <h3 style="margin:0 0 16px;font-size:18px;font-weight:700;">存储配额</h3>
+          <h3>存储配额</h3>
           ${quotaHtml}
         </section>
         <section>
-          <h3 style="margin:0 0 16px;font-size:18px;font-weight:700;">存储空间</h3>
+          <h3>存储空间</h3>
           ${storageHtml}
         </section>
       </div>
@@ -1219,21 +1218,21 @@ export function createPageRenderers(deps) {
 
     let protectedHtml = '';
     if (protectedPathsLoading) {
-      protectedHtml = renderEmptyState('正在加载受保护路径', '正在获取受保护路径列表。', icons.lock);
+      protectedHtml = renderEmptyStateCompact('正在加载受保护路径', '正在获取受保护路径列表。', icons.lock);
     } else if (protectedPathsError) {
       protectedHtml = `<div class="empty-state"><div class="empty-orb">${icons.lock}</div><p class="empty-copy">${escapeHtml(protectedPathsError)}</p></div>`;
     } else if (protectedPaths.length === 0) {
-      protectedHtml = renderEmptyState('暂无受保护路径', '还没有设置任何受保护路径。点击下方按钮添加。', icons.lock);
+      protectedHtml = renderEmptyStateCompact('暂无受保护路径', '还没有设置任何受保护路径。点击下方按钮添加。', icons.lock);
     } else {
       protectedHtml = `
-        <div class="latest-list">
+        <div class="latest-list-compact">
           ${protectedPaths.map(item => {
             const path = String(item?.path || item?.folder || '/');
             const note = item?.note || '';
             const showName = item?.showName || '';
             return `
-              <article class="latest-item">
-                <div class="status-bar" style="margin-bottom:8px;">
+              <article class="latest-item-compact">
+                <div class="status-bar">
                   <div class="status-main">
                     <span class="status-dot"></span>
                     <span>${safeText(showName || path)}</span>
@@ -1253,19 +1252,19 @@ export function createPageRenderers(deps) {
 
     let hiddenHtml = '';
     if (hiddenPathsLoading) {
-      hiddenHtml = renderEmptyState('正在加载隐藏路径', '正在获取隐藏路径列表。', icons.eye);
+      hiddenHtml = renderEmptyStateCompact('正在加载隐藏路径', '正在获取隐藏路径列表。', icons.eye);
     } else if (hiddenPathsError) {
       hiddenHtml = `<div class="empty-state"><div class="empty-orb">${icons.eye}</div><p class="empty-copy">${escapeHtml(hiddenPathsError)}</p></div>`;
     } else if (hiddenPaths.length === 0) {
-      hiddenHtml = renderEmptyState('暂无隐藏路径', '还没有设置任何隐藏路径。点击下方按钮添加。', icons.eye);
+      hiddenHtml = renderEmptyStateCompact('暂无隐藏路径', '还没有设置任何隐藏路径。点击下方按钮添加。', icons.eye);
     } else {
       hiddenHtml = `
-        <div class="latest-list">
+        <div class="latest-list-compact">
           ${hiddenPaths.map(item => {
             const path = String(item?.path || '/');
             return `
-              <article class="latest-item">
-                <div class="status-bar" style="margin-bottom:8px;">
+              <article class="latest-item-compact">
+                <div class="status-bar">
                   <div class="status-main">
                     <span class="status-dot"></span>
                     <span>${safeText(path)}</span>
@@ -1282,16 +1281,16 @@ export function createPageRenderers(deps) {
     }
 
     return `
-      <div style="display:flex;flex-direction:column;gap:24px;">
+      <div class="admin-section-compact">
         <section>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <h3 style="margin:0;font-size:18px;font-weight:700;">受保护路径</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3>受保护路径</h3>
           </div>
           ${protectedHtml}
         </section>
         <section>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <h3 style="margin:0;font-size:18px;font-weight:700;">隐藏路径</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3>隐藏路径</h3>
           </div>
           ${hiddenHtml}
         </section>
@@ -1313,15 +1312,15 @@ export function createPageRenderers(deps) {
         </div>
       `;
     } else if (webhooksLoading) {
-      webhooksHtml = renderEmptyState('加载中', '正在加载 Webhook 配置...', icons.link);
+      webhooksHtml = renderEmptyStateCompact('加载中', '正在加载 Webhook 配置...', icons.link);
     } else if (webhooks.length === 0) {
-      webhooksHtml = renderEmptyState('暂无 Webhook', '还没有配置任何 Webhook。添加后可在文件操作或管理事件时收到通知。', icons.link);
+      webhooksHtml = renderEmptyStateCompact('暂无 Webhook', '还没有配置任何 Webhook。添加后可在文件操作或管理事件时收到通知。', icons.link);
     } else {
       webhooksHtml = `
-        <div class="latest-list">
+        <div class="latest-list-compact">
           ${webhooks.map(item => `
-            <article class="latest-item">
-              <div class="status-bar" style="margin-bottom:4px;">
+            <article class="latest-item-compact">
+              <div class="status-bar">
                 <div class="status-main">
                   <span class="status-dot" style="background:${item.enabled ? 'var(--primary)' : 'var(--muted)'}"></span>
                   <span>${safeText(item.name)}</span>
@@ -1335,9 +1334,9 @@ export function createPageRenderers(deps) {
                   <button class="btn btn-danger" type="button" data-action="confirm-delete-webhook" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">${icons.trash}<span>删除</span></button>
                 </div>
               </div>
-              <div style="font-size:13px;color:var(--muted);">
+              <div class="latest-copy">
                 ${escapeHtml(item.url)}
-                <span style="margin:0 8px;">·</span>
+                <span style="margin:0 6px;">·</span>
                 ${(item.events || []).map(e => `<span class="toolbar-tag">${escapeHtml(e)}</span>`).join(' ')}
               </div>
             </article>
@@ -1348,17 +1347,17 @@ export function createPageRenderers(deps) {
 
     let deliveriesHtml = '';
     if (webhookDeliveriesLoading) {
-      deliveriesHtml = renderEmptyState('加载中', '正在加载投递记录...', icons.list);
+      deliveriesHtml = renderEmptyStateCompact('加载中', '正在加载投递记录...', icons.list);
     } else if (webhookDeliveries.length === 0) {
-      deliveriesHtml = renderEmptyState('暂无投递记录', '还没有任何 Webhook 投递记录。', icons.list);
+      deliveriesHtml = renderEmptyStateCompact('暂无投递记录', '还没有任何 Webhook 投递记录。', icons.list);
     } else {
       deliveriesHtml = `
-        <div class="latest-list">
+        <div class="latest-list-compact">
           ${webhookDeliveries.map(item => {
             const ok = item.ok === 1 || item.ok === true;
             return `
-              <article class="latest-item">
-                <div class="status-bar" style="margin-bottom:4px;">
+              <article class="latest-item-compact">
+                <div class="status-bar">
                   <div class="status-main">
                     <span class="status-dot" style="background:${ok ? 'var(--primary)' : 'var(--danger)'}"></span>
                     <span>${safeText(item.event)}</span>
@@ -1366,11 +1365,11 @@ export function createPageRenderers(deps) {
                     <span class="toolbar-tag ${ok ? 'tag-unlimited' : 'tag-expired'}">${ok ? '成功' : '失败'}</span>
                   </div>
                 </div>
-                <div style="font-size:13px;color:var(--muted);">
+                <div class="latest-copy">
                   ${ok ? `<span>HTTP ${escapeHtml(String(item.status))}</span>` : `<span>${escapeHtml(item.error || '未知错误')}</span>`}
-                  <span style="margin:0 8px;">·</span>
+                  <span style="margin:0 6px;">·</span>
                   <span>${escapeHtml(item.duration_ms || 0)}ms</span>
-                  <span style="margin:0 8px;">·</span>
+                  <span style="margin:0 6px;">·</span>
                   <span>${escapeHtml(formatRelative(item.created_at) || '')}</span>
                 </div>
               </article>
@@ -1381,16 +1380,16 @@ export function createPageRenderers(deps) {
     }
 
     return `
-      <div style="display:flex;flex-direction:column;gap:24px;">
+      <div class="admin-section-compact">
         <section>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <h3 style="margin:0;font-size:18px;font-weight:700;">Webhook 配置</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3>Webhook 配置</h3>
           </div>
           ${webhooksHtml}
         </section>
         <section>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <h3 style="margin:0;font-size:18px;font-weight:700;">投递记录</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3>投递记录</h3>
           </div>
           ${deliveriesHtml}
         </section>
@@ -1401,9 +1400,9 @@ export function createPageRenderers(deps) {
   function renderAdminActiveTab(admin, activeTab) {
     switch (activeTab) {
       case 'overview':
-        if (admin.loading) return renderEmptyState('正在加载概览', '正在统计文件数量、索引状态与回收站信息。', icons.stats);
+        if (admin.loading) return renderEmptyStateCompact('正在加载概览', '正在统计文件数量、索引状态与回收站信息。', icons.stats);
         if (admin.error) return renderAdminErrorState(admin.error);
-        if (!admin.stats) return renderEmptyState('暂无概览数据', '后台接口已接通，但当前还没有可展示的概览结果。', icons.stats);
+        if (!admin.stats) return renderEmptyStateCompact('暂无概览数据', '后台接口已接通，但当前还没有可展示的概览结果。', icons.stats);
         return renderAdminStatsGrid(admin.stats);
       case 'system': return renderSystemStatusSection(admin);
       case 'logs': return renderAdminLogsSection(admin);
@@ -1431,13 +1430,13 @@ export function createPageRenderers(deps) {
           </div>
         </div>
         <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
-          ${renderEmptyState('需要管理员登录', '登录后即可查看文件统计、索引状态、分享记录和后续管理模块。', icons.lock)}
+          ${renderEmptyStateCompact('需要管理员登录', '登录后即可查看文件统计、索引状态、分享记录和后续管理模块。', icons.lock)}
         </div>
       `;
     }
 
     return `
-      <div class="toolbar-card flex-shrink-0 flex items-center bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+      <div class="toolbar-card flex-shrink-0 flex items-center bg-white border border-slate-200/60 rounded-2xl p-3 shadow-sm">
         <div class="admin-tab-bar">
           ${ADMIN_TABS.map(tab => `
             <button class="admin-tab-btn${activeTab === tab.id ? ' admin-tab-active' : ''}"
@@ -1449,7 +1448,7 @@ export function createPageRenderers(deps) {
           `).join('')}
         </div>
       </div>
-      <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
+      <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm overflow-hidden flex flex-col">
         ${renderAdminActiveTab(admin, activeTab)}
       </div>
     `;

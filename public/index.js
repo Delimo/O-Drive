@@ -161,6 +161,7 @@ const {
   buildBreadcrumbs: sharedBuildBreadcrumbs,
   renderEntryCard: sharedRenderEntryCard,
   renderEmptyState: sharedRenderEmptyState,
+  renderEmptyStateCompact: sharedRenderEmptyStateCompact,
 } = createSharedRenderers({
   icons,
   escapeHtml,
@@ -199,6 +200,7 @@ const { renderAdminPage: adminRenderer, renderSharePage: shareRenderer } = creat
   icons,
   escapeHtml,
   renderEmptyState: sharedRenderEmptyState,
+  renderEmptyStateCompact: sharedRenderEmptyStateCompact,
   formatBytes,
   formatTime,
   formatRelative,

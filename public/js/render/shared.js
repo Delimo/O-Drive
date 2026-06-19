@@ -234,6 +234,18 @@ export function createSharedRenderers(deps) {
     `;
   }
 
+  function renderEmptyStateCompact(title, copy, icon) {
+    return `
+      <div class="empty-state-compact">
+        <div>
+          <div class="empty-orb">${icon}</div>
+          <h3 class="empty-title">${escapeHtml(title)}</h3>
+          <p class="empty-copy">${escapeHtml(copy)}</p>
+        </div>
+      </div>
+    `;
+  }
+
   return {
     renderInspector,
     renderBatchBar,
@@ -243,5 +255,6 @@ export function createSharedRenderers(deps) {
     buildBreadcrumbs,
     renderEntryCard,
     renderEmptyState,
+    renderEmptyStateCompact,
   };
 }

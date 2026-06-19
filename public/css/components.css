@@ -96,8 +96,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 33.6px;
+  height: 33.6px;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -896,6 +896,35 @@
   text-align: center;
 }
 
+.empty-state-compact {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  height: 100%;
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.empty-state-compact .empty-orb {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 10px;
+}
+
+.empty-state-compact .empty-orb svg {
+  width: 24px;
+  height: 24px;
+}
+
+.empty-state-compact .empty-title {
+  font-size: 16px;
+}
+
+.empty-state-compact .empty-copy {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
 .empty-orb {
   width: 72px;
   height: 72px;
@@ -985,6 +1014,192 @@
 
 .admin-card.span-12 {
   grid-column: span 12;
+}
+
+.admin-grid-overview {
+  gap: 12px;
+}
+
+.admin-grid-overview .admin-card {
+  padding: 12px 16px;
+}
+
+.admin-grid-overview .admin-value {
+  margin-top: 6px;
+  font-size: 26px;
+}
+
+.admin-grid-overview .admin-copy {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.type-chip {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  min-width: 100px;
+  flex: 1 1 auto;
+}
+
+.type-chip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.type-chip-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.latest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.latest-chip {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.latest-chip-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.latest-chip-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.attention-list-compact {
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.attention-list-compact .attention-item {
+  padding: 10px 12px;
+}
+
+.attention-list-compact .attention-title {
+  font-size: 13px;
+}
+
+.attention-list-compact .attention-copy {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.hero-strip-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.mini-stat-compact {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.mini-stat-compact .mini-stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mini-stat-compact .mini-stat-value {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.mini-stat-compact .mini-stat-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.admin-section-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-section-compact > section {
+  padding: 12px 16px;
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.admin-section-compact > section > h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.latest-list-compact {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.latest-item-compact {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.latest-item-compact .status-bar {
+  margin-bottom: 0;
+}
+
+.latest-item-compact .latest-copy {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.data-table-compact {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table-compact th,
+.data-table-compact td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.data-table-compact th {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .admin-label {
