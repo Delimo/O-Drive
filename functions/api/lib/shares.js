@@ -195,8 +195,8 @@ async function cleanupExpiredShares(env, { now = Date.now(), manual = false } = 
   return expiredRows.length;
 }
 
-async function expiredResponse(env, token, message = 'Share link expired') {
-  const row = await getShare(env, token);
+async function expiredResponse(env, token, message = 'Share link expired', row) {
+  row = row || await getShare(env, token);
   const autoDeleteAt = row ? Number(row.expires_at || 0) + EXPIRED_SHARE_AUTO_DELETE_MS : 0;
   const shouldDelete = row ? canAutoDeleteExpiredShare(row) : true;
   if (row) await notifyShareExpiredOnce(env, row, 'expired');
@@ -204,8 +204,8 @@ async function expiredResponse(env, token, message = 'Share link expired') {
   return jsonResponse({ success: false, code: 'SHARE_EXPIRED', message, deleted: shouldDelete, autoDeleteAt }, 410);
 }
 
-async function exhaustedResponse(env, token) {
-  const row = await getShare(env, token);
+async function exhaustedResponse(env, token, row) {
+  row = row || await getShare(env, token);
   if (row) await notifyShareExpiredOnce(env, row, 'exhausted');
   await deleteShare(env, token);
   return jsonResponse({ success: false, code: 'SHARE_EXHAUSTED', message: 'Share download limit reached', deleted: true }, 410);
@@ -274,8 +274,8 @@ export async function handlePublicShare(env, request, path) {
   if (!row) return jsonResponse({ success: false, message: 'Share link not found' }, 404);
 
   const item = mapShare(row);
-  if (item.expired) return expiredResponse(env, token);
-  if (item.exhausted) return exhaustedResponse(env, token);
+  if (item.expired) return expiredResponse(env, token, 'Share link expired', row);
+  if (item.exhausted) return exhaustedResponse(env, token, row);
   if (action === 'unlock') {
     if (!item.hasPassword) return jsonResponse({ success: true });
     const body = await request.json().catch(() => ({}));

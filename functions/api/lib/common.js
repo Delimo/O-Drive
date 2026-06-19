@@ -133,8 +133,8 @@ export async function addLog(env, request, action, details) {
   const meta = typeof details === 'object' && details !== null ? details : {};
   try {
     await env.D1.prepare(
-      `INSERT INTO logs (action, details, ip, actor, status, duration_ms, target_path, error_code, metadata)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO logs (action, details, ip, actor, status, duration_ms, target_path, error_code, metadata, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       action,
       detailText,
@@ -145,11 +145,12 @@ export async function addLog(env, request, action, details) {
       String(meta.targetPath || meta.path || ''),
       String(meta.errorCode || meta.code || ''),
       meta.metadata ? JSON.stringify(meta.metadata).slice(0, 4000) : '',
+      Date.now(),
     ).run();
     await cleanupLogs(env);
   } catch (e) {
     try {
-      await env.D1.prepare('INSERT INTO logs (action, details, ip) VALUES (?, ?, ?)').bind(action, detailText, ip).run();
+      await env.D1.prepare('INSERT INTO logs (action, details, ip, timestamp) VALUES (?, ?, ?, ?)').bind(action, detailText, ip, Date.now()).run();
       await cleanupLogs(env);
     } catch (_) {}
   }
@@ -157,14 +158,15 @@ export async function addLog(env, request, action, details) {
 
 export async function cleanupLogs(env, now = Date.now()) {
   await ensureCoreTables(env);
-  const cutoff = new Date(now - LOG_RETENTION_MS).toISOString().replace('T', ' ').slice(0, 19);
-  const beforeCount = await env.D1.prepare('SELECT COUNT(*) as count FROM logs').first().catch(() => ({ count: 0 }));
-  await env.D1.prepare('DELETE FROM logs WHERE timestamp < ?').bind(cutoff).run();
-  await env.D1.prepare(
+  const cutoff = now - LOG_RETENTION_MS;
+  let total = 0;
+  const r1 = await env.D1.prepare('DELETE FROM logs WHERE timestamp < ?').bind(cutoff).run().catch(() => ({}));
+  total += r1?.meta?.changes || 0;
+  const r2 = await env.D1.prepare(
     'DELETE FROM logs WHERE id NOT IN (SELECT id FROM logs ORDER BY timestamp DESC, id DESC LIMIT ?)'
-  ).bind(LOG_RETENTION_ROWS).run();
-  const afterCount = await env.D1.prepare('SELECT COUNT(*) as count FROM logs').first().catch(() => ({ count: 0 }));
-  return Math.max(0, Number(beforeCount?.count || 0) - Number(afterCount?.count || 0));
+  ).bind(LOG_RETENTION_ROWS).run().catch(() => ({}));
+  total += r2?.meta?.changes || 0;
+  return total;
 }
 
 export async function recordSystemWarning(env, source, message, level = 'warning') {
@@ -201,6 +203,18 @@ export function getMaxBodySize(isUpload = false) {
  * @param {boolean} [isUpload=false] - Whether this is a file upload (higher limit)
  * @throws {Error} With status 413 if body is too large
  */
+/**
+ * Fire-and-forget a promise via context.waitUntil if available.
+ * Catches and suppresses errors to avoid unhandled rejections.
+ * @param {Object} context - Request context (may have waitUntil)
+ * @param {Promise} promise - The async operation to fire
+ */
+export function waitForWebhook(context, promise) {
+  if (!promise) return;
+  if (typeof context?.waitUntil === 'function') context.waitUntil(promise.catch(() => {}));
+  else promise.catch(() => {});
+}
+
 export function assertBodySize(request, isUpload = false) {
   const contentLength = Number(request.headers.get('content-length') || 0);
   const limit = getMaxBodySize(isUpload);

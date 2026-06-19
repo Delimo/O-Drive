@@ -1,23 +1,35 @@
-/**
- * @fileoverview Storage quota management.
- * Allows admins to set a total storage limit and check current usage.
- * Enforced before upload operations.
- *
- * Configuration stored in kv_config table:
- *   key: 'storage_quota_bytes'
- *   value: number (0 = unlimited)
- */
-
 import { formatBytes } from './common.js';
 import { indexedFileCount, syncFileIndexFromR2 } from './file-index.js';
 
 const QUOTA_CONFIG_KEY = 'storage_quota_bytes';
 
-/**
- * Get the configured storage quota in bytes.
- * @param {object} db - D1 database
- * @returns {Promise<number>} Quota bytes (0 = unlimited)
- */
+function ensureStorageUsage(db) {
+  return db.prepare(
+    `CREATE TABLE IF NOT EXISTS storage_usage (
+      storage_id TEXT NOT NULL DEFAULT 'r2',
+      object_key TEXT NOT NULL,
+      size INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (storage_id, object_key)
+    )`
+  ).run().catch(() => {});
+}
+
+async function rebuildStorageUsage(db) {
+  await ensureStorageUsage(db);
+  await db.prepare('DELETE FROM storage_usage').run();
+  await db.prepare(
+    `INSERT INTO storage_usage (storage_id, object_key, size)
+     SELECT storage_id, COALESCE(NULLIF(object_key, ''), path), MAX(size)
+     FROM file_index GROUP BY storage_id, COALESCE(NULLIF(object_key, ''), path)`
+  ).run().catch(() => {});
+}
+
+async function ensureStorageUsagePopulated(db) {
+  await ensureStorageUsage(db);
+  const row = await db.prepare('SELECT COUNT(*) as cnt FROM storage_usage').first().catch(() => ({ cnt: 0 }));
+  if (!Number(row?.cnt || 0)) await rebuildStorageUsage(db);
+}
+
 export async function getStorageQuota(db) {
   try {
     const row = await db.prepare('SELECT value FROM kv_config WHERE key = ?').bind(QUOTA_CONFIG_KEY).first();
@@ -27,38 +39,21 @@ export async function getStorageQuota(db) {
   }
 }
 
-/**
- * Set the storage quota.
- * @param {object} db - D1 database
- * @param {number} bytes - New quota (0 = unlimited)
- */
 export async function setStorageQuota(db, bytes) {
   const val = Math.max(0, Math.floor(bytes));
   await db.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)').bind(QUOTA_CONFIG_KEY, String(val)).run();
 }
 
-/**
- * Get current storage usage from the file index.
- * @param {object} db - D1 database
- * @returns {Promise<number>} Used bytes
- */
 export async function getStorageUsed(db) {
   try {
-    const row = await db.prepare(
-      'SELECT COALESCE(SUM(size), 0) AS total FROM (SELECT storage_id, COALESCE(NULLIF(object_key, \'\'), path) AS object_key, MAX(size) AS size FROM file_index GROUP BY storage_id, COALESCE(NULLIF(object_key, \'\'), path))'
-    ).first();
+    await ensureStorageUsagePopulated(db);
+    const row = await db.prepare('SELECT COALESCE(SUM(size), 0) AS total FROM storage_usage').first();
     return Number(row?.total || 0);
   } catch {
     return 0;
   }
 }
 
-/**
- * Check if a new upload would exceed the quota.
- * @param {object} db - D1 database
- * @param {number} incomingBytes - Size of file(s) to upload
- * @returns {Promise<{allowed: boolean, used: number, quota: number, remaining: number}>}
- */
 export async function checkQuota(target, incomingBytes = 0) {
   const db = target?.D1 || target;
   let syncedIndex = false;
@@ -81,5 +76,3 @@ export async function checkQuota(target, incomingBytes = 0) {
     indexTruncated,
   };
 }
-
-

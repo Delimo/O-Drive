@@ -1,3 +1,9 @@
+const _keyCache = new Map();
+
+function cacheKey(secret, date, region, service) {
+  return `${secret}\0${date}\0${region}\0${service}`;
+}
+
 function cleanPath(path = '') {
   return String(path || '').trim().replace(/^\/+|\/+$/g, '');
 }
@@ -17,10 +23,15 @@ async function hmac(key, value) {
 }
 
 async function signingKey(secret, date, region, service) {
+  const ck = cacheKey(secret, date, region, service);
+  const cached = _keyCache.get(ck);
+  if (cached) return cached;
   const kDate = await hmac(new TextEncoder().encode(`AWS4${secret}`), date);
   const kRegion = await hmac(kDate, region);
   const kService = await hmac(kRegion, service);
-  return hmac(kService, 'aws4_request');
+  const result = await hmac(kService, 'aws4_request');
+  _keyCache.set(ck, result);
+  return result;
 }
 
 function encodePathSegment(value) {

@@ -33,17 +33,17 @@ async function ensureTaskTable(env) {
 
 export async function cleanupFileTasks(env, now = Date.now(), { force = false } = {}) {
   await ensureTaskTable(env);
+  let total = 0;
   if (force) {
-    const before = await env.D1.prepare("SELECT COUNT(*) as count FROM file_tasks WHERE status NOT IN ('queued', 'running')").first().catch(() => ({ count: 0 }));
-    await env.D1.prepare("DELETE FROM file_tasks WHERE status NOT IN ('queued', 'running')").run();
-    return Number(before?.count || 0);
+    const r = await env.D1.prepare("DELETE FROM file_tasks WHERE status NOT IN ('queued', 'running')").run().catch(() => ({}));
+    return r?.meta?.changes || 0;
   }
-  const before = await env.D1.prepare("SELECT COUNT(*) as count FROM file_tasks WHERE status NOT IN ('queued', 'running')").first().catch(() => ({ count: 0 }));
   const cutoff = now - TASK_RETENTION_MS;
-  await env.D1.prepare(
+  const r1 = await env.D1.prepare(
     "DELETE FROM file_tasks WHERE status NOT IN ('queued', 'running') AND finished_at > 0 AND finished_at < ?"
-  ).bind(cutoff).run();
-  await env.D1.prepare(
+  ).bind(cutoff).run().catch(() => ({}));
+  total += r1?.meta?.changes || 0;
+  const r2 = await env.D1.prepare(
     `DELETE FROM file_tasks
      WHERE status NOT IN ('queued', 'running')
        AND id NOT IN (
@@ -52,9 +52,9 @@ export async function cleanupFileTasks(env, now = Date.now(), { force = false } 
          ORDER BY created_at DESC
          LIMIT ?
        )`
-  ).bind(TASK_RETENTION_ROWS).run();
-  const after = await env.D1.prepare("SELECT COUNT(*) as count FROM file_tasks WHERE status NOT IN ('queued', 'running')").first().catch(() => ({ count: 0 }));
-  return Math.max(0, Number(before?.count || 0) - Number(after?.count || 0));
+  ).bind(TASK_RETENTION_ROWS).run().catch(() => ({}));
+  total += r2?.meta?.changes || 0;
+  return total;
 }
 
 function mapTask(row) {
@@ -85,24 +85,23 @@ function mapTask(row) {
 }
 
 async function updateTask(env, id, patch) {
-  const row = await env.D1.prepare('SELECT * FROM file_tasks WHERE id = ?').bind(id).first();
-  if (!row) return null;
-  const next = { ...row, ...patch, updated_at: Date.now() };
-  await env.D1.prepare(
-    `UPDATE file_tasks SET status = ?, total = ?, completed = ?, failed = ?, result = ?, error = ?, updated_at = ?, finished_at = ?
-     WHERE id = ?`
-  ).bind(
-    next.status,
-    Number(next.total || 0),
-    Number(next.completed || 0),
-    Number(next.failed || 0),
-    typeof next.result === 'string' ? next.result : JSON.stringify(next.result || {}),
-    String(next.error || ''),
-    Number(next.updated_at || Date.now()),
-    Number(next.finished_at || 0),
-    id,
-  ).run();
-  return mapTask(next);
+  const now = Date.now();
+  const sets = ['updated_at = ?'];
+  const params = [now];
+  const strFields = { status: 'status', error: 'error' };
+  const numFields = { total: 'total', completed: 'completed', failed: 'failed', finished_at: 'finished_at' };
+  for (const [key, col] of Object.entries(strFields)) {
+    if (key in patch) { sets.push(`${col} = ?`); params.push(String(patch[key] ?? '')); }
+  }
+  for (const [key, col] of Object.entries(numFields)) {
+    if (key in patch) { sets.push(`${col} = ?`); params.push(Number(patch[key] ?? 0)); }
+  }
+  if ('result' in patch) {
+    sets.push('result = ?');
+    params.push(typeof patch.result === 'string' ? patch.result : JSON.stringify(patch.result || {}));
+  }
+  params.push(id);
+  await env.D1.prepare(`UPDATE file_tasks SET ${sets.join(', ')} WHERE id = ?`).bind(...params).run();
 }
 
 function jsonRequest(url, body, request) {
@@ -224,7 +223,7 @@ export async function updateFileTask(env, request, url) {
   try { currentResult = JSON.parse(row.result || '{}'); } catch (_) {}
   const result = body.result && typeof body.result === 'object' ? body.result : currentResult;
   const finished = ['completed', 'partial', 'failed'].includes(status);
-  const item = await updateTask(env, id, {
+  await updateTask(env, id, {
     status,
     total,
     completed,
@@ -233,6 +232,7 @@ export async function updateFileTask(env, request, url) {
     error: String(body.error || ''),
     finished_at: finished ? Number(body.finishedAt || Date.now()) : 0,
   });
+  const item = { ...mapTask(row), status, total, completed, failed, result, error: String(body.error || ''), updatedAt: Date.now() };
   return jsonResponse({ success: true, item });
 }
 

@@ -1,4 +1,4 @@
-import { jsonResponse, decodeBase64UrlJson, encodeBase64Url, ensureCoreTables } from './common.js';
+import { jsonResponse, decodeBase64UrlJson, encodeBase64Url, ensureCoreTables, waitForWebhook } from './common.js';
 import { signHmac, verifyHmac } from './secrets.js';
 import { loadWebhookEndpoints, notifyLoginBurst } from './webhooks.js';
 
@@ -83,12 +83,6 @@ async function recordLoginFailure(env, ip) {
     return Number(row?.attempts || 0);
   } catch (e) {}
   return 0;
-}
-
-function waitForWebhook(context, promise) {
-  if (!promise) return;
-  if (typeof context?.waitUntil === 'function') context.waitUntil(promise.catch(() => {}));
-  else promise.catch(() => {});
 }
 
 function positiveNumber(value, fallback) {

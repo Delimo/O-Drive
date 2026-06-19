@@ -53,8 +53,9 @@ async function runStatement(statement) {
   return statement.run();
 }
 
-export async function ensureFileIndexTable(env) {
-  if (!env?.D1) return false;
+let _fileIndexReady;
+
+async function _ensureFileIndexTable(env) {
   try {
     await runStatement(env.D1.prepare(FILE_INDEX_SQL));
     try {
@@ -76,6 +77,16 @@ export async function ensureFileIndexTable(env) {
   } catch (_) {
     return false;
   }
+}
+
+export async function ensureFileIndexTable(env) {
+  if (!env?.D1) return false;
+  if (_fileIndexReady) return true;
+  _fileIndexReady = _ensureFileIndexTable(env).catch(err => {
+    _fileIndexReady = null;
+    throw err;
+  });
+  return _fileIndexReady;
 }
 
 const UPSERT_SQL = `INSERT INTO file_index (path, storage_id, object_key, name, parent, kind, size, content_type, uploaded_at, updated_at)
@@ -109,10 +120,45 @@ export function buildUpsertParams(key, meta = {}) {
   ];
 }
 
+async function ensureStorageUsageTable(env) {
+  try {
+    await env.D1.prepare(
+      `CREATE TABLE IF NOT EXISTS storage_usage (
+        storage_id TEXT NOT NULL DEFAULT 'r2',
+        object_key TEXT NOT NULL,
+        size INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (storage_id, object_key)
+      )`
+    ).run();
+  } catch (_) {}
+}
+
+async function addStorageUsage(env, storageId, objectKey, size) {
+  await ensureStorageUsageTable(env);
+  try {
+    await env.D1.prepare(
+      'INSERT OR REPLACE INTO storage_usage (storage_id, object_key, size) VALUES (?, ?, ?)'
+    ).bind(storageId, objectKey, Number(size || 0)).run();
+  } catch (_) {}
+}
+
+async function removeStorageUsage(env, storageId, objectKey) {
+  await ensureStorageUsageTable(env);
+  try {
+    const row = await env.D1.prepare(
+      'SELECT COUNT(*) as cnt FROM file_index WHERE storage_id = ? AND COALESCE(NULLIF(object_key, \'\'), path) = ?'
+    ).bind(storageId, objectKey).first();
+    if (!Number(row?.cnt || 0)) {
+      await env.D1.prepare('DELETE FROM storage_usage WHERE storage_id = ? AND object_key = ?').bind(storageId, objectKey).run();
+    }
+  } catch (_) {}
+}
+
 export async function upsertFileIndex(env, key, meta = {}) {
   if (!indexableKey(key) || !(await ensureFileIndexTable(env))) return;
   try {
     await env.D1.prepare(UPSERT_SQL).bind(...buildUpsertParams(key, meta)).run();
+    await addStorageUsage(env, meta.storageId || meta.storage_id || 'r2', meta.objectKey || meta.object_key || key, Number(meta.size || 0));
   } catch (_) {}
 }
 
@@ -145,7 +191,9 @@ export async function batchUpsertFileIndex(env, entries) {
 export async function deleteFileIndexKey(env, key) {
   if (!(await ensureFileIndexTable(env))) return;
   try {
+    const row = await env.D1.prepare('SELECT storage_id, COALESCE(NULLIF(object_key, \'\'), path) AS object_key FROM file_index WHERE path = ?').bind(key).first();
     await env.D1.prepare('DELETE FROM file_index WHERE path = ?').bind(key).run();
+    if (row) await removeStorageUsage(env, row.storage_id || 'r2', row.object_key || key);
   } catch (_) {}
 }
 
@@ -153,7 +201,13 @@ export async function deleteFileIndexPrefix(env, prefix) {
   if (!(await ensureFileIndexTable(env))) return;
   const clean = String(prefix || '').replace(/^\/+|\/+$/g, '');
   try {
+    const rows = await env.D1.prepare(
+      'SELECT DISTINCT storage_id, COALESCE(NULLIF(object_key, \'\'), path) AS object_key FROM file_index WHERE path = ? OR path LIKE ?'
+    ).bind(clean, `${clean}/%`).all();
     await env.D1.prepare('DELETE FROM file_index WHERE path = ? OR path LIKE ?').bind(clean, `${clean}/%`).run();
+    for (const row of (rows.results || [])) {
+      await removeStorageUsage(env, row.storage_id || 'r2', row.object_key);
+    }
   } catch (_) {}
 }
 
@@ -251,10 +305,16 @@ export async function listFileIndexPrefix(env, prefix) {
 export async function getIndexedStorageUsed(env, storageId = 'r2') {
   if (!(await ensureFileIndexTable(env))) return 0;
   try {
+    await ensureStorageUsageTable(env);
     const row = await env.D1.prepare(
+      'SELECT COALESCE(SUM(size), 0) AS total FROM storage_usage WHERE storage_id = ?'
+    ).bind(storageId).first();
+    if (row?.total != null) return Number(row.total);
+    // Fallback to direct aggregation if materialized table is empty
+    const r = await env.D1.prepare(
       'SELECT COALESCE(SUM(size), 0) AS total FROM (SELECT storage_id, COALESCE(NULLIF(object_key, \'\'), path) AS object_key, MAX(size) AS size FROM file_index WHERE storage_id = ? GROUP BY storage_id, COALESCE(NULLIF(object_key, \'\'), path))'
     ).bind(storageId).first();
-    return Number(row?.total || 0);
+    return Number(r?.total || 0);
   } catch (_) {
     return 0;
   }

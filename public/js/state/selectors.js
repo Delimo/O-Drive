@@ -35,11 +35,16 @@ export function createStateSelectors(deps) {
     return entry.fullKey || entry.path || entry.original_key || '';
   }
 
+  let _cachedExplorer = null;
+  let _cachedResult = null;
+
   function currentEntries(state) {
     const explorer = state.explorer;
+    if (_cachedExplorer === explorer) return _cachedResult;
+    _cachedExplorer = explorer;
 
     if (explorer.trashMode) {
-      return applySort(
+      _cachedResult = applySort(
         explorer.trashItems
           .map(item => ({
             ...item,
@@ -55,6 +60,7 @@ export function createStateSelectors(deps) {
           .filter(item => explorer.filter === 'all' || item.kind === explorer.filter),
         explorer.sort,
       );
+      return _cachedResult;
     }
 
     const folders = (explorer.folders || []).map(item => ({
@@ -72,7 +78,8 @@ export function createStateSelectors(deps) {
     const filteredFolders = explorer.filter === 'all' || explorer.filter === 'folder' ? folders : [];
     const filteredFiles = files.filter(item => explorer.filter === 'all' || item.kind === explorer.filter);
 
-    return applySort([...filteredFolders, ...filteredFiles], explorer.sort);
+    _cachedResult = applySort([...filteredFolders, ...filteredFiles], explorer.sort);
+    return _cachedResult;
   }
 
   function getSelectedEntry(state) {

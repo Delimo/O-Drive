@@ -1,4 +1,6 @@
 const initializedCoreTables = new WeakSet();
+const initializedShareTable = new WeakSet();
+const initializedProtectedTables = new WeakSet();
 
 export const CORE_TABLE_SQL = [
   `CREATE TABLE IF NOT EXISTS settings (
@@ -16,7 +18,7 @@ export const CORE_TABLE_SQL = [
     target_path TEXT DEFAULT '',
     error_code TEXT DEFAULT '',
     metadata TEXT DEFAULT '',
-    timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    timestamp INTEGER NOT NULL DEFAULT 0
   )`,
   `CREATE TABLE IF NOT EXISTS login_attempts (
     ip TEXT PRIMARY KEY,
@@ -87,6 +89,12 @@ export const CORE_TABLE_SQL = [
     updated_at INTEGER NOT NULL,
     finished_at INTEGER NOT NULL DEFAULT 0
   )`,
+  `CREATE TABLE IF NOT EXISTS storage_usage (
+    storage_id TEXT NOT NULL DEFAULT 'r2',
+    object_key TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (storage_id, object_key)
+  )`,
 ];
 
 export const CORE_MIGRATION_SQL = [
@@ -102,6 +110,9 @@ export const CORE_MIGRATION_SQL = [
   `ALTER TABLE system_warnings ADD COLUMN acknowledged_at INTEGER NOT NULL DEFAULT 0`,
   `CREATE INDEX IF NOT EXISTS idx_trash_trashed_at ON trash(trashed_at)`,
   `CREATE INDEX IF NOT EXISTS idx_trash_original_key ON trash(original_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_logs_action_ip_timestamp ON logs(action, ip, timestamp)`,
+  `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event_created_at ON webhook_deliveries(event, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_file_tasks_status_created_at ON file_tasks(status, created_at)`,
 ];
 
 export const SHARE_TABLE_SQL = `
@@ -130,6 +141,7 @@ export const SHARE_MIGRATION_SQL = [
   `ALTER TABLE share_links ADD COLUMN password_hash TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN expired_notified_at INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE share_links ADD COLUMN last_access_ip TEXT DEFAULT ''`,
+  `CREATE INDEX IF NOT EXISTS idx_share_links_path ON share_links(path)`,
 ];
 
 export const PROTECTED_PATH_TABLE_SQL = `
@@ -177,9 +189,13 @@ export async function ensureCoreTables(env) {
 }
 
 export async function ensureShareTable(env) {
+  if (!env?.D1 || initializedShareTable.has(env)) return;
   await runSchemaStatements(env, [SHARE_TABLE_SQL], SHARE_MIGRATION_SQL);
+  initializedShareTable.add(env);
 }
 
 export async function ensureProtectedTables(env) {
+  if (!env?.D1 || initializedProtectedTables.has(env)) return;
   await runSchemaStatements(env, [PROTECTED_PATH_TABLE_SQL, PROTECTED_ATTEMPTS_TABLE_SQL]);
+  initializedProtectedTables.add(env);
 }

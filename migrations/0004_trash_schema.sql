@@ -1,1 +1,0 @@
-ALTER TABLE trash ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2';

@@ -7,10 +7,14 @@ const STORAGE_CONFIG_KEY = 'storage_config_v1';
 const DEFAULT_R2_QUOTA_BYTES = 10 * 1024 * 1024 * 1024;
 const DEFAULT_OVERFLOW_THRESHOLD = 85;
 
+let _kvConfigReady;
+
 async function ensureKvConfig(env) {
+  if (_kvConfigReady) return;
   try {
     await env.D1.prepare('CREATE TABLE IF NOT EXISTS kv_config (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
   } catch (_) {}
+  _kvConfigReady = true;
 }
 
 function cleanPath(path = '') {
@@ -52,6 +56,8 @@ function normalizeBinding(item = {}) {
   return { path, storageId };
 }
 
+const _configCacheSymbol = Symbol('storageConfig');
+
 function defaultConfig() {
   return {
     r2QuotaBytes: DEFAULT_R2_QUOTA_BYTES,
@@ -63,6 +69,7 @@ function defaultConfig() {
 }
 
 export async function loadStorageConfig(env) {
+  if (env?.[_configCacheSymbol]) return env[_configCacheSymbol];
   const fallback = defaultConfig();
   if (!env?.D1) return fallback;
   await ensureKvConfig(env);
@@ -75,13 +82,15 @@ export async function loadStorageConfig(env) {
       .map(normalizeBinding)
       .filter(item => item && storageIds.has(item.storageId))
       .sort((a, b) => a.path.localeCompare(b.path));
-    return {
+    const config = {
       r2QuotaBytes: parseCapacityBytes(raw.r2QuotaBytes, fallback.r2QuotaBytes),
       overflowEnabled: raw.overflowEnabled !== false,
       overflowThresholdPercent: Math.max(1, Math.min(99, Number(raw.overflowThresholdPercent || fallback.overflowThresholdPercent))),
       spaces,
       bindings,
     };
+    env[_configCacheSymbol] = config;
+    return config;
   } catch (err) {
     await recordSystemWarning(env, 'storage.config', err?.message || 'Storage config load failed');
     return fallback;
@@ -94,6 +103,7 @@ export async function saveStorageConfig(env, config) {
   await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)')
     .bind(STORAGE_CONFIG_KEY, JSON.stringify(normalized))
     .run();
+  delete env[_configCacheSymbol];
   return normalized;
 }
 

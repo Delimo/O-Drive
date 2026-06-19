@@ -34,11 +34,11 @@ export async function handleAdminLogs(env, url) {
   }
   if (from) {
     filters.push('timestamp >= ?');
-    params.push(`${from} 00:00:00`);
+    params.push(new Date(from).getTime());
   }
   if (to) {
     filters.push('timestamp <= ?');
-    params.push(`${to} 23:59:59`);
+    params.push(new Date(to).getTime() + 86400000);
   }
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
   let totalStmt = env.D1.prepare(`SELECT COUNT(*) as count FROM logs ${where}`);

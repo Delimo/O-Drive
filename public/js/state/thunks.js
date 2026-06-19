@@ -1,10 +1,13 @@
-import { isMockMode, mockFolders, mockFiles, mockAdminStats, mockAdminShares, mockShareItem, mockTextContent, mockAdminHealth, mockAdminLogs, mockProtectedPaths, mockAdminQuota, mockHiddenPaths, mockStorageConfig, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockNotifications } from '../mock/index.js';
+import { CHUNK_SIZE } from '../constants.js';
 
-const CHUNK_SIZE = 5 * 1024 * 1024;
+const _isMock = new URLSearchParams(window.location.search).get('mock') === '1';
+const _mockModule = _isMock ? import('../mock/index.js') : null;
+
+let _audioCtx;
 
 function showNotificationAlert(message) {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _audioCtx || (_audioCtx = new (window.AudioContext || window.webkitAudioContext)());
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -55,7 +58,7 @@ export function createThunks(deps) {
   } = deps;
 
   const page = getPage();
-  const mock = isMockMode();
+  const mock = _isMock;
 
   let uploadIdSeq = 0;
   const nextUploadId = () => `up-${Date.now()}-${(uploadIdSeq += 1)}`;
@@ -91,11 +94,12 @@ export function createThunks(deps) {
       dispatch(actions.explorer.setSearching(Boolean(query) && !state.explorer.trashMode));
 
       if (mock) {
+        const m = await _mockModule;
         dispatch(actions.explorer.setData({
-          folders: query ? [] : mockFolders,
+          folders: query ? [] : m.mockFolders,
           files: query
-            ? mockFiles.filter(f => f.name.toLowerCase().includes(query.toLowerCase()))
-            : mockFiles,
+            ? m.mockFiles.filter(f => f.name.toLowerCase().includes(query.toLowerCase()))
+            : m.mockFiles,
           storageId: 'r2',
         }));
         dispatch(actions.explorer.setSearching(false));
@@ -143,7 +147,8 @@ export function createThunks(deps) {
     loadAdminStats: () => async dispatch => {
       dispatch(actions.admin.setLoading(true));
       if (mock) {
-        dispatch(actions.admin.setStats(mockAdminStats));
+        const m = await _mockModule;
+        dispatch(actions.admin.setStats(m.mockAdminStats));
         return;
       }
       try {
@@ -157,7 +162,8 @@ export function createThunks(deps) {
     loadAdminShares: () => async dispatch => {
       dispatch(actions.admin.setSharesLoading(true));
       if (mock) {
-        dispatch(actions.admin.setShares(mockAdminShares));
+        const m = await _mockModule;
+        dispatch(actions.admin.setShares(m.mockAdminShares));
         return;
       }
       try {
@@ -177,7 +183,8 @@ export function createThunks(deps) {
 
       dispatch(actions.share.setLoading(true));
       if (mock) {
-        dispatch(actions.share.setData(mockShareItem));
+        const m = await _mockModule;
+        dispatch(actions.share.setData(m.mockShareItem));
         if (!token) dispatch(actions.share.setToken('mock-share-token'));
         return;
       }
@@ -470,7 +477,8 @@ export function createThunks(deps) {
       }
 
       if (mock) {
-        dispatch(actions.app.setModal({ ...baseModal, loading: false, content: mockTextContent(entry) }));
+        const m = await _mockModule;
+        dispatch(actions.app.setModal({ ...baseModal, loading: false, content: m.mockTextContent(entry) }));
         return;
       }
 
@@ -764,7 +772,8 @@ export function createThunks(deps) {
     loadAdminHealth: () => async dispatch => {
       dispatch(actions.admin.setHealthLoading(true));
       if (mock) {
-        dispatch(actions.admin.setHealth(mockAdminHealth));
+        const m = await _mockModule;
+        dispatch(actions.admin.setHealth(m.mockAdminHealth));
         return;
       }
       try {
@@ -779,7 +788,8 @@ export function createThunks(deps) {
       dispatch(actions.admin.setLogsLoading(true));
       const filter = getState().admin.logsFilter;
       if (mock) {
-        dispatch(actions.admin.setLogs(mockAdminLogs(page)));
+        const m = await _mockModule;
+        dispatch(actions.admin.setLogs(m.mockAdminLogs(page)));
         return;
       }
       try {
@@ -794,7 +804,8 @@ export function createThunks(deps) {
     loadAdminQuota: () => async dispatch => {
       dispatch(actions.admin.setQuotaLoading(true));
       if (mock) {
-        dispatch(actions.admin.setQuota(mockAdminQuota));
+        const m = await _mockModule;
+        dispatch(actions.admin.setQuota(m.mockAdminQuota));
         return;
       }
       try {
@@ -819,7 +830,8 @@ export function createThunks(deps) {
     loadAdminProtectedPaths: () => async dispatch => {
       dispatch(actions.admin.setProtectedPathsLoading(true));
       if (mock) {
-        dispatch(actions.admin.setProtectedPaths(mockProtectedPaths));
+        const m = await _mockModule;
+        dispatch(actions.admin.setProtectedPaths(m.mockProtectedPaths));
         return;
       }
       try {
@@ -858,7 +870,8 @@ export function createThunks(deps) {
     loadAdminHiddenPaths: () => async dispatch => {
       dispatch(actions.admin.setHiddenPathsLoading(true));
       if (mock) {
-        dispatch(actions.admin.setHiddenPaths(mockHiddenPaths));
+        const m = await _mockModule;
+        dispatch(actions.admin.setHiddenPaths(m.mockHiddenPaths));
         return;
       }
       try {
@@ -894,7 +907,8 @@ export function createThunks(deps) {
     loadAdminStorageConfig: () => async dispatch => {
       dispatch(actions.admin.setStorageConfigLoading(true));
       if (mock) {
-        dispatch(actions.admin.setStorageConfig(mockStorageConfig));
+        const m = await _mockModule;
+        dispatch(actions.admin.setStorageConfig(m.mockStorageConfig));
         return;
       }
       try {
@@ -931,7 +945,8 @@ export function createThunks(deps) {
     loadAdminWebhooks: () => async dispatch => {
       dispatch(actions.admin.setWebhooksLoading(true));
       if (mock) {
-        dispatch(actions.admin.setWebhooks(mockWebhooks));
+        const m = await _mockModule;
+        dispatch(actions.admin.setWebhooks(m.mockWebhooks));
         return;
       }
       try {
@@ -969,7 +984,8 @@ export function createThunks(deps) {
     loadAdminWebhookDeliveries: () => async dispatch => {
       dispatch(actions.admin.setWebhookDeliveriesLoading(true));
       if (mock) {
-        dispatch(actions.admin.setWebhookDeliveries(mockWebhookDeliveries));
+        const m = await _mockModule;
+        dispatch(actions.admin.setWebhookDeliveries(m.mockWebhookDeliveries));
         return;
       }
       try {
@@ -1026,7 +1042,8 @@ export function createThunks(deps) {
     loadTasks: () => async dispatch => {
       dispatch(actions.admin.setTasksLoading(true));
       if (mock) {
-        dispatch(actions.admin.setTasks(mockTasks));
+        const m = await _mockModule;
+        dispatch(actions.admin.setTasks(m.mockTasks));
         return;
       }
       try {
@@ -1040,7 +1057,8 @@ export function createThunks(deps) {
     loadMaintenanceSnapshot: () => async dispatch => {
       dispatch(actions.admin.setMaintenanceLoading(true));
       if (mock) {
-        dispatch(actions.admin.setMaintenance(mockMaintenanceSnapshot));
+        const m = await _mockModule;
+        dispatch(actions.admin.setMaintenance(m.mockMaintenanceSnapshot));
         return;
       }
       try {
@@ -1085,8 +1103,9 @@ export function createThunks(deps) {
     loadNotifications: () => async (dispatch, getState) => {
       dispatch(actions.admin.setNotificationsLoading(true));
       if (mock) {
-        const unread = mockNotifications.filter(n => !n.read).length;
-        dispatch(actions.admin.setNotifications({ items: mockNotifications, unread }));
+        const m = await _mockModule;
+        const unread = m.mockNotifications.filter(n => !n.read).length;
+        dispatch(actions.admin.setNotifications({ items: m.mockNotifications, unread }));
         return;
       }
       try {
@@ -1110,7 +1129,8 @@ export function createThunks(deps) {
     },
     markNotificationRead: id => async dispatch => {
       if (mock) {
-        dispatch(actions.admin.setNotificationsUnread(Math.max(0, mockNotifications.filter(n => !n.read).length - 1)));
+        const m = await _mockModule;
+        dispatch(actions.admin.setNotificationsUnread(Math.max(0, m.mockNotifications.filter(n => !n.read).length - 1)));
         return;
       }
       try {
@@ -1131,7 +1151,8 @@ export function createThunks(deps) {
     loadAdminNotifications: () => async dispatch => {
       dispatch(actions.admin.setAdminNotifHistoryLoading(true));
       if (mock) {
-        dispatch(actions.admin.setAdminNotifHistory({ items: mockNotifications, unread: mockNotifications.filter(n => !n.read).length }));
+        const m = await _mockModule;
+        dispatch(actions.admin.setAdminNotifHistory({ items: m.mockNotifications, unread: m.mockNotifications.filter(n => !n.read).length }));
         return;
       }
       try {

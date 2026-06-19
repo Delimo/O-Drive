@@ -8,7 +8,13 @@ CREATE TABLE IF NOT EXISTS logs (
   action TEXT NOT NULL,
   details TEXT,
   ip TEXT,
-  timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  actor TEXT DEFAULT '',
+  status TEXT DEFAULT '',
+  duration_ms INTEGER NOT NULL DEFAULT 0,
+  target_path TEXT DEFAULT '',
+  error_code TEXT DEFAULT '',
+  metadata TEXT DEFAULT '',
+  timestamp INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS login_attempts (
@@ -54,8 +60,45 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
   created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS system_warnings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source TEXT NOT NULL,
+  message TEXT NOT NULL,
+  level TEXT NOT NULL DEFAULT 'warning',
+  acknowledged_at INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS trash (
+  id TEXT PRIMARY KEY,
+  original_key TEXT NOT NULL,
+  trash_key TEXT NOT NULL,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  size INTEGER NOT NULL DEFAULT 0,
+  storage_id TEXT NOT NULL DEFAULT 'r2',
+  trashed_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS file_tasks (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  status TEXT NOT NULL,
+  total INTEGER NOT NULL DEFAULT 0,
+  completed INTEGER NOT NULL DEFAULT 0,
+  failed INTEGER NOT NULL DEFAULT 0,
+  payload TEXT NOT NULL DEFAULT '{}',
+  result TEXT NOT NULL DEFAULT '{}',
+  error TEXT DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  finished_at INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS file_index (
   path TEXT PRIMARY KEY,
+  storage_id TEXT NOT NULL DEFAULT 'r2',
+  object_key TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL,
   parent TEXT NOT NULL,
   kind TEXT NOT NULL,
@@ -69,19 +112,15 @@ CREATE INDEX IF NOT EXISTS idx_file_index_name ON file_index(name);
 CREATE INDEX IF NOT EXISTS idx_file_index_parent ON file_index(parent);
 CREATE INDEX IF NOT EXISTS idx_file_index_kind ON file_index(kind);
 CREATE INDEX IF NOT EXISTS idx_file_index_uploaded_at ON file_index(uploaded_at);
-
-CREATE TABLE IF NOT EXISTS trash (
-  id TEXT PRIMARY KEY,
-  original_key TEXT NOT NULL,
-  trash_key TEXT NOT NULL,
-  name TEXT NOT NULL,
-  kind TEXT NOT NULL,
-  size INTEGER NOT NULL DEFAULT 0,
-  trashed_at INTEGER NOT NULL
-);
+CREATE INDEX IF NOT EXISTS idx_file_index_storage_id ON file_index(storage_id);
+CREATE INDEX IF NOT EXISTS idx_file_index_object ON file_index(storage_id, object_key);
 
 CREATE INDEX IF NOT EXISTS idx_trash_trashed_at ON trash(trashed_at);
 CREATE INDEX IF NOT EXISTS idx_trash_original_key ON trash(original_key);
+
+CREATE INDEX IF NOT EXISTS idx_logs_action_ip_timestamp ON logs(action, ip, timestamp);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event_created_at ON webhook_deliveries(event, created_at);
+CREATE INDEX IF NOT EXISTS idx_file_tasks_status_created_at ON file_tasks(status, created_at);
 
 CREATE TABLE IF NOT EXISTS path_passwords (
   path TEXT PRIMARY KEY,
@@ -111,9 +150,14 @@ CREATE TABLE IF NOT EXISTS share_links (
   expires_at INTEGER NOT NULL DEFAULT 0,
   max_downloads INTEGER NOT NULL DEFAULT 0,
   download_count INTEGER NOT NULL DEFAULT 0,
+  password_salt TEXT DEFAULT '',
+  password_hash TEXT DEFAULT '',
+  expired_notified_at INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
-  last_accessed_at INTEGER NOT NULL DEFAULT 0
+  last_accessed_at INTEGER NOT NULL DEFAULT 0,
+  last_access_ip TEXT DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_share_links_created_at ON share_links(created_at);
 CREATE INDEX IF NOT EXISTS idx_share_links_expires_at ON share_links(expires_at);
+CREATE INDEX IF NOT EXISTS idx_share_links_path ON share_links(path);

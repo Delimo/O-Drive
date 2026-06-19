@@ -30,7 +30,11 @@ const SETTINGS_TABLE_SQL = `
   )
 `;
 
+let _trashTableReady;
+let _settingsTableReady;
+
 async function ensureTrashTable(env) {
+  if (_trashTableReady) return;
   const stmt = env.D1.prepare(TRASH_TABLE_SQL);
   if (typeof stmt.bind === 'function') {
     await stmt.bind().run();
@@ -40,15 +44,18 @@ async function ensureTrashTable(env) {
   try {
     await env.D1.prepare("ALTER TABLE trash ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'").run();
   } catch (_) {}
+  _trashTableReady = true;
 }
 
 async function ensureSettingsTable(env) {
+  if (_settingsTableReady) return;
   const stmt = env.D1.prepare(SETTINGS_TABLE_SQL);
   if (typeof stmt.bind === 'function') {
     await stmt.bind().run();
-    return;
+  } else {
+    await stmt.run();
   }
-  await stmt.run();
+  _settingsTableReady = true;
 }
 
 function createTrashId() {
@@ -75,8 +82,15 @@ export async function softDeleteTree(env, sourceKey, request) {
   for (const row of await listFileIndexPrefix(env, sourceKey)) {
     entries.set(row.path, { key: row.path, size: Number(row.size || 0), indexed: true });
   }
-  for (const item of listed.objects || []) {
-    if (!entries.has(item.key)) entries.set(item.key, { key: item.key, size: item.size || 0, indexed: Boolean(await getFileIndexEntry(env, item.key)) });
+  const newKeys = (listed.objects || []).filter(item => !entries.has(item.key)).map(item => item.key);
+  if (newKeys.length) {
+    const placeholders = newKeys.map(() => '?').join(',');
+    const rows = await env.D1.prepare(`SELECT path FROM file_index WHERE path IN (${placeholders})`).bind(...newKeys).all().catch(() => ({ results: [] }));
+    const indexedPaths = new Set((rows.results || []).map(r => r.path));
+    for (const key of newKeys) {
+      const item = listed.objects.find(o => o.key === key);
+      entries.set(key, { key, size: item.size || 0, indexed: indexedPaths.has(key) });
+    }
   }
   const entryList = [...entries.values()];
   if (entryList.length === 0) {

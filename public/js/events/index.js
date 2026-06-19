@@ -24,6 +24,9 @@ export function registerAppEvents(deps) {
     syncHomeUrl,
   } = deps;
 
+  const ac = new AbortController();
+  const opts = { signal: ac.signal };
+
   documentRef.addEventListener('click', event => {
     const stopClose = event.target.closest('[data-stop-close="true"]');
     const actionNode = event.target.closest('[data-action]');
@@ -875,7 +878,7 @@ export function registerAppEvents(deps) {
         return;
       }
     }
-  });
+  }, opts);
 
   documentRef.addEventListener('input', event => {
     const state = store.getState();
@@ -911,7 +914,7 @@ export function registerAppEvents(deps) {
     if (event.target.name === 'password' && page === 'share') {
       store.dispatch(actions.share.setPassword(event.target.value));
     }
-  });
+  }, opts);
 
   documentRef.addEventListener('keydown', event => {
     // Ctrl/Cmd + S 在文本编辑态下保存
@@ -923,7 +926,7 @@ export function registerAppEvents(deps) {
         store.dispatch(thunks.savePreviewText(area?.value || ''));
       }
     }
-  });
+  }, opts);
 
   documentRef.addEventListener('change', event => {
     const action = event.target.dataset.action;
@@ -1018,7 +1021,7 @@ export function registerAppEvents(deps) {
       }
       event.target.value = '';
     }
-  });
+  }, opts);
 
   documentRef.addEventListener('submit', event => {
     const form = event.target.dataset.form;
@@ -1149,12 +1152,14 @@ export function registerAppEvents(deps) {
       store.dispatch(thunks.saveAdminStorageConfig({ ...config, bindings: updatedBindings }));
       return;
     }
-  });
+  }, opts);
 
   const mq = windowRef.matchMedia('(prefers-color-scheme: dark)');
   mq.addEventListener('change', e => {
     if (!localStorage.getItem('theme')) {
       documentRef.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
     }
-  });
+  }, opts);
+
+  return () => ac.abort();
 }

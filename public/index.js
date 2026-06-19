@@ -211,7 +211,7 @@ const { renderUploadsPanel } = createUploadsRenderer({
   escapeHtml,
 });
 
-registerAppEvents({
+const destroyEvents = registerAppEvents({
   documentRef: document,
   windowRef: window,
   store,
@@ -237,6 +237,12 @@ registerAppEvents({
   getSearchTimer: () => searchTimer,
   syncHomeUrl: (path, query) => syncHomeUrlHelper(page, path, query),
 });
+
+function renderRegion(container, htmlString) {
+  const next = container.cloneNode(false);
+  next.innerHTML = htmlString;
+  morphdom(container, next, { childrenOnly: true });
+}
 
 function render() {
   const state = store.getState();
@@ -264,13 +270,31 @@ function render() {
         `
         : ''
     }
-    ${modalRenderer(state)}
-    ${toastRenderer(state)}
-    ${page === 'home' ? renderUploadsPanel(state) : ''}
+    <div data-region="modal"></div>
+    <div data-region="toast"></div>
+    ${page === 'home' ? '<div data-region="uploads"></div>' : ''}
   `;
   const next = root.cloneNode(false);
   next.innerHTML = html;
   morphdom(root, next, { childrenOnly: true });
+}
+
+function renderModal() {
+  const state = store.getState();
+  const el = root.querySelector('[data-region="modal"]');
+  if (el) renderRegion(el, modalRenderer(state));
+}
+
+function renderToast() {
+  const state = store.getState();
+  const el = root.querySelector('[data-region="toast"]');
+  if (el) renderRegion(el, toastRenderer(state));
+}
+
+function renderUploads() {
+  const state = store.getState();
+  const el = root.querySelector('[data-region="uploads"]');
+  if (el) renderRegion(el, renderUploadsPanel(state));
 }
 
 function renderHeader(state) {
@@ -363,8 +387,29 @@ function startNotificationPolling(store, thunks) {
   }, 30000);
 }
 
-store.subscribe(render);
+function subscribeSlice(selector, fn) {
+  let prev = selector(store.getState());
+  return store.subscribe(() => {
+    const next = selector(store.getState());
+    if (next !== prev) {
+      prev = next;
+      fn();
+    }
+  });
+}
+
+subscribeSlice(
+  s => page === 'home' ? s.explorer : page === 'admin' ? s.admin : page === 'share' ? s.share : null,
+  render,
+);
+subscribeSlice(s => s.app.modal, renderModal);
+subscribeSlice(s => s.app.toast, renderToast);
+subscribeSlice(s => s.uploads, renderUploads);
+
 render();
+renderModal();
+renderToast();
+renderUploads();
 
 store.dispatch(actions.app.setNow(Date.now()));
 store.dispatch(thunks.loadRole()).then(async () => {
@@ -392,5 +437,11 @@ store.dispatch(thunks.loadRole()).then(async () => {
   } else if (page === 'share') {
     await store.dispatch(thunks.loadShare());
   }
+});
+
+window.addEventListener('beforeunload', () => {
+  destroyEvents();
+  unsubscribe();
+  if (notifPollTimer) clearInterval(notifPollTimer);
 });
 

@@ -47,9 +47,8 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
     }
     return rows;
   };
-  const sqlTimestamp = (value = Date.now()) => new Date(value).toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
   const materializedLogs = () => [...logs]
-    .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')) || Number(b.id || 0) - Number(a.id || 0));
+    .sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0) || Number(b.id || 0) - Number(a.id || 0));
   const filteredLogs = (sql = '', bound = []) => {
     let rows = materializedLogs();
     let idx = 0;
@@ -70,12 +69,12 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
       rows = rows.filter(row => String(row.ip || '').toLowerCase().includes(ip));
     }
     if (/timestamp >= \?/i.test(sql)) {
-      const from = String(bound[idx++] || '');
-      rows = rows.filter(row => String(row.timestamp || '') >= from);
+      const ts = Number(bound[idx++] || 0);
+      rows = rows.filter(row => Number(row.timestamp || 0) >= ts);
     }
     if (/timestamp <= \?/i.test(sql)) {
-      const to = String(bound[idx++] || '');
-      rows = rows.filter(row => String(row.timestamp || '') <= to);
+      const ts = Number(bound[idx++] || 0);
+      rows = rows.filter(row => Number(row.timestamp || 0) <= ts);
     }
     return rows;
   };
@@ -191,6 +190,34 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             return statement;
           },
           async run() {
+            let changes = 0;
+            if (/UPDATE file_tasks\s+SET/i.test(sql)) {
+              const id = statement.bound?.at(-1);
+              const row = taskRows.find(item => item.id === id);
+              if (row) {
+                const clause = sql.replace(/.*SET\s+/i, '').replace(/\s+WHERE.*/i, '').trim();
+                const parts = clause.split(',').map(p => p.trim());
+                let pi = 0;
+                for (const part of parts) {
+                  const m = part.match(/^(\w+)\s*=/);
+                  if (!m) { pi++; continue; }
+                  const col = m[1];
+                  const val = statement.bound?.[pi];
+                  if (col === 'status') row.status = String(val ?? '');
+                  else if (col === 'error') row.error = String(val ?? '');
+                  else if (col === 'total') row.total = Number(val ?? 0);
+                  else if (col === 'completed') row.completed = Number(val ?? 0);
+                  else if (col === 'failed') row.failed = Number(val ?? 0);
+                  else if (col === 'finished_at') row.finished_at = Number(val ?? 0);
+                  else if (col === 'updated_at') row.updated_at = Number(val ?? 0);
+                  else if (col === 'result') {
+                    if (val && typeof val === 'object' && !Array.isArray(val)) row.result = JSON.stringify(val);
+                    else row.result = String(val ?? '{}');
+                  }
+                  pi++;
+                }
+              }
+            }
             if (/INSERT INTO logs/i.test(sql)) {
               logs.push({
                 id: logNextId++,
@@ -203,7 +230,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 target_path: statement.bound?.[6] || '',
                 error_code: statement.bound?.[7] || '',
                 metadata: statement.bound?.[8] || '',
-                timestamp: sqlTimestamp(),
+                timestamp: statement.bound?.length >= 10 ? statement.bound?.[9] : Date.now(),
               });
             }
             if (/INSERT INTO trash/i.test(sql)) {
@@ -441,20 +468,6 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) row.expired_notified_at = statement.bound?.[0];
             }
-            if (/UPDATE file_tasks SET status = \?/i.test(sql)) {
-              const id = statement.bound?.[8];
-              const row = taskRows.find(item => item.id === id);
-              if (row) {
-                row.status = statement.bound?.[0];
-                row.total = statement.bound?.[1];
-                row.completed = statement.bound?.[2];
-                row.failed = statement.bound?.[3];
-                row.result = statement.bound?.[4];
-                row.error = statement.bound?.[5];
-                row.updated_at = statement.bound?.[6];
-                row.finished_at = statement.bound?.[7];
-              }
-            }
             if (/UPDATE share_links SET download_count = download_count \+ 1/i.test(sql)) {
               const row = shareRows.find(item => item.token === (statement.bound?.[2] ?? statement.bound?.[1]));
               if (row) {
@@ -467,39 +480,41 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const path = statement.bound?.[0];
               const prefix = String(statement.bound?.[1] || '').replace(/%$/, '');
               for (let i = fileIndexRows.length - 1; i >= 0; i--) {
-                if (fileIndexRows[i].path === path || fileIndexRows[i].path.startsWith(prefix)) fileIndexRows.splice(i, 1);
+                if (fileIndexRows[i].path === path || fileIndexRows[i].path.startsWith(prefix)) { fileIndexRows.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM file_index$/i.test(sql.trim())) {
+              changes = fileIndexRows.length;
               fileIndexRows.length = 0;
             }
             if (/DELETE FROM path_access_attempts$/i.test(sql.trim())) {
+              changes = pathAttemptRows.length;
               pathAttemptRows.length = 0;
             }
             if (/DELETE FROM logs WHERE timestamp < \?/i.test(sql)) {
-              const cutoff = String(statement.bound?.[0] || '');
+              const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = logs.length - 1; i >= 0; i--) {
-                if (String(logs[i].timestamp || '') < cutoff) logs.splice(i, 1);
+                if (Number(logs[i].timestamp || 0) < cutoff) { logs.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM logs WHERE id NOT IN/i.test(sql)) {
               const limit = Number(statement.bound?.[0] || 2000);
               const keep = new Set(materializedLogs().slice(0, limit).map(row => row.id));
               for (let i = logs.length - 1; i >= 0; i--) {
-                if (!keep.has(logs[i].id)) logs.splice(i, 1);
+                if (!keep.has(logs[i].id)) { logs.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM download_bursts WHERE window_start < \? AND last_alert < \?/i.test(sql)) {
               const [windowCutoff, alertCutoff] = statement.bound || [];
               for (let i = downloadBurstRows.length - 1; i >= 0; i--) {
                 const row = downloadBurstRows[i];
-                if (Number(row.window_start || 0) < windowCutoff && Number(row.last_alert || 0) < alertCutoff) downloadBurstRows.splice(i, 1);
+                if (Number(row.window_start || 0) < windowCutoff && Number(row.last_alert || 0) < alertCutoff) { downloadBurstRows.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM webhook_deliveries WHERE created_at < \?/i.test(sql)) {
               const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = webhookDeliveryRows.length - 1; i >= 0; i--) {
-                if (Number(webhookDeliveryRows[i].created_at || 0) < cutoff) webhookDeliveryRows.splice(i, 1);
+                if (Number(webhookDeliveryRows[i].created_at || 0) < cutoff) { webhookDeliveryRows.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM webhook_deliveries WHERE id NOT IN/i.test(sql)) {
@@ -511,13 +526,13 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                   .map(row => row.id)
               );
               for (let i = webhookDeliveryRows.length - 1; i >= 0; i--) {
-                if (!keep.has(webhookDeliveryRows[i].id)) webhookDeliveryRows.splice(i, 1);
+                if (!keep.has(webhookDeliveryRows[i].id)) { webhookDeliveryRows.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM system_warnings WHERE created_at < \?/i.test(sql)) {
               const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = systemWarningRows.length - 1; i >= 0; i--) {
-                if (Number(systemWarningRows[i].created_at || 0) < cutoff) systemWarningRows.splice(i, 1);
+                if (Number(systemWarningRows[i].created_at || 0) < cutoff) { systemWarningRows.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM system_warnings WHERE id NOT IN/i.test(sql)) {
@@ -529,10 +544,11 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                   .map(row => row.id)
               );
               for (let i = systemWarningRows.length - 1; i >= 0; i--) {
-                if (!keep.has(systemWarningRows[i].id)) systemWarningRows.splice(i, 1);
+                if (!keep.has(systemWarningRows[i].id)) { systemWarningRows.splice(i, 1); changes++; }
               }
             }
             if (/^DELETE FROM system_warnings$/i.test(sql.trim())) {
+              changes = systemWarningRows.length;
               systemWarningRows.length = 0;
             }
             if (/UPDATE system_warnings SET acknowledged_at = \? WHERE acknowledged_at = 0/i.test(sql)) {
@@ -545,12 +561,12 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = taskRows.length - 1; i >= 0; i--) {
                 const row = taskRows[i];
-                if (!['queued', 'running'].includes(row.status) && Number(row.finished_at || 0) > 0 && Number(row.finished_at || 0) < cutoff) taskRows.splice(i, 1);
+                if (!['queued', 'running'].includes(row.status) && Number(row.finished_at || 0) > 0 && Number(row.finished_at || 0) < cutoff) { taskRows.splice(i, 1); changes++; }
               }
             }
             if (/^DELETE FROM file_tasks WHERE status NOT IN \('queued', 'running'\)$/i.test(sql.trim())) {
               for (let i = taskRows.length - 1; i >= 0; i--) {
-                if (!['queued', 'running'].includes(taskRows[i].status)) taskRows.splice(i, 1);
+                if (!['queued', 'running'].includes(taskRows[i].status)) { taskRows.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM file_tasks\s+WHERE status NOT IN \('queued', 'running'\)\s+AND id NOT IN/i.test(sql)) {
@@ -561,10 +577,10 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 .slice(0, limit);
               const keep = new Set(completed.map(row => row.id));
               for (let i = taskRows.length - 1; i >= 0; i--) {
-                if (!['queued', 'running'].includes(taskRows[i].status) && !keep.has(taskRows[i].id)) taskRows.splice(i, 1);
+                if (!['queued', 'running'].includes(taskRows[i].status) && !keep.has(taskRows[i].id)) { taskRows.splice(i, 1); changes++; }
               }
             }
-            return {};
+            return { meta: { changes } };
           },
           async first() {
             if (/SELECT COUNT\(\*\) as count FROM file_index WHERE storage_id = \? AND COALESCE\(NULLIF\(object_key, ''\), path\) = \?/i.test(sql)) {

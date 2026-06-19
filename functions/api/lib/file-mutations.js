@@ -61,13 +61,13 @@ function assertPathList(paths) {
 }
 
 /**
- * Check if a key exists in R2 (as object or prefix).
- * @param {Env} env
- * @param {string} key
- * @returns {Promise<boolean>}
+ * Check if a key exists (as object or prefix).
+ * Fast path: file index lookup only (covers all managed files).
+ * Full path: fallback to R2/S3 storage check for orphaned objects.
  */
 async function keyExists(env, key) {
-  if (await getFileIndexEntry(env, key)) return true;
+  const entry = await getFileIndexEntry(env, key);
+  if (entry) return true;
   const storageId = await resolveExistingStorageId(env, key);
   if (await storageHead(env, storageId, key)) return true;
   const listed = await storageList(env, storageId, { prefix: key + '/', limit: 1 });
@@ -106,10 +106,15 @@ async function resolveUploadConflict(env, key, mode = 'error') {
   const dot = name.lastIndexOf('.');
   const base = dot > 0 ? name.slice(0, dot) : name;
   const ext = dot > 0 ? name.slice(dot) : '';
-  for (let i = 1; i <= 999; i++) {
-    const candidate = `${dir}${base} (${i})${ext}`;
-    if (!(await keyExists(env, candidate))) return { key: candidate, skipped: false, conflict: true };
-  }
+  const candidates = Array.from({ length: 100 }, (_, i) => `${dir}${base} (${i + 1})${ext}`);
+  const placeholders = candidates.map(() => '?').join(',');
+  try {
+    const existing = await env.D1.prepare(`SELECT path FROM file_index WHERE path IN (${placeholders})`).bind(...candidates).all();
+    const existingSet = new Set((existing.results || []).map(r => r.path));
+    for (const candidate of candidates) {
+      if (!existingSet.has(candidate)) return { key: candidate, skipped: false, conflict: true };
+    }
+  } catch (_) {}
   throw new Error('Unable to generate unique filename');
 }
 

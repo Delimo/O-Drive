@@ -32,28 +32,24 @@ export async function checkRateLimit(db, key, maxRequests = 60, windowMs = 60000
       await db.prepare('DELETE FROM api_rate_limits WHERE window_start < ?').bind(windowStart).run();
     }
 
+    // Atomic UPSERT: creates row if missing, resets if window expired, otherwise increments
+    await db.prepare(
+      `INSERT INTO api_rate_limits (key, request_count, window_start) VALUES (?, 1, ?)
+       ON CONFLICT(key) DO UPDATE SET
+         request_count = CASE WHEN ? > window_start + ? THEN 1 ELSE request_count + 1 END,
+         window_start = CASE WHEN ? > window_start + ? THEN ? ELSE window_start END`
+    ).bind(key, now, now, windowMs, now, windowMs, now).run();
+
     const row = await db.prepare(
       'SELECT request_count, window_start FROM api_rate_limits WHERE key = ?'
     ).bind(key).first();
 
-    if (!row || row.window_start < windowStart) {
-      // New window
-      await db.prepare(
-        'INSERT OR REPLACE INTO api_rate_limits (key, request_count, window_start) VALUES (?, 1, ?)'
-      ).bind(key, now).run();
-      return { allowed: true, remaining: maxRequests - 1, retryAfter: 0 };
-    }
-
-    if (row.request_count >= maxRequests) {
+    if (row.request_count > maxRequests) {
       const retryAfter = Math.ceil((row.window_start + windowMs - now) / 1000);
       return { allowed: false, remaining: 0, retryAfter };
     }
 
-    await db.prepare(
-      'UPDATE api_rate_limits SET request_count = request_count + 1 WHERE key = ?'
-    ).bind(key).run();
-
-    return { allowed: true, remaining: maxRequests - row.request_count - 1, retryAfter: 0 };
+    return { allowed: true, remaining: maxRequests - row.request_count, retryAfter: 0 };
   } catch {
     // If rate limiting fails, allow the request (fail open)
     return { allowed: true, remaining: maxRequests, retryAfter: 0 };

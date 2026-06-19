@@ -48,14 +48,8 @@ import { handleProtectedSettings, handleProtectedUnlock } from './protected-path
 import { handleAdminShares } from './shares.js';
 import { createFileTask, getFileTask, updateFileTask } from './tasks.js';
 import { notifyDownloadBurst, notifyWebhookWithLog } from './webhooks.js';
-import { assertBodySize, jsonResponse, recordSystemWarning } from './common.js';
+import { assertBodySize, jsonResponse, recordSystemWarning, waitForWebhook } from './common.js';
 import { checkDownloadBlocked, recordDownloadBurst } from './download-bursts.js';
-
-function waitForWebhook(context, promise) {
-  if (!promise) return;
-  if (typeof context?.waitUntil === 'function') context.waitUntil(promise.catch(() => {}));
-  else promise.catch(() => {});
-}
 
 async function notifyConfiguredWebhooks(env, context, notifyFn) {
   try {
