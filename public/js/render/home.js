@@ -13,6 +13,13 @@ export function createHomeRenderers(deps) {
     renderTrashBatchBar,
     renderEmptyState,
     escapeHtml,
+    inferKind,
+    canPreview,
+    formatTime,
+    entryKey,
+    iconForKind,
+    iconClass,
+    thumbnailUrl,
   } = deps;
 
   function renderHomePage(state) {
@@ -180,8 +187,13 @@ export function createHomeRenderers(deps) {
 
     if (entries.length) {
       const isList = explorer.view === 'list';
+      
+      if (isList) {
+        return renderListTable(state, entries, showBackButton, parentPath);
+      }
+      
       return `
-        <div class="file-grid ${isList ? 'is-list' : ''}">
+        <div class="file-grid">
           ${showBackButton ? `
           <article class="item-card item-card-back" data-action="crumb" data-path="${escapeHtml(parentPath)}">
             <div class="item-icon file">
@@ -191,16 +203,6 @@ export function createHomeRenderers(deps) {
               <h3 class="item-title">返回上一层</h3>
             </div>
           </article>
-          ` : ''}
-          ${isList ? `
-          <div class="list-header">
-            <span></span>
-            <span></span>
-            <span>名称</span>
-            <span style="text-align:right">大小</span>
-            <span style="text-align:right">修改时间</span>
-            <span style="text-align:right">操作</span>
-          </div>
           ` : ''}
           ${entries.map(item => renderEntryCard(item, state)).join('')}
         </div>
@@ -216,6 +218,159 @@ export function createHomeRenderers(deps) {
           : '可以直接上传文件，或者先新建一个文件夹。',
       '<span></span>',
     );
+  }
+
+  function renderListTable(state, entries, showBackButton, parentPath) {
+    const explorer = state.explorer;
+    const sortField = explorer.sortField || 'name';
+    const sortDir = explorer.sortDir || 'asc';
+    
+    const getSortIcon = (field) => {
+      if (sortField !== field) return '<span class="sort-icon">↕</span>';
+      return sortDir === 'asc' 
+        ? '<span class="sort-icon">↑</span>' 
+        : '<span class="sort-icon">↓</span>';
+    };
+
+    const getSortClass = (field) => sortField === field ? 'sort-active' : '';
+
+    return `
+      <div class="list-table-wrap">
+        <table class="list-table">
+          <thead>
+            <tr>
+              <th class="col-checkbox">
+                <div class="th-inner">
+                  <button class="list-checkbox" data-action="toggle-all-pick" title="全选">
+                    ${icons.check}
+                  </button>
+                </div>
+              </th>
+              <th class="col-name">
+                <div class="th-inner">名称</div>
+              </th>
+              <th class="col-size col-sortable ${getSortClass('size')}" data-action="sort-list" data-field="size">
+                <div class="th-inner">
+                  大小
+                  ${getSortIcon('size')}
+                </div>
+              </th>
+              <th class="col-time col-sortable ${getSortClass('time')}" data-action="sort-list" data-field="time">
+                <div class="th-inner">
+                  修改时间
+                  ${getSortIcon('time')}
+                </div>
+              </th>
+              <th class="col-ops">
+                <div class="th-inner">操作</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            ${showBackButton ? `
+            <tr class="row-back">
+              <td colspan="5">
+                <button class="list-back-btn" data-action="crumb" data-path="${escapeHtml(parentPath)}">
+                  ${icons.arrowLeft}
+                  <span>返回上一层</span>
+                </button>
+              </td>
+            </tr>
+            ` : ''}
+            ${entries.map(item => renderListRow(item, state)).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderListRow(item, state) {
+    const key = entryKey(item);
+    const picked = state.explorer.selectedKeys.includes(key);
+    const kind = item.kind || inferKind(item);
+    const isFolder = kind === 'folder';
+    const isImage = kind === 'image';
+    const path = item.fullKey || item.original_key || item.path || item.name || '';
+    
+    const sizeText = isFolder 
+      ? (item.sizeFormatted || '—') 
+      : (item.sizeFormatted || formatBytes(item.rawSize || 0));
+    
+    const timeText = item.time 
+      ? formatListTime(item.time) 
+      : '—';
+    
+    const fileName = item.name || '未命名';
+    const displayName = fileName.length > 40 
+      ? fileName.substring(0, 37) + '...' 
+      : fileName;
+
+    const iconContent = isImage && thumbnailUrl
+      ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('cell-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
+      : iconForKind(kind);
+
+    return `
+      <tr class="${picked ? 'is-selected' : ''}" data-key="${escapeHtml(key)}">
+        <td class="col-checkbox">
+          <button class="list-checkbox ${picked ? 'is-checked' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
+            ${picked ? icons.check : ''}
+          </button>
+        </td>
+        <td class="col-name">
+          <div class="list-name-cell" data-action="open-entry" data-key="${escapeHtml(key)}">
+            <div class="cell-icon ${iconClass(kind)} ${isImage ? 'item-icon-image' : ''}">
+              ${iconContent}
+            </div>
+            <div class="cell-name">
+              <span class="cell-name-text" data-tooltip="${escapeHtml(fileName)}">${escapeHtml(displayName)}</span>
+              ${isFolder ? '<span class="cell-name-sub">文件夹</span>' : ''}
+            </div>
+          </div>
+        </td>
+        <td class="col-size">
+          <span class="list-cell-text ${isFolder ? 'list-cell-placeholder' : ''}">${escapeHtml(sizeText)}</span>
+        </td>
+        <td class="col-time">
+          <span class="list-cell-text">${escapeHtml(timeText)}</span>
+        </td>
+        <td class="col-ops">
+          <div class="list-ops-cell">
+            <div class="list-ops-actions">
+              ${!isFolder && canPreview(item) ? `<button class="list-ops-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ''}
+              ${!isFolder ? `<button class="list-ops-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">${icons.download}</button>` : ''}
+              <button class="list-ops-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">${icons.info}</button>
+            </div>
+            <button class="list-ops-more" data-action="open-list-menu" data-key="${escapeHtml(key)}">
+              ${icons.more}
+            </button>
+            <div class="list-popover" data-menu-for="${escapeHtml(key)}" style="display:none">
+              ${!isFolder && canPreview(item) ? `<button class="list-popover-item" data-action="preview" data-key="${escapeHtml(key)}">${icons.eye} 预览</button>` : ''}
+              ${!isFolder ? `<button class="list-popover-item" data-action="download" data-key="${escapeHtml(key)}">${icons.download} 下载</button>` : ''}
+              <button class="list-popover-item" data-action="info" data-key="${escapeHtml(key)}">${icons.info} 详细信息</button>
+              <div class="list-popover-sep"></div>
+              ${state.app.role === 'admin' ? `
+                <button class="list-popover-item" data-action="open-rename-modal" data-key="${escapeHtml(key)}">重命名</button>
+                <button class="list-popover-item" data-action="open-share-modal" data-key="${escapeHtml(key)}">分享</button>
+                <button class="list-popover-item" data-action="copy-selected" data-key="${escapeHtml(key)}">复制</button>
+                <button class="list-popover-item" data-action="move-selected" data-key="${escapeHtml(key)}">移动</button>
+                <button class="list-popover-item danger" data-action="delete-selected" data-key="${escapeHtml(key)}">删除</button>
+              ` : ''}
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function formatListTime(timestamp) {
+    if (!timestamp) return '—';
+    const date = new Date(timestamp * 1000);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
 
   return {

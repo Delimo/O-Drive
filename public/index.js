@@ -194,6 +194,13 @@ const { renderHomePage: homeRenderer } = createHomeRenderers({
   renderTrashBatchBar: sharedRenderTrashBatchBar,
   renderEmptyState: sharedRenderEmptyState,
   formatBytes,
+  inferKind,
+  canPreview,
+  formatTime,
+  entryKey,
+  iconForKind,
+  iconClass,
+  thumbnailUrl: apiClient.thumbnailUrl,
 });
 
 const { renderAdminPage: adminRenderer, renderSharePage: shareRenderer } = createPageRenderers({
