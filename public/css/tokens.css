@@ -51,3 +51,8 @@
   --toast-bg: rgba(30, 41, 59, 0.95);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
+
+[data-theme="dark"] .item-icon svg,
+[data-theme="dark"] .cell-icon svg {
+  filter: brightness(0.85) saturate(0.9);
+}

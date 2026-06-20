@@ -6,9 +6,12 @@ export function inferKind(item) {
   if (/\.(mp3|wav|aac|flac|ogg|m4a)$/.test(key)) return "audio";
   if (/\.pdf$/.test(key)) return "pdf";
   if (/\.(zip|rar|7z|tar|gz|tgz)$/.test(key)) return "archive";
-  if (/\.(js|ts|tsx|jsx|json|md|txt|csv|html|css|xml|yml|yaml)$/.test(key))
-    return "text";
-  if (/\.(exe|msi|dmg|apk|ipa)$/.test(key)) return "app";
+  if (/\.(js|ts|tsx|jsx|json|css|less|expression)$/.test(key)) return "code";
+  if (/\.(md|txt|csv|html|xml|yml|yaml)$/.test(key)) return "text";
+  if (/\.(java|py|rb|php|rust|vbs|script|sh|bash)$/.test(key)) return "script";
+  if (/\.(doc|docx|ppt|pptx|xls|xlsx)$/.test(key)) return "document";
+  if (/\.(exe|msi|dmg|apk|ipa|dll|deb|rpm)$/.test(key)) return "app";
+  if (/\.(obj|fbx|glb|gltf|stl|3ds)$/.test(key)) return "model3d";
   return "file";
 }
 
@@ -24,7 +27,7 @@ export function iconForKind(kind, icons) {
 }
 
 export function iconClass(kind) {
-  if (["folder", "image", "video", "audio", "pdf", "archive"].includes(kind))
+  if (["folder", "image", "video", "audio", "pdf", "archive", "code", "script", "document", "model3d"].includes(kind))
     return kind;
   return "file";
 }
