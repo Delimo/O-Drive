@@ -1,13 +1,15 @@
-import { CHUNK_SIZE } from '../constants.js';
+import { CHUNK_SIZE } from "../constants.js";
 
-const _isMock = new URLSearchParams(window.location.search).get('mock') === '1';
-const _mockModule = _isMock ? import('../mock/index.js') : null;
+const _isMock = new URLSearchParams(window.location.search).get("mock") === "1";
+const _mockModule = _isMock ? import("../mock/index.js") : null;
 
 let _audioCtx;
 
 function showNotificationAlert(message) {
   try {
-    const ctx = _audioCtx || (_audioCtx = new (window.AudioContext || window.webkitAudioContext)());
+    const ctx =
+      _audioCtx ||
+      (_audioCtx = new (window.AudioContext || window.webkitAudioContext)());
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -20,10 +22,10 @@ function showNotificationAlert(message) {
     osc.stop(ctx.currentTime + 0.4);
   } catch (_) {}
   try {
-    if (typeof Notification === 'undefined') return;
-    if (Notification.permission === 'granted') {
-      new Notification('O-Drive 通知', { body: message, icon: '/favicon.ico' });
-    } else if (Notification.permission !== 'denied') {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission === "granted") {
+      new Notification("O-Drive 通知", { body: message, icon: "/favicon.ico" });
+    } else if (Notification.permission !== "denied") {
       Notification.requestPermission();
     }
   } catch (_) {}
@@ -62,25 +64,25 @@ export function createThunks(deps) {
 
   let uploadIdSeq = 0;
   const nextUploadId = () => `up-${Date.now()}-${(uploadIdSeq += 1)}`;
-  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const thunks = {
-    loadRole: () => async dispatch => {
+    loadRole: () => async (dispatch) => {
       if (mock) {
-        dispatch(actions.app.setRole({ role: 'admin', csrf: 'mock-csrf' }));
+        dispatch(actions.app.setRole({ role: "admin", csrf: "mock-csrf" }));
         dispatch(actions.app.setBooting(false));
         return;
       }
       try {
         const { response, data } = await authApi.loadRole();
         if (!response.ok) {
-          dispatch(actions.app.setRole({ role: 'guest', csrf: '' }));
+          dispatch(actions.app.setRole({ role: "guest", csrf: "" }));
           dispatch(actions.app.setBooting(false));
           return;
         }
         dispatch(actions.app.setRole(data));
       } catch (_) {
-        dispatch(actions.app.setRole({ role: 'guest', csrf: '' }));
+        dispatch(actions.app.setRole({ role: "guest", csrf: "" }));
       } finally {
         dispatch(actions.app.setBooting(false));
       }
@@ -88,20 +90,28 @@ export function createThunks(deps) {
     loadExplorer: () => async (dispatch, getState) => {
       const state = getState();
       dispatch(actions.explorer.setLoading(true));
-      dispatch(actions.explorer.setSelection(''));
+      dispatch(actions.explorer.setSelection(""));
       const path = normalizeKey(state.explorer.path);
       const query = state.explorer.query.trim();
-      dispatch(actions.explorer.setSearching(Boolean(query) && !state.explorer.trashMode));
+      dispatch(
+        actions.explorer.setSearching(
+          Boolean(query) && !state.explorer.trashMode,
+        ),
+      );
 
       if (mock) {
         const m = await _mockModule;
-        dispatch(actions.explorer.setData({
-          folders: query ? [] : m.mockFolders,
-          files: query
-            ? m.mockFiles.filter(f => f.name.toLowerCase().includes(query.toLowerCase()))
-            : m.mockFiles,
-          storageId: 'r2',
-        }));
+        dispatch(
+          actions.explorer.setData({
+            folders: query ? [] : m.mockFolders,
+            files: query
+              ? m.mockFiles.filter((f) =>
+                  f.name.toLowerCase().includes(query.toLowerCase()),
+                )
+              : m.mockFiles,
+            storageId: "r2",
+          }),
+        );
         dispatch(actions.explorer.setSearching(false));
         syncHomeUrl(path, query);
         return;
@@ -110,41 +120,55 @@ export function createThunks(deps) {
       try {
         if (state.explorer.trashMode) {
           const { response, data } = await trashApi.list(query);
-          if (!response.ok) throw new Error(data?.message || '回收站加载失败');
+          if (!response.ok) throw new Error(data?.message || "回收站加载失败");
           dispatch(actions.explorer.setData({ trashItems: data.items || [] }));
           return;
         }
 
         if (query) {
-          const scope = path ? `/${path}` : '/';
-          const { filterKind, filterMinSize, filterMaxSize, filterDateFrom, filterDateTo } = state.explorer;
-          const { response, data } = await fileApi.search(query, scope, '', {
-            kind: filterKind !== 'all' ? filterKind : '',
-            minSize: filterMinSize || '',
-            maxSize: filterMaxSize || '',
-            modifiedAfter: filterDateFrom || '',
-            modifiedBefore: filterDateTo || '',
+          const scope = path ? `/${path}` : "/";
+          const {
+            filterKind,
+            filterMinSize,
+            filterMaxSize,
+            filterDateFrom,
+            filterDateTo,
+          } = state.explorer;
+          const { response, data } = await fileApi.search(query, scope, "", {
+            kind: filterKind !== "all" ? filterKind : "",
+            minSize: filterMinSize || "",
+            maxSize: filterMaxSize || "",
+            modifiedAfter: filterDateFrom || "",
+            modifiedBefore: filterDateTo || "",
           });
-          if (!response.ok) throw new Error(data?.message || '搜索失败');
-          dispatch(actions.explorer.setSearchData({ files: data.files || [], cursor: data.nextCursor || '', hasMore: Boolean(data.nextCursor) }));
+          if (!response.ok) throw new Error(data?.message || "搜索失败");
+          dispatch(
+            actions.explorer.setSearchData({
+              files: data.files || [],
+              cursor: data.nextCursor || "",
+              hasMore: Boolean(data.nextCursor),
+            }),
+          );
           return;
         }
 
         const { response, data } = await fileApi.list(path);
-        if (!response.ok) throw new Error(data?.message || '目录加载失败');
-        dispatch(actions.explorer.setData({
-          folders: data.folders || [],
-          files: data.files || [],
-          storageId: data.storageId || 'r2',
-        }));
+        if (!response.ok) throw new Error(data?.message || "目录加载失败");
+        dispatch(
+          actions.explorer.setData({
+            folders: data.folders || [],
+            files: data.files || [],
+            storageId: data.storageId || "r2",
+          }),
+        );
         syncHomeUrl(path, query);
       } catch (error) {
-        dispatch(actions.explorer.setError(error.message || '加载失败'));
+        dispatch(actions.explorer.setError(error.message || "加载失败"));
       } finally {
         dispatch(actions.explorer.setSearching(false));
       }
     },
-    loadAdminStats: () => async dispatch => {
+    loadAdminStats: () => async (dispatch) => {
       dispatch(actions.admin.setLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -153,13 +177,13 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await adminApi.stats();
-        if (!response.ok) throw new Error(data?.message || '后台概览加载失败');
+        if (!response.ok) throw new Error(data?.message || "后台概览加载失败");
         dispatch(actions.admin.setStats(data));
       } catch (error) {
-        dispatch(actions.admin.setError(error.message || '后台概览加载失败'));
+        dispatch(actions.admin.setError(error.message || "后台概览加载失败"));
       }
     },
-    loadAdminShares: () => async dispatch => {
+    loadAdminShares: () => async (dispatch) => {
       dispatch(actions.admin.setSharesLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -168,16 +192,18 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await shareApi.list();
-        if (!response.ok) throw new Error(data?.message || '分享列表加载失败');
+        if (!response.ok) throw new Error(data?.message || "分享列表加载失败");
         dispatch(actions.admin.setShares(data?.items || []));
       } catch (error) {
-        dispatch(actions.admin.setSharesError(error.message || '分享列表加载失败'));
+        dispatch(
+          actions.admin.setSharesError(error.message || "分享列表加载失败"),
+        );
       }
     },
     loadShare: () => async (dispatch, getState) => {
       const token = getState().share.token.trim();
       if (!token && !mock) {
-        dispatch(actions.share.setError('请提供分享 token。'));
+        dispatch(actions.share.setError("请提供分享 token。"));
         return;
       }
 
@@ -185,42 +211,57 @@ export function createThunks(deps) {
       if (mock) {
         const m = await _mockModule;
         dispatch(actions.share.setData(m.mockShareItem));
-        if (!token) dispatch(actions.share.setToken('mock-share-token'));
+        if (!token) dispatch(actions.share.setToken("mock-share-token"));
         return;
       }
       try {
         const { response, data } = await shareApi.info(token);
-        if (response.status === 403 && data?.code === 'SHARE_PASSWORD_REQUIRED') {
-          dispatch(actions.share.setPasswordRequired('该分享需要访问密码。'));
+        if (
+          response.status === 403 &&
+          data?.code === "SHARE_PASSWORD_REQUIRED"
+        ) {
+          dispatch(actions.share.setPasswordRequired("该分享需要访问密码。"));
           return;
         }
-        if (!response.ok) throw new Error(data?.message || '分享信息加载失败');
+        if (!response.ok) throw new Error(data?.message || "分享信息加载失败");
         dispatch(actions.share.setData(data.item));
       } catch (error) {
-        dispatch(actions.share.setError(error.message || '分享信息加载失败'));
+        dispatch(actions.share.setError(error.message || "分享信息加载失败"));
       }
     },
-    login: credentials => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    login: (credentials) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       const values = { username: credentials.username };
-      dispatch(actions.app.setModal({ type: 'login', loading: true, error: '', values }));
+      dispatch(
+        actions.app.setModal({
+          type: "login",
+          loading: true,
+          error: "",
+          values,
+        }),
+      );
       try {
         const { response, data } = await authApi.login(credentials);
         if (!response.ok || !data?.success) {
-          dispatch(actions.app.setModal({
-            type: 'login',
-            loading: false,
-            error: data?.message || '用户名或密码错误',
-            values,
-          }));
+          dispatch(
+            actions.app.setModal({
+              type: "login",
+              loading: false,
+              error: data?.message || "用户名或密码错误",
+              values,
+            }),
+          );
           return;
         }
 
         dispatch(actions.app.setModal(null));
         await dispatch(thunks.loadRole());
-        dispatchToast('success', '管理员登录成功');
+        dispatchToast("success", "管理员登录成功");
 
-        if (page === 'admin') {
+        if (page === "admin") {
           await Promise.all([
             dispatch(thunks.loadAdminStats()),
             dispatch(thunks.loadAdminShares()),
@@ -230,102 +271,145 @@ export function createThunks(deps) {
 
         await dispatch(thunks.loadExplorer());
       } catch (_) {
-        dispatch(actions.app.setModal({
-          type: 'login',
-          loading: false,
-          error: '登录请求失败',
-          values,
-        }));
+        dispatch(
+          actions.app.setModal({
+            type: "login",
+            loading: false,
+            error: "登录请求失败",
+            values,
+          }),
+        );
       }
     },
-    logout: () => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    logout: () => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         await authApi.logout();
-        dispatch(actions.app.setRole({ role: 'guest', csrf: '' }));
-        dispatchToast('success', '已退出管理员账户');
-        if (page === 'admin') {
-          dispatch(actions.admin.setError('当前未登录管理员账户。'));
+        dispatch(actions.app.setRole({ role: "guest", csrf: "" }));
+        dispatchToast("success", "已退出管理员账户");
+        if (page === "admin") {
+          dispatch(actions.admin.setError("当前未登录管理员账户。"));
           dispatch(actions.admin.setShares([]));
-          dispatch(actions.admin.setSharesError(''));
+          dispatch(actions.admin.setSharesError(""));
         }
-        if (page === 'home') {
+        if (page === "home") {
           dispatch(actions.explorer.setTrashMode(false));
           await dispatch(thunks.loadExplorer());
         }
       } catch (_) {
-        dispatchToast('error', '退出失败');
+        dispatchToast("error", "退出失败");
       }
     },
-    createFolder: folderName => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
-      const name = String(folderName || '').trim();
+    createFolder: (folderName) => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      const name = String(folderName || "").trim();
       if (!name) return;
 
       const state = getState();
       const path = normalizeKey(state.explorer.path);
       try {
-        const { response, data } = await fileApi.createFolder(path, name, state.explorer.storageId || 'r2');
-        if (!response.ok || !data?.success) throw new Error(data?.message || '创建文件夹失败');
+        const { response, data } = await fileApi.createFolder(
+          path,
+          name,
+          state.explorer.storageId || "r2",
+        );
+        if (!response.ok || !data?.success)
+          throw new Error(data?.message || "创建文件夹失败");
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', `已创建文件夹“${name}”`);
+        dispatchToast("success", `已创建文件夹“${name}”`);
         await dispatch(thunks.loadExplorer());
       } catch (error) {
-        dispatch(actions.app.setModal({
-          type: 'folder',
-          loading: false,
-          error: error.message || '创建文件夹失败',
-          values: { folderName: name },
-        }));
+        dispatch(
+          actions.app.setModal({
+            type: "folder",
+            loading: false,
+            error: error.message || "创建文件夹失败",
+            values: { folderName: name },
+          }),
+        );
       }
     },
-    uploadFiles: files => async (dispatch, getState) => {
+    uploadFiles: (files) => async (dispatch, getState) => {
       const state = getState();
-      const list = uploadService.prepareFiles(files, normalizeKey(state.explorer.path));
+      const list = uploadService.prepareFiles(
+        files,
+        normalizeKey(state.explorer.path),
+      );
       if (!list.length) return;
 
-      const queued = list.map(item => ({
+      const queued = list.map((item) => ({
         item,
         id: nextUploadId(),
-        name: item.relativeDir ? `${item.relativeDir}/${item.file.name}` : item.file.name,
+        name: item.relativeDir
+          ? `${item.relativeDir}/${item.file.name}`
+          : item.file.name,
         multipart: item.file.size > CHUNK_SIZE,
       }));
 
-      dispatch(actions.uploads.enqueue(queued.map(q => ({
-        id: q.id,
-        name: q.name,
-        status: 'pending',
-        progress: 0,
-        error: '',
-        multipart: q.multipart,
-      }))));
+      dispatch(
+        actions.uploads.enqueue(
+          queued.map((q) => ({
+            id: q.id,
+            name: q.name,
+            status: "pending",
+            progress: 0,
+            error: "",
+            multipart: q.multipart,
+          })),
+        ),
+      );
 
       if (mock) {
         for (const q of queued) {
-          dispatch(actions.uploads.update({ id: q.id, status: 'uploading', progress: 0 }));
+          dispatch(
+            actions.uploads.update({
+              id: q.id,
+              status: "uploading",
+              progress: 0,
+            }),
+          );
           for (const pct of [25, 55, 80, 100]) {
             await delay(160);
             dispatch(actions.uploads.update({ id: q.id, progress: pct }));
           }
-          dispatch(actions.uploads.update({ id: q.id, status: 'success', progress: 100 }));
+          dispatch(
+            actions.uploads.update({
+              id: q.id,
+              status: "success",
+              progress: 100,
+            }),
+          );
         }
-        dispatchToast('success', `已模拟上传 ${queued.length} 个文件（设计预览模式）`);
+        dispatchToast(
+          "success",
+          `已模拟上传 ${queued.length} 个文件（设计预览模式）`,
+        );
         return;
       }
 
       let uploaded = 0;
       let failed = 0;
       let cancelledItems = [];
-      let uploadTaskId = '';
+      let uploadTaskId = "";
 
-      const dirsToCreate = [...new Set(queued.filter(q => q.item.relativeDir).map(q => q.item.targetDir))];
+      const dirsToCreate = [
+        ...new Set(
+          queued.filter((q) => q.item.relativeDir).map((q) => q.item.targetDir),
+        ),
+      ];
       for (const dir of dirsToCreate) {
         await uploadService.ensureDirectoryTree(dir);
       }
 
       try {
-        const { response, data } = await taskApi.create('upload', {
-          files: queued.map(q => ({ name: q.name, size: q.item.file.size })),
+        const { response, data } = await taskApi.create("upload", {
+          files: queued.map((q) => ({ name: q.name, size: q.item.file.size })),
         });
         if (response.ok && data?.item?.id) {
           uploadTaskId = data.item.id;
@@ -346,46 +430,82 @@ export function createThunks(deps) {
 
       for (const q of queued) {
         const { item, multipart } = q;
-        dispatch(actions.uploads.update({ id: q.id, status: 'uploading', progress: 0 }));
+        dispatch(
+          actions.uploads.update({
+            id: q.id,
+            status: "uploading",
+            progress: 0,
+          }),
+        );
 
         try {
           const stateNow = getState();
-          const currentItem = stateNow.uploads.items.find(i => i.id === q.id);
-          if (currentItem?.status === 'cancelling') throw new Error('UPLOAD_CANCELLED');
+          const currentItem = stateNow.uploads.items.find((i) => i.id === q.id);
+          if (currentItem?.status === "cancelling")
+            throw new Error("UPLOAD_CANCELLED");
 
           const conflictMode = getState().uploads.conflictMode;
 
           if (multipart) {
             let cancelled = false;
-            await uploadService.multipartUpload(item, pct => {
-              const s = getState();
-              const ci = s.uploads.items.find(i => i.id === q.id);
-              if (ci?.status === 'cancelling') { cancelled = true; return; }
-              dispatch(actions.uploads.update({ id: q.id, progress: pct }));
-            }, null, conflictMode);
-            if (cancelled) throw new Error('UPLOAD_CANCELLED');
+            await uploadService.multipartUpload(
+              item,
+              (pct) => {
+                const s = getState();
+                const ci = s.uploads.items.find((i) => i.id === q.id);
+                if (ci?.status === "cancelling") {
+                  cancelled = true;
+                  return;
+                }
+                dispatch(actions.uploads.update({ id: q.id, progress: pct }));
+              },
+              () => {
+                const s = getState();
+                const ci = s.uploads.items.find((i) => i.id === q.id);
+                return ci?.status === "cancelling" || ci?.status === "paused";
+              },
+              conflictMode,
+            );
+            if (cancelled) throw new Error("UPLOAD_CANCELLED");
           } else {
-            const { response, data } = await uploadService.uploadSingle(item, pct => {
-              const s = getState();
-              const ci = s.uploads.items.find(i => i.id === q.id);
-              if (ci?.status === 'cancelling') throw new Error('UPLOAD_CANCELLED');
-              dispatch(actions.uploads.update({ id: q.id, progress: pct }));
-            }, conflictMode);
+            const { response, data } = await uploadService.uploadSingle(
+              item,
+              (pct) => {
+                const s = getState();
+                const ci = s.uploads.items.find((i) => i.id === q.id);
+                if (ci?.status === "cancelling")
+                  throw new Error("UPLOAD_CANCELLED");
+                dispatch(actions.uploads.update({ id: q.id, progress: pct }));
+              },
+              conflictMode,
+            );
             if (!response.ok || !data?.success) {
               throw new Error(data?.message || `上传 ${item.file.name} 失败`);
             }
           }
 
           uploaded += 1;
-          dispatch(actions.uploads.update({ id: q.id, status: 'success', progress: 100 }));
+          dispatch(
+            actions.uploads.update({
+              id: q.id,
+              status: "success",
+              progress: 100,
+            }),
+          );
           await updateTask();
         } catch (error) {
-          if (error.message === 'UPLOAD_CANCELLED') {
+          if (error.message === "UPLOAD_CANCELLED") {
             cancelledItems.push(q.id);
             dispatch(actions.uploads.setCancelled(q.id));
           } else {
             failed += 1;
-            dispatch(actions.uploads.update({ id: q.id, status: 'error', error: error.message || '上传失败' }));
+            dispatch(
+              actions.uploads.update({
+                id: q.id,
+                status: "error",
+                error: error.message || "上传失败",
+              }),
+            );
           }
           await updateTask();
         }
@@ -393,20 +513,24 @@ export function createThunks(deps) {
 
       if (uploadTaskId) {
         try {
-          const finalStatus = failed === 0 ? 'completed' : uploaded === 0 ? 'failed' : 'partial';
-          await taskApi.update(uploadTaskId, { status: finalStatus, finishedAt: Date.now() });
+          const finalStatus =
+            failed === 0 ? "completed" : uploaded === 0 ? "failed" : "partial";
+          await taskApi.update(uploadTaskId, {
+            status: finalStatus,
+            finishedAt: Date.now(),
+          });
         } catch (_) {}
-        dispatch(actions.admin.setActiveUploadTaskId(''));
+        dispatch(actions.admin.setActiveUploadTaskId(""));
       }
 
       if (failed === 0 && cancelledItems.length === 0) {
-        dispatchToast('success', `已上传 ${uploaded} 个文件`);
+        dispatchToast("success", `已上传 ${uploaded} 个文件`);
       } else if (uploaded === 0 && failed === 0) {
-        dispatchToast('info', `已取消 ${cancelledItems.length} 个文件`);
+        dispatchToast("info", `已取消 ${cancelledItems.length} 个文件`);
       } else if (uploaded === 0) {
-        dispatchToast('error', `上传失败 ${failed} 个文件`);
+        dispatchToast("error", `上传失败 ${failed} 个文件`);
       } else {
-        dispatchToast('error', `成功 ${uploaded} 个，失败 ${failed} 个`);
+        dispatchToast("error", `成功 ${uploaded} 个，失败 ${failed} 个`);
       }
       await dispatch(thunks.loadExplorer());
     },
@@ -416,117 +540,157 @@ export function createThunks(deps) {
       if (!cursor || state.explorer.loading) return;
       const query = state.explorer.query.trim();
       const path = normalizeKey(state.explorer.path);
-      const scope = path ? `/${path}` : '/';
-      const { filterKind, filterMinSize, filterMaxSize, filterDateFrom, filterDateTo } = state.explorer;
+      const scope = path ? `/${path}` : "/";
+      const {
+        filterKind,
+        filterMinSize,
+        filterMaxSize,
+        filterDateFrom,
+        filterDateTo,
+      } = state.explorer;
       dispatch(actions.explorer.setLoading(true));
       try {
         const { response, data } = await fileApi.search(query, scope, cursor, {
-          kind: filterKind !== 'all' ? filterKind : '',
-          minSize: filterMinSize || '',
-          maxSize: filterMaxSize || '',
-          modifiedAfter: filterDateFrom || '',
-          modifiedBefore: filterDateTo || '',
+          kind: filterKind !== "all" ? filterKind : "",
+          minSize: filterMinSize || "",
+          maxSize: filterMaxSize || "",
+          modifiedAfter: filterDateFrom || "",
+          modifiedBefore: filterDateTo || "",
         });
-        if (!response.ok) throw new Error(data?.message || '搜索失败');
-        dispatch(actions.explorer.appendSearchResults({ files: data.files || [], cursor: data.nextCursor || '', hasMore: Boolean(data.nextCursor) }));
+        if (!response.ok) throw new Error(data?.message || "搜索失败");
+        dispatch(
+          actions.explorer.appendSearchResults({
+            files: data.files || [],
+            cursor: data.nextCursor || "",
+            hasMore: Boolean(data.nextCursor),
+          }),
+        );
       } catch (error) {
-        dispatchToast('error', error.message || '加载更多结果失败');
+        dispatchToast("error", error.message || "加载更多结果失败");
         dispatch(actions.explorer.setLoading(false));
       }
     },
-    cancelFileUpload: id => async dispatch => {
+    cancelFileUpload: (id) => async (dispatch) => {
       dispatch(actions.uploads.cancelItem(id));
     },
-    pauseFileUpload: id => async dispatch => {
+    pauseFileUpload: (id) => async (dispatch) => {
       dispatch(actions.uploads.pauseItem(id));
     },
-    resumeFileUpload: id => async (dispatch, getState) => {
-      const item = getState().uploads.items.find(i => i.id === id);
+    resumeFileUpload: (id) => async (dispatch, getState) => {
+      const item = getState().uploads.items.find((i) => i.id === id);
       if (!item) return;
       if (item.multipart) {
-        dispatchToast('info', `分片上传暂不支持断点续传，将重新开始`);
+        dispatchToast("info", `分片上传暂不支持断点续传，将重新开始`);
       }
       dispatch(actions.uploads.resumeItem({ id }));
     },
-    retryFileUpload: id => async (dispatch, getState) => {
+    retryFileUpload: (id) => async (dispatch, getState) => {
       const state = getState();
-      const item = state.uploads.items.find(i => i.id === id);
+      const item = state.uploads.items.find((i) => i.id === id);
       if (!item) return;
       dispatch(actions.uploads.retryItem(id));
       const files = state.explorer.files || [];
       const folders = state.explorer.folders || [];
-      const entry = [...folders, ...files].find(e => e.name === item.name);
+      const entry = [...folders, ...files].find((e) => e.name === item.name);
       if (entry) {
-        dispatchToast('info', `重新上传 ${item.name}`);
+        dispatchToast("info", `重新上传 ${item.name}`);
         return;
       }
     },
-    previewEntry: entry => async dispatch => {
+    previewEntry: (entry) => async (dispatch) => {
       if (!entry || !getEntryPath(entry)) return;
 
       if (requiresProtectedUnlock(entry)) {
-        openProtectedUnlockModal(getEntryPath(entry), createDeferredAction('preview', { path: getEntryPath(entry) }));
+        openProtectedUnlockModal(
+          getEntryPath(entry),
+          createDeferredAction("preview", { path: getEntryPath(entry) }),
+        );
         return;
       }
 
       const baseModal = previewService.createModal(entry);
       dispatch(actions.app.setModal(baseModal));
-      if (baseModal.contentMode !== 'text') {
+      if (baseModal.contentMode !== "text") {
         dispatch(actions.app.setModal({ ...baseModal, loading: false }));
         return;
       }
 
       if (mock) {
         const m = await _mockModule;
-        dispatch(actions.app.setModal({ ...baseModal, loading: false, content: m.mockTextContent(entry) }));
+        dispatch(
+          actions.app.setModal({
+            ...baseModal,
+            loading: false,
+            content: m.mockTextContent(entry),
+          }),
+        );
         return;
       }
 
       try {
         const { response, text } = await previewService.fetchText(entry);
         if (!response.ok) throw new Error(`读取失败 (${response.status})`);
-        dispatch(actions.app.setModal({ ...baseModal, loading: false, content: text }));
+        dispatch(
+          actions.app.setModal({ ...baseModal, loading: false, content: text }),
+        );
       } catch (error) {
-        dispatch(actions.app.setModal({ ...baseModal, loading: false, error: error.message || '预览失败' }));
+        dispatch(
+          actions.app.setModal({
+            ...baseModal,
+            loading: false,
+            error: error.message || "预览失败",
+          }),
+        );
       }
     },
-    savePreviewText: content => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    savePreviewText: (content) => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       const modal = getState().app.modal;
-      const path = modal?.entry ? getEntryPath(modal.entry) : '';
+      const path = modal?.entry ? getEntryPath(modal.entry) : "";
       if (!path) return;
 
       try {
         const { response, data } = await fileApi.saveText(path, content);
-        if (!response.ok || data?.success === false) throw new Error(humanError(response, data, '保存失败'));
+        if (!response.ok || data?.success === false)
+          throw new Error(humanError(response, data, "保存失败"));
         const { draftContent: _, ...cleanModal } = modal;
-        dispatch(actions.app.setModal({ ...cleanModal, editing: false, content }));
-        dispatchToast('success', '文本内容已保存');
+        dispatch(
+          actions.app.setModal({ ...cleanModal, editing: false, content }),
+        );
+        dispatchToast("success", "文本内容已保存");
       } catch (error) {
-        dispatchToast('error', error.message || '保存失败');
+        dispatchToast("error", error.message || "保存失败");
       }
     },
-    createShare: entry => async dispatch => {
+    createShare: (entry) => async (dispatch) => {
       if (!entry || !getEntryPath(entry)) return;
-      dispatch(actions.app.setModal({
-        type: 'share',
-        loading: false,
-        error: '',
-        entry,
-        values: {
-          expiresInDays: '7',
-          maxDownloads: '0',
-          password: '',
-          allowPreview: true,
-          allowDownload: true,
-        },
-      }));
+      dispatch(
+        actions.app.setModal({
+          type: "share",
+          loading: false,
+          error: "",
+          entry,
+          values: {
+            expiresInDays: "7",
+            maxDownloads: "0",
+            password: "",
+            allowPreview: true,
+            allowDownload: true,
+          },
+        }),
+      );
     },
-    submitShare: values => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    submitShare: (values) => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       const modal = getState().app.modal;
       const entry = modal?.entry;
-      const path = entry ? getEntryPath(entry) : '';
+      const path = entry ? getEntryPath(entry) : "";
       if (!path) return;
 
       try {
@@ -534,205 +698,283 @@ export function createThunks(deps) {
           path,
           expiresInDays: Number(values.expiresInDays || 0),
           maxDownloads: Number(values.maxDownloads || 0),
-          password: String(values.password || '').trim(),
+          password: String(values.password || "").trim(),
           allowPreview: Boolean(values.allowPreview),
           allowDownload: Boolean(values.allowDownload),
         };
         const { response, data } = await shareApi.create(payload);
-        if (!response.ok || !data?.item?.token) throw new Error(humanError(response, data, '创建分享失败'));
+        if (!response.ok || !data?.item?.token)
+          throw new Error(humanError(response, data, "创建分享失败"));
 
         const link = `${window.location.origin}/share.html?token=${encodeURIComponent(data.item.token)}`;
-        await copyText(link, '分享链接已创建并复制');
+        await copyText(link, "分享链接已创建并复制");
         dispatch(actions.app.setModal(null));
 
-        if (page === 'admin') {
+        if (page === "admin") {
           await dispatch(thunks.loadAdminShares());
         }
       } catch (error) {
-        dispatch(actions.app.setModal({ ...modal, error: error.message || '创建分享失败', values }));
+        dispatch(
+          actions.app.setModal({
+            ...modal,
+            error: error.message || "创建分享失败",
+            values,
+          }),
+        );
       }
     },
-    deleteShare: token => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    deleteShare: (token) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       if (!token) return;
 
       dispatch(actions.admin.setShareBusyToken(token));
       try {
         const { response, data } = await shareApi.remove(token);
         if (!response.ok || data?.success === false) {
-          throw new Error(humanError(response, data, '删除分享失败'));
+          throw new Error(humanError(response, data, "删除分享失败"));
         }
-        dispatchToast('success', '分享已删除');
+        dispatchToast("success", "分享已删除");
         await dispatch(thunks.loadAdminShares());
       } catch (error) {
-        dispatchToast('error', error.message || '删除分享失败');
+        dispatchToast("error", error.message || "删除分享失败");
       } finally {
-        dispatch(actions.admin.setShareBusyToken(''));
+        dispatch(actions.admin.setShareBusyToken(""));
       }
     },
-    deleteShareWithModal: token => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    deleteShareWithModal: (token) => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       if (!token) return;
 
       const modal = getState().app.modal;
-      dispatch(actions.app.setModal({ ...modal, loading: true, error: '' }));
+      dispatch(actions.app.setModal({ ...modal, loading: true, error: "" }));
       try {
         const { response, data } = await shareApi.remove(token);
         if (!response.ok || data?.success === false) {
-          throw new Error(humanError(response, data, '删除分享失败'));
+          throw new Error(humanError(response, data, "删除分享失败"));
         }
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', '分享已删除');
+        dispatchToast("success", "分享已删除");
         await dispatch(thunks.loadAdminShares());
       } catch (error) {
-        dispatch(actions.app.setModal({ ...modal, loading: false, error: error.message || '删除分享失败' }));
+        dispatch(
+          actions.app.setModal({
+            ...modal,
+            loading: false,
+            error: error.message || "删除分享失败",
+          }),
+        );
       }
     },
-    cleanupExpiredShares: () => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
-      dispatch(actions.admin.setShareBusyToken('__cleanup__'));
+    cleanupExpiredShares: () => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      dispatch(actions.admin.setShareBusyToken("__cleanup__"));
       try {
         const { response, data } = await shareApi.cleanupExpired();
         if (!response.ok || data?.success === false) {
-          throw new Error(humanError(response, data, '清理过期分享失败'));
+          throw new Error(humanError(response, data, "清理过期分享失败"));
         }
-        dispatchToast('success', '已清理过期分享');
+        dispatchToast("success", "已清理过期分享");
         await dispatch(thunks.loadAdminShares());
       } catch (error) {
-        dispatchToast('error', error.message || '清理过期分享失败');
+        dispatchToast("error", error.message || "清理过期分享失败");
       } finally {
-        dispatch(actions.admin.setShareBusyToken(''));
+        dispatch(actions.admin.setShareBusyToken(""));
       }
     },
     cleanupExpiredSharesWithModal: () => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
 
       const modal = getState().app.modal;
-      dispatch(actions.app.setModal({ ...modal, loading: true, error: '' }));
+      dispatch(actions.app.setModal({ ...modal, loading: true, error: "" }));
       try {
         const { response, data } = await shareApi.cleanupExpired();
         if (!response.ok || data?.success === false) {
-          throw new Error(humanError(response, data, '清理过期分享失败'));
+          throw new Error(humanError(response, data, "清理过期分享失败"));
         }
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', '已清理过期分享');
+        dispatchToast("success", "已清理过期分享");
         await dispatch(thunks.loadAdminShares());
       } catch (error) {
-        dispatch(actions.app.setModal({ ...modal, loading: false, error: error.message || '清理过期分享失败' }));
+        dispatch(
+          actions.app.setModal({
+            ...modal,
+            loading: false,
+            error: error.message || "清理过期分享失败",
+          }),
+        );
       }
     },
-    restoreTrash: trashId => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    restoreTrash: (trashId) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await trashApi.restore(trashId);
-        if (!response.ok || data?.success === false) throw new Error(humanError(response, data, '恢复失败'));
-        dispatchToast('success', '已从回收站恢复');
+        if (!response.ok || data?.success === false)
+          throw new Error(humanError(response, data, "恢复失败"));
+        dispatchToast("success", "已从回收站恢复");
         await dispatch(thunks.loadExplorer());
       } catch (error) {
-        dispatchToast('error', error.message || '恢复失败');
+        dispatchToast("error", error.message || "恢复失败");
       }
     },
-    deleteTrash: trashId => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    deleteTrash: (trashId) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await trashApi.remove(trashId);
-        if (!response.ok || data?.success === false) throw new Error(humanError(response, data, '彻底删除失败'));
-        dispatchToast('success', '回收站记录已彻底删除');
+        if (!response.ok || data?.success === false)
+          throw new Error(humanError(response, data, "彻底删除失败"));
+        dispatchToast("success", "回收站记录已彻底删除");
         await dispatch(thunks.loadExplorer());
       } catch (error) {
-        dispatchToast('error', error.message || '彻底删除失败');
+        dispatchToast("error", error.message || "彻底删除失败");
       }
     },
-    clearTrash: () => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    clearTrash: () => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await trashApi.clear();
-        if (!response.ok) throw new Error(humanError(response, data, '清空回收站失败'));
-        dispatchToast('success', '回收站已清空');
+        if (!response.ok)
+          throw new Error(humanError(response, data, "清空回收站失败"));
+        dispatchToast("success", "回收站已清空");
         await dispatch(thunks.loadExplorer());
       } catch (error) {
-        dispatchToast('error', error.message || '清空回收站失败');
+        dispatchToast("error", error.message || "清空回收站失败");
       }
     },
     clearTrashWithModal: () => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
 
       try {
         const { response, data } = await trashApi.clear();
-        if (!response.ok) throw new Error(humanError(response, data, '清空回收站失败'));
+        if (!response.ok)
+          throw new Error(humanError(response, data, "清空回收站失败"));
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', '回收站已清空');
+        dispatchToast("success", "回收站已清空");
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         const modal = getState().app.modal;
-        dispatch(actions.app.setModal({ ...modal, loading: false, error: error.message || '清空回收站失败' }));
+        dispatch(
+          actions.app.setModal({
+            ...modal,
+            loading: false,
+            error: error.message || "清空回收站失败",
+          }),
+        );
       }
     },
-    batchDownloadZip: paths => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    batchDownloadZip: (paths) => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       if (!paths?.length) return;
       try {
         const state = getState();
-        const headers = { 'Content-Type': 'application/json' };
-        if (state.app.csrf) headers['X-CSRF-Token'] = state.app.csrf;
-        const response = await fetch('/api/zip-download', {
-          method: 'POST', headers, body: JSON.stringify({ paths }), credentials: 'same-origin',
+        const headers = { "Content-Type": "application/json" };
+        if (state.app.csrf) headers["X-CSRF-Token"] = state.app.csrf;
+        const response = await fetch("/api/zip-download", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ paths }),
+          credentials: "same-origin",
         });
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          throw new Error(data?.message || '下载失败');
+          throw new Error(data?.message || "下载失败");
         }
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        const cd = response.headers.get('Content-Disposition') || '';
+        const cd = response.headers.get("Content-Disposition") || "";
         const match = cd.match(/filename\*=UTF-8''(.+?)(?:;|$)/);
-        a.download = match ? decodeURIComponent(match[1]) : 'archive.zip';
+        a.download = match ? decodeURIComponent(match[1]) : "archive.zip";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } catch (error) {
-        dispatchToast('error', error.message || '下载失败');
+        dispatchToast("error", error.message || "下载失败");
       }
     },
-    batchDelete: paths => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    batchDelete: (paths) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       if (!paths?.length) return;
 
       dispatch(actions.explorer.setBatchBusy(true));
       try {
         const { response, data } = await fileApi.batchDelete(paths);
         if ((!response.ok || data?.success === false) && !data?.completed) {
-          throw new Error(humanError(response, data, '删除失败'));
+          throw new Error(humanError(response, data, "删除失败"));
         }
         dispatch(actions.explorer.setSelectedKeys([]));
-        dispatchToast('success', data?.completed ? `已处理 ${data.completed} 项` : '已移入回收站');
+        dispatchToast(
+          "success",
+          data?.completed ? `已处理 ${data.completed} 项` : "已移入回收站",
+        );
         await dispatch(thunks.loadExplorer());
       } catch (error) {
-        dispatchToast('error', error.message || '删除失败');
+        dispatchToast("error", error.message || "删除失败");
       } finally {
         dispatch(actions.explorer.setBatchBusy(false));
       }
     },
-    renameEntry: (path, newName) => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    renameEntry: (path, newName) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       if (!path || !newName) return;
 
       try {
         const { response, data } = await fileApi.rename(path, newName);
-        if (!response.ok) throw new Error(humanError(response, data, '重命名失败'));
+        if (!response.ok)
+          throw new Error(humanError(response, data, "重命名失败"));
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', '已完成重命名');
+        dispatchToast("success", "已完成重命名");
         await dispatch(thunks.loadExplorer());
       } catch (error) {
         const modal = getStore().getState().app.modal;
-        dispatch(actions.app.setModal({ ...modal, error: error.message || '重命名失败', values: { newName } }));
+        dispatch(
+          actions.app.setModal({
+            ...modal,
+            error: error.message || "重命名失败",
+            values: { newName },
+          }),
+        );
       }
     },
     pasteClipboard: () => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       const clipboard = getState().explorer.clipboard;
       if (!clipboard?.paths?.length) return;
 
@@ -741,23 +983,30 @@ export function createThunks(deps) {
         const { response, data } = await fileApi.paste(
           clipboard.action,
           clipboard.paths,
-          `/${normalizeKey(getState().explorer.path)}`.replace(/\/$/, '') || '/',
+          `/${normalizeKey(getState().explorer.path)}`.replace(/\/$/, "") ||
+            "/",
         );
         if ((!response.ok || data?.success === false) && !data?.completed) {
-          throw new Error(humanError(response, data, '粘贴失败'));
+          throw new Error(humanError(response, data, "粘贴失败"));
         }
         dispatch(actions.explorer.setClipboard(null));
         dispatch(actions.explorer.setSelectedKeys([]));
-        dispatchToast('success', clipboard.action === 'move' ? '已执行移动' : '已执行复制');
+        dispatchToast(
+          "success",
+          clipboard.action === "move" ? "已执行移动" : "已执行复制",
+        );
         await dispatch(thunks.loadExplorer());
       } catch (error) {
-        dispatchToast('error', error.message || '粘贴失败');
+        dispatchToast("error", error.message || "粘贴失败");
       } finally {
         dispatch(actions.explorer.setBatchBusy(false));
       }
     },
-    batchRestoreTrash: trashIds => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    batchRestoreTrash: (trashIds) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       if (!trashIds?.length) return;
 
       dispatch(actions.explorer.setTrashBatchBusy(true));
@@ -765,20 +1014,23 @@ export function createThunks(deps) {
         for (const id of trashIds) {
           const { response, data } = await trashApi.restore(id);
           if (!response.ok || data?.success === false) {
-            throw new Error(humanError(response, data, '批量恢复失败'));
+            throw new Error(humanError(response, data, "批量恢复失败"));
           }
         }
         dispatch(actions.explorer.setTrashSelectedKeys([]));
-        dispatchToast('success', `已恢复 ${trashIds.length} 条记录`);
+        dispatchToast("success", `已恢复 ${trashIds.length} 条记录`);
         await dispatch(thunks.loadExplorer());
       } catch (error) {
-        dispatchToast('error', error.message || '批量恢复失败');
+        dispatchToast("error", error.message || "批量恢复失败");
       } finally {
         dispatch(actions.explorer.setTrashBatchBusy(false));
       }
     },
-    batchDeleteTrash: trashIds => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    batchDeleteTrash: (trashIds) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       if (!trashIds?.length) return;
 
       dispatch(actions.explorer.setTrashBatchBusy(true));
@@ -786,19 +1038,19 @@ export function createThunks(deps) {
         for (const id of trashIds) {
           const { response, data } = await trashApi.remove(id);
           if (!response.ok || data?.success === false) {
-            throw new Error(humanError(response, data, '批量彻底删除失败'));
+            throw new Error(humanError(response, data, "批量彻底删除失败"));
           }
         }
         dispatch(actions.explorer.setTrashSelectedKeys([]));
-        dispatchToast('success', `已彻底删除 ${trashIds.length} 条记录`);
+        dispatchToast("success", `已彻底删除 ${trashIds.length} 条记录`);
         await dispatch(thunks.loadExplorer());
       } catch (error) {
-        dispatchToast('error', error.message || '批量彻底删除失败');
+        dispatchToast("error", error.message || "批量彻底删除失败");
       } finally {
         dispatch(actions.explorer.setTrashBatchBusy(false));
       }
     },
-    loadAdminHealth: () => async dispatch => {
+    loadAdminHealth: () => async (dispatch) => {
       dispatch(actions.admin.setHealthLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -807,30 +1059,43 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await adminApi.health();
-        if (!response.ok) throw new Error(data?.message || '健康检查加载失败');
+        if (!response.ok) throw new Error(data?.message || "健康检查加载失败");
         dispatch(actions.admin.setHealth(data));
       } catch (error) {
-        dispatch(actions.admin.setHealthError(error.message || '健康检查加载失败'));
+        dispatch(
+          actions.admin.setHealthError(error.message || "健康检查加载失败"),
+        );
       }
     },
-    loadAdminLogs: (page = 1) => async (dispatch, getState) => {
-      dispatch(actions.admin.setLogsLoading(true));
-      const filter = getState().admin.logsFilter;
-      if (mock) {
-        const m = await _mockModule;
-        dispatch(actions.admin.setLogs(m.mockAdminLogs(page)));
-        return;
-      }
-      try {
-        const params = { page, size: 20, ...filter };
-        const { response, data } = await adminApi.logs(params);
-        if (!response.ok) throw new Error(data?.message || '操作日志加载失败');
-        dispatch(actions.admin.setLogs({ items: data.logs || [], page: data.currentPage || 1, totalPages: data.totalPages || 0 }));
-      } catch (error) {
-        dispatch(actions.admin.setLogsError(error.message || '操作日志加载失败'));
-      }
-    },
-    loadAdminQuota: () => async dispatch => {
+    loadAdminLogs:
+      (page = 1) =>
+      async (dispatch, getState) => {
+        dispatch(actions.admin.setLogsLoading(true));
+        const filter = getState().admin.logsFilter;
+        if (mock) {
+          const m = await _mockModule;
+          dispatch(actions.admin.setLogs(m.mockAdminLogs(page)));
+          return;
+        }
+        try {
+          const params = { page, size: 20, ...filter };
+          const { response, data } = await adminApi.logs(params);
+          if (!response.ok)
+            throw new Error(data?.message || "操作日志加载失败");
+          dispatch(
+            actions.admin.setLogs({
+              items: data.logs || [],
+              page: data.currentPage || 1,
+              totalPages: data.totalPages || 0,
+            }),
+          );
+        } catch (error) {
+          dispatch(
+            actions.admin.setLogsError(error.message || "操作日志加载失败"),
+          );
+        }
+      },
+    loadAdminQuota: () => async (dispatch) => {
       dispatch(actions.admin.setQuotaLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -839,24 +1104,29 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await adminApi.quota();
-        if (!response.ok) throw new Error(data?.message || '存储配额加载失败');
+        if (!response.ok) throw new Error(data?.message || "存储配额加载失败");
         dispatch(actions.admin.setQuota(data));
       } catch (error) {
-        dispatch(actions.admin.setQuotaError(error.message || '存储配额加载失败'));
+        dispatch(
+          actions.admin.setQuotaError(error.message || "存储配额加载失败"),
+        );
       }
     },
-    setAdminQuota: bytes => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    setAdminQuota: (bytes) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await adminApi.setQuota(bytes);
-        if (!response.ok) throw new Error(data?.message || '设置存储配额失败');
-        dispatchToast('success', '存储配额已更新');
+        if (!response.ok) throw new Error(data?.message || "设置存储配额失败");
+        dispatchToast("success", "存储配额已更新");
         await dispatch(thunks.loadAdminQuota());
       } catch (error) {
-        dispatchToast('error', error.message || '设置存储配额失败');
+        dispatchToast("error", error.message || "设置存储配额失败");
       }
     },
-    loadAdminProtectedPaths: () => async dispatch => {
+    loadAdminProtectedPaths: () => async (dispatch) => {
       dispatch(actions.admin.setProtectedPathsLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -865,38 +1135,63 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await adminApi.protectedPaths();
-        if (!response.ok) throw new Error(data?.message || '受保护路径加载失败');
-        dispatch(actions.admin.setProtectedPaths(data.list || data.items || []));
+        if (!response.ok)
+          throw new Error(data?.message || "受保护路径加载失败");
+        dispatch(
+          actions.admin.setProtectedPaths(data.list || data.items || []),
+        );
       } catch (error) {
-        dispatch(actions.admin.setProtectedPathsError(error.message || '受保护路径加载失败'));
+        dispatch(
+          actions.admin.setProtectedPathsError(
+            error.message || "受保护路径加载失败",
+          ),
+        );
       }
     },
-    createAdminProtectedPath: path => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    createAdminProtectedPath: (path) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       const modal = getStore().getState().app.modal;
       if (!modal) return;
       try {
-        const { response, data } = await adminApi.createProtectedPath(path, modal.password, modal.note, modal.showName);
-        if (!response.ok) throw new Error(data?.message || '创建受保护路径失败');
+        const { response, data } = await adminApi.createProtectedPath(
+          path,
+          modal.password,
+          modal.note,
+          modal.showName,
+        );
+        if (!response.ok)
+          throw new Error(data?.message || "创建受保护路径失败");
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', '受保护路径已创建');
+        dispatchToast("success", "受保护路径已创建");
         await dispatch(thunks.loadAdminProtectedPaths());
       } catch (error) {
-        dispatch(actions.app.setModal({ ...modal, error: error.message || '创建受保护路径失败' }));
+        dispatch(
+          actions.app.setModal({
+            ...modal,
+            error: error.message || "创建受保护路径失败",
+          }),
+        );
       }
     },
-    deleteAdminProtectedPath: path => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    deleteAdminProtectedPath: (path) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await adminApi.deleteProtectedPath(path);
-        if (!response.ok) throw new Error(data?.message || '删除受保护路径失败');
-        dispatchToast('success', '受保护路径已删除');
+        if (!response.ok)
+          throw new Error(data?.message || "删除受保护路径失败");
+        dispatchToast("success", "受保护路径已删除");
         await dispatch(thunks.loadAdminProtectedPaths());
       } catch (error) {
-        dispatchToast('error', error.message || '删除受保护路径失败');
+        dispatchToast("error", error.message || "删除受保护路径失败");
       }
     },
-    loadAdminHiddenPaths: () => async dispatch => {
+    loadAdminHiddenPaths: () => async (dispatch) => {
       dispatch(actions.admin.setHiddenPathsLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -905,35 +1200,45 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await adminApi.hiddenPaths();
-        if (!response.ok) throw new Error(data?.message || '隐藏路径加载失败');
+        if (!response.ok) throw new Error(data?.message || "隐藏路径加载失败");
         dispatch(actions.admin.setHiddenPaths(data.list || []));
       } catch (error) {
-        dispatch(actions.admin.setHiddenPathsError(error.message || '隐藏路径加载失败'));
+        dispatch(
+          actions.admin.setHiddenPathsError(
+            error.message || "隐藏路径加载失败",
+          ),
+        );
       }
     },
-    createAdminHiddenPath: targetPath => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    createAdminHiddenPath: (targetPath) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await adminApi.createHiddenPath(targetPath);
-        if (!response.ok) throw new Error(data?.message || '添加隐藏路径失败');
-        dispatchToast('success', '隐藏路径已添加');
+        if (!response.ok) throw new Error(data?.message || "添加隐藏路径失败");
+        dispatchToast("success", "隐藏路径已添加");
         await dispatch(thunks.loadAdminHiddenPaths());
       } catch (error) {
-        dispatchToast('error', error.message || '添加隐藏路径失败');
+        dispatchToast("error", error.message || "添加隐藏路径失败");
       }
     },
-    deleteAdminHiddenPath: path => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    deleteAdminHiddenPath: (path) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await adminApi.deleteHiddenPath(path);
-        if (!response.ok) throw new Error(data?.message || '删除隐藏路径失败');
-        dispatchToast('success', '隐藏路径已删除');
+        if (!response.ok) throw new Error(data?.message || "删除隐藏路径失败");
+        dispatchToast("success", "隐藏路径已删除");
         await dispatch(thunks.loadAdminHiddenPaths());
       } catch (error) {
-        dispatchToast('error', error.message || '删除隐藏路径失败');
+        dispatchToast("error", error.message || "删除隐藏路径失败");
       }
     },
-    loadAdminStorageConfig: () => async dispatch => {
+    loadAdminStorageConfig: () => async (dispatch) => {
       dispatch(actions.admin.setStorageConfigLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -942,36 +1247,51 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await adminApi.storageConfig();
-        if (!response.ok) throw new Error(data?.message || '存储配置加载失败');
+        if (!response.ok) throw new Error(data?.message || "存储配置加载失败");
         dispatch(actions.admin.setStorageConfig(data));
       } catch (error) {
-        dispatch(actions.admin.setStorageConfigError(error.message || '存储配置加载失败'));
+        dispatch(
+          actions.admin.setStorageConfigError(
+            error.message || "存储配置加载失败",
+          ),
+        );
       }
     },
-    saveAdminStorageConfig: config => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    saveAdminStorageConfig: (config) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       dispatch(actions.admin.setStorageConfigSaving(true));
       try {
         const { response, data } = await adminApi.saveStorageConfig(config);
-        if (!response.ok) throw new Error(data?.message || '保存存储配置失败');
-        dispatchToast('success', '存储配置已更新');
+        if (!response.ok) throw new Error(data?.message || "保存存储配置失败");
+        dispatchToast("success", "存储配置已更新");
         dispatch(actions.admin.setStorageConfig(data));
       } catch (error) {
-        dispatchToast('error', error.message || '保存存储配置失败');
+        dispatchToast("error", error.message || "保存存储配置失败");
         dispatch(actions.admin.setStorageConfigSaving(false));
       }
     },
-    testAdminStorageSpace: space => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    testAdminStorageSpace: (space) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await adminApi.testStorageSpace(space);
-        if (!response.ok) throw new Error(data?.message || '连接测试失败');
-        dispatchToast(data.success ? 'success' : 'error', data.success ? `连接成功（${data.durationMs}ms）` : `连接失败: ${data.error || ''}`);
+        if (!response.ok) throw new Error(data?.message || "连接测试失败");
+        dispatchToast(
+          data.success ? "success" : "error",
+          data.success
+            ? `连接成功（${data.durationMs}ms）`
+            : `连接失败: ${data.error || ""}`,
+        );
       } catch (error) {
-        dispatchToast('error', error.message || '连接测试失败');
+        dispatchToast("error", error.message || "连接测试失败");
       }
     },
-    loadAdminWebhooks: () => async dispatch => {
+    loadAdminWebhooks: () => async (dispatch) => {
       dispatch(actions.admin.setWebhooksLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -980,37 +1300,51 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await adminApi.webhooks();
-        if (!response.ok) throw new Error(data?.message || 'Webhook 配置加载失败');
+        if (!response.ok)
+          throw new Error(data?.message || "Webhook 配置加载失败");
         dispatch(actions.admin.setWebhooks(data.items || []));
       } catch (error) {
-        dispatch(actions.admin.setWebhooksError(error.message || 'Webhook 配置加载失败'));
+        dispatch(
+          actions.admin.setWebhooksError(
+            error.message || "Webhook 配置加载失败",
+          ),
+        );
       }
     },
-    saveAdminWebhooks: items => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    saveAdminWebhooks: (items) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await adminApi.saveWebhooks(items);
-        if (!response.ok) throw new Error(data?.message || '保存 Webhook 配置失败');
-        dispatchToast('success', 'Webhook 配置已更新');
+        if (!response.ok)
+          throw new Error(data?.message || "保存 Webhook 配置失败");
+        dispatchToast("success", "Webhook 配置已更新");
         dispatch(actions.admin.setWebhooks(data.items || []));
       } catch (error) {
-        dispatchToast('error', error.message || '保存 Webhook 配置失败');
+        dispatchToast("error", error.message || "保存 Webhook 配置失败");
       }
     },
-    testAdminWebhook: endpoint => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    testAdminWebhook: (endpoint) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       try {
         const { response, data } = await adminApi.testWebhook(endpoint);
-        if (!response.ok) throw new Error(data?.message || '测试投递失败');
-        dispatchToast(data.success ? 'success' : 'error',
+        if (!response.ok) throw new Error(data?.message || "测试投递失败");
+        dispatchToast(
+          data.success ? "success" : "error",
           data.success
-            ? `${data.name || 'Webhook'} 测试成功（${data.durationMs || 0}ms）：${data.message || ''}`
-            : `测试失败：${data.message || data.error || '未知错误'}`);
+            ? `${data.name || "Webhook"} 测试成功（${data.durationMs || 0}ms）：${data.message || ""}`
+            : `测试失败：${data.message || data.error || "未知错误"}`,
+        );
       } catch (error) {
-        dispatchToast('error', error.message || '测试投递失败');
+        dispatchToast("error", error.message || "测试投递失败");
       }
     },
-    loadAdminWebhookDeliveries: () => async dispatch => {
+    loadAdminWebhookDeliveries: () => async (dispatch) => {
       dispatch(actions.admin.setWebhookDeliveriesLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -1019,56 +1353,75 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await adminApi.webhookDeliveries();
-        if (!response.ok) throw new Error(data?.message || '投递记录加载失败');
+        if (!response.ok) throw new Error(data?.message || "投递记录加载失败");
         dispatch(actions.admin.setWebhookDeliveries(data.items || []));
       } catch (error) {
         dispatch(actions.admin.setWebhookDeliveriesLoading(false));
-        dispatchToast('error', error.message || '投递记录加载失败');
+        dispatchToast("error", error.message || "投递记录加载失败");
       }
     },
-    unlockProtectedPath: password => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    unlockProtectedPath: (password) => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       const modal = getState().app.modal;
-      const path = modal?.path || '';
+      const path = modal?.path || "";
       if (!path) return;
 
       try {
-        const { response, data } = await authApi.unlockProtectedPath(path, password);
+        const { response, data } = await authApi.unlockProtectedPath(
+          path,
+          password,
+        );
         if (!response.ok || data?.success === false) {
-          dispatch(actions.app.setModal({ ...modal, error: data?.message || '密码错误' }));
+          dispatch(
+            actions.app.setModal({
+              ...modal,
+              error: data?.message || "密码错误",
+            }),
+          );
           return;
         }
 
         const deferred = modal.deferredAction;
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', '路径已解锁');
+        dispatchToast("success", "路径已解锁");
 
-        if (deferred?.kind === 'preview') {
+        if (deferred?.kind === "preview") {
           const unlockedEntry = findCurrentEntryByPath(deferred.path);
           if (unlockedEntry) {
-            await dispatch(thunks.previewEntry({ ...unlockedEntry, protected: false }));
+            await dispatch(
+              thunks.previewEntry({ ...unlockedEntry, protected: false }),
+            );
           }
           return;
         }
 
-        if (deferred?.kind === 'download') {
+        if (deferred?.kind === "download") {
           const unlockedEntry = findCurrentEntryByPath(deferred.path);
-          if (unlockedEntry) openDownload({ ...unlockedEntry, protected: false });
+          if (unlockedEntry)
+            openDownload({ ...unlockedEntry, protected: false });
           return;
         }
 
-        if (deferred?.kind === 'navigate') {
+        if (deferred?.kind === "navigate") {
           dispatch(actions.explorer.setTrashMode(false));
           dispatch(actions.explorer.setPath(normalizeKey(deferred.path)));
-          dispatch(actions.explorer.setQuery(''));
-          dispatch(actions.explorer.setQueryDraft(''));
+          dispatch(actions.explorer.setQuery(""));
+          dispatch(actions.explorer.setQueryDraft(""));
           await dispatch(thunks.loadExplorer());
         }
       } catch (error) {
-        dispatch(actions.app.setModal({ ...modal, error: error.message || '解锁失败' }));
+        dispatch(
+          actions.app.setModal({
+            ...modal,
+            error: error.message || "解锁失败",
+          }),
+        );
       }
     },
-    loadTasks: () => async dispatch => {
+    loadTasks: () => async (dispatch) => {
       dispatch(actions.admin.setTasksLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -1077,13 +1430,13 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await taskApi.list(20);
-        if (!response.ok) throw new Error(data?.message || '任务列表加载失败');
+        if (!response.ok) throw new Error(data?.message || "任务列表加载失败");
         dispatch(actions.admin.setTasks(data.items || []));
       } catch (_) {
         dispatch(actions.admin.setTasksLoading(false));
       }
     },
-    loadMaintenanceSnapshot: () => async dispatch => {
+    loadMaintenanceSnapshot: () => async (dispatch) => {
       dispatch(actions.admin.setMaintenanceLoading(true));
       if (mock) {
         const m = await _mockModule;
@@ -1092,60 +1445,80 @@ export function createThunks(deps) {
       }
       try {
         const { response, data } = await maintenanceApi.snapshot();
-        if (!response.ok) throw new Error(data?.message || '维护快照加载失败');
+        if (!response.ok) throw new Error(data?.message || "维护快照加载失败");
         dispatch(actions.admin.setMaintenance(data));
       } catch (error) {
-        dispatch(actions.admin.setMaintenanceError(error.message || '维护快照加载失败'));
+        dispatch(
+          actions.admin.setMaintenanceError(
+            error.message || "维护快照加载失败",
+          ),
+        );
       }
     },
-    executeMaintenanceAction: action => async dispatch => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    executeMaintenanceAction: (action) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       dispatch(actions.admin.setMaintenanceBusyAction(action));
       try {
         const { response, data } = await maintenanceApi.executeAction(action);
-        if (!response.ok) throw new Error(data?.message || '执行维护操作失败');
+        if (!response.ok) throw new Error(data?.message || "执行维护操作失败");
         dispatch(actions.app.setModal(null));
-        dispatchToast('success', data?.message || '维护操作已完成');
+        dispatchToast("success", data?.message || "维护操作已完成");
         await dispatch(thunks.loadMaintenanceSnapshot());
       } catch (error) {
-        dispatchToast('error', error.message || '执行维护操作失败');
+        dispatchToast("error", error.message || "执行维护操作失败");
       } finally {
-        dispatch(actions.admin.setMaintenanceBusyAction(''));
+        dispatch(actions.admin.setMaintenanceBusyAction(""));
       }
     },
-    unlockShare: password => async (dispatch, getState) => {
-      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+    unlockShare: (password) => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
       const token = getState().share.token.trim();
       if (!token) return;
 
       dispatch(actions.share.setLoading(true));
       try {
         const { response, data } = await shareApi.unlock(token, password);
-        if (!response.ok || !data?.success) throw new Error(data?.message || '密码错误');
-        dispatchToast('success', '分享已解锁');
-        dispatch(actions.share.setPassword(''));
+        if (!response.ok || !data?.success)
+          throw new Error(data?.message || "密码错误");
+        dispatchToast("success", "分享已解锁");
+        dispatch(actions.share.setPassword(""));
         await dispatch(thunks.loadShare());
       } catch (error) {
-        dispatch(actions.share.setPasswordRequired(error.message || '密码错误'));
+        dispatch(
+          actions.share.setPasswordRequired(error.message || "密码错误"),
+        );
       }
     },
     loadNotifications: () => async (dispatch, getState) => {
       dispatch(actions.admin.setNotificationsLoading(true));
       if (mock) {
         const m = await _mockModule;
-        const unread = m.mockNotifications.filter(n => !n.read).length;
-        dispatch(actions.admin.setNotifications({ items: m.mockNotifications, unread }));
+        const unread = m.mockNotifications.filter((n) => !n.read).length;
+        dispatch(
+          actions.admin.setNotifications({
+            items: m.mockNotifications,
+            unread,
+          }),
+        );
         return;
       }
       try {
         const { response, data } = await notificationApi.list(20);
-        if (!response.ok) throw new Error(data?.message || '通知列表加载失败');
+        if (!response.ok) throw new Error(data?.message || "通知列表加载失败");
         const state = getState();
         const oldIds = state.admin.lastNotifIds;
-        const newIds = (data.items || []).map(n => n.id);
+        const newIds = (data.items || []).map((n) => n.id);
         if (state.admin.notifInitialized && newIds.length && oldIds.length) {
-          const newUnread = (data.items || []).filter(n => !n.read && !oldIds.includes(n.id));
-          newUnread.forEach(n => showNotificationAlert(n.message));
+          const newUnread = (data.items || []).filter(
+            (n) => !n.read && !oldIds.includes(n.id),
+          );
+          newUnread.forEach((n) => showNotificationAlert(n.message));
         }
         dispatch(actions.admin.setNotifications(data));
         dispatch(actions.admin.setLastNotifIds(newIds));
@@ -1156,10 +1529,14 @@ export function createThunks(deps) {
         dispatch(actions.admin.setNotificationsLoading(false));
       }
     },
-    markNotificationRead: id => async dispatch => {
+    markNotificationRead: (id) => async (dispatch) => {
       if (mock) {
         const m = await _mockModule;
-        dispatch(actions.admin.setNotificationsUnread(Math.max(0, m.mockNotifications.filter(n => !n.read).length - 1)));
+        dispatch(
+          actions.admin.setNotificationsUnread(
+            Math.max(0, m.mockNotifications.filter((n) => !n.read).length - 1),
+          ),
+        );
         return;
       }
       try {
@@ -1167,7 +1544,7 @@ export function createThunks(deps) {
         await dispatch(thunks.loadNotifications());
       } catch (_) {}
     },
-    markAllNotificationsRead: () => async dispatch => {
+    markAllNotificationsRead: () => async (dispatch) => {
       if (mock) {
         dispatch(actions.admin.setNotificationsUnread(0));
         return;
@@ -1177,16 +1554,21 @@ export function createThunks(deps) {
         await dispatch(thunks.loadNotifications());
       } catch (_) {}
     },
-    loadAdminNotifications: () => async dispatch => {
+    loadAdminNotifications: () => async (dispatch) => {
       dispatch(actions.admin.setAdminNotifHistoryLoading(true));
       if (mock) {
         const m = await _mockModule;
-        dispatch(actions.admin.setAdminNotifHistory({ items: m.mockNotifications, unread: m.mockNotifications.filter(n => !n.read).length }));
+        dispatch(
+          actions.admin.setAdminNotifHistory({
+            items: m.mockNotifications,
+            unread: m.mockNotifications.filter((n) => !n.read).length,
+          }),
+        );
         return;
       }
       try {
         const { response, data } = await notificationApi.list(50);
-        if (!response.ok) throw new Error(data?.message || '通知历史加载失败');
+        if (!response.ok) throw new Error(data?.message || "通知历史加载失败");
         dispatch(actions.admin.setAdminNotifHistory(data));
       } catch (_) {
         dispatch(actions.admin.setAdminNotifHistoryLoading(false));

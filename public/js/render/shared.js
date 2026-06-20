@@ -25,17 +25,23 @@ export function createSharedRenderers(deps) {
     }
 
     const kind = selected.kind || inferKind(selected);
-    const isFolder = kind === 'folder';
-    const previewable = !isFolder && !state.explorer.trashMode && canPreview(selected);
-    const canDownload = kind !== 'folder' && !state.explorer.trashMode;
-    const pathValue = selected.fullKey || selected.original_key || selected.path || selected.name || '';
+    const isFolder = kind === "folder";
+    const previewable =
+      !isFolder && !state.explorer.trashMode && canPreview(selected);
+    const canDownload = kind !== "folder" && !state.explorer.trashMode;
+    const pathValue =
+      selected.fullKey ||
+      selected.original_key ||
+      selected.path ||
+      selected.name ||
+      "";
 
     return `
       <div class="details-panel-shell">
         <div class="details-panel-head">
           <div>
-            <h3 class="details-panel-title">${escapeHtml(selected.name || '未命名')}</h3>
-            <p class="details-panel-copy">${escapeHtml(pathValue || '/')}</p>
+            <h3 class="details-panel-title">${escapeHtml(selected.name || "未命名")}</h3>
+            <p class="details-panel-copy">${escapeHtml(pathValue || "/")}</p>
           </div>
         </div>
 
@@ -45,7 +51,7 @@ export function createSharedRenderers(deps) {
             <div class="details-v">${escapeHtml(kind)}</div>
           </div>
           <div class="details-kv">
-            <div class="details-k">${state.explorer.trashMode ? '删除时间' : '更新时间'}</div>
+            <div class="details-k">${state.explorer.trashMode ? "删除时间" : "更新时间"}</div>
             <div class="details-v">${escapeHtml(formatTime(selected.trashedAt || selected.time || 0))}</div>
           </div>
           <div class="details-kv">
@@ -62,11 +68,11 @@ export function createSharedRenderers(deps) {
                 <button class="btn btn-danger" data-action="delete-trash" data-key="${escapeHtml(entryKey(selected))}">彻底删除</button>
               `
               : `
-                ${isFolder ? `<button class="btn" data-action="open-entry" data-key="${escapeHtml(entryKey(selected))}">打开文件夹</button>` : ''}
-                ${previewable ? `<button class="btn" data-action="preview-entry" data-key="${escapeHtml(entryKey(selected))}">预览</button>` : ''}
-                ${canDownload ? `<button class="btn" data-action="download-entry" data-key="${escapeHtml(entryKey(selected))}">下载</button>` : ''}
-                ${!isFolder && state.app.role === 'admin' ? `<button class="btn" data-action="open-share-modal" data-key="${escapeHtml(entryKey(selected))}">分享</button>` : ''}
-                ${state.app.role === 'admin' ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(entryKey(selected))}">重命名</button>` : ''}
+                ${isFolder ? `<button class="btn" data-action="open-entry" data-key="${escapeHtml(entryKey(selected))}">打开文件夹</button>` : ""}
+                ${previewable ? `<button class="btn" data-action="preview-entry" data-key="${escapeHtml(entryKey(selected))}">预览</button>` : ""}
+                ${canDownload ? `<button class="btn" data-action="download-entry" data-key="${escapeHtml(entryKey(selected))}">下载</button>` : ""}
+                ${!isFolder && state.app.role === "admin" ? `<button class="btn" data-action="open-share-modal" data-key="${escapeHtml(entryKey(selected))}">分享</button>` : ""}
+                ${state.app.role === "admin" ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(entryKey(selected))}">重命名</button>` : ""}
               `
           }
         </div>
@@ -76,20 +82,21 @@ export function createSharedRenderers(deps) {
 
   function renderBatchBar(state, selectedEntries) {
     const busy = state.explorer.batchBusy;
-    const disabled = busy ? 'disabled' : '';
-    const singleKey = selectedEntries.length === 1 ? selectedEntries[0]?.fullKey || '' : '';
+    const disabled = busy ? "disabled" : "";
+    const singleKey =
+      selectedEntries.length === 1 ? selectedEntries[0]?.fullKey || "" : "";
     return `
       <div class="batch-bar">
         <div class="status-main">
           <span class="status-dot"></span>
-          <span>${busy ? '正在处理批量操作，请稍候…' : `已选中 ${selectedEntries.length} 项，可以批量复制、移动或删除。`}</span>
+          <span>${busy ? "正在处理批量操作，请稍候…" : `已选中 ${selectedEntries.length} 项，可以批量复制、移动或删除。`}</span>
         </div>
         <div class="btn-row">
-          ${singleKey ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(singleKey)}" ${disabled}>重命名</button>` : ''}
-          ${selectedEntries.length > 1 ? `<button class="btn" data-action="zip-download" ${disabled}>批量下载</button>` : ''}
+          ${singleKey ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(singleKey)}" ${disabled}>重命名</button>` : ""}
+          ${selectedEntries.length > 1 ? `<button class="btn" data-action="zip-download" ${disabled}>批量下载</button>` : ""}
           <button class="btn" data-action="copy-selected" ${disabled}>复制</button>
           <button class="btn" data-action="move-selected" ${disabled}>移动</button>
-          ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected" ${disabled}>删除</button>` : ''}
+          ${state.app.role === "admin" ? `<button class="btn btn-danger" data-action="delete-selected" ${disabled}>删除</button>` : ""}
           <button class="btn" data-action="clear-selected" ${disabled}>取消选择</button>
         </div>
       </div>
@@ -97,16 +104,16 @@ export function createSharedRenderers(deps) {
   }
 
   function renderTrashBatchBar(state, selectedEntries, trashKeys, busy) {
-    const disabled = busy ? 'disabled' : '';
+    const disabled = busy ? "disabled" : "";
     return `
       <div class="batch-bar">
         <div class="status-main">
           <span class="status-dot"></span>
-          <span>${busy ? '正在处理批量操作，请稍候…' : `已选中 ${(trashKeys || state.explorer.trashSelectedKeys).length} 项回收站记录，可以恢复或彻底删除。`}</span>
+          <span>${busy ? "正在处理批量操作，请稍候…" : `已选中 ${(trashKeys || state.explorer.trashSelectedKeys).length} 项回收站记录，可以恢复或彻底删除。`}</span>
         </div>
         <div class="btn-row">
           <button class="btn" data-action="restore-selected-trash" ${disabled}>批量恢复</button>
-          ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected-trash" ${disabled}>批量彻底删除</button>` : ''}
+          ${state.app.role === "admin" ? `<button class="btn btn-danger" data-action="delete-selected-trash" ${disabled}>批量彻底删除</button>` : ""}
           <button class="btn" data-action="clear-selected" ${disabled}>取消选择</button>
         </div>
       </div>
@@ -114,55 +121,61 @@ export function createSharedRenderers(deps) {
   }
 
   const kindOptions = [
-    ['all', '全部'],
-    ['folder', '文件夹'],
-    ['image', '图片'],
-    ['video', '视频'],
-    ['audio', '音频'],
-    ['pdf', 'PDF'],
-    ['text', '文本'],
-    ['archive', '压缩包'],
-    ['file', '其他'],
+    ["all", "全部"],
+    ["folder", "文件夹"],
+    ["image", "图片"],
+    ["video", "视频"],
+    ["audio", "音频"],
+    ["pdf", "PDF"],
+    ["text", "文本"],
+    ["archive", "压缩包"],
+    ["file", "其他"],
   ];
 
   function renderKindOptions(selected, trashMode, popup) {
     if (popup) {
       return kindOptions
-        .map(([value, label]) => `
-          <button class="filter-popup-item${selected === value ? ' is-active' : ''}" data-action="set-kind-filter" data-value="${value}">
+        .map(
+          ([value, label]) => `
+          <button class="filter-popup-item${selected === value ? " is-active" : ""}" data-action="set-kind-filter" data-value="${value}">
             ${label}
-          </button>`)
-        .join('');
+          </button>`,
+        )
+        .join("");
     }
 
     const current = kindOptions.find(([v]) => v === selected);
-    return current ? current[1] : '全部';
+    return current ? current[1] : "全部";
   }
 
   function renderCrumb(item, index, items) {
     const isLast = index === items.length - 1;
     const isFirst = index === 0;
-    const separator = index > 0 ? '<span class="crumb-sep">/</span>' : '';
+    const separator = index > 0 ? '<span class="crumb-sep">/</span>' : "";
 
     if (item.ellipsis) {
       return `${separator}<button class="crumb-btn crumb-ellipsis" data-action="expand-crumbs" title="展开全部路径">...</button>`;
     }
 
     return `
-      ${separator}<button class="crumb-btn ${isLast ? 'crumb-current' : ''}" data-action="crumb" data-path="${escapeHtml(item.path)}">
+      ${separator}<button class="crumb-btn ${isLast ? "crumb-current" : ""}" data-action="crumb" data-path="${escapeHtml(item.path)}">
         ${escapeHtml(item.label)}
       </button>
     `;
   }
 
   function buildBreadcrumbs(path, expanded = false) {
-    const parts = normalizeKey(path).split('/').filter(Boolean);
-    const crumbs = [{ label: '根目录', path: '', current: parts.length === 0 }];
-    let current = '';
+    const parts = normalizeKey(path).split("/").filter(Boolean);
+    const crumbs = [{ label: "根目录", path: "", current: parts.length === 0 }];
+    let current = "";
 
     parts.forEach((part, index) => {
       current = current ? `${current}/${part}` : part;
-      crumbs.push({ label: part, path: current, current: index === parts.length - 1 });
+      crumbs.push({
+        label: part,
+        path: current,
+        current: index === parts.length - 1,
+      });
     });
 
     if (expanded || crumbs.length <= 4) return crumbs;
@@ -170,7 +183,7 @@ export function createSharedRenderers(deps) {
     const first = crumbs[0];
     const parent = crumbs.length > 2 ? crumbs[crumbs.length - 2] : null;
     const last = crumbs[crumbs.length - 1];
-    const result = [first, { label: '...', path: '', ellipsis: true }];
+    const result = [first, { label: "...", path: "", ellipsis: true }];
     if (parent) result.push(parent);
     result.push(last);
     return result;
@@ -180,50 +193,72 @@ export function createSharedRenderers(deps) {
     const key = entryKey(item);
     const picked = state.explorer.selectedKeys.includes(key);
     const kind = item.kind || inferKind(item);
-    const isFolder = kind === 'folder';
-    const isImage = kind === 'image';
-    const isList = state.explorer.view === 'list';
-    const path = item.fullKey || item.original_key || item.path || item.name || '';
+    const isFolder = kind === "folder";
+    const isImage = kind === "image";
+    const isList = state.explorer.view === "list";
+    const path =
+      item.fullKey || item.original_key || item.path || item.name || "";
     const meta = state.explorer.trashMode
-      ? [isFolder ? '文件夹' : '文件', formatTime(item.trashedAt || 0)]
+      ? [isFolder ? "文件夹" : "文件", formatTime(item.trashedAt || 0)]
       : [
-          isFolder ? '文件夹' : (item.sizeFormatted || formatBytes(item.rawSize || 0)),
+          isFolder
+            ? "文件夹"
+            : item.sizeFormatted || formatBytes(item.rawSize || 0),
           formatTime(item.time),
         ];
 
-    const sizeText = isFolder ? '文件夹' : (item.sizeFormatted || formatBytes(item.rawSize || 0));
+    const sizeText = isFolder
+      ? "文件夹"
+      : item.sizeFormatted || formatBytes(item.rawSize || 0);
     const timeText = formatTime(item.time);
 
-    const iconContent = isImage && thumbnailUrl
-      ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('item-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
-      : iconForKind(kind);
+    const iconContent =
+      isImage && thumbnailUrl
+        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('item-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
+        : iconForKind(kind);
 
     return `
       <article class="item-card item-card-legacy" data-action="open-entry" data-key="${escapeHtml(key)}">
-        <button class="item-pick ${picked ? 'is-active' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
-          ${picked ? icons.check : ''}
+        <button class="item-pick ${picked ? "is-active" : ""}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
+          ${picked ? icons.check : ""}
         </button>
-        <div class="item-icon ${iconClass(kind)} ${isImage ? 'item-icon-image' : ''}">
+        <div class="item-icon ${iconClass(kind)} ${isImage ? "item-icon-image" : ""}">
           ${iconContent}
         </div>
         <div class="item-content">
-          <h3 class="item-title">${escapeHtml(item.name || '未命名项目')}</h3>
-          ${!isList ? `<div class="item-meta">
-            ${meta.map(text => `<span class="item-chip">${escapeHtml(text)}</span>`).join('')}
-          </div>` : ''}
+          <h3 class="item-title">${escapeHtml(item.name || "未命名项目")}</h3>
+          ${
+            !isList
+              ? `<div class="item-meta">
+            ${meta.map((text) => `<span class="item-chip">${escapeHtml(text)}</span>`).join("")}
+          </div>`
+              : ""
+          }
         </div>
-        ${isList ? `
+        ${
+          isList
+            ? `
         <span class="item-list-size">${escapeHtml(sizeText)}</span>
         <span class="item-list-time">${escapeHtml(timeText)}</span>
-        ` : ''}
+        `
+            : ""
+        }
         <div class="item-actions">
-          ${!isFolder && canPreview(item) ? `<button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ''}
-          ${!isFolder ? `<button class="item-action-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">
+          ${!isFolder && canPreview(item) ? `<button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ""}
+          ${
+            !isFolder
+              ? `<button class="item-action-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">
             ${icons.download}
-          </button>` : ''}
-          ${!isFolder ? `<button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
+          </button>`
+              : ""
+          }
+          ${
+            !isFolder
+              ? `<button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
             ${icons.info}
-          </button>` : ''}
+          </button>`
+              : ""
+          }
         </div>
       </article>
     `;

@@ -166,7 +166,7 @@ export const PROTECTED_ATTEMPTS_TABLE_SQL = `
 `;
 
 export async function runStatement(statement) {
-  if (typeof statement.bind === 'function') return statement.bind().run();
+  if (typeof statement.bind === "function") return statement.bind().run();
   return statement.run();
 }
 
@@ -196,6 +196,9 @@ export async function ensureShareTable(env) {
 
 export async function ensureProtectedTables(env) {
   if (!env?.D1 || initializedProtectedTables.has(env)) return;
-  await runSchemaStatements(env, [PROTECTED_PATH_TABLE_SQL, PROTECTED_ATTEMPTS_TABLE_SQL]);
+  await runSchemaStatements(env, [
+    PROTECTED_PATH_TABLE_SQL,
+    PROTECTED_ATTEMPTS_TABLE_SQL,
+  ]);
   initializedProtectedTables.add(env);
 }

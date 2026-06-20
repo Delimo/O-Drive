@@ -1,24 +1,27 @@
 export function createStateSelectors(deps) {
-  const {
-    formatBytes,
-    inferKind,
-    normalizeKey,
-    isProtectedEntry,
-  } = deps;
+  const { formatBytes, inferKind, normalizeKey, isProtectedEntry } = deps;
 
   function applySort(entries, mode) {
     const list = [...entries];
-    const alpha = (a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true, sensitivity: 'base' });
+    const alpha = (a, b) =>
+      a.name.localeCompare(b.name, "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      });
 
     list.sort((a, b) => {
-      if (mode === 'smart' && a.kind === 'folder' && b.kind !== 'folder') return -1;
-      if (mode === 'smart' && a.kind !== 'folder' && b.kind === 'folder') return 1;
-      if (mode === 'time') {
-        if ((b.time || 0) !== (a.time || 0)) return (b.time || 0) - (a.time || 0);
+      if (mode === "smart" && a.kind === "folder" && b.kind !== "folder")
+        return -1;
+      if (mode === "smart" && a.kind !== "folder" && b.kind === "folder")
+        return 1;
+      if (mode === "time") {
+        if ((b.time || 0) !== (a.time || 0))
+          return (b.time || 0) - (a.time || 0);
         return alpha(a, b);
       }
-      if (mode === 'size') {
-        if ((b.rawSize || 0) !== (a.rawSize || 0)) return (b.rawSize || 0) - (a.rawSize || 0);
+      if (mode === "size") {
+        if ((b.rawSize || 0) !== (a.rawSize || 0))
+          return (b.rawSize || 0) - (a.rawSize || 0);
         return alpha(a, b);
       }
       return alpha(a, b);
@@ -32,7 +35,7 @@ export function createStateSelectors(deps) {
   }
 
   function getEntryPath(entry) {
-    return entry.fullKey || entry.path || entry.original_key || '';
+    return entry.fullKey || entry.path || entry.original_key || "";
   }
 
   let _cachedExplorer = null;
@@ -46,63 +49,84 @@ export function createStateSelectors(deps) {
     if (explorer.trashMode) {
       _cachedResult = applySort(
         explorer.trashItems
-          .map(item => ({
+          .map((item) => ({
             ...item,
-            kind: item.kind || 'file',
-            fullKey: item.original_key || '',
-            name: item.name || '',
+            kind: item.kind || "file",
+            fullKey: item.original_key || "",
+            name: item.name || "",
             rawSize: Number(item.size || 0),
             time: Number(item.trashed_at || 0),
             sizeFormatted: formatBytes(item.size || 0),
             trashedAt: Number(item.trashed_at || 0),
             trashId: item.id,
           }))
-          .filter(item => explorer.filter === 'all' || item.kind === explorer.filter),
+          .filter(
+            (item) =>
+              explorer.filter === "all" || item.kind === explorer.filter,
+          ),
         explorer.sort,
       );
       return _cachedResult;
     }
 
-    const folders = (explorer.folders || []).map(item => ({
+    const folders = (explorer.folders || []).map((item) => ({
       ...item,
-      kind: 'folder',
+      kind: "folder",
       rawSize: 0,
       time: Number(item.time || 0),
     }));
-    const files = (explorer.files || []).map(item => ({
+    const files = (explorer.files || []).map((item) => ({
       ...item,
       kind: inferKind(item),
       rawSize: Number(item.rawSize || item.size || 0),
       time: Number(item.time || item.uploaded || 0),
     }));
-    const filteredFolders = explorer.filter === 'all' || explorer.filter === 'folder' ? folders : [];
-    const filteredFiles = files.filter(item => explorer.filter === 'all' || item.kind === explorer.filter);
+    const filteredFolders =
+      explorer.filter === "all" || explorer.filter === "folder" ? folders : [];
+    const filteredFiles = files.filter(
+      (item) => explorer.filter === "all" || item.kind === explorer.filter,
+    );
 
-    _cachedResult = applySort([...filteredFolders, ...filteredFiles], explorer.sort);
+    _cachedResult = applySort(
+      [...filteredFolders, ...filteredFiles],
+      explorer.sort,
+    );
     return _cachedResult;
   }
 
   function getSelectedEntry(state) {
     const key = state.explorer.selectedKey;
     if (!key) return null;
-    return currentEntries(state).find(item => entryKey(item) === key) || null;
+    return currentEntries(state).find((item) => entryKey(item) === key) || null;
   }
 
   function detectContentMode(entry) {
     const kind = entry.kind || inferKind(entry);
-    if (kind === 'image' || kind === 'video' || kind === 'audio' || kind === 'pdf') return kind;
-    return 'text';
+    if (
+      kind === "image" ||
+      kind === "video" ||
+      kind === "audio" ||
+      kind === "pdf"
+    )
+      return kind;
+    return "text";
   }
 
   function findCurrentEntryByPath(state, path) {
     const normalized = normalizeKey(path);
-    return currentEntries(state).find(item => normalizeKey(getEntryPath(item)) === normalized) || null;
+    return (
+      currentEntries(state).find(
+        (item) => normalizeKey(getEntryPath(item)) === normalized,
+      ) || null
+    );
   }
 
   function selectedEntriesFromState(state) {
     const entries = currentEntries(state);
-    const keys = state.explorer.trashMode ? state.explorer.trashSelectedKeys : state.explorer.selectedKeys;
-    return entries.filter(item => keys.includes(entryKey(item)));
+    const keys = state.explorer.trashMode
+      ? state.explorer.trashSelectedKeys
+      : state.explorer.selectedKeys;
+    return entries.filter((item) => keys.includes(entryKey(item)));
   }
 
   function requiresProtectedUnlock(entry) {
@@ -110,14 +134,14 @@ export function createStateSelectors(deps) {
   }
 
   function findEntryByKey(state, key) {
-    return currentEntries(state).find(item => entryKey(item) === key) || null;
+    return currentEntries(state).find((item) => entryKey(item) === key) || null;
   }
 
   function collectSelectedPaths(state, getEntryPathFn) {
     return state.explorer.selectedKeys
-      .map(id => findEntryByKey(state, id))
+      .map((id) => findEntryByKey(state, id))
       .filter(Boolean)
-      .map(item => getEntryPathFn(item))
+      .map((item) => getEntryPathFn(item))
       .filter(Boolean);
   }
 

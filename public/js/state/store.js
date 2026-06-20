@@ -1,4 +1,8 @@
-import { getInitialPath, getInitialSearch, getShareToken } from '../utils/path.js';
+import {
+  getInitialPath,
+  getInitialSearch,
+  getShareToken,
+} from "../utils/path.js";
 
 function createSlice({ name, initialState: sliceState, reducers }) {
   const actionCreators = {};
@@ -7,7 +11,7 @@ function createSlice({ name, initialState: sliceState, reducers }) {
   Object.entries(reducers).forEach(([key, reducer]) => {
     const type = `${name}/${key}`;
     caseMap[type] = reducer;
-    actionCreators[key] = payload => ({ type, payload });
+    actionCreators[key] = (payload) => ({ type, payload });
   });
 
   const reducer = (state = sliceState, action) => {
@@ -41,11 +45,11 @@ function createStore(reducer, state) {
       return () => listeners.delete(listener);
     },
     dispatch(action) {
-      if (typeof action === 'function') {
+      if (typeof action === "function") {
         return action(this.dispatch.bind(this), this.getState.bind(this));
       }
       currentState = reducer(currentState, action);
-      listeners.forEach(listener => listener());
+      listeners.forEach((listener) => listener());
       return action;
     },
   };
@@ -55,8 +59,8 @@ export function createRootStore({ page }) {
   const initialState = {
     app: {
       page,
-      role: 'guest',
-      csrf: '',
+      role: "guest",
+      csrf: "",
       booting: true,
       toast: null,
       modal: null,
@@ -65,79 +69,81 @@ export function createRootStore({ page }) {
     },
     explorer: {
       path: getInitialPath(),
-      storageId: 'r2',
+      storageId: "r2",
       loading: false,
       query: getInitialSearch(),
       queryDraft: getInitialSearch(),
       showFilters: false,
-      filterKind: 'all',
-      filterMinSize: '',
-      filterMaxSize: '',
-      filterDateFrom: '',
-      filterDateTo: '',
-      searchCursor: '',
+      filterKind: "all",
+      filterMinSize: "",
+      filterMaxSize: "",
+      filterDateFrom: "",
+      filterDateTo: "",
+      searchCursor: "",
       hasMore: false,
-      view: 'grid',
-      sort: 'smart',
-      filter: 'all',
+      view: "grid",
+      sort: "smart",
+      sortField: "name",
+      sortDir: "asc",
+      filter: "all",
       folders: [],
       files: [],
       trashItems: [],
       trashMode: false,
-      selectedKey: '',
+      selectedKey: "",
       selectedKeys: [],
       trashSelectedKeys: [],
       clipboard: null,
       expandedCrumbs: false,
-      error: '',
+      error: "",
       searching: false,
       batchBusy: false,
       trashBatchBusy: false,
     },
     admin: {
       loading: false,
-      activeTab: 'overview',
+      activeTab: "overview",
       stats: null,
       shares: [],
       sharesLoading: false,
-      sharesError: '',
-      shareBusyToken: '',
-      shareFilter: 'all',
-      error: '',
+      sharesError: "",
+      shareBusyToken: "",
+      shareFilter: "all",
+      error: "",
       health: null,
       healthLoading: false,
-      healthError: '',
+      healthError: "",
       logs: [],
       logsLoading: false,
-      logsError: '',
+      logsError: "",
       logsPage: 1,
       logsTotalPages: 0,
-      logsFilter: { q: '', action: '', from: '', to: '' },
+      logsFilter: { q: "", action: "", from: "", to: "" },
       quota: null,
       quotaLoading: false,
-      quotaError: '',
+      quotaError: "",
       protectedPaths: [],
       protectedPathsLoading: false,
-      protectedPathsError: '',
+      protectedPathsError: "",
       hiddenPaths: [],
       hiddenPathsLoading: false,
-      hiddenPathsError: '',
+      hiddenPathsError: "",
       storageConfig: null,
       storageConfigLoading: false,
-      storageConfigError: '',
+      storageConfigError: "",
       storageConfigSaving: false,
       webhooks: [],
       webhooksLoading: false,
-      webhooksError: '',
+      webhooksError: "",
       webhookDeliveries: [],
       webhookDeliveriesLoading: false,
       maintenance: null,
       maintenanceLoading: false,
-      maintenanceError: '',
-      maintenanceBusyAction: '',
+      maintenanceError: "",
+      maintenanceBusyAction: "",
       tasks: [],
       tasksLoading: false,
-      activeUploadTaskId: '',
+      activeUploadTaskId: "",
       notifications: [],
       notificationsUnread: 0,
       notificationsLoading: false,
@@ -151,26 +157,30 @@ export function createRootStore({ page }) {
       token: getShareToken(),
       loading: false,
       item: null,
-      error: '',
+      error: "",
       requiresPassword: false,
-      password: '',
+      password: "",
     },
     uploads: {
       items: [],
-      conflictMode: 'rename',
+      conflictMode: "rename",
       pendingFiles: null,
     },
   };
 
   const appSlice = createSlice({
-    name: 'app',
+    name: "app",
     initialState: initialState.app,
     reducers: {
       setBooting(state, action) {
         return { ...state, booting: action.payload };
       },
       setRole(state, action) {
-        return { ...state, role: action.payload.role, csrf: action.payload.csrf || '' };
+        return {
+          ...state,
+          role: action.payload.role,
+          csrf: action.payload.csrf || "",
+        };
       },
       setToast(state, action) {
         return { ...state, toast: action.payload };
@@ -191,7 +201,7 @@ export function createRootStore({ page }) {
   });
 
   const explorerSlice = createSlice({
-    name: 'explorer',
+    name: "explorer",
     initialState: initialState.explorer,
     reducers: {
       setLoading(state, action) {
@@ -211,6 +221,10 @@ export function createRootStore({ page }) {
       },
       setSort(state, action) {
         return { ...state, sort: action.payload };
+      },
+      setSortList(state, action) {
+        const { field, dir } = action.payload;
+        return { ...state, sortField: field, sortDir: dir };
       },
       setSearching(state, action) {
         return { ...state, searching: action.payload };
@@ -246,7 +260,7 @@ export function createRootStore({ page }) {
         return {
           ...state,
           loading: false,
-          error: '',
+          error: "",
           folders: action.payload.folders || [],
           files: action.payload.files || [],
           trashItems: action.payload.trashItems || [],
@@ -259,10 +273,10 @@ export function createRootStore({ page }) {
         return {
           ...state,
           loading: false,
-          error: '',
+          error: "",
           folders: [],
           files: files || [],
-          searchCursor: cursor || '',
+          searchCursor: cursor || "",
           hasMore: hasMore || false,
           selectedKeys: [],
         };
@@ -273,9 +287,9 @@ export function createRootStore({ page }) {
         return {
           ...state,
           loading: false,
-          error: '',
+          error: "",
           files: [...existing, ...(files || [])],
-          searchCursor: cursor || '',
+          searchCursor: cursor || "",
           hasMore: hasMore || false,
           selectedKeys: [],
         };
@@ -305,32 +319,42 @@ export function createRootStore({ page }) {
   });
 
   const adminSlice = createSlice({
-    name: 'admin',
+    name: "admin",
     initialState: initialState.admin,
     reducers: {
       setActiveTab(state, action) {
-        return { ...state, activeTab: action.payload || 'overview' };
+        return { ...state, activeTab: action.payload || "overview" };
       },
       setLoading(state, action) {
         return { ...state, loading: action.payload };
       },
       setStats(state, action) {
-        return { ...state, loading: false, error: '', stats: action.payload };
+        return { ...state, loading: false, error: "", stats: action.payload };
       },
       setSharesLoading(state, action) {
         return { ...state, sharesLoading: action.payload };
       },
       setShares(state, action) {
-        return { ...state, sharesLoading: false, sharesError: '', shares: action.payload || [] };
+        return {
+          ...state,
+          sharesLoading: false,
+          sharesError: "",
+          shares: action.payload || [],
+        };
       },
       setSharesError(state, action) {
-        return { ...state, sharesLoading: false, sharesError: action.payload, shares: [] };
+        return {
+          ...state,
+          sharesLoading: false,
+          sharesError: action.payload,
+          shares: [],
+        };
       },
       setShareBusyToken(state, action) {
-        return { ...state, shareBusyToken: action.payload || '' };
+        return { ...state, shareBusyToken: action.payload || "" };
       },
       setShareFilter(state, action) {
-        return { ...state, shareFilter: action.payload || 'all' };
+        return { ...state, shareFilter: action.payload || "all" };
       },
       setError(state, action) {
         return { ...state, loading: false, error: action.payload };
@@ -339,59 +363,126 @@ export function createRootStore({ page }) {
         return { ...state, healthLoading: action.payload };
       },
       setHealth(state, action) {
-        return { ...state, healthLoading: false, healthError: '', health: action.payload };
+        return {
+          ...state,
+          healthLoading: false,
+          healthError: "",
+          health: action.payload,
+        };
       },
       setHealthError(state, action) {
-        return { ...state, healthLoading: false, healthError: action.payload, health: null };
+        return {
+          ...state,
+          healthLoading: false,
+          healthError: action.payload,
+          health: null,
+        };
       },
       setLogsLoading(state, action) {
         return { ...state, logsLoading: action.payload };
       },
       setLogs(state, action) {
         const { items, page, totalPages } = action.payload || {};
-        return { ...state, logsLoading: false, logsError: '', logs: items || [], logsPage: page || 1, logsTotalPages: totalPages || 0 };
+        return {
+          ...state,
+          logsLoading: false,
+          logsError: "",
+          logs: items || [],
+          logsPage: page || 1,
+          logsTotalPages: totalPages || 0,
+        };
       },
       setLogsError(state, action) {
-        return { ...state, logsLoading: false, logsError: action.payload, logs: [] };
+        return {
+          ...state,
+          logsLoading: false,
+          logsError: action.payload,
+          logs: [],
+        };
       },
       setLogsFilter(state, action) {
-        return { ...state, logsFilter: { ...state.logsFilter, ...(action.payload || {}) } };
+        return {
+          ...state,
+          logsFilter: { ...state.logsFilter, ...(action.payload || {}) },
+        };
       },
       setQuotaLoading(state, action) {
         return { ...state, quotaLoading: action.payload };
       },
       setQuota(state, action) {
-        return { ...state, quotaLoading: false, quotaError: '', quota: action.payload };
+        return {
+          ...state,
+          quotaLoading: false,
+          quotaError: "",
+          quota: action.payload,
+        };
       },
       setQuotaError(state, action) {
-        return { ...state, quotaLoading: false, quotaError: action.payload, quota: null };
+        return {
+          ...state,
+          quotaLoading: false,
+          quotaError: action.payload,
+          quota: null,
+        };
       },
       setProtectedPathsLoading(state, action) {
         return { ...state, protectedPathsLoading: action.payload };
       },
       setProtectedPaths(state, action) {
-        return { ...state, protectedPathsLoading: false, protectedPathsError: '', protectedPaths: action.payload || [] };
+        return {
+          ...state,
+          protectedPathsLoading: false,
+          protectedPathsError: "",
+          protectedPaths: action.payload || [],
+        };
       },
       setProtectedPathsError(state, action) {
-        return { ...state, protectedPathsLoading: false, protectedPathsError: action.payload, protectedPaths: [] };
+        return {
+          ...state,
+          protectedPathsLoading: false,
+          protectedPathsError: action.payload,
+          protectedPaths: [],
+        };
       },
       setHiddenPathsLoading(state, action) {
         return { ...state, hiddenPathsLoading: action.payload };
       },
       setHiddenPaths(state, action) {
-        return { ...state, hiddenPathsLoading: false, hiddenPathsError: '', hiddenPaths: action.payload || [] };
+        return {
+          ...state,
+          hiddenPathsLoading: false,
+          hiddenPathsError: "",
+          hiddenPaths: action.payload || [],
+        };
       },
       setHiddenPathsError(state, action) {
-        return { ...state, hiddenPathsLoading: false, hiddenPathsError: action.payload, hiddenPaths: [] };
+        return {
+          ...state,
+          hiddenPathsLoading: false,
+          hiddenPathsError: action.payload,
+          hiddenPaths: [],
+        };
       },
       setStorageConfigLoading(state, action) {
         return { ...state, storageConfigLoading: action.payload };
       },
       setStorageConfig(state, action) {
-        return { ...state, storageConfigLoading: false, storageConfigError: '', storageConfigSaving: false, storageConfig: action.payload };
+        return {
+          ...state,
+          storageConfigLoading: false,
+          storageConfigError: "",
+          storageConfigSaving: false,
+          storageConfig: action.payload,
+        };
       },
       setStorageConfigError(state, action) {
-        return { ...state, storageConfigLoading: false, storageConfigError: action.payload, storageConfig: null, storageConfigSaving: false };
+        return {
+          ...state,
+          storageConfigLoading: false,
+          storageConfigError: action.payload,
+          storageConfig: null,
+          storageConfigSaving: false,
+        };
       },
       setStorageConfigSaving(state, action) {
         return { ...state, storageConfigSaving: action.payload };
@@ -400,28 +491,52 @@ export function createRootStore({ page }) {
         return { ...state, webhooksLoading: action.payload };
       },
       setWebhooks(state, action) {
-        return { ...state, webhooksLoading: false, webhooksError: '', webhooks: action.payload || [] };
+        return {
+          ...state,
+          webhooksLoading: false,
+          webhooksError: "",
+          webhooks: action.payload || [],
+        };
       },
       setWebhooksError(state, action) {
-        return { ...state, webhooksLoading: false, webhooksError: action.payload, webhooks: [] };
+        return {
+          ...state,
+          webhooksLoading: false,
+          webhooksError: action.payload,
+          webhooks: [],
+        };
       },
       setWebhookDeliveriesLoading(state, action) {
         return { ...state, webhookDeliveriesLoading: action.payload };
       },
       setWebhookDeliveries(state, action) {
-        return { ...state, webhookDeliveriesLoading: false, webhookDeliveries: action.payload || [] };
+        return {
+          ...state,
+          webhookDeliveriesLoading: false,
+          webhookDeliveries: action.payload || [],
+        };
       },
       setMaintenanceLoading(state, action) {
         return { ...state, maintenanceLoading: action.payload };
       },
       setMaintenance(state, action) {
-        return { ...state, maintenanceLoading: false, maintenanceError: '', maintenance: action.payload };
+        return {
+          ...state,
+          maintenanceLoading: false,
+          maintenanceError: "",
+          maintenance: action.payload,
+        };
       },
       setMaintenanceError(state, action) {
-        return { ...state, maintenanceLoading: false, maintenanceError: action.payload, maintenance: null };
+        return {
+          ...state,
+          maintenanceLoading: false,
+          maintenanceError: action.payload,
+          maintenance: null,
+        };
       },
       setMaintenanceBusyAction(state, action) {
-        return { ...state, maintenanceBusyAction: action.payload || '' };
+        return { ...state, maintenanceBusyAction: action.payload || "" };
       },
       setTasksLoading(state, action) {
         return { ...state, tasksLoading: action.payload };
@@ -430,16 +545,25 @@ export function createRootStore({ page }) {
         return { ...state, tasksLoading: false, tasks: action.payload || [] };
       },
       setActiveUploadTaskId(state, action) {
-        return { ...state, activeUploadTaskId: action.payload || '' };
+        return { ...state, activeUploadTaskId: action.payload || "" };
       },
       setNotifications(state, action) {
-        return { ...state, notificationsLoading: false, notifications: action.payload?.items || [], notificationsUnread: action.payload?.unread || 0 };
+        return {
+          ...state,
+          notificationsLoading: false,
+          notifications: action.payload?.items || [],
+          notificationsUnread: action.payload?.unread || 0,
+        };
       },
       setNotificationsLoading(state, action) {
         return { ...state, notificationsLoading: action.payload || false };
       },
       addNotification(state, action) {
-        return { ...state, notifications: [action.payload, ...state.notifications], notificationsUnread: state.notificationsUnread + 1 };
+        return {
+          ...state,
+          notifications: [action.payload, ...state.notifications],
+          notificationsUnread: state.notificationsUnread + 1,
+        };
       },
       setNotificationsUnread(state, action) {
         return { ...state, notificationsUnread: action.payload || 0 };
@@ -448,7 +572,13 @@ export function createRootStore({ page }) {
         return { ...state, notifOpen: !!action.payload };
       },
       setAdminNotifHistory(state, action) {
-        return { ...state, adminNotifHistoryLoading: false, adminNotifHistory: action.payload?.items || [], notificationsUnread: action.payload?.unread ?? state.notificationsUnread };
+        return {
+          ...state,
+          adminNotifHistoryLoading: false,
+          adminNotifHistory: action.payload?.items || [],
+          notificationsUnread:
+            action.payload?.unread ?? state.notificationsUnread,
+        };
       },
       setAdminNotifHistoryLoading(state, action) {
         return { ...state, adminNotifHistoryLoading: action.payload || false };
@@ -463,7 +593,7 @@ export function createRootStore({ page }) {
   });
 
   const shareSlice = createSlice({
-    name: 'share',
+    name: "share",
     initialState: initialState.share,
     reducers: {
       setLoading(state, action) {
@@ -476,10 +606,21 @@ export function createRootStore({ page }) {
         return { ...state, password: action.payload };
       },
       setData(state, action) {
-        return { ...state, loading: false, item: action.payload, error: '', requiresPassword: false };
+        return {
+          ...state,
+          loading: false,
+          item: action.payload,
+          error: "",
+          requiresPassword: false,
+        };
       },
       setPasswordRequired(state, action) {
-        return { ...state, loading: false, requiresPassword: true, error: action.payload || '' };
+        return {
+          ...state,
+          loading: false,
+          requiresPassword: true,
+          error: action.payload || "",
+        };
       },
       setError(state, action) {
         return { ...state, loading: false, error: action.payload };
@@ -488,7 +629,7 @@ export function createRootStore({ page }) {
   });
 
   const uploadsSlice = createSlice({
-    name: 'uploads',
+    name: "uploads",
     initialState: initialState.uploads,
     reducers: {
       enqueue(state, action) {
@@ -496,35 +637,81 @@ export function createRootStore({ page }) {
       },
       update(state, action) {
         const { id, ...patch } = action.payload || {};
-        return { ...state, items: state.items.map(item => (item.id === id ? { ...item, ...patch } : item)) };
+        return {
+          ...state,
+          items: state.items.map((item) =>
+            item.id === id ? { ...item, ...patch } : item,
+          ),
+        };
       },
       remove(state, action) {
-        return { ...state, items: state.items.filter(item => item.id !== action.payload) };
+        return {
+          ...state,
+          items: state.items.filter((item) => item.id !== action.payload),
+        };
       },
       clearFinished(state) {
-        return { ...state, items: state.items.filter(item => item.status === 'pending' || item.status === 'uploading') };
+        return {
+          ...state,
+          items: state.items.filter(
+            (item) => item.status === "pending" || item.status === "uploading",
+          ),
+        };
       },
       clearAll(state) {
         return { ...state, items: [] };
       },
       cancelItem(state, action) {
-        return { ...state, items: state.items.map(item => item.id === action.payload ? { ...item, status: 'cancelling' } : item) };
+        return {
+          ...state,
+          items: state.items.map((item) =>
+            item.id === action.payload
+              ? { ...item, status: "cancelling" }
+              : item,
+          ),
+        };
       },
       setCancelled(state, action) {
-        return { ...state, items: state.items.map(item => item.id === action.payload ? { ...item, status: 'cancelled', progress: 0 } : item) };
+        return {
+          ...state,
+          items: state.items.map((item) =>
+            item.id === action.payload
+              ? { ...item, status: "cancelled", progress: 0 }
+              : item,
+          ),
+        };
       },
       pauseItem(state, action) {
-        return { ...state, items: state.items.map(item => item.id === action.payload ? { ...item, status: 'paused' } : item) };
+        return {
+          ...state,
+          items: state.items.map((item) =>
+            item.id === action.payload ? { ...item, status: "paused" } : item,
+          ),
+        };
       },
       resumeItem(state, action) {
         const resumeData = action.payload?.resumeData;
-        return { ...state, items: state.items.map(item => item.id === action.payload?.id ? { ...item, status: 'pending', ...(resumeData || {}) } : item) };
+        return {
+          ...state,
+          items: state.items.map((item) =>
+            item.id === action.payload?.id
+              ? { ...item, status: "pending", ...(resumeData || {}) }
+              : item,
+          ),
+        };
       },
       retryItem(state, action) {
-        return { ...state, items: state.items.map(item => item.id === action.payload ? { ...item, status: 'pending', progress: 0, error: '' } : item) };
+        return {
+          ...state,
+          items: state.items.map((item) =>
+            item.id === action.payload
+              ? { ...item, status: "pending", progress: 0, error: "" }
+              : item,
+          ),
+        };
       },
       setConflictMode(state, action) {
-        return { ...state, conflictMode: action.payload || 'rename' };
+        return { ...state, conflictMode: action.payload || "rename" };
       },
       setPendingFiles(state, action) {
         return { ...state, pendingFiles: action.payload };

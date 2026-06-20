@@ -1,4 +1,4 @@
-import { escapeHtml } from './text.js';
+import { escapeHtml } from "./text.js";
 
 function renderInline(text) {
   let out = text;
@@ -7,25 +7,30 @@ function renderInline(text) {
     codeSpans.push(code);
     return `\x00CODE${codeSpans.length - 1}\x00`;
   });
-  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (whole, label, url) => {
-    const safe = /^(https?:\/\/|\/|#|mailto:)/i.test(url) || (/^[\w./?=&%-]+$/.test(url) && !/^javascript:/i.test(url));
+    const safe =
+      /^(https?:\/\/|\/|#|mailto:)/i.test(url) ||
+      (/^[\w./?=&%-]+$/.test(url) && !/^javascript:/i.test(url));
     if (!safe) return whole;
     return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
   });
-  out = out.replace(/\x00CODE(\d+)\x00/g, (_, i) => `<code>${codeSpans[Number(i)]}</code>`);
+  out = out.replace(
+    /\x00CODE(\d+)\x00/g,
+    (_, i) => `<code>${codeSpans[Number(i)]}</code>`,
+  );
   return out;
 }
 
 export function renderMarkdown(source) {
-  const escaped = escapeHtml(String(source || ''));
-  const lines = escaped.split('\n');
+  const escaped = escapeHtml(String(source || ""));
+  const lines = escaped.split("\n");
   const html = [];
 
   let inCode = false;
   let codeBuffer = [];
-  let listType = '';
+  let listType = "";
   let listItems = [];
   let paragraph = [];
   let inTable = false;
@@ -34,29 +39,38 @@ export function renderMarkdown(source) {
 
   const flushParagraph = () => {
     if (paragraph.length) {
-      html.push(`<p>${renderInline(paragraph.join(' '))}</p>`);
+      html.push(`<p>${renderInline(paragraph.join(" "))}</p>`);
       paragraph = [];
     }
   };
   const flushList = () => {
     if (listItems.length) {
-      const tag = listType === 'ol' ? 'ol' : 'ul';
-      const isTask = listItems.some(i => /^(<input type="checkbox"|\[ ?[x ]?\] )/.test(i));
-      const items = listItems.map(item => {
-        const taskMatch = item.match(/^(<input type="checkbox" disabled(?: checked)?>)\s*(.*)$/);
-        if (taskMatch) return `<li style="list-style:none">${taskMatch[1]} ${taskMatch[2]}</li>`;
+      const tag = listType === "ol" ? "ol" : "ul";
+      const isTask = listItems.some((i) =>
+        /^(<input type="checkbox"|\[ ?[x ]?\] )/.test(i),
+      );
+      const items = listItems.map((item) => {
+        const taskMatch = item.match(
+          /^(<input type="checkbox" disabled(?: checked)?>)\s*(.*)$/,
+        );
+        if (taskMatch)
+          return `<li style="list-style:none">${taskMatch[1]} ${taskMatch[2]}</li>`;
         return `<li>${item}</li>`;
       });
-      const listClass = isTask ? ' class="task-list"' : '';
-      html.push(`<${tag}${listClass}>${items.join('')}</${tag}>`);
+      const listClass = isTask ? ' class="task-list"' : "";
+      html.push(`<${tag}${listClass}>${items.join("")}</${tag}>`);
       listItems = [];
-      listType = '';
+      listType = "";
     }
   };
   const flushTable = () => {
     if (inTable) {
-      const head = tableHeader.length ? `<thead><tr>${tableHeader.map(c => `<th>${renderInline(c)}</th>`).join('')}</tr></thead>` : '';
-      const body = tableRows.length ? `<tbody>${tableRows.map(row => `<tr>${row.map(c => `<td>${renderInline(c)}</td>`).join('')}</tr>`).join('')}</tbody>` : '';
+      const head = tableHeader.length
+        ? `<thead><tr>${tableHeader.map((c) => `<th>${renderInline(c)}</th>`).join("")}</tr></thead>`
+        : "";
+      const body = tableRows.length
+        ? `<tbody>${tableRows.map((row) => `<tr>${row.map((c) => `<td>${renderInline(c)}</td>`).join("")}</tr>`).join("")}</tbody>`
+        : "";
       html.push(`<table>${head}${body}</table>`);
       tableHeader = [];
       tableRows = [];
@@ -69,7 +83,7 @@ export function renderMarkdown(source) {
 
     if (/^```/.test(line.trim())) {
       if (inCode) {
-        html.push(`<pre><code>${codeBuffer.join('\n')}</code></pre>`);
+        html.push(`<pre><code>${codeBuffer.join("\n")}</code></pre>`);
         codeBuffer = [];
         inCode = false;
       } else {
@@ -98,7 +112,7 @@ export function renderMarkdown(source) {
       flushParagraph();
       flushList();
       flushTable();
-      html.push('<hr>');
+      html.push("<hr>");
       continue;
     }
 
@@ -116,15 +130,23 @@ export function renderMarkdown(source) {
       flushParagraph();
       flushList();
       flushTable();
-      html.push(`<blockquote>${renderInline(trimmed.replace(/^&gt;\s?/, ''))}</blockquote>`);
+      html.push(
+        `<blockquote>${renderInline(trimmed.replace(/^&gt;\s?/, ""))}</blockquote>`,
+      );
       continue;
     }
 
     if (/^\|/.test(trimmed) && /\|$/.test(trimmed)) {
       flushParagraph();
       flushList();
-      const cells = trimmed.split('|').filter((_, i, a) => i > 0 && i < a.length - 1).map(c => c.trim());
-      if (/^[-:\s]+\|[-:\s]+/.test(trimmed) && /^[-:\s]+$/.test(cells.join(''))) {
+      const cells = trimmed
+        .split("|")
+        .filter((_, i, a) => i > 0 && i < a.length - 1)
+        .map((c) => c.trim());
+      if (
+        /^[-:\s]+\|[-:\s]+/.test(trimmed) &&
+        /^[-:\s]+$/.test(cells.join(""))
+      ) {
         continue;
       }
       if (!inTable) {
@@ -140,8 +162,8 @@ export function renderMarkdown(source) {
     if (ol) {
       flushParagraph();
       flushTable();
-      if (listType && listType !== 'ol') flushList();
-      listType = 'ol';
+      if (listType && listType !== "ol") flushList();
+      listType = "ol";
       listItems.push(ol[1]);
       continue;
     }
@@ -150,12 +172,12 @@ export function renderMarkdown(source) {
     if (ul) {
       flushParagraph();
       flushTable();
-      if (listType && listType !== 'ul') flushList();
-      listType = 'ul';
+      if (listType && listType !== "ul") flushList();
+      listType = "ul";
       const content = ul[1];
       const task = content.match(/^\[( |x|X)?\]\s+(.*)$/);
       if (task) {
-        const checked = task[1] && task[1] !== ' ' ? ' checked' : '';
+        const checked = task[1] && task[1] !== " " ? " checked" : "";
         listItems.push(`<input type="checkbox" disabled${checked}> ${task[2]}`);
       } else {
         listItems.push(content);
@@ -168,14 +190,14 @@ export function renderMarkdown(source) {
     paragraph.push(trimmed);
   }
 
-  if (inCode) html.push(`<pre><code>${codeBuffer.join('\n')}</code></pre>`);
+  if (inCode) html.push(`<pre><code>${codeBuffer.join("\n")}</code></pre>`);
   flushParagraph();
   flushList();
   flushTable();
 
-  return html.join('\n');
+  return html.join("\n");
 }
 
-export function isMarkdownName(name = '') {
+export function isMarkdownName(name = "") {
   return /\.(md|markdown)$/i.test(name);
 }

@@ -1,10 +1,15 @@
 function syncInputValue(fromNode, toNode) {
-  if (fromNode.nodeName !== 'INPUT' && fromNode.nodeName !== 'TEXTAREA' && fromNode.nodeName !== 'SELECT') return;
+  if (
+    fromNode.nodeName !== "INPUT" &&
+    fromNode.nodeName !== "TEXTAREA" &&
+    fromNode.nodeName !== "SELECT"
+  )
+    return;
   if (document.activeElement === fromNode) return;
-  if ('value' in fromNode && toNode.value !== fromNode.value) {
+  if ("value" in fromNode && toNode.value !== fromNode.value) {
     fromNode.value = toNode.value;
   }
-  if (fromNode.nodeName === 'INPUT') {
+  if (fromNode.nodeName === "INPUT") {
     if (toNode.checked !== undefined) fromNode.checked = toNode.checked;
     if (toNode.disabled !== undefined) fromNode.disabled = toNode.disabled;
   }

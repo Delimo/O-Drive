@@ -67,9 +67,15 @@ function makeEOCD(entryCount, centralDirSize, centralDirOffset) {
 export function buildZipEntries(entries) {
   let offset = 0;
   const centralParts = [];
-  const headers = entries.map(e => {
+  const headers = entries.map((e) => {
     const hdr = makeLocalHeader(e.name, e.size);
-    const entry = { name: e.name, size: e.size, localOffset: offset, header: hdr, getStream: e.getStream };
+    const entry = {
+      name: e.name,
+      size: e.size,
+      localOffset: offset,
+      header: hdr,
+      getStream: e.getStream,
+    };
     offset += hdr.length + e.size;
     return entry;
   });
@@ -77,10 +83,17 @@ export function buildZipEntries(entries) {
     centralParts.push(makeCentralEntry(e.name, e.size, e.localOffset));
   }
   const centralSize = centralParts.reduce((s, b) => s + b.length, 0);
-  const centralOffset = headers.length > 0
-    ? headers[headers.length - 1].localOffset + headers[headers.length - 1].header.length + headers[headers.length - 1].size
-    : 0;
-  return { headers, centralParts, eocd: makeEOCD(entries.length, centralSize, centralOffset) };
+  const centralOffset =
+    headers.length > 0
+      ? headers[headers.length - 1].localOffset +
+        headers[headers.length - 1].header.length +
+        headers[headers.length - 1].size
+      : 0;
+  return {
+    headers,
+    centralParts,
+    eocd: makeEOCD(entries.length, centralSize, centralOffset),
+  };
 }
 
 export function createZipStream(entries) {
@@ -113,7 +126,11 @@ export function createZipStream(entries) {
       controller.close();
     },
     cancel() {
-      if (reader) { reader.cancel(); reader.releaseLock(); reader = null; }
+      if (reader) {
+        reader.cancel();
+        reader.releaseLock();
+        reader = null;
+      }
     },
   });
 }

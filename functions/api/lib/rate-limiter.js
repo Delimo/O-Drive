@@ -11,7 +11,7 @@
  * @returns {string}
  */
 export function getClientIp(request) {
-  return request.headers.get('cf-connecting-ip') || 'unknown';
+  return request.headers.get("cf-connecting-ip") || "unknown";
 }
 
 /**
@@ -22,34 +22,52 @@ export function getClientIp(request) {
  * @param {number} windowMs - Window duration in milliseconds
  * @returns {Promise<{allowed: boolean, remaining: number, retryAfter: number}>}
  */
-export async function checkRateLimit(db, key, maxRequests = 60, windowMs = 60000) {
+export async function checkRateLimit(
+  db,
+  key,
+  maxRequests = 60,
+  windowMs = 60000,
+) {
   const now = Date.now();
   const windowStart = now - windowMs;
 
   try {
     // Clean up old entries periodically (1% chance)
     if (Math.random() < 0.01) {
-      await db.prepare('DELETE FROM api_rate_limits WHERE window_start < ?').bind(windowStart).run();
+      await db
+        .prepare("DELETE FROM api_rate_limits WHERE window_start < ?")
+        .bind(windowStart)
+        .run();
     }
 
     // Atomic UPSERT: creates row if missing, resets if window expired, otherwise increments
-    await db.prepare(
-      `INSERT INTO api_rate_limits (key, request_count, window_start) VALUES (?, 1, ?)
+    await db
+      .prepare(
+        `INSERT INTO api_rate_limits (key, request_count, window_start) VALUES (?, 1, ?)
        ON CONFLICT(key) DO UPDATE SET
          request_count = CASE WHEN ? > window_start + ? THEN 1 ELSE request_count + 1 END,
-         window_start = CASE WHEN ? > window_start + ? THEN ? ELSE window_start END`
-    ).bind(key, now, now, windowMs, now, windowMs, now).run();
+         window_start = CASE WHEN ? > window_start + ? THEN ? ELSE window_start END`,
+      )
+      .bind(key, now, now, windowMs, now, windowMs, now)
+      .run();
 
-    const row = await db.prepare(
-      'SELECT request_count, window_start FROM api_rate_limits WHERE key = ?'
-    ).bind(key).first();
+    const row = await db
+      .prepare(
+        "SELECT request_count, window_start FROM api_rate_limits WHERE key = ?",
+      )
+      .bind(key)
+      .first();
 
     if (row.request_count > maxRequests) {
       const retryAfter = Math.ceil((row.window_start + windowMs - now) / 1000);
       return { allowed: false, remaining: 0, retryAfter };
     }
 
-    return { allowed: true, remaining: maxRequests - row.request_count, retryAfter: 0 };
+    return {
+      allowed: true,
+      remaining: maxRequests - row.request_count,
+      retryAfter: 0,
+    };
   } catch {
     // If rate limiting fails, allow the request (fail open)
     return { allowed: true, remaining: maxRequests, retryAfter: 0 };
@@ -74,23 +92,27 @@ export function withRateLimit(handler, options = {}) {
 
     if (!result.allowed) {
       return Response.json(
-        { success: false, code: 'RATE_LIMITED', message: 'Rate limit exceeded' },
+        {
+          success: false,
+          code: "RATE_LIMITED",
+          message: "Rate limit exceeded",
+        },
         {
           status: 429,
           headers: {
-            'Retry-After': String(result.retryAfter),
-            'X-RateLimit-Limit': String(maxRequests),
-            'X-RateLimit-Remaining': '0',
+            "Retry-After": String(result.retryAfter),
+            "X-RateLimit-Limit": String(maxRequests),
+            "X-RateLimit-Remaining": "0",
           },
-        }
+        },
       );
     }
 
     const response = await handler(request, env, ...args);
     // Add rate limit headers to successful responses
     if (response?.headers) {
-      response.headers.set('X-RateLimit-Limit', String(maxRequests));
-      response.headers.set('X-RateLimit-Remaining', String(result.remaining));
+      response.headers.set("X-RateLimit-Limit", String(maxRequests));
+      response.headers.set("X-RateLimit-Remaining", String(result.remaining));
     }
     return response;
   };

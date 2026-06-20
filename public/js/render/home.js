@@ -35,10 +35,14 @@ export function createHomeRenderers(deps) {
           </div>
         </div>
         <div class="tools-right flex items-center gap-2">
-          ${state.app.role === 'admin' ? `
+          ${
+            state.app.role === "admin"
+              ? `
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="upload">上传</button>
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="open-folder-modal">新建</button>
-          ` : ''}
+          `
+              : ""
+          }
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="toggle-view">${humanView(explorer.view)}</button>
           <div class="relative inline-block">
@@ -50,12 +54,12 @@ export function createHomeRenderers(deps) {
             </div>
           </div>
           ${
-            state.app.role === 'admin'
+            state.app.role === "admin"
               ? `
-                <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors ${explorer.trashMode ? 'bg-slate-100 border-slate-300' : ''}" data-action="toggle-trash">${explorer.trashMode ? '退出回收站' : '回收站'}</button>
-                ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" data-action="confirm-clear-trash">清空回收站</button>' : ''}
+                <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors ${explorer.trashMode ? "bg-slate-100 border-slate-300" : ""}" data-action="toggle-trash">${explorer.trashMode ? "退出回收站" : "回收站"}</button>
+                ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" data-action="confirm-clear-trash">清空回收站</button>' : ""}
               `
-              : ''
+              : ""
           }
         </div>
         <input class="sr-only" id="upload-input" type="file" multiple>
@@ -69,18 +73,27 @@ export function createHomeRenderers(deps) {
   }
 
   function breadcrumbsMarkup(path, expanded) {
-    return `<div class="crumbs-bar">${buildBreadcrumbs(path, expanded).map(renderCrumb).join('')}</div>`;
+    return `<div class="crumbs-bar">${buildBreadcrumbs(path, expanded).map(renderCrumb).join("")}</div>`;
   }
 
   function renderFilterPanel(explorer) {
-    if (!explorer.showFilters) return '';
-    const kindOptions = ['all', 'image', 'video', 'audio', 'pdf', 'text', 'archive', 'file'];
+    if (!explorer.showFilters) return "";
+    const kindOptions = [
+      "all",
+      "image",
+      "video",
+      "audio",
+      "pdf",
+      "text",
+      "archive",
+      "file",
+    ];
     return `
       <div class="filter-panel">
         <div style="display:flex;flex-direction:column;gap:4px;">
           <label style="font-size:12px;color:var(--muted);">类型</label>
           <select class="inline-input" data-role="filter-kind" style="padding:4px 8px;font-size:13px;">
-            ${kindOptions.map(k => `<option value="${k}" ${explorer.filterKind === k ? 'selected' : ''}>${k === 'all' ? '全部' : k}</option>`).join('')}
+            ${kindOptions.map((k) => `<option value="${k}" ${explorer.filterKind === k ? "selected" : ""}>${k === "all" ? "全部" : k}</option>`).join("")}
           </select>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;">
@@ -105,7 +118,7 @@ export function createHomeRenderers(deps) {
   }
 
   function renderLoadMore(explorer) {
-    if (!explorer.hasMore || explorer.loading) return '';
+    if (!explorer.hasMore || explorer.loading) return "";
     return `
       <div style="text-align:center;padding:16px;">
         <button class="btn toolbar-btn" data-action="load-more-search" type="button">加载更多结果</button>
@@ -125,17 +138,17 @@ export function createHomeRenderers(deps) {
               <span>${
                 explorer.searching
                   ? `正在搜索“${escapeHtml(explorer.query)}”…`
-                  : `找到 ${entries.length} 个匹配“${escapeHtml(explorer.query)}”的结果${explorer.filter !== 'all' || explorer.filterKind !== 'all' ? `（已应用筛选）` : ''}`
+                  : `找到 ${entries.length} 个匹配“${escapeHtml(explorer.query)}”的结果${explorer.filter !== "all" || explorer.filterKind !== "all" ? `（已应用筛选）` : ""}`
               }</span>
-              <button class="btn toolbar-btn" data-action="toggle-search-filters" type="button" style="font-size:12px;padding:2px 8px;margin-left:8px;">${explorer.showFilters ? '收起筛选' : '筛选'}</button>
+              <button class="btn toolbar-btn" data-action="toggle-search-filters" type="button" style="font-size:12px;padding:2px 8px;margin-left:8px;">${explorer.showFilters ? "收起筛选" : "筛选"}</button>
             </div>
             ${renderFilterPanel(explorer)}
           `
-          : ''
+          : ""
       }
       ${renderExplorerBanner(state, selectedEntries)}
       ${renderExplorerBody(state, entries)}
-      ${explorer.query ? renderLoadMore(explorer) : ''}
+      ${explorer.query ? renderLoadMore(explorer) : ""}
     `;
   }
 
@@ -144,7 +157,12 @@ export function createHomeRenderers(deps) {
 
     if (explorer.trashMode) {
       if (explorer.trashSelectedKeys.length) {
-        return renderTrashBatchBar(state, selectedEntries, explorer.trashSelectedKeys, explorer.trashBatchBusy);
+        return renderTrashBatchBar(
+          state,
+          selectedEntries,
+          explorer.trashSelectedKeys,
+          explorer.trashBatchBusy,
+        );
       }
     } else if (explorer.selectedKeys.length) {
       return renderBatchBar(state, selectedEntries);
@@ -155,7 +173,7 @@ export function createHomeRenderers(deps) {
         <div class="batch-bar">
           <div class="status-main">
             <span class="status-dot"></span>
-            <span>剪贴板中有 ${explorer.clipboard.paths.length} 项，准备${explorer.clipboard.action === 'move' ? '移动' : '复制'}到当前文件夹。</span>
+            <span>剪贴板中有 ${explorer.clipboard.paths.length} 项，准备${explorer.clipboard.action === "move" ? "移动" : "复制"}到当前文件夹。</span>
           </div>
           <div class="btn-row">
             <button class="btn btn-primary" data-action="paste-clipboard">粘贴到这里</button>
@@ -165,36 +183,48 @@ export function createHomeRenderers(deps) {
       `;
     }
 
-    return '';
+    return "";
   }
 
   function renderExplorerBody(state, entries) {
     const explorer = state.explorer;
 
     if (explorer.loading) {
-      return renderEmptyState('正在载入', '文件列表正在同步，请稍候。', '<span></span>');
+      return renderEmptyState(
+        "正在载入",
+        "文件列表正在同步，请稍候。",
+        "<span></span>",
+      );
     }
 
     if (explorer.error) {
-      if (explorer.error === 'Unauthorized') {
-        return renderEmptyState('访客访问未开启', '当前站点未开放访客浏览，请联系管理员或登录后查看。', icons.lock);
+      if (explorer.error === "Unauthorized") {
+        return renderEmptyState(
+          "访客访问未开启",
+          "当前站点未开放访客浏览，请联系管理员或登录后查看。",
+          icons.lock,
+        );
       }
-      return renderEmptyState('加载失败', explorer.error, '<span></span>');
+      return renderEmptyState("加载失败", explorer.error, "<span></span>");
     }
 
-    const parentPath = explorer.path ? explorer.path.split('/').slice(0, -1).join('/') : '';
+    const parentPath = explorer.path
+      ? explorer.path.split("/").slice(0, -1).join("/")
+      : "";
     const showBackButton = explorer.path && !explorer.trashMode;
 
     if (entries.length) {
-      const isList = explorer.view === 'list';
-      
+      const isList = explorer.view === "list";
+
       if (isList) {
         return renderListTable(state, entries, showBackButton, parentPath);
       }
-      
+
       return `
         <div class="file-grid">
-          ${showBackButton ? `
+          ${
+            showBackButton
+              ? `
           <article class="item-card item-card-back" data-action="crumb" data-path="${escapeHtml(parentPath)}">
             <div class="item-icon file">
               <span style="display:grid;place-items:center;width:100%;height:100%">${icons.arrowLeft}</span>
@@ -203,36 +233,42 @@ export function createHomeRenderers(deps) {
               <h3 class="item-title">返回上一层</h3>
             </div>
           </article>
-          ` : ''}
-          ${entries.map(item => renderEntryCard(item, state)).join('')}
+          `
+              : ""
+          }
+          ${entries.map((item) => renderEntryCard(item, state)).join("")}
         </div>
       `;
     }
 
     return renderEmptyState(
-      explorer.query ? '没有搜索结果' : explorer.trashMode ? '回收站为空' : '这个文件夹还是空的',
       explorer.query
-        ? '试试换一个关键词，或者回到文件夹里继续找。'
+        ? "没有搜索结果"
         : explorer.trashMode
-          ? '当前没有已删除项目。'
-          : '可以直接上传文件，或者先新建一个文件夹。',
-      '<span></span>',
+          ? "回收站为空"
+          : "这个文件夹还是空的",
+      explorer.query
+        ? "试试换一个关键词，或者回到文件夹里继续找。"
+        : explorer.trashMode
+          ? "当前没有已删除项目。"
+          : "可以直接上传文件，或者先新建一个文件夹。",
+      "<span></span>",
     );
   }
 
   function renderListTable(state, entries, showBackButton, parentPath) {
     const explorer = state.explorer;
-    const sortField = explorer.sortField || 'name';
-    const sortDir = explorer.sortDir || 'asc';
-    
+    const sortField = explorer.sortField || "name";
+    const sortDir = explorer.sortDir || "asc";
+
     const getSortIcon = (field) => {
       if (sortField !== field) return '<span class="sort-icon">↕</span>';
-      return sortDir === 'asc' 
-        ? '<span class="sort-icon">↑</span>' 
+      return sortDir === "asc"
+        ? '<span class="sort-icon">↑</span>'
         : '<span class="sort-icon">↓</span>';
     };
 
-    const getSortClass = (field) => sortField === field ? 'sort-active' : '';
+    const getSortClass = (field) => (sortField === field ? "sort-active" : "");
 
     return `
       <div class="list-table-wrap">
@@ -249,16 +285,16 @@ export function createHomeRenderers(deps) {
               <th class="col-name">
                 <div class="th-inner">名称</div>
               </th>
-              <th class="col-size col-sortable ${getSortClass('size')}" data-action="sort-list" data-field="size">
+              <th class="col-size col-sortable ${getSortClass("size")}" data-action="sort-list" data-field="size">
                 <div class="th-inner">
                   大小
-                  ${getSortIcon('size')}
+                  ${getSortIcon("size")}
                 </div>
               </th>
-              <th class="col-time col-sortable ${getSortClass('time')}" data-action="sort-list" data-field="time">
+              <th class="col-time col-sortable ${getSortClass("time")}" data-action="sort-list" data-field="time">
                 <div class="th-inner">
                   修改时间
-                  ${getSortIcon('time')}
+                  ${getSortIcon("time")}
                 </div>
               </th>
               <th class="col-ops">
@@ -267,7 +303,9 @@ export function createHomeRenderers(deps) {
             </tr>
           </thead>
           <tbody>
-            ${showBackButton ? `
+            ${
+              showBackButton
+                ? `
             <tr class="row-back">
               <td colspan="5">
                 <button class="list-back-btn" data-action="crumb" data-path="${escapeHtml(parentPath)}">
@@ -276,8 +314,10 @@ export function createHomeRenderers(deps) {
                 </button>
               </td>
             </tr>
-            ` : ''}
-            ${entries.map(item => renderListRow(item, state)).join('')}
+            `
+                : ""
+            }
+            ${entries.map((item) => renderListRow(item, state)).join("")}
           </tbody>
         </table>
       </div>
@@ -288,55 +328,54 @@ export function createHomeRenderers(deps) {
     const key = entryKey(item);
     const picked = state.explorer.selectedKeys.includes(key);
     const kind = item.kind || inferKind(item);
-    const isFolder = kind === 'folder';
-    const isImage = kind === 'image';
-    const path = item.fullKey || item.original_key || item.path || item.name || '';
-    
-    const sizeText = isFolder 
-      ? (item.sizeFormatted || '—') 
-      : (item.sizeFormatted || formatBytes(item.rawSize || 0));
-    
-    const timeText = item.time 
-      ? formatListTime(item.time) 
-      : '—';
-    
-    const fileName = item.name || '未命名';
-    const displayName = fileName.length > 40 
-      ? fileName.substring(0, 37) + '...' 
-      : fileName;
+    const isFolder = kind === "folder";
+    const isImage = kind === "image";
+    const path =
+      item.fullKey || item.original_key || item.path || item.name || "";
 
-    const iconContent = isImage && thumbnailUrl
-      ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('cell-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
-      : iconForKind(kind);
+    const sizeText = isFolder
+      ? item.sizeFormatted || "—"
+      : item.sizeFormatted || formatBytes(item.rawSize || 0);
+
+    const timeText = item.time ? formatListTime(item.time) : "—";
+
+    const fileName = item.name || "未命名";
+    const displayName =
+      fileName.length > 40 ? fileName.substring(0, 37) + "..." : fileName;
+
+    const iconContent =
+      isImage && thumbnailUrl
+        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('cell-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
+        : iconForKind(kind);
 
     return `
-      <tr class="${picked ? 'is-selected' : ''}" data-key="${escapeHtml(key)}">
+      <tr class="${picked ? "is-selected" : ""}" data-key="${escapeHtml(key)}">
         <td class="col-checkbox">
-          <button class="list-checkbox ${picked ? 'is-checked' : ''}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
-            ${picked ? icons.check : ''}
+          <button class="list-checkbox ${picked ? "is-checked" : ""}" data-action="toggle-pick" data-key="${escapeHtml(key)}">
+            ${picked ? icons.check : ""}
           </button>
         </td>
         <td class="col-name">
           <div class="list-name-cell" data-action="open-entry" data-key="${escapeHtml(key)}">
-            <div class="cell-icon ${iconClass(kind)} ${isImage ? 'item-icon-image' : ''}">
+            <div class="cell-icon ${iconClass(kind)} ${isImage ? "item-icon-image" : ""}">
               ${iconContent}
             </div>
             <div class="cell-name">
               <span class="cell-name-text" data-tooltip="${escapeHtml(fileName)}">${escapeHtml(displayName)}</span>
-              ${isFolder ? '<span class="cell-name-sub">文件夹</span>' : ''}
+              ${isFolder ? '<span class="cell-name-sub">文件夹</span>' : ""}
             </div>
           </div>
         </td>
         <td class="col-size">
-          <span class="list-cell-text ${isFolder ? 'list-cell-placeholder' : ''}">${escapeHtml(sizeText)}</span>
+          <span class="list-cell-text ${isFolder ? "list-cell-placeholder" : ""}">${escapeHtml(sizeText)}</span>
         </td>
         <td class="col-time">
           <span class="list-cell-text">${escapeHtml(timeText)}</span>
         </td>
         <td class="col-ops">
           <div class="list-ops-cell">
-            ${!isFolder && canPreview(item) ? `<button class="list-ops-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ''}
-            ${!isFolder ? `<button class="list-ops-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">${icons.download}</button>` : ''}
+            ${!isFolder && canPreview(item) ? `<button class="list-ops-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ""}
+            ${!isFolder ? `<button class="list-ops-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">${icons.download}</button>` : ""}
             <button class="list-ops-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">${icons.info}</button>
           </div>
         </td>
@@ -345,13 +384,13 @@ export function createHomeRenderers(deps) {
   }
 
   function formatListTime(timestamp) {
-    if (!timestamp) return '—';
+    if (!timestamp) return "—";
     const date = new Date(timestamp * 1000);
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
 
