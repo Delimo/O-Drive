@@ -12,6 +12,7 @@ export function createSharesRenderer({
   getShareStatusTags,
   getExpiryStatus,
   isShareActive,
+  components,
 }) {
   function renderShareErrorState(error) {
     return `

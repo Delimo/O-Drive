@@ -6,6 +6,7 @@ export function createLogsRenderer({
   renderEmptyStateCompact,
   formatTime,
   formatRelative,
+  components,
 }) {
   function renderAdminLogsSection(admin) {
     const {

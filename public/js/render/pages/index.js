@@ -1,4 +1,5 @@
 import { createShareUtils } from "./admin/utils.js";
+import { createAdminComponents } from "./admin/components.js";
 import { createOverviewRenderer } from "./admin/overview.js";
 import { createLogsRenderer } from "./admin/logs.js";
 import { createSettingsRenderer } from "./admin/settings.js";
@@ -29,6 +30,7 @@ export function createPageRenderers(deps) {
   } = deps;
 
   const shareUtils = createShareUtils({ escapeHtml });
+  const components = createAdminComponents({ icons, escapeHtml });
 
   const overview = createOverviewRenderer({
     icons,
@@ -38,6 +40,7 @@ export function createPageRenderers(deps) {
     formatBytes,
     formatTime,
     formatRelative,
+    components,
   });
 
   const logs = createLogsRenderer({
@@ -48,6 +51,7 @@ export function createPageRenderers(deps) {
     renderEmptyStateCompact,
     formatTime,
     formatRelative,
+    components,
   });
 
   const settings = createSettingsRenderer({
@@ -59,6 +63,7 @@ export function createPageRenderers(deps) {
     formatBytes,
     formatTime,
     formatRelative,
+    components,
   });
 
   const shares = createSharesRenderer({
@@ -75,6 +80,7 @@ export function createPageRenderers(deps) {
     getShareStatusTags: shareUtils.getShareStatusTags,
     getExpiryStatus: shareUtils.getExpiryStatus,
     isShareActive: shareUtils.isShareActive,
+    components,
   });
 
   const webhooks = createWebhooksRenderer({
@@ -84,6 +90,7 @@ export function createPageRenderers(deps) {
     renderEmptyState,
     renderEmptyStateCompact,
     formatRelative,
+    components,
   });
 
   function renderAdminActiveTab(admin, activeTab) {

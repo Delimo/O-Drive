@@ -6,6 +6,7 @@ export function createOverviewRenderer({
   formatBytes,
   formatTime,
   formatRelative,
+  components,
 }) {
   function renderAdminStatsGrid(stats) {
     const breakdown = Object.entries(stats.breakdown || {});

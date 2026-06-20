@@ -5,6 +5,7 @@ export function createWebhooksRenderer({
   renderEmptyState,
   renderEmptyStateCompact,
   formatRelative,
+  components,
 }) {
   function renderAdminWebhooksSection(admin) {
     const { webhooks, webhooksLoading, webhooksError } = admin;
