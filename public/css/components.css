@@ -369,7 +369,7 @@
 
 .list-header {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 100px 170px 80px;
+  grid-template-columns: 36px 32px minmax(0, 1fr) 100px 170px 80px;
   align-items: center;
   padding: 8px 16px;
   background: var(--panel-soft);
@@ -457,9 +457,13 @@
   justify-content: center;
 }
 
+.file-grid.is-list .item-card.item-card-legacy {
+  justify-content: start;
+}
+
 .file-grid.is-list .item-card {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 100px 170px 80px;
+  grid-template-columns: 36px 32px minmax(0, 1fr) 100px 170px 80px;
   align-items: center;
   padding: 0 16px;
   border-radius: 0;
@@ -500,6 +504,7 @@
 .file-grid.is-list .item-card .item-content {
   min-width: 0;
   text-align: left;
+  flex: none;
 }
 
 .file-grid.is-list .item-card .item-title {

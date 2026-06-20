@@ -195,6 +195,7 @@ export function createHomeRenderers(deps) {
           ${isList ? `
           <div class="list-header">
             <span></span>
+            <span></span>
             <span>名称</span>
             <span style="text-align:right">大小</span>
             <span style="text-align:right">修改时间</span>
