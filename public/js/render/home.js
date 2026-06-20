@@ -347,8 +347,8 @@ export function createHomeRenderers(deps) {
 
     const iconContent =
       isImage && thumbnailUrl
-        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="${escapeHtml(item.name || "")}" loading="lazy" onerror="this.parentElement.classList.add('cell-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
-        : iconForKind(kind);
+        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="${escapeHtml(item.name || "")}" loading="lazy" onerror="this.onerror=null;this.src='/icons/file-type-${kind}.svg'">`
+        : iconForKind(kind, item.name);
 
     return `
       <tr class="${picked ? "is-selected" : ""}" data-key="${escapeHtml(key)}">

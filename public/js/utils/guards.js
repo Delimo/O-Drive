@@ -22,12 +22,16 @@ export function canPreview(entry) {
   return PREVIEWABLE_KINDS.has(kind);
 }
 
-export function iconForKind(kind, icons) {
+export function iconForKind(kind, icons, name, fileTypeIcons) {
+  if (name && fileTypeIcons) {
+    const ext = name.split('.').pop().toLowerCase();
+    if (fileTypeIcons[ext]) return fileTypeIcons[ext];
+  }
   return icons[kind] || icons.file;
 }
 
 export function iconClass(kind) {
-  if (["folder", "image", "video", "audio", "pdf", "archive", "code", "script", "document", "model3d"].includes(kind))
+  if (["folder", "image", "video", "audio", "pdf", "archive", "code", "script", "document", "model3d", "text", "app"].includes(kind))
     return kind;
   return "file";
 }

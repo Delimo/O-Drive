@@ -131,3 +131,14 @@ export const icons = {
   play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>',
 };
+
+export const fileTypeIcons = {
+  js: icons.js, ts: icons.code, tsx: icons.code, jsx: icons.code, json: icons.code,
+  css: icons.css, less: icons.less, expression: icons.expression,
+  html: icons.html, xml: icons.xml, yaml: icons.yaml, md: icons.md,
+  java: icons.java, py: icons.py, rb: icons.rb, php: icons.php,
+  rust: icons.rust, vbs: icons.vbs, sh: icons.script, bash: icons.script,
+  doc: icons.doc, docx: icons.docx, ppt: icons.ppt, pptx: icons.pptx,
+  xls: icons.xls, xlsx: icons.xlsx,
+  exe: icons.exe, apk: icons.apk, dll: icons.dll, deb: icons.deb, rpm: icons.rpm,
+};

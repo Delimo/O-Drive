@@ -214,8 +214,8 @@ export function createSharedRenderers(deps) {
 
     const iconContent =
       isImage && thumbnailUrl
-        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="${escapeHtml(item.name || "")}" loading="lazy" onerror="this.parentElement.classList.add('item-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
-        : iconForKind(kind);
+        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="${escapeHtml(item.name || "")}" loading="lazy" onerror="this.onerror=null;this.src='/icons/file-type-${kind}.svg'">`
+        : iconForKind(kind, item.name);
 
     return `
       <article class="item-card item-card-legacy" data-action="open-entry" data-key="${escapeHtml(key)}">

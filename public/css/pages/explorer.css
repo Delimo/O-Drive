@@ -167,23 +167,8 @@
   display: grid;
   place-items: center;
   color: var(--muted);
-  background: var(--bg);
+  background: transparent;
   border: none;
-}
-
-.item-icon.folder {
-  color: #d97706;
-  background: #fef3c7;
-}
-
-.item-icon.pdf {
-  color: #dc2626;
-  background: #fee2e2;
-}
-
-.item-icon.image {
-  color: #0891b2;
-  background: #cffafe;
 }
 
 .item-icon-image {
@@ -199,29 +184,8 @@
   border-radius: inherit;
 }
 
-.item-icon.video {
-  color: #7c3aed;
-  background: #ede9fe;
-}
-
-.item-icon.audio {
-  color: #db2777;
-  background: #fce7f3;
-}
-
-.item-icon.archive {
-  color: #65a30d;
-  background: #ecfccb;
-}
-
-.item-icon.file,
-.item-icon.text,
-.item-icon.app {
-  color: #64748b;
-  background: var(--bg);
-}
-
-.item-icon svg {
+.item-icon svg,
+.item-icon img {
   width: 30px;
   height: 30px;
 }
@@ -1138,59 +1102,18 @@
   place-items: center;
   flex-shrink: 0;
   transition: transform 0.15s ease;
+  background: transparent;
 }
 
 .list-table tbody tr:hover .list-name-cell .cell-icon {
   transform: scale(1.05);
 }
 
-.list-name-cell .cell-icon svg {
+.list-name-cell .cell-icon svg,
+.list-name-cell .cell-icon img {
   width: 20px;
   height: 20px;
 }
-
-.list-name-cell .cell-icon.folder {
-  color: #d97706;
-  background: #fef3c7;
-}
-
-.list-name-cell .cell-icon.pdf {
-  color: #dc2626;
-  background: #fee2e2;
-}
-
-.list-name-cell .cell-icon.image {
-  color: #0891b2;
-  background: #cffafe;
-}
-
-.list-name-cell .cell-icon.video {
-  color: #7c3aed;
-  background: #ede9fe;
-}
-
-.list-name-cell .cell-icon.audio {
-  color: #db2777;
-  background: #fce7f3;
-}
-
-.list-name-cell .cell-icon.archive {
-  color: #65a30d;
-  background: #ecfccb;
-}
-
-.list-name-cell .cell-icon.file,
-.list-name-cell .cell-icon.text {
-  color: #64748b;
-  background: var(--bg);
-}
-
-[data-theme="dark"] .list-name-cell .cell-icon.folder { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
-[data-theme="dark"] .list-name-cell .cell-icon.pdf { color: #f87171; background: rgba(248, 113, 113, 0.12); }
-[data-theme="dark"] .list-name-cell .cell-icon.image { color: #22d3ee; background: rgba(34, 211, 238, 0.12); }
-[data-theme="dark"] .list-name-cell .cell-icon.video { color: #a78bfa; background: rgba(167, 139, 250, 0.12); }
-[data-theme="dark"] .list-name-cell .cell-icon.audio { color: #f472b6; background: rgba(244, 114, 182, 0.12); }
-[data-theme="dark"] .list-name-cell .cell-icon.archive { color: #a3e635; background: rgba(163, 230, 53, 0.12); }
 
 .list-name-cell .cell-name {
   min-width: 0;

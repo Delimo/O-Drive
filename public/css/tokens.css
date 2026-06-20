@@ -53,6 +53,8 @@
 }
 
 [data-theme="dark"] .item-icon svg,
-[data-theme="dark"] .cell-icon svg {
+[data-theme="dark"] .cell-icon svg,
+[data-theme="dark"] .item-icon img,
+[data-theme="dark"] .cell-icon img {
   filter: brightness(0.85) saturate(0.9);
 }

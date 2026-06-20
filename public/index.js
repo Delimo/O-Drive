@@ -13,7 +13,7 @@ import { normalizeKey, encodeRouteKey } from './js/utils/path.js';
 import { inferKind, iconForKind as iconForKindBase, iconClass, isProtectedEntry, canPreview } from './js/utils/guards.js';
 import { escapeHtml, humanError, splitUploadTarget } from './js/utils/text.js';
 import { renderMarkdown, isMarkdownName } from './js/utils/markdown.js';
-import { icons } from './js/ui/icons.js';
+import { icons, fileTypeIcons } from './js/ui/icons.js';
 import { createRootStore } from './js/state/store.js';
 import { createDeferredAction, syncHomeUrl as syncHomeUrlHelper, openDownload as openDownloadHelper, readDroppedEntries } from './js/utils/helpers.js';
 import { cleanupAudioContext } from './js/state/thunks/index.js';
@@ -36,7 +36,33 @@ function dispatchToast(type, message) {
   }, 2600);
 }
 
-const iconForKind = (kind) => iconForKindBase(kind, icons);
+const svgIconNames = new Set([
+  'folder','file','image','video','audio','pdf','archive','text','script','document','office',
+  'js','css','html','xml','yaml','md','less','expression',
+  'java','py','rb','php','rust','vbs',
+  'doc','docx','ppt','pptx','xls','xlsx',
+  'exe','apk','dll','deb','rpm','root','three3d',
+]);
+
+function svgUrl(name) {
+  return svgIconNames.has(name) ? `/icons/file-type-${name}.svg` : '';
+}
+
+function iconForKind(kind, name) {
+  if (name) {
+    const ext = name.split('.').pop().toLowerCase();
+    const extUrl = svgUrl(ext);
+    if (extUrl) {
+      const fallbackUrl = svgUrl(kind) || '/icons/file-type-file.svg';
+      return `<img src="${extUrl}" alt="" aria-hidden="true" onerror="this.onerror=null;this.src='${fallbackUrl}'">`;
+    }
+  }
+  const kindUrl = svgUrl(kind);
+  if (kindUrl) {
+    return `<img src="${kindUrl}" alt="" aria-hidden="true" onerror="this.onerror=null;this.src='/icons/file-type-file.svg'">`;
+  }
+  return iconForKindBase(kind, icons);
+}
 
 async function copyText(value, successText = '已复制') {
   try {
