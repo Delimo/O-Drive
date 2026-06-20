@@ -27,7 +27,7 @@
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  transition: all .18s ease;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
@@ -891,7 +891,7 @@
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
-  transition: all .15s ease;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
 
 .share-filter-btn:hover {

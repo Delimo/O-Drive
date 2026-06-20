@@ -1,4 +1,5 @@
 export function registerUiActions(documentRef, windowRef, store, actions, thunks) {
+  let filterSearchTimer = null;
   return {
     handleInput: (event) => {
       const role = event.target.dataset.role;

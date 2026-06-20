@@ -267,7 +267,7 @@
   background: var(--panel);
   color: var(--muted);
   cursor: pointer;
-  transition: all 160ms ease;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease;
 }
 
 .item-action-btn:hover {
@@ -1016,7 +1016,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
   opacity: 0;
   transform: scale(0.8);
 }
@@ -1064,7 +1064,7 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
 .list-back-btn:hover {
@@ -1197,7 +1197,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
 .list-ops-btn:hover {

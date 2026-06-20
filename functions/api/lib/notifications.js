@@ -7,6 +7,12 @@ let _notifyTableEnsured = false;
 async function ensureNotificationTable(env) {
   if (_notifyTableEnsured) return;
   await env.D1.prepare(NOTIFY_TABLE).run();
+  try {
+    await env.D1.prepare("CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)").run();
+  } catch (_) {}
+  try {
+    await env.D1.prepare("CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)").run();
+  } catch (_) {}
   _notifyTableEnsured = true;
 }
 

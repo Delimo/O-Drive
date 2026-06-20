@@ -26,7 +26,7 @@ import { handleAdminStorage, handleAdminStorageTest } from '../functions/api/lib
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
-import { getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index.js';
+import { clearStorageUsedCache, getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index.js';
 import { createFileTask, updateFileTask } from '../functions/api/lib/tasks.js';
 import {
   handleProtectedSettings,
@@ -1050,6 +1050,7 @@ test('copy and move operations keep file index in sync', async () => {
 });
 
 test('same-storage copy creates a logical alias without duplicating the object', async () => {
+  clearStorageUsedCache();
   const env = makeEnv({
     objects: [
       { key: 'docs/source.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
@@ -1324,6 +1325,7 @@ test('legacy global quota no longer blocks uploads', async () => {
 });
 
 test('R2 high-water uploads overflow to configured S3 with a visible warning', async () => {
+  clearStorageUsedCache();
   const env = makeEnv();
   await upsertFileIndex(env, 'existing.bin', { size: 9 * 1024 * 1024 * 1024, storageId: 'r2', uploaded: Date.now() });
   const saved = await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
@@ -1437,6 +1439,7 @@ test('admin S3 storage test reports connection failures', async () => {
 });
 
 test('uploads enforce the selected storage bucket quota', async () => {
+  clearStorageUsedCache();
   const env = makeEnv();
   await upsertFileIndex(env, 'r2-used.bin', { size: Math.floor(9.5 * 1024 * 1024 * 1024) - 2, storageId: 'r2', uploaded: Date.now() });
   await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
@@ -1459,6 +1462,7 @@ test('uploads enforce the selected storage bucket quota', async () => {
 });
 
 test('uploads enforce S3 bucket quota after path binding', async () => {
+  clearStorageUsedCache();
   const env = makeEnv();
   await upsertFileIndex(env, 's3/a.bin', { size: 90, storageId: 's3-main', uploaded: Date.now() });
   await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
@@ -1529,6 +1533,7 @@ test('admin stats can summarize from file index', async () => {
 });
 
 test('admin attention warns when bucket quota usage reaches 90 percent', async () => {
+  clearStorageUsedCache();
   const env = makeEnv();
   await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
     method: 'PUT',
@@ -1541,9 +1546,11 @@ test('admin attention warns when bucket quota usage reaches 90 percent', async (
     }),
   }), 'PUT');
   await upsertFileIndex(env, 'docs/archive.zip', { size: 90, storageId: 'r2', contentType: 'application/zip', uploaded: new Date('2026-01-03') });
+  clearStorageUsedCache();
 
   const res = await handleAdminStats(env);
   const data = await res.json();
+
   const item = data.attention.find(entry => entry.title === 'Cloudflare R2 空间即将用满');
 
   assert.ok(item);

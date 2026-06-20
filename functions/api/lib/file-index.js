@@ -406,8 +406,17 @@ export async function listFileIndexPrefix(env, prefix) {
   }
 }
 
+const STORAGE_USED_CACHE_TTL = 30000;
+const storageUsedCache = {};
+export function clearStorageUsedCache() {
+  for (const k of Object.keys(storageUsedCache)) delete storageUsedCache[k];
+}
+
 export async function getIndexedStorageUsed(env, storageId = "r2") {
+  const cached = storageUsedCache[storageId];
+  if (cached && Date.now() - cached.ts < STORAGE_USED_CACHE_TTL) return cached.value;
   if (!(await ensureFileIndexTable(env))) return 0;
+  let result = 0;
   try {
     await ensureStorageUsageTable(env);
     const row = await env.D1.prepare(
@@ -415,17 +424,17 @@ export async function getIndexedStorageUsed(env, storageId = "r2") {
     )
       .bind(storageId)
       .first();
-    if (row?.total != null) return Number(row.total);
-    // Fallback to direct aggregation if materialized table is empty
-    const r = await env.D1.prepare(
-      "SELECT COALESCE(SUM(size), 0) AS total FROM (SELECT storage_id, COALESCE(NULLIF(object_key, ''), path) AS object_key, MAX(size) AS size FROM file_index WHERE storage_id = ? GROUP BY storage_id, COALESCE(NULLIF(object_key, ''), path))",
-    )
-      .bind(storageId)
-      .first();
-    return Number(r?.total || 0);
-  } catch (_) {
-    return 0;
-  }
+    if (row?.total != null) { result = Number(row.total); } else {
+      const r = await env.D1.prepare(
+        "SELECT COALESCE(SUM(size), 0) AS total FROM (SELECT storage_id, COALESCE(NULLIF(object_key, ''), path) AS object_key, MAX(size) AS size FROM file_index WHERE storage_id = ? GROUP BY storage_id, COALESCE(NULLIF(object_key, ''), path))",
+      )
+        .bind(storageId)
+        .first();
+      result = Number(r?.total || 0);
+    }
+  } catch (_) { result = 0; }
+  storageUsedCache[storageId] = { value: result, ts: Date.now() };
+  return result;
 }
 
 export async function syncFileIndexFromR2(env, { maxObjects = 20000 } = {}) {
@@ -545,6 +554,9 @@ function rowMatchesSearchFilters(row, filters = {}) {
   return true;
 }
 
+const searchCache = new Map();
+const SEARCH_CACHE_TTL = 10000;
+
 export async function searchFileIndex(
   env,
   { q, scope, limit, cursor, filters = {} },
@@ -553,6 +565,10 @@ export async function searchFileIndex(
 ) {
   const count = await indexedFileCount(env);
   if (!count) return null;
+  if (!q || String(q).length < 2) return null;
+  const cacheKey = `${q}|${scope}|${limit}|${cursor}|${JSON.stringify(filters)}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < SEARCH_CACHE_TTL) return cached.data;
   const offset = Math.max(0, Number(cursor || 0));
   const cleanScope = String(scope || "").replace(/^\/+|\/+$/g, "");
   const like = `%${String(q || "").toLowerCase()}%`;
@@ -604,13 +620,15 @@ export async function searchFileIndex(
     }
 
     const page = visible.slice(0, limit).map((entry) => entry.item);
-    return {
+    const data = {
       files: page,
       nextCursor:
         visible.length > limit ? String(visible[limit - 1].nextCursor) : "",
       scanned: page.length,
       scanLimitReached: false,
     };
+    searchCache.set(cacheKey, { data, ts: Date.now() });
+    return data;
   } catch (_) {
     return null;
   }

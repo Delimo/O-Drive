@@ -121,7 +121,7 @@
   color: var(--text);
   font-size: 15px;
   cursor: pointer;
-  transition: all 160ms ease;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease;
 }
 
 .header-icon-btn:hover {

@@ -10,6 +10,7 @@ import {
   resolveExistingObjectLocation,
   resolveExistingStorageId,
   resolveStorageIdForPath,
+  storageCopy,
   storageDelete,
   storageGet,
   storageList,

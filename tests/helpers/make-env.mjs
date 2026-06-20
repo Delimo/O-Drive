@@ -140,6 +140,11 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
       async delete(key) {
         byKey.delete(key);
       },
+      async copy(sourceKey, destKey, options) {
+        const obj = byKey.get(sourceKey);
+        if (!obj) return;
+        byKey.set(destKey, { ...obj, key: destKey });
+      },
       async createMultipartUpload(key) {
         return {
           key,
@@ -497,6 +502,15 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 if (Number(logs[i].timestamp || 0) < cutoff) { logs.splice(i, 1); changes++; }
               }
             }
+            if (/DELETE FROM logs WHERE id\s*[<]=?\s*\?/i.test(sql)) {
+              const cutoffId = Number(statement.bound?.[0] || 0);
+              const comparator = /id\s*<=/i.test(sql)
+                ? (id) => Number(id || 0) <= cutoffId
+                : (id) => Number(id || 0) < cutoffId;
+              for (let i = logs.length - 1; i >= 0; i--) {
+                if (comparator(logs[i].id)) { logs.splice(i, 1); changes++; }
+              }
+            }
             if (/DELETE FROM logs WHERE id NOT IN/i.test(sql)) {
               const limit = Number(statement.bound?.[0] || 2000);
               const keep = new Set(materializedLogs().slice(0, limit).map(row => row.id));
@@ -533,6 +547,15 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = systemWarningRows.length - 1; i >= 0; i--) {
                 if (Number(systemWarningRows[i].created_at || 0) < cutoff) { systemWarningRows.splice(i, 1); changes++; }
+              }
+            }
+            if (/DELETE FROM system_warnings WHERE id\s*[<]=?\s*\?/i.test(sql)) {
+              const cutoffId = Number(statement.bound?.[0] || 0);
+              const comparator = /id\s*<=/i.test(sql)
+                ? (id) => Number(id || 0) <= cutoffId
+                : (id) => Number(id || 0) < cutoffId;
+              for (let i = systemWarningRows.length - 1; i >= 0; i--) {
+                if (comparator(systemWarningRows[i].id)) { systemWarningRows.splice(i, 1); changes++; }
               }
             }
             if (/DELETE FROM system_warnings WHERE id NOT IN/i.test(sql)) {
@@ -678,6 +701,19 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT value FROM kv_config WHERE key = 'webhooks'/i.test(sql)) {
               const value = kvRows.get('webhooks');
               return value == null ? null : { value };
+            }
+            if (/SELECT id FROM logs ORDER BY id DESC LIMIT 1 OFFSET \?/i.test(sql)) {
+              const offset = Number(statement.bound?.[0] || 0);
+              const sorted = [...logs].sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+              const row = sorted[offset];
+              return row ? { id: row.id } : null;
+            }
+            if (/SELECT id FROM system_warnings ORDER BY id DESC LIMIT 1 OFFSET \?/i.test(sql)) {
+              const offset = Number(statement.bound?.[0] || 0);
+              const sorted = [...systemWarningRows]
+                .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0));
+              const row = sorted[offset];
+              return row ? { id: row.id } : null;
             }
             return null;
           },

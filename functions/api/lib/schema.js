@@ -113,6 +113,7 @@ export const CORE_MIGRATION_SQL = [
   `CREATE INDEX IF NOT EXISTS idx_logs_action_ip_timestamp ON logs(action, ip, timestamp)`,
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event_created_at ON webhook_deliveries(event, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_file_tasks_status_created_at ON file_tasks(status, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_system_warnings_created_at ON system_warnings(created_at)`,
 ];
 
 export const SHARE_TABLE_SQL = `

@@ -54,20 +54,21 @@ export async function cleanupFileTasks(
     .run()
     .catch(() => ({}));
   total += r1?.meta?.changes || 0;
-  const r2 = await env.D1.prepare(
-    `DELETE FROM file_tasks
-     WHERE status NOT IN ('queued', 'running')
-       AND id NOT IN (
-         SELECT id FROM file_tasks
+  try {
+    const cutoff = await env.D1.prepare(
+      `SELECT id FROM file_tasks
+       WHERE status NOT IN ('queued', 'running')
+       ORDER BY id DESC LIMIT 1 OFFSET ?`,
+    ).bind(TASK_RETENTION_ROWS).first();
+    if (cutoff?.id) {
+      const r2 = await env.D1.prepare(
+        `DELETE FROM file_tasks
          WHERE status NOT IN ('queued', 'running')
-         ORDER BY created_at DESC
-         LIMIT ?
-       )`,
-  )
-    .bind(TASK_RETENTION_ROWS)
-    .run()
-    .catch(() => ({}));
-  total += r2?.meta?.changes || 0;
+           AND id < ?`,
+      ).bind(cutoff.id).run();
+      total += r2?.meta?.changes || 0;
+    }
+  } catch (_) {}
   return total;
 }
 

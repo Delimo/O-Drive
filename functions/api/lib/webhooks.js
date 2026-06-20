@@ -318,11 +318,14 @@ async function cleanupWebhookDeliveries(env, now = Date.now()) {
   await env.D1.prepare("DELETE FROM webhook_deliveries WHERE created_at < ?")
     .bind(cutoff)
     .run();
-  await env.D1.prepare(
-    "DELETE FROM webhook_deliveries WHERE id NOT IN (SELECT id FROM webhook_deliveries ORDER BY created_at DESC, id DESC LIMIT ?)",
-  )
-    .bind(DELIVERY_RETENTION_ROWS)
-    .run();
+  try {
+    const cutoff = await env.D1.prepare(
+      "SELECT id FROM webhook_deliveries ORDER BY id DESC LIMIT 1 OFFSET ?",
+    ).bind(DELIVERY_RETENTION_ROWS).first();
+    if (cutoff?.id) {
+      await env.D1.prepare("DELETE FROM webhook_deliveries WHERE id < ?").bind(cutoff.id).run();
+    }
+  } catch (_) {}
 }
 
 /**

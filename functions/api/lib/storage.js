@@ -554,6 +554,24 @@ export async function storageDelete(env, storageId, key) {
   await signedS3Request(adapter.space, "DELETE", key);
 }
 
+export async function storageCopy(env, sourceStorageId, sourceKey, destStorageId, destKey, options = {}) {
+  const adapter = await getStorageAdapter(env, sourceStorageId);
+  if (adapter.provider !== "r2") {
+    const obj = await storageGet(env, sourceStorageId, sourceKey);
+    if (!obj) return false;
+    await storagePut(env, destStorageId, destKey, obj.body, { httpMetadata: obj.httpMetadata, ...options });
+    return true;
+  }
+  if (sourceStorageId !== destStorageId) {
+    const obj = await storageGet(env, sourceStorageId, sourceKey);
+    if (!obj) return false;
+    await storagePut(env, destStorageId, destKey, obj.body, { httpMetadata: obj.httpMetadata, ...options });
+    return true;
+  }
+  await adapter.bucket.copy(sourceKey, destKey, options);
+  return true;
+}
+
 export async function storageList(env, storageId, options = {}, extra = {}) {
   const adapter = await getStorageAdapter(env, storageId);
   if (adapter.provider === "r2")

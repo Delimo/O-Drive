@@ -40,22 +40,16 @@ export async function checkRateLimit(
         .run();
     }
 
-    // Atomic UPSERT: creates row if missing, resets if window expired, otherwise increments
-    await db
+    // Atomic UPSERT with RETURNING: single query instead of INSERT + SELECT
+    const row = await db
       .prepare(
         `INSERT INTO api_rate_limits (key, request_count, window_start) VALUES (?, 1, ?)
        ON CONFLICT(key) DO UPDATE SET
          request_count = CASE WHEN ? > window_start + ? THEN 1 ELSE request_count + 1 END,
-         window_start = CASE WHEN ? > window_start + ? THEN ? ELSE window_start END`,
+         window_start = CASE WHEN ? > window_start + ? THEN ? ELSE window_start END
+       RETURNING request_count, window_start`,
       )
       .bind(key, now, now, windowMs, now, windowMs, now)
-      .run();
-
-    const row = await db
-      .prepare(
-        "SELECT request_count, window_start FROM api_rate_limits WHERE key = ?",
-      )
-      .bind(key)
       .first();
 
     if (row.request_count > maxRequests) {

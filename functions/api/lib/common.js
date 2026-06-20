@@ -199,13 +199,15 @@ export async function cleanupLogs(env, now = Date.now()) {
     .run()
     .catch(() => ({}));
   total += r1?.meta?.changes || 0;
-  const r2 = await env.D1.prepare(
-    "DELETE FROM logs WHERE id NOT IN (SELECT id FROM logs ORDER BY timestamp DESC, id DESC LIMIT ?)",
-  )
-    .bind(LOG_RETENTION_ROWS)
-    .run()
-    .catch(() => ({}));
-  total += r2?.meta?.changes || 0;
+  try {
+    const cutoff = await env.D1.prepare(
+      "SELECT id FROM logs ORDER BY id DESC LIMIT 1 OFFSET ?",
+    ).bind(LOG_RETENTION_ROWS).first();
+    if (cutoff?.id) {
+      const r2 = await env.D1.prepare("DELETE FROM logs WHERE id <= ?").bind(cutoff.id).run();
+      total += r2?.meta?.changes || 0;
+    }
+  } catch (_) {}
   return total;
 }
 
@@ -241,11 +243,14 @@ async function cleanupSystemWarnings(env, now = Date.now()) {
   await env.D1.prepare("DELETE FROM system_warnings WHERE created_at < ?")
     .bind(cutoff)
     .run();
-  await env.D1.prepare(
-    "DELETE FROM system_warnings WHERE id NOT IN (SELECT id FROM system_warnings ORDER BY created_at DESC, id DESC LIMIT ?)",
-  )
-    .bind(SYSTEM_WARNING_RETENTION_ROWS)
-    .run();
+  try {
+    const cutoff = await env.D1.prepare(
+      "SELECT id FROM system_warnings ORDER BY id DESC LIMIT 1 OFFSET ?",
+    ).bind(SYSTEM_WARNING_RETENTION_ROWS).first();
+    if (cutoff?.id) {
+      await env.D1.prepare("DELETE FROM system_warnings WHERE id <= ?").bind(cutoff.id).run();
+    }
+  } catch (_) {}
 }
 
 const MAX_BODY_SIZE = 512 * 1024; // 512 KB for JSON/regular requests

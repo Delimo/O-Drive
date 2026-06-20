@@ -14,6 +14,9 @@ export function createUploadsRenderer(deps) {
   function renderUploadsPanel(state) {
     const items = state.uploads.items;
     if (!items.length) return "";
+    const maxVisible = 20;
+    const overflow = items.length > maxVisible ? items.length - maxVisible : 0;
+    const visibleItems = overflow ? items.slice(0, maxVisible) : items;
 
     const active = items.filter(
       (i) =>
@@ -41,7 +44,7 @@ export function createUploadsRenderer(deps) {
           </div>
         </div>
         <div class="upload-panel-body">
-          ${items
+          ${visibleItems
             .map(
               (item) => `
             <div class="upload-row" data-status="${escapeHtml(item.status)}">
@@ -84,6 +87,7 @@ export function createUploadsRenderer(deps) {
           `,
             )
             .join("")}
+          ${overflow ? `<div class="upload-row upload-row-overflow">... 和另外 ${overflow} 个文件</div>` : ""}
         </div>
       </div>
     `;

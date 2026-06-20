@@ -25,7 +25,18 @@ function makeDb() {
           const row = rows.get(stmt.bound?.[0]);
           return row ? { request_count: row.request_count, window_start: row.window_start } : null;
         }
-        return null;
+        if (/INSERT INTO api_rate_limits[\s\S]*RETURNING/i.test(stmt.sql)) {
+          const [key, now, checkNow, windowMs] = stmt.bound;
+          const existing = rows.get(key);
+          if (!existing || checkNow > existing.windowStart + windowMs) {
+            rows.set(key, { key, request_count: 1, window_start: now });
+          } else {
+            existing.request_count += 1;
+          }
+          const row = rows.get(key);
+          return { request_count: row.request_count, window_start: row.window_start };
+        }
+        return { request_count: 1, window_start: Date.now() };
       };
       return stmt;
     },

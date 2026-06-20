@@ -19,19 +19,6 @@ function fileKind(key) {
   return indexedFileKind(key);
 }
 
-function emptyBreakdown() {
-  return {
-    image: { count: 0, size: 0 },
-    video: { count: 0, size: 0 },
-    audio: { count: 0, size: 0 },
-    pdf: { count: 0, size: 0 },
-    text: { count: 0, size: 0 },
-    archive: { count: 0, size: 0 },
-    exe: { count: 0, size: 0 },
-    other: { count: 0, size: 0 },
-  };
-}
-
 export async function handleAdminStats(env) {
   if (await indexedFileCount(env)) {
     const indexed = await getIndexedStats(env);
@@ -55,67 +42,31 @@ export async function handleAdminStats(env) {
       });
     }
   }
-  const listed = await listR2Objects(env.R2, {}, { maxObjects: 20000 });
   await syncFileIndexFromR2(env, { maxObjects: 20000 });
-  const objects = (listed.objects || []).filter(
-    (obj) => !isReservedKey(obj.key) && !obj.key.endsWith("/.folder"),
-  );
-  const breakdown = emptyBreakdown();
-  let totalSize = 0;
-  let folderMarkers = 0;
-
-  for (const obj of listed.objects || []) {
-    if (obj.key.endsWith("/.folder")) folderMarkers++;
+  if (await indexedFileCount(env)) {
+    const indexed = await getIndexedStats(env);
+    if (indexed) {
+      const dbStats = await adminDbStats(env);
+      if (dbStats.trash)
+        dbStats.trash.percentOfFiles =
+          Number(indexed.files?.totalSize || 0) > 0
+            ? Math.round(
+                (Number(dbStats.trash.size || 0) /
+                  Number(indexed.files.totalSize || 0)) *
+                  100,
+              )
+            : 0;
+      const index = await overviewIndexStatus(env);
+      return jsonResponse({
+        ...indexed,
+        ...dbStats,
+        index,
+        attention: await overviewAttention(env, indexed, dbStats, index),
+      });
+    }
   }
-
-  for (const obj of objects) {
-    const size = Number(obj.size || 0);
-    const kind = fileKind(obj.key);
-    totalSize += size;
-    breakdown[kind].count++;
-    breakdown[kind].size += size;
-  }
-
-  const latest = [...objects]
-    .sort(
-      (a, b) => (b.uploaded?.getTime?.() || 0) - (a.uploaded?.getTime?.() || 0),
-    )
-    .slice(0, 10)
-    .map((obj) => ({
-      key: obj.key,
-      size: obj.size || 0,
-      sizeFormatted: formatBytes(obj.size || 0),
-      uploaded: obj.uploaded?.getTime?.() || 0,
-    }));
-
-  const dbStats = await adminDbStats(env);
-  if (dbStats.trash)
-    dbStats.trash.percentOfFiles =
-      totalSize > 0
-        ? Math.round((Number(dbStats.trash.size || 0) / totalSize) * 100)
-        : 0;
-  const index = await overviewIndexStatus(env, listed);
-  const stats = {
-    files: {
-      count: objects.length,
-      totalSize,
-      totalSizeFormatted: formatBytes(totalSize),
-      folderMarkers,
-      truncated: Boolean(listed.truncated),
-    },
-    breakdown: Object.fromEntries(
-      Object.entries(breakdown).map(([kind, value]) => [
-        kind,
-        { ...value, sizeFormatted: formatBytes(value.size) },
-      ]),
-    ),
-    latest,
-    ...dbStats,
-    index,
-  };
   return jsonResponse({
-    ...stats,
-    attention: await overviewAttention(env, stats, dbStats, index),
+    attention: [{ type: "warning", message: "文件索引为空，请先在维护页面重建索引" }],
   });
 }
 
