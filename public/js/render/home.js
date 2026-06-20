@@ -179,8 +179,9 @@ export function createHomeRenderers(deps) {
     const showBackButton = explorer.path && !explorer.trashMode;
 
     if (entries.length) {
+      const isList = explorer.view === 'list';
       return `
-        <div class="file-grid ${explorer.view === 'list' ? 'is-list' : ''}">
+        <div class="file-grid ${isList ? 'is-list' : ''}">
           ${showBackButton ? `
           <article class="item-card item-card-back" data-action="crumb" data-path="${escapeHtml(parentPath)}">
             <div class="item-icon file">
@@ -190,6 +191,15 @@ export function createHomeRenderers(deps) {
               <h3 class="item-title">返回上一层</h3>
             </div>
           </article>
+          ` : ''}
+          ${isList ? `
+          <div class="list-header">
+            <span></span>
+            <span>名称</span>
+            <span style="text-align:right">大小</span>
+            <span style="text-align:right">修改时间</span>
+            <span style="text-align:right">操作</span>
+          </div>
           ` : ''}
           ${entries.map(item => renderEntryCard(item, state)).join('')}
         </div>

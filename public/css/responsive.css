@@ -69,8 +69,19 @@
   }
 
   .file-grid.is-list .item-card {
+    display: flex;
     align-items: flex-start;
     flex-direction: column;
+    padding: 10px 14px;
+  }
+
+  .file-grid.is-list .item-card .item-list-size,
+  .file-grid.is-list .item-card .item-list-time {
+    display: none;
+  }
+
+  .list-header {
+    display: none;
   }
 
   .details-drawer {

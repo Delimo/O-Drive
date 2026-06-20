@@ -182,6 +182,7 @@ export function createSharedRenderers(deps) {
     const kind = item.kind || inferKind(item);
     const isFolder = kind === 'folder';
     const isImage = kind === 'image';
+    const isList = state.explorer.view === 'list';
     const path = item.fullKey || item.original_key || item.path || item.name || '';
     const meta = state.explorer.trashMode
       ? [isFolder ? '文件夹' : '文件', formatTime(item.trashedAt || 0)]
@@ -189,6 +190,9 @@ export function createSharedRenderers(deps) {
           isFolder ? '文件夹' : (item.sizeFormatted || formatBytes(item.rawSize || 0)),
           item.time ? formatTime(item.time) : '等待同步',
         ];
+
+    const sizeText = isFolder ? '文件夹' : (item.sizeFormatted || formatBytes(item.rawSize || 0));
+    const timeText = item.time ? formatTime(item.time) : '等待同步';
 
     const iconContent = isImage && thumbnailUrl
       ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('item-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
@@ -204,21 +208,23 @@ export function createSharedRenderers(deps) {
         </div>
         <div class="item-content">
           <h3 class="item-title">${escapeHtml(item.name || '未命名项目')}</h3>
-          <div class="item-meta">
+          ${!isList ? `<div class="item-meta">
             ${meta.map(text => `<span class="item-chip">${escapeHtml(text)}</span>`).join('')}
-          </div>
+          </div>` : ''}
         </div>
-        ${!isFolder ? `
-        <div class="item-actions">
-          ${canPreview(item) ? `<button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ''}
-          <button class="item-action-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">
-            ${icons.download}
-          </button>
-          <button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
-            ${icons.info}
-          </button>
-        </div>
+        ${isList ? `
+        <span class="item-list-size">${escapeHtml(sizeText)}</span>
+        <span class="item-list-time">${escapeHtml(timeText)}</span>
         ` : ''}
+        <div class="item-actions">
+          ${!isFolder && canPreview(item) ? `<button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ''}
+          ${!isFolder ? `<button class="item-action-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">
+            ${icons.download}
+          </button>` : ''}
+          ${!isFolder ? `<button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
+            ${icons.info}
+          </button>` : ''}
+        </div>
       </article>
     `;
   }
