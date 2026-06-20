@@ -689,6 +689,26 @@ export function createRootStore({ page }) {
           ),
         };
       },
+      pauseAll(state) {
+        return {
+          ...state,
+          items: state.items.map((item) =>
+            item.status === "pending" || item.status === "uploading"
+              ? { ...item, status: "paused" }
+              : item,
+          ),
+        };
+      },
+      resumeAll(state) {
+        return {
+          ...state,
+          items: state.items.map((item) =>
+            item.status === "paused"
+              ? { ...item, status: "pending" }
+              : item,
+          ),
+        };
+      },
       resumeItem(state, action) {
         const resumeData = action.payload?.resumeData;
         return {

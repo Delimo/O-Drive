@@ -76,9 +76,22 @@ export function registerUploadActions(documentRef, store, actions, thunks, dispa
       return;
     }
 
+    if (action === "pause-all-uploads") {
+      store.dispatch(actions.uploads.pauseAll());
+      return;
+    }
+
     if (action === "resume-upload") {
       const uploadId = actionNode.dataset.id || key;
       store.dispatch(thunks.resumeFileUpload(uploadId));
+      return;
+    }
+
+    if (action === "resume-all-uploads") {
+      const pausedItems = store.getState().uploads.items.filter((i) => i.status === "paused");
+      pausedItems.forEach((item) => {
+        store.dispatch(thunks.resumeFileUpload(item.id));
+      });
       return;
     }
 

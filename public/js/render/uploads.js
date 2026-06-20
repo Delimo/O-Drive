@@ -27,6 +27,10 @@ export function createUploadsRenderer(deps) {
     const done = items.filter((i) => i.status === "success").length;
     const failed = items.filter((i) => i.status === "error").length;
     const cancelled = items.filter((i) => i.status === "cancelled").length;
+    const allPaused = items.length > 0 && items.every(
+      (i) => i.status === "paused" || i.status === "success" || i.status === "error" || i.status === "cancelled",
+    );
+    const hasActive = active > 0;
 
     const title = active
       ? `正在上传 ${active} 个文件`
@@ -39,6 +43,8 @@ export function createUploadsRenderer(deps) {
         <div class="upload-panel-head">
           <span class="upload-panel-title">${escapeHtml(title)}</span>
           <div class="upload-panel-tools">
+            ${hasActive ? `<button class="upload-panel-btn" data-action="pause-all-uploads" type="button">暂停全部</button>` : ""}
+            ${allPaused && !hasActive ? `<button class="upload-panel-btn" data-action="resume-all-uploads" type="button">继续全部</button>` : ""}
             ${active ? "" : `<button class="upload-panel-btn" data-action="clear-finished-uploads" type="button">清除已完成</button>`}
             <button class="upload-panel-close" data-action="dismiss-uploads" type="button" aria-label="关闭上传面板">×</button>
           </div>

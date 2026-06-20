@@ -512,7 +512,7 @@
   right: 24px;
   bottom: 24px;
   z-index: 60;
-  width: min(800px, calc(100vw - 48px));
+  width: min(420px, calc(100vw - 48px));
   padding: 16px;
   border-radius: 16px;
   background: var(--panel);
@@ -627,7 +627,19 @@
   height: 100%;
   border-radius: 999px;
   background: var(--accent);
-  transition: width 0.2s ease;
+  transition: width 0.3s ease;
+}
+
+.upload-row[data-status="uploading"] .upload-row-bar,
+.upload-row[data-status="pending"] .upload-row-bar {
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, white), var(--accent));
+  background-size: 200% 100%;
+  animation: upload-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes upload-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .upload-row[data-status="success"] .upload-row-bar { background: #18794e; }
