@@ -337,12 +337,12 @@ function renderHeader(state) {
         ${page === 'home' ? `
           <div class="search-bar relative">
             <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
-            <input type="search" value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(searchPlaceholder)}" data-role="search-input" aria-label="搜索文件" class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all" ${searchDisabled ? 'disabled' : ''}>
+            <input type="search" value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(searchPlaceholder)}" data-role="search-input" aria-label="搜索文件" class="w-44 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all" ${searchDisabled ? 'disabled' : ''}>
           </div>
         ` : `
           <div class="search-bar relative">
             <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
-            <input type="search" value="" placeholder="搜索文件..." aria-label="搜索文件" class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
+            <input type="search" value="" placeholder="搜索文件..." aria-label="搜索文件" class="w-44 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
           </div>
         `}
         <button class="header-icon-btn header-theme-btn" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
