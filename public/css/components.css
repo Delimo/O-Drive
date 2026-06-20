@@ -441,6 +441,7 @@
   gap: 14px;
   padding: 12px 14px;
   border-radius: var(--radius-md);
+  height: auto;
 }
 
 .file-grid.is-list .item-content {
