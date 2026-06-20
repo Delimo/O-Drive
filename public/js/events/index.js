@@ -3,6 +3,7 @@ import { registerAdminActions } from './admin-actions.js';
 import { registerUploadActions } from './upload-actions.js';
 import { registerNavigationActions } from './navigation-actions.js';
 import { registerUiActions } from './ui-actions.js';
+import { clearUploadAutoTimers } from '../state/thunks/upload.js';
 
 export function registerAppEvents(deps) {
   const {
@@ -38,7 +39,7 @@ export function registerAppEvents(deps) {
 
   const fileActions = registerFileActions(documentRef, windowRef, store, actions, thunks, commonDeps);
   const adminActions = registerAdminActions(documentRef, windowRef, store, actions, thunks, dispatchToast);
-  const uploadActions = registerUploadActions(documentRef, store, actions, thunks, dispatchToast);
+  const uploadActions = registerUploadActions(documentRef, store, actions, thunks, dispatchToast, clearUploadAutoTimers);
   const navigationActions = registerNavigationActions(documentRef, windowRef, store, actions, thunks);
   const uiActions = registerUiActions(documentRef, windowRef, store, actions, thunks);
 

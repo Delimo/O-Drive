@@ -204,8 +204,8 @@ export function createSharedRenderers(deps) {
           isFolder
             ? "文件夹"
             : item.sizeFormatted || formatBytes(item.rawSize || 0),
-          formatTime(item.time),
-        ];
+          isFolder ? "" : formatTime(item.time),
+        ].filter(Boolean);
 
     const sizeText = isFolder
       ? "文件夹"

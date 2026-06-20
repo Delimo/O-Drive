@@ -243,19 +243,34 @@ export function createHomeRenderers(deps) {
       `;
     }
 
-    return renderEmptyState(
-      explorer.query
-        ? "没有搜索结果"
-        : explorer.trashMode
-          ? "回收站为空"
-          : "这个文件夹还是空的",
-      explorer.query
-        ? "试试换一个关键词，或者回到文件夹里继续找。"
-        : explorer.trashMode
-          ? "当前没有已删除项目。"
-          : "可以直接上传文件，或者先新建一个文件夹。",
-      "<span></span>",
-    );
+    const emptyTitle = explorer.query
+      ? "没有搜索结果"
+      : explorer.trashMode
+        ? "回收站为空"
+        : "这个文件夹还是空的";
+    const emptyCopy = explorer.query
+      ? "试试换一个关键词，或者回到文件夹里继续找。"
+      : explorer.trashMode
+        ? "当前没有已删除项目。"
+        : "可以直接上传文件，或者先新建一个文件夹。";
+
+    if (showBackButton) {
+      return `
+        <div class="file-grid">
+          <article class="item-card item-card-back" data-action="crumb" data-path="${escapeHtml(parentPath)}">
+            <div class="item-icon file">
+              <span style="display:grid;place-items:center;width:100%;height:100%">${icons.arrowLeft}</span>
+            </div>
+            <div class="item-content">
+              <h3 class="item-title">返回上一层</h3>
+            </div>
+          </article>
+        </div>
+        ${renderEmptyState(emptyTitle, emptyCopy, "<span></span>")}
+      `;
+    }
+
+    return renderEmptyState(emptyTitle, emptyCopy, "<span></span>");
   }
 
   function renderListTable(state, entries, showBackButton, parentPath) {

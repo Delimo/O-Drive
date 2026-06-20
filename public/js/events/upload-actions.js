@@ -1,4 +1,4 @@
-export function registerUploadActions(documentRef, store, actions, thunks, dispatchToast) {
+export function registerUploadActions(documentRef, store, actions, thunks, dispatchToast, clearUploadAutoTimers) {
   return (event) => {
     const actionNode = event.target.closest("[data-action]");
     if (!actionNode) return;
@@ -89,11 +89,13 @@ export function registerUploadActions(documentRef, store, actions, thunks, dispa
     }
 
     if (action === "clear-finished-uploads") {
+      if (clearUploadAutoTimers) clearUploadAutoTimers();
       store.dispatch(actions.uploads.clearFinished());
       return;
     }
 
     if (action === "dismiss-uploads") {
+      if (clearUploadAutoTimers) clearUploadAutoTimers();
       store.dispatch(actions.uploads.clearAll());
       return;
     }

@@ -592,7 +592,7 @@ export function createModalRenderers(deps) {
             <div style="padding:12px 24px;border-top:1px solid var(--line);margin-top:8px;">
               <div style="display:flex;align-items:center;gap:10px;">
                 <label style="flex-shrink:0;font-size:13px;color:var(--muted);">冲突策略</label>
-                <select class="inline-input conflict-select" data-action="set-upload-conflict-mode" style="flex:1;min-height:36px;font-size:13px;">
+                <select class="inline-input conflict-select" data-action="set-upload-conflict-mode" style="flex:0 0 auto;width:auto;min-height:36px;font-size:13px;">
                   <option value="rename" ${conflictMode === "rename" ? "selected" : ""}>自动重命名</option>
                   <option value="overwrite" ${conflictMode === "overwrite" ? "selected" : ""}>覆盖已有</option>
                   <option value="skip" ${conflictMode === "skip" ? "selected" : ""}>跳过</option>

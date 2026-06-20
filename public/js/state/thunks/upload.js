@@ -2,6 +2,20 @@ import { CHUNK_SIZE } from "../../constants.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const AUTO_REMOVE_DELAY = 3000;
+const AUTO_CLOSE_DELAY = 3000;
+let autoRemoveTimers = [];
+let autoCloseTimer = null;
+
+export function clearUploadAutoTimers() {
+  autoRemoveTimers.forEach(clearTimeout);
+  autoRemoveTimers = [];
+  if (autoCloseTimer) {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = null;
+  }
+}
+
 export function createUploadThunks(deps, context) {
   const {
     actions,
@@ -174,6 +188,12 @@ export function createUploadThunks(deps, context) {
               progress: 100,
             }),
           );
+          const successId = q.id;
+          autoRemoveTimers.push(
+            setTimeout(() => {
+              dispatch(actions.uploads.remove(successId));
+            }, AUTO_REMOVE_DELAY),
+          );
           await updateTask();
         } catch (error) {
           if (error.message === "UPLOAD_CANCELLED") {
@@ -214,6 +234,11 @@ export function createUploadThunks(deps, context) {
       } else {
         dispatchToast("error", `成功 ${uploaded} 个，失败 ${failed} 个`);
       }
+
+      autoCloseTimer = setTimeout(() => {
+        dispatch(actions.uploads.clearAll());
+      }, AUTO_CLOSE_DELAY);
+
       await dispatch(getThunks().loadExplorer());
     },
 

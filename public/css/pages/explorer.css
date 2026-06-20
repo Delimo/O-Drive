@@ -509,9 +509,8 @@
 
 .upload-panel {
   position: fixed;
-  left: 50%;
+  right: 24px;
   bottom: 24px;
-  transform: translateX(-50%);
   z-index: 60;
   width: min(800px, calc(100vw - 48px));
   padding: 16px;
@@ -567,23 +566,28 @@
 
 .upload-panel-body {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 10px;
-  max-height: 120px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .upload-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 200px;
-  flex: 1 1 auto;
-  padding: 6px 10px;
+  padding: 8px 10px;
   border-radius: 8px;
   background: var(--subtle-bg);
+  transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+}
+
+.upload-row.is-fading {
+  opacity: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0 10px;
+  overflow: hidden;
 }
 
 .upload-row-icon {
