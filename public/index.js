@@ -376,7 +376,7 @@ function renderHeader(state) {
         <div class="relative" data-component="notifications">
           <button class="header-icon-btn notif-bell" data-action="toggle-notifications" aria-label="通知">
             <span class="icon">${icons.bell}</span>
-            <span class="notif-badge" data-role="notif-count" style="display:${state.admin.notificationsUnread ? '' : 'none'}">${state.admin.notificationsUnread}</span>
+            <span class="notif-dot" data-role="notif-count" style="display:${state.admin.notificationsUnread ? '' : 'none'}"></span>
           </button>
           <div class="notif-dropdown" data-role="notif-dropdown" style="display:${state.admin.notifOpen ? '' : 'none'}">
             <div class="notif-dropdown-head">

@@ -818,27 +818,22 @@
   100% { transform: rotate(0deg); }
 }
 
-.notif-badge {
+.notif-dot {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: var(--danger);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
+  border: 2px solid var(--panel);
   pointer-events: none;
-  animation: badge-pulse 2s ease-in-out infinite;
+  animation: dot-pulse 2s ease-in-out infinite;
 }
 
-@keyframes badge-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.2); }
 }
 
 .notif-dropdown {
