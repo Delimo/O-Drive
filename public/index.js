@@ -15,7 +15,7 @@ import { escapeHtml, humanError, splitUploadTarget } from './js/utils/text.js';
 import { renderMarkdown, isMarkdownName } from './js/utils/markdown.js';
 import { icons } from './js/ui/icons.js';
 import { createRootStore } from './js/state/store.js';
-import { createDeferredAction, syncHomeUrl as syncHomeUrlHelper, openDownload as openDownloadHelper } from './js/utils/helpers.js';
+import { createDeferredAction, syncHomeUrl as syncHomeUrlHelper, openDownload as openDownloadHelper, readDroppedEntries } from './js/utils/helpers.js';
 import morphdom from './js/vendor/morphdom.js';
 
 const root = document.getElementById('app');
@@ -236,6 +236,7 @@ const destroyEvents = registerAppEvents({
   },
   getSearchTimer: () => searchTimer,
   syncHomeUrl: (path, query) => syncHomeUrlHelper(page, path, query),
+  readDroppedEntries,
 });
 
 function renderRegion(container, htmlString) {
@@ -272,6 +273,7 @@ function render() {
     }
     <div data-region="modal"></div>
     <div data-region="toast"></div>
+    <div data-region="drop-overlay"></div>
     ${page === 'home' ? '<div data-region="uploads"></div>' : ''}
   `;
   const next = root.cloneNode(false);
@@ -295,6 +297,18 @@ function renderUploads() {
   const state = store.getState();
   const el = root.querySelector('[data-region="uploads"]');
   if (el) renderRegion(el, renderUploadsPanel(state));
+}
+
+function renderDropOverlay() {
+  const state = store.getState();
+  const el = root.querySelector('[data-region="drop-overlay"]');
+  if (!el) return;
+  if (state.app.dragging) {
+    el.innerHTML = '<div class="drop-overlay"><div class="drop-overlay-inner"><span class="drop-overlay-icon">⇧</span><span class="drop-overlay-text">松开上传</span></div></div>';
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 function renderHeader(state) {
@@ -405,11 +419,13 @@ subscribeSlice(
 subscribeSlice(s => s.app.modal, renderModal);
 subscribeSlice(s => s.app.toast, renderToast);
 subscribeSlice(s => s.uploads, renderUploads);
+subscribeSlice(s => s.app.dragging, renderDropOverlay);
 
 render();
 renderModal();
 renderToast();
 renderUploads();
+renderDropOverlay();
 
 store.dispatch(actions.app.setNow(Date.now()));
 store.dispatch(thunks.loadRole()).then(async () => {

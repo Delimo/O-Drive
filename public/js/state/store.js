@@ -61,6 +61,7 @@ export function createRootStore({ page }) {
       toast: null,
       modal: null,
       now: Date.now(),
+      dragging: false,
     },
     explorer: {
       path: getInitialPath(),
@@ -182,6 +183,9 @@ export function createRootStore({ page }) {
       },
       setNow(state, action) {
         return { ...state, now: action.payload };
+      },
+      setDragging(state, action) {
+        return { ...state, dragging: action.payload };
       },
     },
   });

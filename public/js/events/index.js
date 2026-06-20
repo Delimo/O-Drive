@@ -22,6 +22,7 @@ export function registerAppEvents(deps) {
     setSearchTimer,
     getSearchTimer,
     syncHomeUrl,
+    readDroppedEntries,
   } = deps;
 
   const ac = new AbortController();
@@ -1165,6 +1166,39 @@ export function registerAppEvents(deps) {
   mq.addEventListener('change', e => {
     if (!localStorage.getItem('theme')) {
       documentRef.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    }
+  }, opts);
+
+  let dragCounter = 0;
+
+  documentRef.addEventListener('dragenter', event => {
+    event.preventDefault();
+    if (store.getState().app.role !== 'admin') return;
+    dragCounter++;
+    store.dispatch(actions.app.setDragging(true));
+  }, opts);
+
+  documentRef.addEventListener('dragover', event => {
+    event.preventDefault();
+  }, opts);
+
+  documentRef.addEventListener('dragleave', event => {
+    event.preventDefault();
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      store.dispatch(actions.app.setDragging(false));
+    }
+  }, opts);
+
+  documentRef.addEventListener('drop', async event => {
+    event.preventDefault();
+    dragCounter = 0;
+    store.dispatch(actions.app.setDragging(false));
+    if (store.getState().app.role !== 'admin') return;
+    const files = await readDroppedEntries(event.dataTransfer);
+    if (files.length) {
+      store.dispatch(actions.app.setModal({ type: 'upload-confirm', files }));
     }
   }, opts);
 

@@ -560,6 +560,7 @@
 
 .item-card-back {
   justify-content: center;
+  width: 150px;
 }
 
 .item-card-back .item-icon {
@@ -2382,3 +2383,39 @@ select.conflict-select {
 [data-theme="dark"] .bg-sky-600 { background-color: #0284c7; }
 [data-theme="dark"] .hover\:bg-sky-700:hover { background-color: #0369a1; }
 [data-theme="dark"] .focus\:border-sky-500:focus { border-color: #0ea5e9; }
+
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent-strong) 10%, transparent);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.drop-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 60px;
+  border: 2px dashed var(--accent-strong);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.drop-overlay-icon {
+  font-size: 40px;
+  color: var(--accent-strong);
+  line-height: 1;
+}
+
+.drop-overlay-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-strong);
+}

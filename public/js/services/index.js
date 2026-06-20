@@ -1,5 +1,21 @@
 import { CHUNK_SIZE } from '../constants.js';
 
+function getUploadKey(dir, name) {
+  return `od-upload:${dir}/${name}`;
+}
+
+function saveProgress(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch (_) {}
+}
+
+function loadProgress(key) {
+  try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch (_) { return null; }
+}
+
+function clearProgress(key) {
+  try { localStorage.removeItem(key); } catch (_) {}
+}
+
 export function createServices(deps) {
   const {
     detectContentMode,
@@ -68,21 +84,43 @@ export function createServices(deps) {
       const name = item.targetName;
       const type = file.type || 'application/octet-stream';
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+      const pKey = getUploadKey(item.targetDir, name);
+      const saved = loadProgress(pKey);
 
-      const createRes = await multipartApi.create({
-        targetDir: item.targetDir,
-        name,
-        type,
-        totalSize: file.size,
-        conflict: conflict || item.conflict || 'rename',
-      });
-      if (!createRes.response.ok) throw new Error(createRes.data?.message || '创建分片上传失败');
-      const { key, uploadId, storageId, renamed } = createRes.data;
+      let key, uploadId, storageId;
+      let completedParts = [];
+      let startChunk = 0;
+
+      if (saved && saved.fileSize === file.size && saved.totalChunks === totalChunks) {
+        key = saved.key;
+        uploadId = saved.uploadId;
+        storageId = saved.storageId;
+        completedParts = saved.parts || [];
+        startChunk = completedParts.length;
+      } else {
+        if (saved && saved.uploadId) {
+          try { await multipartApi.abort({ key: saved.key, uploadId: saved.uploadId, storageId: saved.storageId }); } catch (_) {}
+        }
+        const createRes = await multipartApi.create({
+          targetDir: item.targetDir,
+          name,
+          type,
+          totalSize: file.size,
+          conflict: conflict || item.conflict || 'rename',
+        });
+        if (!createRes.response.ok) throw new Error(createRes.data?.message || '创建分片上传失败');
+        key = createRes.data.key;
+        uploadId = createRes.data.uploadId;
+        storageId = createRes.data.storageId;
+        saveProgress(pKey, { key, uploadId, storageId, totalChunks, fileSize: file.size, parts: [] });
+      }
 
       const partResults = new Array(totalChunks);
-      let nextPartIndex = 0;
+      for (const p of completedParts) partResults[p.partNumber - 1] = p;
+
+      let nextPartIndex = startChunk;
       let cancelled = false;
-      let completedParts = 0;
+      let completedCount = completedParts.length;
 
       async function uploadWorker() {
         while (nextPartIndex < totalChunks && !cancelled) {
@@ -96,24 +134,28 @@ export function createServices(deps) {
           if (!response.ok) { cancelled = true; throw new Error(data?.message || `分片 ${partNumber} 上传失败`); }
           partResults[i] = { partNumber, etag: data?.etag || '' };
           uploadService.partTracker.add(uploadId, partNumber, data?.etag || '');
-          completedParts++;
-          if (typeof onProgress === 'function') onProgress(Math.round((completedParts / totalChunks) * 100));
+          completedCount++;
+          saveProgress(pKey, { key, uploadId, storageId, totalChunks, fileSize: file.size, parts: partResults.filter(Boolean).sort((a, b) => a.partNumber - b.partNumber) });
+          if (typeof onProgress === 'function') onProgress(Math.round((completedCount / totalChunks) * 100));
         }
       }
 
       const CONCURRENCY = 4;
-      const workers = Array.from({ length: Math.min(CONCURRENCY, totalChunks) }, () => uploadWorker());
+      const workers = Array.from({ length: Math.min(CONCURRENCY, totalChunks - startChunk) }, () => uploadWorker());
       await Promise.all(workers);
 
       const parts = partResults.filter(Boolean).sort((a, b) => a.partNumber - b.partNumber);
       const completeRes = await multipartApi.complete({ key, uploadId, parts, storageId });
       if (!completeRes.response.ok) throw new Error(completeRes.data?.message || '完成分片上传失败');
+      clearProgress(pKey);
       uploadService.partTracker.clear(uploadId);
-      return { ...completeRes, data: { ...completeRes.data, renamed } };
+      return { ...completeRes, data: { ...completeRes.data, renamed: saved?.renamed } };
     },
     async abortMultipart(key, uploadId, storageId) {
       await multipartApi.abort({ key, uploadId, storageId });
       uploadService.partTracker.clear(uploadId);
+      const idx = key.lastIndexOf('/');
+      clearProgress(getUploadKey(idx >= 0 ? key.slice(0, idx) : '', idx >= 0 ? key.slice(idx + 1) : key));
     },
   };
 
