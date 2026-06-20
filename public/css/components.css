@@ -352,7 +352,7 @@
 
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, 150px);
   gap: 14px;
 }
 
@@ -558,20 +558,18 @@
   font-size: 12px;
 }
 
-.back-to-parent {
-  margin-bottom: 12px;
+.item-card-back {
+  justify-content: center;
 }
 
-.back-to-parent .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.item-card-back .item-icon {
+  color: var(--muted);
+  background: var(--bg);
 }
 
-.back-to-parent .icon {
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
+.item-card-back .item-title {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .item-chip {

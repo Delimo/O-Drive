@@ -181,12 +181,14 @@ export function createHomeRenderers(deps) {
     if (entries.length) {
       return `
         ${showBackButton ? `
-        <div class="back-to-parent">
-          <button class="btn" data-action="crumb" data-path="${escapeHtml(parentPath)}">
-            <span class="icon">${icons.arrowLeft}</span>
-            返回上一层
-          </button>
-        </div>
+        <article class="item-card item-card-back" data-action="crumb" data-path="${escapeHtml(parentPath)}">
+          <div class="item-icon file">
+            <span style="display:grid;place-items:center;width:100%;height:100%">${icons.arrowLeft}</span>
+          </div>
+          <div class="item-content">
+            <h3 class="item-title">返回上一层</h3>
+          </div>
+        </article>
         ` : ''}
         <div class="file-grid ${explorer.view === 'list' ? 'is-list' : ''}">
           ${entries.map(item => renderEntryCard(item, state)).join('')}
