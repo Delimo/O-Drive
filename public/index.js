@@ -1,10 +1,10 @@
 ﻿import { createApiLayer } from './js/api/index.js';
 import { createServices } from './js/services/index.js';
 import { createStateSelectors } from './js/state/selectors.js';
-import { createThunks } from './js/state/thunks.js';
+import { createThunks } from './js/state/thunks/index.js';
 import { createModalRenderers } from './js/render/modal.js';
 import { createHomeRenderers } from './js/render/home.js';
-import { createPageRenderers } from './js/render/pages.js';
+import { createPageRenderers } from './js/render/pages/index.js';
 import { createSharedRenderers } from './js/render/shared.js';
 import { createUploadsRenderer } from './js/render/uploads.js';
 import { registerAppEvents } from './js/events/index.js';
@@ -16,7 +16,7 @@ import { renderMarkdown, isMarkdownName } from './js/utils/markdown.js';
 import { icons } from './js/ui/icons.js';
 import { createRootStore } from './js/state/store.js';
 import { createDeferredAction, syncHomeUrl as syncHomeUrlHelper, openDownload as openDownloadHelper, readDroppedEntries } from './js/utils/helpers.js';
-import { cleanupAudioContext } from './js/state/thunks.js';
+import { cleanupAudioContext } from './js/state/thunks/index.js';
 import morphdom from './js/vendor/morphdom.js';
 
 const root = document.getElementById('app');
@@ -420,14 +420,20 @@ function subscribeSlice(selector, fn) {
   });
 }
 
-subscribeSlice(
-  s => page === 'home' ? s.explorer : page === 'admin' ? s.admin : page === 'share' ? s.share : null,
-  render,
-);
-subscribeSlice(s => s.app.modal, renderModal);
-subscribeSlice(s => s.app.toast, renderToast);
-subscribeSlice(s => s.uploads, renderUploads);
-subscribeSlice(s => s.app.dragging, renderDropOverlay);
+const unsubscribers = [
+  subscribeSlice(
+    s => page === 'home' ? s.explorer : page === 'admin' ? s.admin : page === 'share' ? s.share : null,
+    render,
+  ),
+  subscribeSlice(s => s.app.modal, renderModal),
+  subscribeSlice(s => s.app.toast, renderToast),
+  subscribeSlice(s => s.uploads, renderUploads),
+  subscribeSlice(s => s.app.dragging, renderDropOverlay),
+];
+
+function unsubscribe() {
+  unsubscribers.forEach(unsub => unsub());
+}
 
 render();
 renderModal();

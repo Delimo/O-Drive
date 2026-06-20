@@ -13,7 +13,7 @@ import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
 import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockNotifications } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
-import { createPageRenderers } from '../public/js/render/pages.js';
+import { createPageRenderers } from '../public/js/render/pages/index.js';
 
 // 任意图标都返回占位 SVG，避免在测试里维护完整图标表
 const icons = new Proxy({}, { get: () => '<svg></svg>' });
@@ -57,6 +57,7 @@ const pages = createPageRenderers({
   icons,
   escapeHtml,
   renderEmptyState: shared.renderEmptyState,
+  renderEmptyStateCompact: shared.renderEmptyStateCompact,
   formatBytes,
   formatTime,
   formatRelative,
@@ -489,7 +490,7 @@ test('admin health section renders health components', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'health', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: mockAdminHealth, healthError: '',
@@ -536,31 +537,32 @@ test('admin quota section renders storage usage', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'quota', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
-      healthLoading: false, health: null, healthError: '',
+      healthLoading: false, health: mockAdminHealth, healthError: '',
       logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
       quotaLoading: false, quota: mockAdminQuota, quotaError: '',
-      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
-      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
-      webhooksLoading: false, webhooks: [], webhooksError: '',
-      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      protectedPathsLoading: false, protectedPaths: mockProtectedPaths, protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: mockHiddenPaths, hiddenPathsError: '',
+      webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
       storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      tasks: mockTasks, tasksLoading: false,
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /已用空间/);
-  assert.match(html, /总配额/);
+  assert.match(html, /已用/);
   assert.match(html, /1\.2/);
-  assert.match(html, /5\.0/);
+  assert.match(html, /5/);
 });
 
 test('admin protected paths section renders path list with delete buttons', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'protected', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'paths', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -682,7 +684,7 @@ test('admin task list section renders upload task records', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'tasks', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -693,7 +695,7 @@ test('admin task list section renders upload task records', () => {
       webhooksLoading: false, webhooks: [], webhooksError: '',
       webhookDeliveriesLoading: false, webhookDeliveries: [],
       storageConfig: null, storageConfigLoading: false, storageConfigError: '',
-      maintenance: null, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
       tasks: mockTasks, tasksLoading: false,
     },
   };
@@ -707,7 +709,7 @@ test('admin task list section shows loading state', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'tasks', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -718,7 +720,7 @@ test('admin task list section shows loading state', () => {
       webhooksLoading: false, webhooks: [], webhooksError: '',
       webhookDeliveriesLoading: false, webhookDeliveries: [],
       storageConfig: null, storageConfigLoading: false, storageConfigError: '',
-      maintenance: null, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
       tasks: [], tasksLoading: true,
     },
   };

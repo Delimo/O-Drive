@@ -23,11 +23,23 @@
   .admin-card.span-12 {
     grid-column: span 12;
   }
+
+  .sys-status-body {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
   .admin-grid {
     gap: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-card.span-4,
+  .admin-card.span-6,
+  .admin-card.span-8,
+  .admin-card.span-12 {
+    grid-column: span 1;
   }
 
   .admin-value {
@@ -40,6 +52,25 @@
 
   .admin-card {
     padding: 16px;
+  }
+
+  .hero-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .env-grid,
+  .maint-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tab-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .admin-tab-btn {
+    flex-shrink: 0;
   }
 }
 
