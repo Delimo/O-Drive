@@ -335,27 +335,9 @@ export function createHomeRenderers(deps) {
         </td>
         <td class="col-ops">
           <div class="list-ops-cell">
-            <div class="list-ops-actions">
-              ${!isFolder && canPreview(item) ? `<button class="list-ops-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ''}
-              ${!isFolder ? `<button class="list-ops-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">${icons.download}</button>` : ''}
-              <button class="list-ops-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">${icons.info}</button>
-            </div>
-            <button class="list-ops-more" data-action="open-list-menu" data-key="${escapeHtml(key)}">
-              ${icons.more}
-            </button>
-            <div class="list-popover" data-menu-for="${escapeHtml(key)}" style="display:none">
-              ${!isFolder && canPreview(item) ? `<button class="list-popover-item" data-action="preview" data-key="${escapeHtml(key)}">${icons.eye} 预览</button>` : ''}
-              ${!isFolder ? `<button class="list-popover-item" data-action="download" data-key="${escapeHtml(key)}">${icons.download} 下载</button>` : ''}
-              <button class="list-popover-item" data-action="info" data-key="${escapeHtml(key)}">${icons.info} 详细信息</button>
-              <div class="list-popover-sep"></div>
-              ${state.app.role === 'admin' ? `
-                <button class="list-popover-item" data-action="open-rename-modal" data-key="${escapeHtml(key)}">重命名</button>
-                <button class="list-popover-item" data-action="open-share-modal" data-key="${escapeHtml(key)}">分享</button>
-                <button class="list-popover-item" data-action="copy-selected" data-key="${escapeHtml(key)}">复制</button>
-                <button class="list-popover-item" data-action="move-selected" data-key="${escapeHtml(key)}">移动</button>
-                <button class="list-popover-item danger" data-action="delete-selected" data-key="${escapeHtml(key)}">删除</button>
-              ` : ''}
-            </div>
+            ${!isFolder && canPreview(item) ? `<button class="list-ops-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ''}
+            ${!isFolder ? `<button class="list-ops-btn" data-action="download" data-key="${escapeHtml(key)}" title="下载">${icons.download}</button>` : ''}
+            <button class="list-ops-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">${icons.info}</button>
           </div>
         </td>
       </tr>
