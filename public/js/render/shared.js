@@ -188,11 +188,11 @@ export function createSharedRenderers(deps) {
       ? [isFolder ? '文件夹' : '文件', formatTime(item.trashedAt || 0)]
       : [
           isFolder ? '文件夹' : (item.sizeFormatted || formatBytes(item.rawSize || 0)),
-          isFolder ? '' : formatTime(item.time || 0),
+          formatTime(item.time),
         ];
 
     const sizeText = isFolder ? '文件夹' : (item.sizeFormatted || formatBytes(item.rawSize || 0));
-    const timeText = isFolder ? '' : formatTime(item.time || 0);
+    const timeText = formatTime(item.time);
 
     const iconContent = isImage && thumbnailUrl
       ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('item-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
