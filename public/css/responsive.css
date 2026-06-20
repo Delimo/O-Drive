@@ -7,10 +7,6 @@
     font-size: 22px;
   }
 
-  .admin-section-title {
-    font-size: 26px;
-  }
-
   .hero-strip {
     gap: 10px;
   }
@@ -42,20 +38,8 @@
     font-size: 20px;
   }
 
-  .admin-section-title {
-    font-size: 22px;
-  }
-
   .admin-card {
     padding: 16px;
-  }
-
-  .admin-scroll-stack {
-    gap: 14px;
-  }
-
-  .admin-section {
-    gap: 14px;
   }
 }
 

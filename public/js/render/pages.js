@@ -304,10 +304,10 @@ export function createPageRenderers(deps) {
       </div>
       ${
         admin.sharesLoading
-          ? renderEmptyStateCompact(
+          ?           renderEmptyStateCompact(
               "正在加载分享列表",
               "正在获取已创建的分享记录和访问状态。",
-              icons.refresh,
+              icons.spinner,
             )
           : admin.sharesError
             ? renderShareErrorState(admin.sharesError)
@@ -918,7 +918,7 @@ export function createPageRenderers(deps) {
       maintenanceHtml = renderEmptyStateCompact(
         "加载中",
         "正在获取系统维护快照...",
-        icons.refresh,
+        icons.spinner,
       );
     } else {
       maintenanceHtml = `
@@ -971,7 +971,7 @@ export function createPageRenderers(deps) {
                   data-maintenance-action="${escapeHtml(item.action)}"
                   data-maintenance-label="${escapeHtml(item.label)}"
                   ${busy ? "disabled" : ""}>
-                  ${busy ? icons.refresh : icons.trash}
+                  ${busy ? icons.spinner : icons.trash}
                   <span>${busy ? "执行中..." : "执行"}</span>
                 </button>
               </div>
@@ -986,7 +986,7 @@ export function createPageRenderers(deps) {
       tasksHtml = renderEmptyStateCompact(
         "加载中",
         "正在获取任务列表...",
-        icons.refresh,
+        icons.spinner,
       );
     } else if (!tasks || !tasks.length) {
       tasksHtml = renderEmptyStateCompact(
@@ -1073,7 +1073,7 @@ export function createPageRenderers(deps) {
       return renderEmptyStateCompact(
         "加载中",
         "正在获取任务列表...",
-        icons.refresh,
+        icons.spinner,
       );
     }
     if (!tasks || !tasks.length) {
@@ -1363,7 +1363,7 @@ export function createPageRenderers(deps) {
       maintHtml = renderEmptyStateCompact(
         "加载中",
         "正在获取维护快照...",
-        icons.refresh,
+        icons.spinner,
       );
     } else {
       maintHtml = `
@@ -1413,15 +1413,15 @@ export function createPageRenderers(deps) {
         </div>
         <div class="maint-actions">
           <button class="btn btn-primary toolbar-btn" type="button" data-action="confirm-maintenance-action" data-maintenance-action="rebuild-index" data-maintenance-label="重建文件索引" ${maintenanceBusyAction ? "disabled" : ""}>
-            ${maintenanceBusyAction === "rebuild-index" ? icons.refresh : icons.trash}
+            ${maintenanceBusyAction === "rebuild-index" ? icons.spinner : icons.trash}
             <span>${maintenanceBusyAction === "rebuild-index" ? "执行中..." : "重建文件索引"}</span>
           </button>
           <button class="btn toolbar-btn" type="button" data-action="confirm-maintenance-action" data-maintenance-action="cleanup-access-attempts" data-maintenance-label="清理访问失败记录" ${maintenanceBusyAction ? "disabled" : ""}>
-            ${maintenanceBusyAction === "cleanup-access-attempts" ? icons.refresh : icons.trash}
+            ${maintenanceBusyAction === "cleanup-access-attempts" ? icons.spinner : icons.trash}
             <span>${maintenanceBusyAction === "cleanup-access-attempts" ? "执行中..." : "清理访问失败记录"}</span>
           </button>
           <button class="btn toolbar-btn" type="button" data-action="confirm-maintenance-action" data-maintenance-action="cleanup-thumbnails" data-maintenance-label="清理缩略图缓存" ${maintenanceBusyAction ? "disabled" : ""}>
-            ${maintenanceBusyAction === "cleanup-thumbnails" ? icons.refresh : icons.trash}
+            ${maintenanceBusyAction === "cleanup-thumbnails" ? icons.spinner : icons.trash}
             <span>${maintenanceBusyAction === "cleanup-thumbnails" ? "执行中..." : "清理缩略图缓存"}</span>
           </button>
         </div>
@@ -2000,7 +2000,7 @@ export function createPageRenderers(deps) {
             ? renderEmptyState(
                 "正在读取分享",
                 "正在加载分享文件信息与预览权限。",
-                icons.refresh,
+                icons.spinner,
               )
             : share.error && !share.requiresPassword
               ? renderEmptyState("分享不可用", share.error, icons.lock)

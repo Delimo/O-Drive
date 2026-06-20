@@ -19,13 +19,13 @@ export function formatTime(value) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(time));
+  }).format(new Date(time * 1000));
 }
 
 export function formatRelative(value) {
   const time = Number(value || 0);
   if (!time) return "刚刚";
-  const diff = Date.now() - time;
+  const diff = Date.now() - time * 1000;
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;

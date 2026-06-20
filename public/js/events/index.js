@@ -61,7 +61,7 @@ export function registerAppEvents(deps) {
       }
 
       if (actionNode) {
-        const { action, key, path } = actionNode.dataset;
+        const { action, action2, key, path } = actionNode.dataset;
 
         if (action === "open-login") {
           store.dispatch(
@@ -1100,6 +1100,15 @@ export function registerAppEvents(deps) {
           store.dispatch(thunks.clearTrashWithModal());
           return;
         }
+
+      }
+      if (action2) {
+        const actionMap = {
+          "refresh-admin-health": () => store.dispatch(thunks.loadAdminHealth()),
+          "refresh-admin-maintenance": () => store.dispatch(thunks.loadMaintenanceSnapshot()),
+        };
+        const fn = actionMap[action2];
+        if (fn) fn();
       }
     },
     opts,

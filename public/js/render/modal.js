@@ -601,7 +601,7 @@ export function createModalRenderers(deps) {
             </div>
             <div style="padding:0 24px 20px;display:flex;gap:10px;">
               <button class="btn btn-primary" type="button" data-action="confirm-upload" style="flex:1;min-height:42px;" ${modal.loading || !files.length ? "disabled" : ""}>
-                ${modal.loading ? icons.refresh : ""}
+                ${modal.loading ? icons.spinner : ""}
                 <span>${modal.loading ? "上传中..." : "开始上传"}</span>
               </button>
               <button class="btn" type="button" data-action="cancel-upload-confirm" style="min-height:42px;" ${modal.loading ? "disabled" : ""}>取消</button>

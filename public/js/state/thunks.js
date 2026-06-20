@@ -20,7 +20,7 @@ function showNotificationAlert(message) {
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.4);
-  } catch (_) {}
+  } catch (err) { console.error("AudioContext 错误:", err); }
   try {
     if (typeof Notification === "undefined") return;
     if (Notification.permission === "granted") {
@@ -28,7 +28,14 @@ function showNotificationAlert(message) {
     } else if (Notification.permission !== "denied") {
       Notification.requestPermission();
     }
-  } catch (_) {}
+  } catch (err) { console.error("Notification 错误:", err); }
+}
+
+export function cleanupAudioContext() {
+  if (_audioCtx && _audioCtx.state !== "closed") {
+    _audioCtx.close().catch(() => {});
+    _audioCtx = null;
+  }
 }
 
 export function createThunks(deps) {
@@ -81,7 +88,8 @@ export function createThunks(deps) {
           return;
         }
         dispatch(actions.app.setRole(data));
-      } catch (_) {
+      } catch (err) {
+        console.error("loadRole 错误:", err);
         dispatch(actions.app.setRole({ role: "guest", csrf: "" }));
       } finally {
         dispatch(actions.app.setBooting(false));
@@ -270,7 +278,8 @@ export function createThunks(deps) {
         }
 
         await dispatch(thunks.loadExplorer());
-      } catch (_) {
+      } catch (err) {
+        console.error("login 错误:", err);
         dispatch(
           actions.app.setModal({
             type: "login",
@@ -299,7 +308,8 @@ export function createThunks(deps) {
           dispatch(actions.explorer.setTrashMode(false));
           await dispatch(thunks.loadExplorer());
         }
-      } catch (_) {
+      } catch (err) {
+        console.error("logout 错误:", err);
         dispatchToast("error", "退出失败");
       }
     },
@@ -415,7 +425,7 @@ export function createThunks(deps) {
           uploadTaskId = data.item.id;
           dispatch(actions.admin.setActiveUploadTaskId(uploadTaskId));
         }
-      } catch (_) {}
+      } catch (err) { console.error("创建上传任务错误:", err); }
 
       const updateTask = async () => {
         if (!uploadTaskId) return;
@@ -519,7 +529,7 @@ export function createThunks(deps) {
             status: finalStatus,
             finishedAt: Date.now(),
           });
-        } catch (_) {}
+        } catch (err) { console.error("完成上传任务错误:", err); }
         dispatch(actions.admin.setActiveUploadTaskId(""));
       }
 
@@ -1010,21 +1020,31 @@ export function createThunks(deps) {
       if (!trashIds?.length) return;
 
       dispatch(actions.explorer.setTrashBatchBusy(true));
-      try {
-        for (const id of trashIds) {
+      let successCount = 0;
+      let failCount = 0;
+      const errors = [];
+      for (const id of trashIds) {
+        try {
           const { response, data } = await trashApi.restore(id);
           if (!response.ok || data?.success === false) {
-            throw new Error(humanError(response, data, "批量恢复失败"));
+            throw new Error(humanError(response, data, "恢复失败"));
           }
+          successCount++;
+        } catch (error) {
+          failCount++;
+          errors.push(error.message || "恢复失败");
         }
-        dispatch(actions.explorer.setTrashSelectedKeys([]));
-        dispatchToast("success", `已恢复 ${trashIds.length} 条记录`);
-        await dispatch(thunks.loadExplorer());
-      } catch (error) {
-        dispatchToast("error", error.message || "批量恢复失败");
-      } finally {
-        dispatch(actions.explorer.setTrashBatchBusy(false));
       }
+      dispatch(actions.explorer.setTrashSelectedKeys([]));
+      if (failCount === 0) {
+        dispatchToast("success", `已恢复 ${successCount} 条记录`);
+      } else if (successCount === 0) {
+        dispatchToast("error", `恢复失败 ${failCount} 条: ${errors[0]}`);
+      } else {
+        dispatchToast("error", `成功 ${successCount} 条，失败 ${failCount} 条`);
+      }
+      dispatch(actions.explorer.setTrashBatchBusy(false));
+      await dispatch(thunks.loadExplorer());
     },
     batchDeleteTrash: (trashIds) => async (dispatch) => {
       if (mock) {
@@ -1034,21 +1054,31 @@ export function createThunks(deps) {
       if (!trashIds?.length) return;
 
       dispatch(actions.explorer.setTrashBatchBusy(true));
-      try {
-        for (const id of trashIds) {
+      let successCount = 0;
+      let failCount = 0;
+      const errors = [];
+      for (const id of trashIds) {
+        try {
           const { response, data } = await trashApi.remove(id);
           if (!response.ok || data?.success === false) {
-            throw new Error(humanError(response, data, "批量彻底删除失败"));
+            throw new Error(humanError(response, data, "删除失败"));
           }
+          successCount++;
+        } catch (error) {
+          failCount++;
+          errors.push(error.message || "删除失败");
         }
-        dispatch(actions.explorer.setTrashSelectedKeys([]));
-        dispatchToast("success", `已彻底删除 ${trashIds.length} 条记录`);
-        await dispatch(thunks.loadExplorer());
-      } catch (error) {
-        dispatchToast("error", error.message || "批量彻底删除失败");
-      } finally {
-        dispatch(actions.explorer.setTrashBatchBusy(false));
       }
+      dispatch(actions.explorer.setTrashSelectedKeys([]));
+      if (failCount === 0) {
+        dispatchToast("success", `已彻底删除 ${successCount} 条记录`);
+      } else if (successCount === 0) {
+        dispatchToast("error", `删除失败 ${failCount} 条: ${errors[0]}`);
+      } else {
+        dispatchToast("error", `成功 ${successCount} 条，失败 ${failCount} 条`);
+      }
+      dispatch(actions.explorer.setTrashBatchBusy(false));
+      await dispatch(thunks.loadExplorer());
     },
     loadAdminHealth: () => async (dispatch) => {
       dispatch(actions.admin.setHealthLoading(true));
@@ -1432,7 +1462,8 @@ export function createThunks(deps) {
         const { response, data } = await taskApi.list(20);
         if (!response.ok) throw new Error(data?.message || "任务列表加载失败");
         dispatch(actions.admin.setTasks(data.items || []));
-      } catch (_) {
+      } catch (err) {
+        console.error("loadTasks 错误:", err);
         dispatch(actions.admin.setTasksLoading(false));
       }
     },
@@ -1542,7 +1573,7 @@ export function createThunks(deps) {
       try {
         await notificationApi.markRead(id);
         await dispatch(thunks.loadNotifications());
-      } catch (_) {}
+      } catch (err) { console.error("markNotificationRead 错误:", err); }
     },
     markAllNotificationsRead: () => async (dispatch) => {
       if (mock) {
@@ -1552,7 +1583,7 @@ export function createThunks(deps) {
       try {
         await notificationApi.markAllRead();
         await dispatch(thunks.loadNotifications());
-      } catch (_) {}
+      } catch (err) { console.error("markAllNotificationsRead 错误:", err); }
     },
     loadAdminNotifications: () => async (dispatch) => {
       dispatch(actions.admin.setAdminNotifHistoryLoading(true));
@@ -1570,7 +1601,8 @@ export function createThunks(deps) {
         const { response, data } = await notificationApi.list(50);
         if (!response.ok) throw new Error(data?.message || "通知历史加载失败");
         dispatch(actions.admin.setAdminNotifHistory(data));
-      } catch (_) {
+      } catch (err) {
+        console.error("loadAdminNotifications 错误:", err);
         dispatch(actions.admin.setAdminNotifHistoryLoading(false));
       }
     },

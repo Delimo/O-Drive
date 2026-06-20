@@ -30,9 +30,11 @@ export function createHomeRenderers(deps) {
     return `
       <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
         <div class="tools-left">
-          <div class="crumbs">
-            ${breadcrumbsMarkup(explorer.path, explorer.expandedCrumbs)}
-          </div>
+          <nav aria-label="面包屑导航">
+            <div class="crumbs">
+              ${breadcrumbsMarkup(explorer.path, explorer.expandedCrumbs)}
+            </div>
+          </nav>
         </div>
         <div class="tools-right flex items-center gap-2">
           ${
@@ -62,8 +64,8 @@ export function createHomeRenderers(deps) {
               : ""
           }
         </div>
-        <input class="sr-only" id="upload-input" type="file" multiple>
-        <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory>
+        <input class="sr-only" id="upload-input" type="file" multiple aria-label="选择文件上传">
+        <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory aria-label="选择文件夹上传">
       </div>
 
       <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col" id="explorerCard">
@@ -90,27 +92,27 @@ export function createHomeRenderers(deps) {
     ];
     return `
       <div class="filter-panel">
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-size:12px;color:var(--muted);">类型</label>
-          <select class="inline-input" data-role="filter-kind" style="padding:4px 8px;font-size:13px;">
+        <div class="filter-field">
+          <label class="filter-label">类型</label>
+          <select class="inline-input filter-input" data-role="filter-kind">
             ${kindOptions.map((k) => `<option value="${k}" ${explorer.filterKind === k ? "selected" : ""}>${k === "all" ? "全部" : k}</option>`).join("")}
           </select>
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-size:12px;color:var(--muted);">最小大小 (KB)</label>
-          <input class="inline-input" type="number" min="0" data-role="filter-min-size" value="${escapeHtml(explorer.filterMinSize)}" style="padding:4px 8px;font-size:13px;width:100px;">
+        <div class="filter-field">
+          <label class="filter-label">最小大小 (KB)</label>
+          <input class="inline-input filter-input" type="number" min="0" data-role="filter-min-size" value="${escapeHtml(explorer.filterMinSize)}" style="width:100px;">
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-size:12px;color:var(--muted);">最大大小 (KB)</label>
-          <input class="inline-input" type="number" min="0" data-role="filter-max-size" value="${escapeHtml(explorer.filterMaxSize)}" style="padding:4px 8px;font-size:13px;width:100px;">
+        <div class="filter-field">
+          <label class="filter-label">最大大小 (KB)</label>
+          <input class="inline-input filter-input" type="number" min="0" data-role="filter-max-size" value="${escapeHtml(explorer.filterMaxSize)}" style="width:100px;">
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-size:12px;color:var(--muted);">修改日期从</label>
-          <input class="inline-input" type="date" data-role="filter-date-from" value="${escapeHtml(explorer.filterDateFrom)}" style="padding:4px 8px;font-size:13px;">
+        <div class="filter-field">
+          <label class="filter-label">修改日期从</label>
+          <input class="inline-input filter-input" type="date" data-role="filter-date-from" value="${escapeHtml(explorer.filterDateFrom)}">
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-size:12px;color:var(--muted);">到</label>
-          <input class="inline-input" type="date" data-role="filter-date-to" value="${escapeHtml(explorer.filterDateTo)}" style="padding:4px 8px;font-size:13px;">
+        <div class="filter-field">
+          <label class="filter-label">到</label>
+          <input class="inline-input filter-input" type="date" data-role="filter-date-to" value="${escapeHtml(explorer.filterDateTo)}">
         </div>
         <button class="btn toolbar-btn" data-action="clear-search-filters" type="button" style="font-size:13px;padding:4px 12px;">清除筛选</button>
       </div>
@@ -345,7 +347,7 @@ export function createHomeRenderers(deps) {
 
     const iconContent =
       isImage && thumbnailUrl
-        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('cell-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
+        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="${escapeHtml(item.name || "")}" loading="lazy" onerror="this.parentElement.classList.add('cell-icon');this.remove();this.parentElement.innerHTML='${iconForKind(kind).replace(/'/g, "\\'")}'">`
         : iconForKind(kind);
 
     return `

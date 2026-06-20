@@ -36,13 +36,17 @@ export async function readDroppedEntries(dataTransfer) {
 
 async function readEntryRecursive(entry, result) {
   if (entry.isFile) {
-    const file = await new Promise((resolve) => entry.file(resolve));
+    const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
     result.push(file);
   } else if (entry.isDirectory) {
     const reader = entry.createReader();
     let entries;
     do {
-      entries = await new Promise((resolve) => reader.readEntries(resolve));
+      entries = await new Promise((resolve, reject) => {
+        reader.readEntries(resolve);
+        reader.readEntries.catch?.(reject);
+      });
+      if (!entries) break;
       for (const child of entries) {
         await readEntryRecursive(child, result);
       }

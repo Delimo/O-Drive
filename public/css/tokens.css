@@ -8,6 +8,9 @@
   --line-strong: rgba(100, 116, 139, 0.5);
   --text: #1e293b;
   --muted: #94a3b8;
+  --primary: #0e7490;
+  --primary-soft: rgba(14, 116, 144, 0.1);
+  --border: rgba(148, 163, 184, 0.5);
   --accent: #0e7490;
   --accent-strong: #0f4c5c;
   --accent-soft: rgba(14, 116, 144, 0.1);
@@ -36,6 +39,9 @@
   --line-strong: rgba(148, 163, 184, 0.28);
   --text: #e2e8f0;
   --muted: #64748b;
+  --primary: #38bdf8;
+  --primary-soft: rgba(56, 189, 248, 0.12);
+  --border: rgba(148, 163, 184, 0.15);
   --accent: #38bdf8;
   --accent-strong: #7dd3fc;
   --accent-soft: rgba(56, 189, 248, 0.12);
