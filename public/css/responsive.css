@@ -72,12 +72,52 @@
     display: flex;
     align-items: flex-start;
     flex-direction: column;
-    padding: 10px 14px;
+    padding: 14px 16px;
+    gap: 8px;
+    border-radius: var(--radius-md);
+    margin: 4px 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+
+  .file-grid.is-list .item-card::after {
+    display: none;
   }
 
   .file-grid.is-list .item-card .item-list-size,
   .file-grid.is-list .item-card .item-list-time {
     display: none;
+  }
+
+  .file-grid.is-list .item-card .item-pick {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+  }
+
+  .file-grid.is-list .item-card .item-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .file-grid.is-list .item-card .item-content {
+    flex: 1;
+    padding-right: 40px;
+  }
+
+  .file-grid.is-list .item-card .item-title {
+    font-size: 15px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
+  .file-grid.is-list .item-card .item-actions {
+    opacity: 1;
+    transform: none;
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
   }
 
   .list-header {

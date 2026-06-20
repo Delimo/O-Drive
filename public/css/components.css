@@ -362,22 +362,41 @@
   flex-direction: column;
   gap: 0;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--panel);
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+.file-grid.is-list::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(14, 116, 144, 0.2), transparent);
+  z-index: 1;
 }
 
 .list-header {
   display: grid;
   grid-template-columns: 36px 32px minmax(0, 1fr) 100px 170px 80px;
   align-items: center;
-  padding: 8px 16px;
-  background: var(--panel-soft);
+  padding: 12px 20px;
+  background: linear-gradient(180deg, var(--panel-soft), rgba(248, 250, 252, 0.8));
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--muted);
   user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  backdrop-filter: blur(8px);
 }
 
 .item-card {
@@ -465,14 +484,36 @@
   display: grid;
   grid-template-columns: 36px 32px minmax(0, 1fr) 100px 170px 80px;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 20px;
   border-radius: 0;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
   gap: 0;
   height: auto;
   min-height: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.file-grid.is-list .item-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.file-grid.is-list .item-card:hover {
+  background: linear-gradient(90deg, rgba(14, 116, 144, 0.03), transparent);
+  transform: translateX(2px);
+}
+
+.file-grid.is-list .item-card:hover::after {
+  background: var(--accent);
 }
 
 .file-grid.is-list .item-card:last-child {
@@ -480,7 +521,18 @@
 }
 
 .file-grid.is-list .item-card:hover {
-  transform: none;
+  transform: translateX(2px);
+  background: linear-gradient(90deg, rgba(14, 116, 144, 0.03), transparent);
+}
+
+.file-grid.is-list .item-card.is-selected {
+  background: linear-gradient(90deg, rgba(14, 116, 144, 0.06), rgba(14, 116, 144, 0.02));
+  border-bottom-color: rgba(14, 116, 144, 0.1);
+}
+
+.file-grid.is-list .item-card.is-selected::after {
+  background: var(--accent);
+  width: 4px;
 }
 
 .file-grid.is-list .item-card .item-pick {
@@ -489,11 +541,34 @@
   height: 20px;
   opacity: 1;
   transform: none;
+  border-radius: 6px;
+  border: 1.5px solid var(--line);
+  background: var(--panel);
+  transition: all 0.2s ease;
+}
+
+.file-grid.is-list .item-card .item-pick:hover {
+  border-color: var(--accent);
+  background: rgba(14, 116, 144, 0.05);
+}
+
+.file-grid.is-list .item-card .item-pick.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 2px 8px rgba(14, 116, 144, 0.3);
 }
 
 .file-grid.is-list .item-card .item-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.file-grid.is-list .item-card:hover .item-icon {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .file-grid.is-list .item-card .item-icon svg {
@@ -511,7 +586,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 13.5px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  transition: color 0.2s ease;
+}
+
+.file-grid.is-list .item-card:hover .item-title {
+  color: var(--accent-strong);
 }
 
 .file-grid.is-list .item-card .item-meta {
@@ -525,6 +607,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.2s ease;
+}
+
+.file-grid.is-list .item-card:hover .item-list-size,
+.file-grid.is-list .item-card:hover .item-list-time {
+  color: var(--text);
 }
 
 .file-grid.is-list .item-card .item-list-size {
@@ -537,18 +625,38 @@
 
 .file-grid.is-list .item-card .item-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   justify-content: flex-end;
   margin-left: 0;
+  opacity: 0;
+  transform: translateX(8px);
+  transition: all 0.2s ease;
+}
+
+.file-grid.is-list .item-card:hover .item-actions {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .file-grid.is-list .item-card .item-actions .item-action-btn {
-  opacity: 0;
-  transition: opacity 160ms ease;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
-.file-grid.is-list .item-card:hover .item-actions .item-action-btn {
-  opacity: 1;
+.file-grid.is-list .item-card .item-actions .item-action-btn:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(14, 116, 144, 0.3);
 }
 
 .item-icon {
@@ -2322,6 +2430,31 @@ select.conflict-select {
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes listRowIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.file-grid.is-list .item-card {
+  animation: listRowIn 0.3s ease forwards;
+}
+
+.file-grid.is-list .item-card:nth-child(1) { animation-delay: 0.02s; }
+.file-grid.is-list .item-card:nth-child(2) { animation-delay: 0.04s; }
+.file-grid.is-list .item-card:nth-child(3) { animation-delay: 0.06s; }
+.file-grid.is-list .item-card:nth-child(4) { animation-delay: 0.08s; }
+.file-grid.is-list .item-card:nth-child(5) { animation-delay: 0.10s; }
+.file-grid.is-list .item-card:nth-child(6) { animation-delay: 0.12s; }
+.file-grid.is-list .item-card:nth-child(7) { animation-delay: 0.14s; }
+.file-grid.is-list .item-card:nth-child(8) { animation-delay: 0.16s; }
+.file-grid.is-list .item-card:nth-child(9) { animation-delay: 0.18s; }
+.file-grid.is-list .item-card:nth-child(10) { animation-delay: 0.20s; }
+
 
 .item-card {
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background 280ms ease;
@@ -2416,6 +2549,50 @@ select.conflict-select {
   }
 }
 
+/* ===== Enhanced List Mode Styles ===== */
+
+.file-grid.is-list {
+  position: relative;
+  overflow: hidden;
+}
+
+.file-grid.is-list::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.8));
+  pointer-events: none;
+  z-index: 1;
+}
+
+[data-theme="dark"] .file-grid.is-list::after {
+  background: linear-gradient(transparent, rgba(15, 23, 42, 0.8));
+}
+
+.file-grid.is-list .item-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.file-grid.is-list .item-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(14, 116, 144, 0.03), transparent);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.file-grid.is-list .item-card:hover::before {
+  left: 100%;
+}
+
 /* ===== Dark Mode: Tailwind utility overrides ===== */
 [data-theme="dark"] body,
 [data-theme="dark"] .text-slate-800 { color: var(--text); }
@@ -2443,6 +2620,23 @@ select.conflict-select {
 
 [data-theme="dark"] .item-card.is-selected {
   background: rgba(56, 189, 248, 0.06);
+}
+
+[data-theme="dark"] .file-grid.is-list .item-card:hover {
+  background: linear-gradient(90deg, rgba(14, 116, 144, 0.08), transparent);
+}
+
+[data-theme="dark"] .file-grid.is-list .item-card.is-selected {
+  background: linear-gradient(90deg, rgba(14, 116, 144, 0.12), rgba(14, 116, 144, 0.04));
+}
+
+[data-theme="dark"] .file-grid.is-list .item-card:hover .item-title {
+  color: #38bdf8;
+}
+
+[data-theme="dark"] .file-grid.is-list .item-card .item-actions .item-action-btn:hover {
+  background: #0284c7;
+  border-color: #0284c7;
 }
 
 [data-theme="dark"] .item-pick {
