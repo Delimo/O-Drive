@@ -10,7 +10,7 @@ export function createModalRenderers(deps) {
   } = deps;
 
   function renderPreviewModalBody(modal) {
-    if (modal.loading) return `<div class="empty-state"><div><div class="empty-orb">${icons.refresh}</div><h3 class="empty-title">正在准备预览</h3><p class="empty-copy">正在读取文件内容，请稍候。</p></div></div>`;
+    if (modal.loading) return `<div class="empty-state"><div><div class="empty-orb">${icons.spinner}</div><h3 class="empty-title">正在准备预览</h3><p class="empty-copy">正在读取文件内容，请稍候。</p></div></div>`;
     if (modal.error) return `<div class="empty-state"><div><div class="empty-orb">${icons.lock}</div><h3 class="empty-title">预览失败</h3><p class="empty-copy">${escapeHtml(modal.error)}</p></div></div>`;
     const previewUrl = apiClient.previewUrl(getEntryPath(modal.entry));
     if (modal.contentMode === 'image') return `<div class="preview-media-shell"><img src="${previewUrl}" alt="${escapeHtml(modal.entry?.name || '')}"></div>`;
