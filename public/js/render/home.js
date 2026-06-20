@@ -51,7 +51,7 @@ export function createHomeRenderers(deps) {
             <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors filter-popup-trigger" data-action="toggle-filter-popup" aria-label="文件类型筛选">
               ${renderKindOptions(explorer.filter, explorer.trashMode)}
             </button>
-            <div class="filter-popup" data-role="kind-filter-popup" style="display:none">
+            <div class="filter-popup notif-hidden" data-role="kind-filter-popup">
               ${renderKindOptions(explorer.filter, explorer.trashMode, true)}
             </div>
           </div>

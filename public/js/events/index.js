@@ -53,8 +53,8 @@ export function registerAppEvents(deps) {
 
       const filterPopup = documentRef.querySelector('[data-role="kind-filter-popup"]');
       const clickInPopup = event.target.closest(".filter-popup-wrap");
-      if (filterPopup && filterPopup.style.display !== "none" && !clickInPopup) {
-        filterPopup.style.display = "none";
+      if (filterPopup && !filterPopup.classList.contains("notif-hidden") && !clickInPopup) {
+        filterPopup.classList.add("notif-hidden");
       }
 
       const notifWrap = documentRef.querySelector('[data-component="notifications"]');

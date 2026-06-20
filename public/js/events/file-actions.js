@@ -82,8 +82,7 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     if (action === "toggle-filter-popup") {
       const popup = documentRef.querySelector('[data-role="kind-filter-popup"]');
       if (popup) {
-        const isVisible = popup.style.display !== "none";
-        popup.style.display = isVisible ? "none" : "";
+        popup.classList.toggle("notif-hidden");
       }
       return;
     }
@@ -92,7 +91,7 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       const value = actionNode.dataset.value;
       store.dispatch(actions.explorer.setFilter(value));
       const popup = documentRef.querySelector('[data-role="kind-filter-popup"]');
-      if (popup) popup.style.display = "none";
+      if (popup) popup.classList.add("notif-hidden");
       return;
     }
 

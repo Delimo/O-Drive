@@ -1969,6 +1969,10 @@ select.conflict-select {
   position: relative;
 }
 
+.notif-hidden {
+  display: none !important;
+}
+
 .notif-bell {
   position: relative;
   cursor: pointer;
@@ -2033,9 +2037,13 @@ select.conflict-select {
   background: var(--panel);
   border: 1px solid var(--line);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-  display: flex;
+  display: none;
   flex-direction: column;
   max-height: 400px;
+}
+
+.notif-dropdown.notif-open {
+  display: flex;
 }
 
 .notif-dropdown-head {
