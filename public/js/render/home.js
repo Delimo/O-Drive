@@ -21,7 +21,7 @@ export function createHomeRenderers(deps) {
     const selectedEntries = selectedEntriesFromState(state);
 
     return `
-      <div class="toolbar-card flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+      <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
         <div class="tools-left">
           <div class="crumbs">
             ${breadcrumbsMarkup(explorer.path, explorer.expandedCrumbs)}
