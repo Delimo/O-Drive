@@ -354,6 +354,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, 150px);
   gap: 14px;
+  justify-content: center;
 }
 
 .file-grid.is-list {
@@ -540,12 +541,10 @@
   line-height: 1.4;
   font-weight: 600;
   max-width: 100%;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
-  word-break: break-all;
   text-overflow: ellipsis;
+  word-break: break-all;
 }
 
 .item-meta {
