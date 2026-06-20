@@ -1846,18 +1846,27 @@ select.conflict-select {
   text-align: right;
 }
 
+.upload-row-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .upload-row-remove,
 .upload-row-btn {
   border: 0;
-  background: transparent;
+  background: var(--subtle-bg);
   color: var(--muted);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   flex: 0 0 auto;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: background .15s;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  transition: background .15s, color .15s;
 }
 .upload-row-btn:hover {
   background: var(--hover-bg);
@@ -1962,6 +1971,33 @@ select.conflict-select {
 
 .notif-bell {
   position: relative;
+  cursor: pointer;
+}
+
+.notif-bell:hover {
+  background: var(--hover-bg);
+  transform: scale(1.05);
+}
+
+.notif-bell:active {
+  transform: scale(0.95);
+}
+
+.notif-bell .icon {
+  transition: transform 200ms ease;
+}
+
+.notif-bell:hover .icon {
+  animation: bell-ring 0.4s ease;
+}
+
+@keyframes bell-ring {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(12deg); }
+  40% { transform: rotate(-10deg); }
+  60% { transform: rotate(6deg); }
+  80% { transform: rotate(-3deg); }
+  100% { transform: rotate(0deg); }
 }
 
 .notif-badge {
@@ -1979,6 +2015,12 @@ select.conflict-select {
   line-height: 16px;
   text-align: center;
   pointer-events: none;
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .notif-dropdown {

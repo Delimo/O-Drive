@@ -62,7 +62,7 @@ export function createUploadsRenderer(deps) {
                 </div>
               </div>
               <div class="upload-row-status">${escapeHtml(statusLabel(item))}</div>
-              <div class="upload-row-actions" style="display:flex;gap:4px;">
+              <div class="upload-row-actions">
                 ${
                   item.status === "uploading" || item.status === "pending"
                     ? `<button class="upload-row-btn" data-action="pause-upload" data-id="${escapeHtml(item.id)}" type="button" title="暂停">${icons.pause}</button><button class="upload-row-btn" data-action="cancel-upload" data-id="${escapeHtml(item.id)}" type="button" title="取消">${icons.close}</button>`
