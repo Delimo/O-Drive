@@ -55,7 +55,7 @@ export function createHomeRenderers(deps) {
         <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory>
       </div>
 
-      <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col" id="explorerCard">
+      <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl px-6 pt-6 shadow-sm overflow-y-auto flex flex-col" id="explorerCard">
         ${renderExplorerContent(state, entries, selectedEntries)}
       </div>
     `;
