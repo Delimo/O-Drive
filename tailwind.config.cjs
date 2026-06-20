@@ -12,7 +12,7 @@ module.exports = {
         border: '#e2e8f0',
       },
       fontFamily: {
-        sans: ['"Microsoft YaHei UI"', '"Segoe UI"', 'Tahoma', 'sans-serif'],
+        sans: ['"PingFang SC"', '"Microsoft YaHei"', '"Segoe UI"', 'Tahoma', 'sans-serif'],
         mono: ['"Cascadia Mono"', '"JetBrains Mono"', 'Consolas', 'monospace'],
       },
       boxShadow: {
