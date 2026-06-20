@@ -668,6 +668,35 @@ export function createThunks(deps) {
         dispatch(actions.app.setModal({ ...modal, loading: false, error: error.message || '清空回收站失败' }));
       }
     },
+    batchDownloadZip: paths => async (dispatch, getState) => {
+      if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
+      if (!paths?.length) return;
+      try {
+        const state = getState();
+        const headers = { 'Content-Type': 'application/json' };
+        if (state.app.csrf) headers['X-CSRF-Token'] = state.app.csrf;
+        const response = await fetch('/api/zip-download', {
+          method: 'POST', headers, body: JSON.stringify({ paths }), credentials: 'same-origin',
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data?.message || '下载失败');
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const cd = response.headers.get('Content-Disposition') || '';
+        const match = cd.match(/filename\*=UTF-8''(.+?)(?:;|$)/);
+        a.download = match ? decodeURIComponent(match[1]) : 'archive.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        dispatchToast('error', error.message || '下载失败');
+      }
+    },
     batchDelete: paths => async dispatch => {
       if (mock) { dispatchToast('error', '设计预览模式下不可操作'); return; }
       if (!paths?.length) return;

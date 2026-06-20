@@ -29,6 +29,7 @@ const csrfProtectedRoutes = [
   ['/api/upload-multipart/complete', ['POST']],
   ['/api/upload-multipart/abort', ['POST']],
   ['/api/save-text/', ['POST']],
+  ['/api/zip-download', ['POST']],
 ];
 
 let coreTablesReady;

@@ -31,6 +31,8 @@ import {
 import {
   handleThumbnail,
 } from './thumbnails.js';
+import { handleZipDownload } from './zip-download.js';
+
 import {
   handleAdminHealth,
   handleAdminLogs,
@@ -199,6 +201,7 @@ export async function resolveAdminRoute(env, request, method, path, url, r2Key, 
 
 /** Resolve public routes (accessible by any authenticated user including guests). */
 export async function resolvePublicRoute(env, request, url, path, method, hiddenPaths, auth, r2Key, protectedPaths, context = {}) {
+  if (path === '/api/zip-download' && method === 'POST') return await handleZipDownload(env, request, hiddenPaths, auth, protectedPaths);
   if (path === '/api/access/unlock' && method === 'POST') return await handleProtectedUnlock(env, request, auth, protectedPaths);
   if (path === '/api/search') return await handleSearch(env, request, url, hiddenPaths, auth, protectedPaths);
   if (path.startsWith('/api/files') && method === 'GET') return await handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths);

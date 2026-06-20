@@ -703,6 +703,13 @@ export function registerAppEvents(deps) {
         return;
       }
 
+      if (action === 'zip-download') {
+        if (state.explorer.trashMode) return;
+        const paths = collectSelectedPaths(state);
+        store.dispatch(thunks.batchDownloadZip(paths));
+        return;
+      }
+
       if (action === 'copy-selected' || action === 'move-selected') {
         if (state.explorer.trashMode) return;
         const paths = collectSelectedPaths(state);

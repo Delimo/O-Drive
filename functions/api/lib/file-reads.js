@@ -176,6 +176,8 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
   headers.set('Content-Disposition', makeDisposition(path, r2Key.split('/').pop() || r2Key));
 
   if (!wantsRange) {
+    const contentLength = Number(obj.size);
+    if (Number.isFinite(contentLength) && contentLength > 0) headers.set('Content-Length', String(contentLength));
     return new Response(obj.body, { headers });
   }
 

@@ -86,6 +86,7 @@ export function createSharedRenderers(deps) {
         </div>
         <div class="btn-row">
           ${singleKey ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(singleKey)}" ${disabled}>重命名</button>` : ''}
+          <button class="btn" data-action="zip-download" ${disabled}>下载 ZIP</button>
           <button class="btn" data-action="copy-selected" ${disabled}>复制</button>
           <button class="btn" data-action="move-selected" ${disabled}>移动</button>
           ${state.app.role === 'admin' ? `<button class="btn btn-danger" data-action="delete-selected" ${disabled}>删除</button>` : ''}

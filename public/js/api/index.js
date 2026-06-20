@@ -180,6 +180,13 @@ export function createApiLayer(deps) {
         csrf: true,
       });
     },
+    downloadZip(paths) {
+      return request('/api/zip-download', {
+        method: 'POST',
+        json: { paths },
+        csrf: true,
+      });
+    },
   };
 
   const trashApi = {
