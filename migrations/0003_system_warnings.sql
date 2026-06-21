@@ -1,6 +1,0 @@
-CREATE TABLE IF NOT EXISTS system_warnings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  source TEXT NOT NULL,
-  message TEXT NOT NULL,
-  created_at INTEGER NOT NULL
-);
