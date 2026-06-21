@@ -1,91 +1,71 @@
 .admin-page {
-  --card-radius: 16px;
-  --card-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02);
-  --card-shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.04), 0 4px 6px -2px rgba(0,0,0,0.02);
+  --card-radius: 12px;
+  --card-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02);
+  --card-shadow-hover: 0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
   --card-bg: var(--panel);
-  --card-border: rgba(0,0,0,0.05);
-  --section-gap: 24px;
+  --card-border: var(--line);
+  --section-gap: 16px;
 }
 
-/* 统一卡片样式 */
-.admin-card, .admin-section-card, .sys-status-card {
-  padding: 24px !important;
-  border-radius: var(--card-radius);
-  background: white !important;
-  border: 1px solid var(--card-border) !important;
-  box-shadow: var(--card-shadow);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+.admin-page .header-card,
+.admin-page .toolbar-card,
+.admin-page .explorer-card {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
 }
 
-.admin-card:hover {
-  box-shadow: var(--card-shadow-hover);
-  border-color: rgba(0,0,0,0.1) !important;
+.admin-page .header-card .text-slate-800,
+.admin-page .header-card .text-slate-700,
+.admin-page .header-card .text-slate-900 {
+  color: var(--text) !important;
 }
 
-/* 列表条目优化 */
-.latest-item-compact, .env-item, .maint-item {
-  padding: 16px !important;
-  background: #f8fafc !important; /* slate-50 */
-  border: 1px solid transparent !important;
-  border-radius: 12px !important;
-  transition: all 0.15s ease;
-  margin-bottom: 8px;
+.admin-page .header-card a,
+.admin-page .header-card button {
+  border-color: var(--line) !important;
+  color: var(--text) !important;
 }
 
-.latest-item-compact:hover {
-  background: white !important;
-  border-color: rgba(0,0,0,0.1) !important;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  transform: translateY(-1px);
+.admin-page .header-card a:hover,
+.admin-page .header-card button:hover {
+  background: var(--hover-bg) !important;
 }
 
-/* 标签样式优化 */
-.toolbar-tag {
-  border-radius: 9999px !important;
-  padding: 2px 10px !important;
-  font-weight: 500 !important;
-  letter-spacing: 0;
-  border: none !important;
-}
-
-/* 数值突出显示 */
-.admin-value, .mini-stat-value {
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.025em;
-  color: #1e293b; /* slate-800 */
-}
-
-/* 按钮行美化 */
-.btn-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.btn.toolbar-btn {
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-/* Tab 切换栏优化 */
 .admin-tab-bar {
-  background: #f1f5f9;
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.05);
-  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--subtle-bg);
 }
 
 .admin-tab-btn {
-  padding: 8px 20px;
+  position: relative;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
   border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.admin-tab-btn:hover {
+  color: var(--text);
+  background: rgba(128,128,128,0.06);
 }
 
 .admin-tab-active {
-  background: white !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  color: #0f172a !important; /* slate-900 */
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px var(--line);
 }
 
 .admin-section-card {
@@ -947,6 +927,7 @@
   background: var(--accent) !important;
   color: white !important;
   border-color: var(--accent) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .share-filter-count {
@@ -975,7 +956,6 @@
 .badge-error { background: rgba(192, 57, 43, 0.1); color: #c0392b; }
 .badge-info { background: rgba(14, 116, 144, 0.1); color: #0e7490; }
 
-/* Notifications */
 .notif-hidden { display: none !important; }
 
 .notif-bell {

@@ -21,62 +21,8 @@
     <link rel="stylesheet" href="/css/pages/admin.css">
     <link rel="stylesheet" href="/css/responsive.css">
 </head>
-<body class="admin-page bg-slate-50 min-h-screen flex" data-page="admin" x-data="adminApp">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden md:flex flex-col border-r border-slate-800">
-        <div class="p-6 flex items-center gap-3">
-            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
-            </div>
-            <span class="font-bold text-lg text-white tracking-tight">O-Drive Admin</span>
-        </div>
-        
-        <nav class="flex-1 px-4 space-y-1 py-4">
-            <template x-for="item in menuItems">
-                <button 
-                    @click="currentTab = item.id"
-                    :class="currentTab === item.id ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'"
-                    class="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium"
-                >
-                    <span x-html="item.icon" class="w-5 h-5 opacity-70"></span>
-                    <span x-text="item.label"></span>
-                </button>
-            </template>
-        </nav>
-
-        <div class="p-4 border-t border-slate-800">
-            <a href="/" class="flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white transition-colors">
-                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                返回云盘
-            </a>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <!-- Header -->
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0">
-            <div class="flex items-center gap-4">
-                <button class="md:hidden p-2 text-slate-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
-                <h1 class="text-lg font-semibold text-slate-800" x-text="currentPageLabel">概览</h1>
-            </div>
-            
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold">
-                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                    系统运行中
-                </div>
-                <div id="notif-bell-container"></div>
-            </div>
-        </header>
-
-        <!-- Content Area -->
-        <div id="app" class="flex-1 overflow-y-auto p-8 space-y-8">
-            <!-- Content will be rendered here by JS -->
-        </div>
-    </main>
-
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<body class="admin-page h-screen overflow-hidden p-4 md:p-6 flex flex-col items-center" data-page="admin">
+    <div id="app" class="container mx-auto max-w-[1440px] w-full h-full flex flex-col gap-4 min-h-0"></div>
     <script type="module" src="/index.js"></script>
 </body>
 </html>
