@@ -1,0 +1,125 @@
+.share-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.share-filter-btn {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.share-filter-active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.share-filter-count {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.share-filter-active .share-filter-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.share-status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.tag-active {
+  background: rgba(24, 121, 78, 0.1);
+  color: #18794e;
+}
+
+.tag-expired {
+  background: rgba(192, 57, 43, 0.1);
+  color: #c0392b;
+}
+
+.tag-soon {
+  background: rgba(183, 110, 17, 0.1);
+  color: #b76e11;
+}
+
+.tag-unlimited {
+  background: rgba(14, 116, 144, 0.1);
+  color: #0e7490;
+}
+
+.tag-password {
+  background: rgba(107, 70, 193, 0.1);
+  color: #6b46c1;
+}
+
+.tag-preview {
+  background: rgba(24, 121, 78, 0.1);
+  color: #18794e;
+}
+
+.tag-no-preview {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+}
+
+.tag-download {
+  background: rgba(14, 116, 144, 0.1);
+  color: #0e7490;
+}
+
+.tag-no-download {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+}
+
+.tag-exhausted {
+  background: rgba(192, 57, 43, 0.1);
+  color: #c0392b;
+}
+
+.share-item-expired {
+  opacity: 0.7;
+  border-left: 3px solid rgba(192, 57, 43, 0.4);
+}
+
+.share-item-exhausted {
+  opacity: 0.85;
+  border-left: 3px solid rgba(107, 70, 193, 0.4);
+}
+
+.share-item-expiring-soon {
+  border-left: 3px solid rgba(183, 110, 17, 0.4);
+}
+
+.status-dot-expired {
+  background: #c0392b;
+}
+
+.status-dot-exhausted {
+  background: #6b46c1;
+}
+
+.status-dot-soon {
+  background: #b76e11;
+}
