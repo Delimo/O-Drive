@@ -451,6 +451,11 @@ const unsubscribers = [
     s => page === 'home' ? s.explorer : page === 'admin' ? s.admin : page === 'share' ? s.share : null,
     render,
   ),
+  ...(page === 'home' ? [
+    subscribeSlice(s => s.admin.notifOpen, render),
+    subscribeSlice(s => s.admin.notificationsUnread, render),
+    subscribeSlice(s => s.admin.notifications, render),
+  ] : []),
   subscribeSlice(s => s.app.modal, renderModal),
   subscribeSlice(s => s.app.toast, renderToast),
   subscribeSlice(s => s.uploads, renderUploads),
