@@ -360,6 +360,14 @@ export async function notifyWebhookWithLog(env, envUrls, event, data = {}) {
   const endpoints = normalizeWebhookEndpoints(envUrls).filter(
     (endpoint) => endpoint.enabled && endpointMatchesEvent(endpoint, event),
   );
+
+  const msg = eventLabel(event) || event;
+  const path = data?.path || data?.paths?.[0] || "";
+  const eventMessage = path ? `${msg}: ${path}` : msg;
+  createNotification(env, { event, message: eventMessage, path }).catch(
+    () => {},
+  );
+
   if (!endpoints.length) return [];
 
   const payload = {
@@ -386,13 +394,6 @@ export async function notifyWebhookWithLog(env, envUrls, event, data = {}) {
           return result;
         }),
     ),
-  );
-
-  const msg = eventLabel(event) || event;
-  const path = data?.path || data?.paths?.[0] || "";
-  const eventMessage = path ? `${msg}: ${path}` : msg;
-  createNotification(env, { event, message: eventMessage, path }).catch(
-    () => {},
   );
 
   return results.map((result) => Boolean(result.ok));

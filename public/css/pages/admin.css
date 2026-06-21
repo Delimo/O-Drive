@@ -7,6 +7,30 @@
   --section-gap: 16px;
 }
 
+.admin-page .header-card,
+.admin-page .toolbar-card,
+.admin-page .explorer-card {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+}
+
+.admin-page .header-card .text-slate-800,
+.admin-page .header-card .text-slate-700,
+.admin-page .header-card .text-slate-900 {
+  color: var(--text) !important;
+}
+
+.admin-page .header-card a,
+.admin-page .header-card button {
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+}
+
+.admin-page .header-card a:hover,
+.admin-page .header-card button:hover {
+  background: var(--hover-bg) !important;
+}
+
 .admin-tab-bar {
   display: flex;
   flex-wrap: wrap;
