@@ -124,60 +124,27 @@ export function createSharesRenderer({
     const shares = admin.shares || [];
     const busyToken = admin.shareBusyToken || "";
     const shareFilter = admin.shareFilter || "all";
-    const shareSearch = admin.shareSearch || "";
-    const currentPage = admin.sharePage || 1;
-    const pageSize = 20;
-    
-    let filteredShares = filterShares(shares, shareFilter);
-    if (shareSearch) {
-      const q = shareSearch.toLowerCase();
-      filteredShares = filteredShares.filter(item => 
-        (item.name || "").toLowerCase().includes(q) || 
-        (item.token || "").toLowerCase().includes(q)
-      );
-    }
-    
+    const filteredShares = filterShares(shares, shareFilter);
     const expiredCount = shares.filter((item) => item?.expired).length;
     const exhaustedCount = shares.filter((item) => item?.exhausted).length;
-    
-    const totalPages = Math.ceil(filteredShares.length / pageSize) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const paginatedShares = filteredShares.slice(startIndex, startIndex + pageSize);
 
     return `
-      <div style="margin-bottom:16px;">
-        <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:0;">分享管理</h2>
-      </div>
-      <section>
-        <div class="hero-strip-compact">
-          <div class="mini-stat-compact">
-            <div class="mini-stat-label">分享总数</div>
-            <div class="mini-stat-value">${safeText(shares.length, "0")}</div>
-            <div class="mini-stat-meta">当前可管理的全部分享条目</div>
-          </div>
-          <div class="mini-stat-compact">
-            <div class="mini-stat-label">有效分享</div>
-            <div class="mini-stat-value">${safeText(shares.filter((item) => isShareActive(item)).length, "0")}</div>
-            <div class="mini-stat-meta">未过期且次数未用尽</div>
-          </div>
-          <div class="mini-stat-compact">
-            <div class="mini-stat-label">已失效</div>
-            <div class="mini-stat-value">${safeText(expiredCount + exhaustedCount, "0")}</div>
-            <div class="mini-stat-meta">已过期 ${expiredCount} · 次数用尽 ${exhaustedCount}</div>
-          </div>
+      <div class="hero-strip-compact">
+        <div class="mini-stat-compact">
+          <div class="mini-stat-label">分享总数</div>
+          <div class="mini-stat-value">${safeText(shares.length, "0")}</div>
+          <div class="mini-stat-meta">当前可管理的全部分享条目</div>
         </div>
-      </section>
-      <div class="admin-filter-bar" style="margin-bottom:10px;display:flex;gap:8px;align-items:center;">
-        <input class="input" type="text" placeholder="按文件名或 token 搜索..." value="${escapeHtml(shareSearch)}" data-action-input="set-shares-search" style="flex:1;min-width:120px;">
-        <select class="input" data-action-change="set-shares-filter" style="width:auto;">
-          <option value="all" ${shareFilter === "all" ? "selected" : ""}>全部分享</option>
-          <option value="active" ${shareFilter === "active" ? "selected" : ""}>有效分享</option>
-          <option value="expired" ${shareFilter === "expired" ? "selected" : ""}>已过期</option>
-          <option value="exhausted" ${shareFilter === "exhausted" ? "selected" : ""}>次数已用尽</option>
-        </select>
-        <button class="btn btn-danger toolbar-btn" type="button" data-action="confirm-cleanup-expired-shares">
-          ${icons.trash}<span>清理过期</span>
-        </button>
+        <div class="mini-stat-compact">
+          <div class="mini-stat-label">有效分享</div>
+          <div class="mini-stat-value">${safeText(shares.filter((item) => isShareActive(item)).length, "0")}</div>
+          <div class="mini-stat-meta">未过期且次数未用尽</div>
+        </div>
+        <div class="mini-stat-compact">
+          <div class="mini-stat-label">已失效</div>
+          <div class="mini-stat-value">${safeText(expiredCount + exhaustedCount, "0")}</div>
+          <div class="mini-stat-meta">已过期 ${expiredCount} · 次数用尽 ${exhaustedCount}</div>
+        </div>
       </div>
       ${
         admin.sharesLoading
@@ -197,17 +164,10 @@ export function createSharesRenderer({
               : filteredShares.length === 0
                 ? renderEmptyStateCompact(
                     "筛选结果为空",
-                    `当前筛选条件没有匹配的分享记录，请尝试其他筛选条件。`,
+                    `当前筛选条件"${getFilterLabel(shareFilter)}"没有匹配的分享记录，请尝试其他筛选条件。`,
                     icons.search,
                   )
-                : `
-                  ${renderShareList(paginatedShares, busyToken)}
-                  <div class="admin-pagination" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
-                    <button class="btn btn-muted" type="button" data-action="set-shares-page" data-page="${currentPage - 1}" ${currentPage <= 1 ? "disabled" : ""}>上一页</button>
-                    <span style="font-size:12px;color:var(--muted);">第 ${currentPage} / ${totalPages} 页</span>
-                    <button class="btn btn-muted" type="button" data-action="set-shares-page" data-page="${currentPage + 1}" ${currentPage >= totalPages ? "disabled" : ""}>下一页</button>
-                  </div>
-                `
+                : renderShareList(filteredShares, busyToken)
       }
     `;
   }

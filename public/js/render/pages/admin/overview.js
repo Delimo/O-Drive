@@ -14,9 +14,6 @@ export function createOverviewRenderer({
     const attention = stats.attention || [];
 
     return `
-      <div style="margin-bottom:16px;">
-        <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:0;">后台概览</h2>
-      </div>
       <div class="admin-grid" style="gap:12px;">
         <div class="admin-card span-4">
           <div class="admin-card-header">
@@ -56,15 +53,12 @@ export function createOverviewRenderer({
             <span class="admin-label">索引状态</span>
           </div>
           <div class="admin-value">${safeText(stats.index?.recommendation, "等待初始化")}</div>
-          <div class="admin-copy" style="margin-bottom:8px;">
+          <div class="admin-copy">
             索引 ${safeText(stats.index?.count || 0, "0")} 条，更新于
             ${safeText(stats.index?.latestUpdatedAt ? formatTime(stats.index.latestUpdatedAt) : "未知")}。
           </div>
-          <div class="admin-status-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div class="admin-status-row">
             <span class="toolbar-tag tag-active">${safeText(stats.index?.recommendation, "正常")}</span>
-            <button class="btn btn-primary btn-small" type="button" data-action="confirm-maintenance-action" data-maintenance-action="rebuild-index" data-maintenance-label="重建文件索引" style="padding:0 8px;font-size:11px;min-height:24px;">
-              ${icons.refresh}<span>立即重建</span>
-            </button>
           </div>
         </div>
 
@@ -126,7 +120,7 @@ export function createOverviewRenderer({
                     .map(
                       (item) => `
                   <article class="latest-chip">
-                    <h3 class="latest-chip-name">${safeText(item.name || item.key || "")}</h3>
+                    <h3 class="latest-chip-name">${safeText(item.key || "")}</h3>
                     <div class="latest-chip-meta">
                       ${safeText(item.sizeFormatted || formatBytes(item.size || 0), "0 B")} · ${safeText(formatRelative(item.uploaded || 0), "刚刚")}
                     </div>

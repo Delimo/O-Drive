@@ -927,7 +927,6 @@
   background: var(--accent) !important;
   color: white !important;
   border-color: var(--accent) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .share-filter-count {
@@ -956,6 +955,7 @@
 .badge-error { background: rgba(192, 57, 43, 0.1); color: #c0392b; }
 .badge-info { background: rgba(14, 116, 144, 0.1); color: #0e7490; }
 
+/* Notifications */
 .notif-hidden { display: none !important; }
 
 .notif-bell {

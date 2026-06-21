@@ -191,31 +191,6 @@ export function createStorageRenderer({
           ? "var(--warning)"
           : "var(--primary)";
 
-    const {
-      trashRetention,
-      trashRetentionLoading,
-      trashCleanupBusy,
-    } = admin;
-
-    let retentionHtml = "";
-    if (trashRetentionLoading) {
-      retentionHtml = renderEmptyStateCompact("加载中", "正在获取回收站保留天数...", icons.spinner);
-    } else {
-      const currentDays = trashRetention?.days ?? 0;
-      retentionHtml = `
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:8px;">
-          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
-            <label style="font-size:13px;color:var(--muted);">保留天数（0 为不自动清理）</label>
-            <input class="input" type="number" min="0" max="3650" value="${currentDays}" data-binding="trash-retention-days" style="max-width:200px;">
-          </div>
-          <button class="btn btn-primary toolbar-btn" type="button" data-action="save-trash-retention" ${trashCleanupBusy ? "disabled" : ""}>
-            ${icons.edit}<span>保存设置</span>
-          </button>
-          ${currentDays > 0 ? `<span style="font-size:12px;color:var(--muted);align-self:center;">超过 ${currentDays} 天的回收站项目将被自动清除</span>` : '<span style="font-size:12px;color:var(--warning);align-self:center;">未设置保留天数，不会自动清理</span>'}
-        </div>
-      `;
-    }
-
     return `
       <div class="admin-section-compact">
         <section>
@@ -293,48 +268,6 @@ export function createStorageRenderer({
 
         <section>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <h3>路径绑定</h3>
-            <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-storage-binding" ${storageConfigSaving ? "disabled" : ""}>${icons.plus}<span>添加绑定</span></button>
-          </div>
-          ${
-            bindings.length === 0
-              ? renderEmptyStateCompact(
-                  "暂无路径绑定",
-                  "还没有配置任何路径与存储空间的绑定。",
-                  icons.link,
-                )
-              : `
-                <div class="latest-list-compact">
-                  ${bindings
-                    .map((item) => {
-                      const storageName =
-                        item.storageId === "r2"
-                          ? "Cloudflare R2"
-                          : spaces.find((s) => s.id === item.storageId)?.name ||
-                            item.storageId;
-                      return `
-                      <article class="latest-item-compact">
-                        <div class="status-bar">
-                          <div class="status-main">
-                            <span class="status-dot"></span>
-                            <span>${safeText(item.path)}</span>
-                            <span class="toolbar-tag">${escapeHtml(storageName)}</span>
-                          </div>
-                          <button class="btn btn-danger" type="button" data-action="confirm-delete-storage-binding" data-path="${escapeHtml(item.path)}" ${storageConfigSaving ? "disabled" : ""}>
-                            ${icons.trash}<span>删除</span>
-                          </button>
-                        </div>
-                      </article>
-                    `;
-                    })
-                    .join("")}
-                </div>
-              `
-          }
-        </section>
-
-        <section>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <h3>溢出策略</h3>
           </div>
           <div class="sys-status-card" style="margin:0;">
@@ -346,11 +279,6 @@ export function createStorageRenderer({
               <div class="env-item-desc">R2 空间满时自动写入指定的 S3 溢出目标</div>
             </div>
           </div>
-        </section>
-
-        <section>
-          <h3>回收站保留设置</h3>
-          ${retentionHtml}
         </section>
       </div>
     `;

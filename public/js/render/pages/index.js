@@ -8,12 +8,14 @@ import { createWebhooksRenderer } from "./admin/webhooks.js";
 
 const ADMIN_TABS = [
   { id: "overview", label: "概览" },
+  { id: "system", label: "系统状态" },
   { id: "storage", label: "存储" },
   { id: "shares", label: "分享" },
-  { id: "paths", label: "路径" },
+  { id: "notifications", label: "通知" },
+  { id: "paths", label: "路径管理" },
+  { id: "webhooks", label: "Webhook" },
   { id: "logs", label: "日志" },
   { id: "maintenance", label: "维护" },
-  { id: "system", label: "系统" },
 ];
 
 export function createPageRenderers(deps) {
@@ -109,13 +111,17 @@ export function createPageRenderers(deps) {
           );
         return overview.renderAdminStatsGrid(admin.stats);
       case "system":
-        return settings.renderSystemSection(admin);
+        return settings.renderSystemStatusSection(admin);
+      case "notifications":
+        return settings.renderAdminNotificationsSection(admin);
       case "storage":
         return settings.renderStorageSection(admin);
       case "logs":
         return logs.renderAdminLogsSection(admin);
       case "paths":
         return settings.renderPathManagementSection(admin);
+      case "webhooks":
+        return webhooks.renderWebhookSection(admin);
       case "maintenance":
         return settings.renderAdminMaintenanceSection(admin);
       case "shares":
@@ -147,7 +153,7 @@ export function createPageRenderers(deps) {
     }
 
     return `
-      <div class="toolbar-card flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-3 shadow-sm">
+      <div class="toolbar-card flex-shrink-0 flex items-center bg-white border border-slate-200/60 rounded-2xl p-3 shadow-sm">
         <div class="admin-tab-bar">
           ${ADMIN_TABS.map(
             (tab) => `
@@ -159,9 +165,6 @@ export function createPageRenderers(deps) {
             </button>
           `,
           ).join("")}
-        </div>
-        <div class="flex items-center gap-2">
-          <a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" href="/">返回云盘</a>
         </div>
       </div>
       <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm overflow-hidden flex flex-col">
