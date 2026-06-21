@@ -109,6 +109,8 @@ export function createRootStore({ page }) {
       sharesError: "",
       shareBusyToken: "",
       shareFilter: "all",
+      shareSearch: "",
+      sharePage: 1,
       error: "",
       health: null,
       healthLoading: false,
@@ -357,7 +359,13 @@ export function createRootStore({ page }) {
         return { ...state, shareBusyToken: action.payload || "" };
       },
       setShareFilter(state, action) {
-        return { ...state, shareFilter: action.payload || "all" };
+        return { ...state, shareFilter: action.payload, sharePage: 1 };
+      },
+      setShareSearch(state, action) {
+        return { ...state, shareSearch: action.payload, sharePage: 1 };
+      },
+      setSharePage(state, action) {
+        return { ...state, sharePage: action.payload };
       },
       setError(state, action) {
         return { ...state, loading: false, error: action.payload };

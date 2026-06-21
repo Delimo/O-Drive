@@ -200,12 +200,18 @@ export function createPathsRenderer({
         <section>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <h3>受保护路径</h3>
+            <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-protected-path">
+              ${icons.plus}<span>添加</span>
+            </button>
           </div>
           ${protectedHtml}
         </section>
         <section>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <h3>隐藏路径</h3>
+            <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-hidden-path">
+              ${icons.plus}<span>添加</span>
+            </button>
           </div>
           ${hiddenHtml}
         </section>

@@ -22,6 +22,7 @@ export function createSettingsRenderer(deps) {
     renderAdminMaintenanceSection: maintenance.renderAdminMaintenanceSection,
     renderAdminTaskListSection: maintenance.renderAdminTaskListSection,
     renderSystemStatusSection: system.renderSystemStatusSection,
+    renderSystemSection: system.renderSystemSection,
     renderStorageSection: storage.renderStorageSection,
     renderPathManagementSection: paths.renderPathManagementSection,
   };

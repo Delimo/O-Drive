@@ -29,7 +29,7 @@ export function createLogsRenderer({
     }
 
     return `
-      <div class="admin-filter-bar" style="margin-bottom:10px;">
+      <div class="admin-filter-bar" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <input class="input" type="text" placeholder="搜索关键字..." value="${escapeHtml(logsFilter.q || "")}" data-action-input="set-logs-filter" data-key="q" style="flex:1;min-width:120px;">
         <select class="input" data-action-change="set-logs-filter" data-key="action" style="width:auto;">
           <option value="">全部类型</option>
@@ -40,6 +40,15 @@ export function createLogsRenderer({
           <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>登录</option>
           <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传</option>
         </select>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span style="font-size:12px;color:var(--muted);">从</span>
+          <input class="input" type="date" value="${escapeHtml(logsFilter.from || "")}" data-action-change="set-logs-filter" data-key="from" style="width:auto;padding:2px 6px;">
+          <span style="font-size:12px;color:var(--muted);">至</span>
+          <input class="input" type="date" value="${escapeHtml(logsFilter.to || "")}" data-action-change="set-logs-filter" data-key="to" style="width:auto;padding:2px 6px;">
+        </div>
+        <button class="btn toolbar-btn" type="button" data-action="export-logs-csv">
+          ${icons.download}<span>导出 CSV</span>
+        </button>
       </div>
       ${
         logsLoading

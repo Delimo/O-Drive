@@ -12,11 +12,14 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       if (tab === "system") {
         if (!admin.health) store.dispatch(thunks.loadAdminHealth());
         if (!admin.quota) store.dispatch(thunks.loadAdminQuota());
-        if (!admin.maintenance) store.dispatch(thunks.loadMaintenanceSnapshot());
+        if (admin.adminNotifHistory.length === 0) store.dispatch(thunks.loadAdminNotifications());
+        if (admin.webhooks.length === 0) store.dispatch(thunks.loadAdminWebhooks());
+        if (admin.webhookDeliveries.length === 0) store.dispatch(thunks.loadAdminWebhookDeliveries());
         return;
       }
       if (tab === "storage") {
         if (!admin.storageConfig) store.dispatch(thunks.loadAdminStorageConfig());
+        if (!admin.trashRetention) store.dispatch(thunks.loadTrashRetention());
         return;
       }
       if (tab === "logs" && admin.logs.length === 0) {
@@ -286,8 +289,41 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
-    if (action === "set-share-filter") {
-      const filter = actionNode.dataset.filter || "all";
+    if (action === "export-logs-csv") {
+      const adminState = store.getState().admin;
+      const logs = adminState.logs || [];
+      if (logs.length === 0) {
+        dispatchToast("info", "当前没有可导出的日志记录");
+        return;
+      }
+      
+      const headers = ["ID", "操作", "路径", "用户", "IP", "时间", "详情"];
+      const rows = logs.map(item => [
+        item.id || "",
+        item.action || "",
+        item.path || "",
+        item.user || "",
+        item.ip || "",
+        item.createdAt ? new Date(item.createdAt).toLocaleString("zh-CN") : "",
+        item.detail || ""
+      ]);
+      
+      const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+        + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = documentRef.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `admin_logs_${new Date().toISOString().slice(0,10)}.csv`);
+      documentRef.body.appendChild(link);
+      link.click();
+      documentRef.body.removeChild(link);
+      dispatchToast("success", "日志 CSV 导出成功");
+      return;
+    }
+
+    if (action === "set-share-filter" || action === "set-shares-filter") {
+      const filter = actionNode.dataset.filter || event.target?.value || "all";
       store.dispatch(actions.admin.setShareFilter(filter));
       return;
     }
