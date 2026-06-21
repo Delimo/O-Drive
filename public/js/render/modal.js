@@ -554,6 +554,76 @@ export function createModalRenderers(deps) {
       `;
     }
 
+    if (modal.type === "operation-estimate") {
+      const estimate = modal.estimate;
+      const operation = modal.operation || "delete";
+      const isDelete = operation === "delete";
+      const opLabel = isDelete ? "删除" : operation === "move" ? "移动" : "复制";
+      const items = estimate?.items || [];
+      const itemList = items.slice(0, 30).map((item) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;border-bottom:1px solid var(--line);">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.path)}</span>
+          <span class="toolbar-tag">${item.kind === "folder" ? "文件夹" : "文件"}</span>
+          <span style="color:var(--muted);font-size:12px;">${item.objectCount} 对象</span>
+        </div>
+      `).join("");
+      const hasMore = items.length > 30;
+
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="estimate-title" data-stop-close="true" style="max-width:520px;">
+            <h3 id="estimate-title" class="modal-title">确认${opLabel}</h3>
+            <p class="modal-copy">以下是对所选项目的操作预估，请确认后继续。</p>
+
+            <div class="hero-strip-compact" style="margin:12px 0;">
+              <div class="mini-stat-compact">
+                <div class="mini-stat-label">影响对象</div>
+                <div class="mini-stat-value">${estimate?.totalObjects ?? 0}</div>
+                <div class="mini-stat-meta">文件与文件夹总数</div>
+              </div>
+              <div class="mini-stat-compact">
+                <div class="mini-stat-label">选中项目</div>
+                <div class="mini-stat-value">${items.length}</div>
+                <div class="mini-stat-meta">直接选中项</div>
+              </div>
+              <div class="mini-stat-compact">
+                <div class="mini-stat-label">预估规模</div>
+                <div class="mini-stat-value">${estimate?.large ? "较大" : "常规"}</div>
+                <div class="mini-stat-meta">${estimate?.shouldBatch ? "建议分批" : "可一次执行"}</div>
+              </div>
+            </div>
+
+            ${estimate?.shouldBatch ? `
+              <div class="attention-item" data-level="warning" style="margin:12px 0;">
+                <h3 class="attention-title">操作规模较大</h3>
+                <div class="attention-copy">影响对象超过 ${estimate?.recommendedBatchSize || 1000} 个，系统建议分批执行。可继续执行，但可能耗时较长。</div>
+              </div>
+            ` : ""}
+
+            ${items.length > 0 ? `
+              <div style="max-height:200px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0;">
+                ${itemList}
+                ${hasMore ? `<div style="text-align:center;padding:8px;font-size:12px;color:var(--muted);">... 还有 ${items.length - 30} 项</div>` : ""}
+              </div>
+            ` : ""}
+
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">执行中，请勿刷新页面...</div>' : ""}
+
+            <div class="btn-row" style="margin-top:12px;">
+              <button class="btn btn-danger" type="button"
+                data-action="${isDelete ? "execute-batch-delete" : "execute-batch-paste"}"
+                ${modal.loading ? "disabled" : ""}>
+                ${icons.trash}
+                <span>${modal.loading ? "执行中..." : `确认${opLabel}（${estimate?.totalObjects ?? 0} 项）`}</span>
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? "disabled" : ""}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     if (modal.type === "upload-confirm") {
       const files = modal.files || [];
       const conflictMode = modal.conflictMode || "rename";

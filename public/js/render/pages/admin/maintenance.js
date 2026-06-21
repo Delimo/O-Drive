@@ -199,11 +199,43 @@ export function createMaintenanceRenderer({
       `;
     }
 
+    const {
+      trashRetention,
+      trashRetentionLoading,
+      trashCleanupBusy,
+    } = admin;
+
+    let retentionHtml = "";
+    if (trashRetentionLoading) {
+      retentionHtml = renderEmptyStateCompact("加载中", "正在获取回收站保留天数...", icons.spinner);
+    } else {
+      const currentDays = trashRetention?.days ?? 0;
+      retentionHtml = `
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:8px;">
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
+            <label style="font-size:13px;color:var(--muted);">保留天数（0 为不自动清理）</label>
+            <input class="input" type="number" min="0" max="3650" value="${currentDays}" data-binding="trash-retention-days" style="max-width:200px;">
+          </div>
+          <button class="btn btn-primary toolbar-btn" type="button" data-action="save-trash-retention" ${trashCleanupBusy ? "disabled" : ""}>
+            ${icons.edit}<span>保存设置</span>
+          </button>
+          <button class="btn toolbar-btn" type="button" data-action="cleanup-trash-by-retention" ${trashCleanupBusy ? "disabled" : ""}>
+            ${trashCleanupBusy ? icons.spinner : icons.trash}<span>${trashCleanupBusy ? "清理中..." : "按保留天数清理"}</span>
+          </button>
+          ${currentDays > 0 ? `<span style="font-size:12px;color:var(--muted);align-self:center;">超过 ${currentDays} 天的回收站项目将被自动清除</span>` : '<span style="font-size:12px;color:var(--warning);align-self:center;">未设置保留天数，不会自动清理</span>'}
+        </div>
+      `;
+    }
+
     return `
       <div class="admin-section-compact">
         <section>
           <h3>维护操作</h3>
           ${maintenanceHtml}
+        </section>
+        <section>
+          <h3>回收站自动清理</h3>
+          ${retentionHtml}
         </section>
         <section>
           <h3>后台任务</h3>

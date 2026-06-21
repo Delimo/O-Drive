@@ -218,6 +218,13 @@ export function createApiLayer(deps) {
         csrf: true,
       });
     },
+    operationEstimate(paths) {
+      return request("/api/operation-estimate", {
+        method: "POST",
+        json: { paths },
+        csrf: true,
+      });
+    },
   };
 
   const trashApi = {
@@ -243,6 +250,23 @@ export function createApiLayer(deps) {
     clear() {
       return request("/api/trash/clear", {
         method: "DELETE",
+        json: {},
+        csrf: true,
+      });
+    },
+    getRetention() {
+      return request("/api/admin/settings/trash-retention");
+    },
+    setRetention(days) {
+      return request("/api/admin/settings/trash-retention", {
+        method: "PUT",
+        json: { days },
+        csrf: true,
+      });
+    },
+    cleanup() {
+      return request("/api/trash/cleanup", {
+        method: "POST",
         json: {},
         csrf: true,
       });

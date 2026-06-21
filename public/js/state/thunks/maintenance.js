@@ -1,6 +1,7 @@
 export function createMaintenanceThunks(deps, context) {
   const {
     actions,
+    fileApi,
     trashApi,
     maintenanceApi,
     normalizeKey,
@@ -11,6 +12,88 @@ export function createMaintenanceThunks(deps, context) {
   const { mock, getThunks } = context;
 
   return {
+    loadTrashRetention: () => async (dispatch) => {
+      dispatch(actions.admin.setTrashRetentionLoading(true));
+      if (mock) {
+        dispatch(actions.admin.setTrashRetention({ days: 7 }));
+        return;
+      }
+      try {
+        const { response, data } = await trashApi.getRetention();
+        if (!response.ok) throw new Error(data?.message || "加载保留天数失败");
+        dispatch(actions.admin.setTrashRetention(data));
+      } catch (error) {
+        dispatch(actions.admin.setTrashRetentionLoading(false));
+        console.error("loadTrashRetention:", error);
+      }
+    },
+
+    setTrashRetention: (days) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      try {
+        const { response, data } = await trashApi.setRetention(days);
+        if (!response.ok) throw new Error(data?.message || "设置保留天数失败");
+        dispatch(actions.admin.setTrashRetention(data));
+        dispatchToast("success", `回收站保留天数已设为 ${days} 天`);
+      } catch (error) {
+        dispatchToast("error", error.message || "设置保留天数失败");
+      }
+    },
+
+    cleanupTrashByRetention: () => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      dispatch(actions.admin.setTrashCleanupBusy(true));
+      try {
+        const { response, data } = await trashApi.cleanup();
+        if (!response.ok) throw new Error(data?.message || "清理回收站失败");
+        dispatchToast(
+          "success",
+          `已清理 ${data.deleted || 0} 条过期记录（保留 ${data.retentionDays || 0} 天）`,
+        );
+        await dispatch(getThunks().loadMaintenanceSnapshot());
+      } catch (error) {
+        dispatchToast("error", error.message || "清理回收站失败");
+      } finally {
+        dispatch(actions.admin.setTrashCleanupBusy(false));
+      }
+    },
+
+    estimateAndConfirmDelete: (paths) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      if (!paths?.length) return;
+      try {
+        const { response, data } = await fileApi.operationEstimate(paths);
+        if (!response.ok) throw new Error(data?.message || "操作预估失败");
+        dispatch(actions.app.setModal({ type: "operation-estimate", loading: false, error: "", estimate: data, paths, operation: "delete" }));
+      } catch (error) {
+        dispatchToast("error", error.message || "操作预估失败");
+      }
+    },
+
+    estimateAndConfirmPaste: (paths, action) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      if (!paths?.length) return;
+      try {
+        const { response, data } = await fileApi.operationEstimate(paths);
+        if (!response.ok) throw new Error(data?.message || "操作预估失败");
+        dispatch(actions.app.setModal({ type: "operation-estimate", loading: false, error: "", estimate: data, paths, operation: action }));
+      } catch (error) {
+        dispatchToast("error", error.message || "操作预估失败");
+      }
+    },
+
     restoreTrash: (trashId) => async (dispatch) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");

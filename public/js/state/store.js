@@ -144,6 +144,9 @@ export function createRootStore({ page }) {
       tasks: [],
       tasksLoading: false,
       activeUploadTaskId: "",
+      trashRetention: null,
+      trashRetentionLoading: false,
+      trashCleanupBusy: false,
       notifications: [],
       notificationsUnread: 0,
       notificationsLoading: false,
@@ -546,6 +549,15 @@ export function createRootStore({ page }) {
       },
       setActiveUploadTaskId(state, action) {
         return { ...state, activeUploadTaskId: action.payload || "" };
+      },
+      setTrashRetention(state, action) {
+        return { ...state, trashRetention: action.payload, trashRetentionLoading: false };
+      },
+      setTrashRetentionLoading(state, action) {
+        return { ...state, trashRetentionLoading: !!action.payload };
+      },
+      setTrashCleanupBusy(state, action) {
+        return { ...state, trashCleanupBusy: !!action.payload };
       },
       setNotifications(state, action) {
         return {

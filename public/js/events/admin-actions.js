@@ -36,6 +36,7 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       if (tab === "maintenance") {
         if (!admin.maintenance) store.dispatch(thunks.loadMaintenanceSnapshot());
         if (admin.tasks.length === 0) store.dispatch(thunks.loadTasks());
+        if (!admin.trashRetention) store.dispatch(thunks.loadTrashRetention());
         return;
       }
       return;
@@ -208,6 +209,19 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       const modal = store.getState().app.modal;
       if (!modal || !modal.maintenanceAction) return;
       store.dispatch(thunks.executeMaintenanceAction(modal.maintenanceAction));
+      return;
+    }
+
+    if (action === "save-trash-retention") {
+      const input = documentRef.querySelector('[data-binding="trash-retention-days"]');
+      if (!input) return;
+      const days = Math.max(0, parseInt(input.value, 10) || 0);
+      store.dispatch(thunks.setTrashRetention(days));
+      return;
+    }
+
+    if (action === "cleanup-trash-by-retention") {
+      store.dispatch(thunks.cleanupTrashByRetention());
       return;
     }
 

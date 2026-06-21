@@ -156,6 +156,16 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     }
 
     if (action === "paste-clipboard") {
+      const clipboard = state.explorer.clipboard;
+      if (!clipboard?.paths?.length) return;
+      store.dispatch(thunks.estimateAndConfirmPaste(clipboard.paths, clipboard.action));
+      return;
+    }
+
+    if (action === "execute-batch-paste") {
+      const modal = state.app.modal;
+      if (!modal) return;
+      store.dispatch(actions.app.setModal(null));
       store.dispatch(thunks.pasteClipboard());
       return;
     }
@@ -163,7 +173,16 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     if (action === "delete-selected") {
       if (state.explorer.trashMode) return;
       const paths = collectSelectedPaths(state);
-      store.dispatch(thunks.batchDelete(paths));
+      if (paths.length === 0) return;
+      store.dispatch(thunks.estimateAndConfirmDelete(paths));
+      return;
+    }
+
+    if (action === "execute-batch-delete") {
+      const modal = state.app.modal;
+      if (!modal || !modal.paths?.length) return;
+      store.dispatch(actions.app.setModal(null));
+      store.dispatch(thunks.batchDelete(modal.paths));
       return;
     }
 
