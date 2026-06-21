@@ -434,9 +434,9 @@
 
 .item-icon {
   position: relative;
-  width: 56px;
-  height: 56px;
-  flex: 0 0 56px;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
   border-radius: var(--radius-md);
   display: grid;
   place-items: center;
@@ -496,8 +496,8 @@
 }
 
 .item-icon svg {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
 }
 
 .item-content {
@@ -2488,8 +2488,8 @@ select.conflict-select {
 }
 
 .list-name-cell .cell-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -2502,8 +2502,8 @@ select.conflict-select {
 }
 
 .list-name-cell .cell-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .list-name-cell .cell-icon.folder {

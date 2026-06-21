@@ -27,7 +27,7 @@ function mapEntry(o) {
     storageId: o.storageId || "r2",
     sizeFormatted: formatBytes(o.size),
     rawSize: o.size,
-    time: o.uploaded.getTime(),
+    time: Math.floor(o.uploaded.getTime() / 1000),
   };
 }
 
