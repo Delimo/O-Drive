@@ -1437,4 +1437,9 @@
 
 .explorer-card > :last-child {
   margin-bottom: 24px;
+  padding-bottom: 0;
+}
+
+.explorer-card {
+  padding-bottom: 0 !important;
 }
