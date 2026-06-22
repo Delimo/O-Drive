@@ -1,16 +1,16 @@
 import { combineReducers, createStore } from "./create-slice.js";
-import { createAppSlice } from "./slices/app-slice.js";
-import { createExplorerSlice } from "./slices/explorer-slice.js";
-import { createAdminSlice } from "./slices/admin-slice.js";
-import { createShareSlice } from "./slices/share-slice.js";
-import { createUploadsSlice } from "./slices/uploads-slice.js";
+import { createAppSlice, appInitialState } from "./slices/app-slice.js";
+import { createExplorerSlice, explorerInitialState } from "./slices/explorer-slice.js";
+import { createAdminSlice, adminInitialState } from "./slices/admin-slice.js";
+import { createShareSlice, shareInitialState } from "./slices/share-slice.js";
+import { createUploadsSlice, uploadsInitialState } from "./slices/uploads-slice.js";
 
 export function createRootStore({ page }) {
-  const appSlice = createAppSlice({ page, role: "guest", csrf: "", booting: true, toast: null, modal: null, now: Date.now(), dragging: false });
-  const explorerSlice = createExplorerSlice(undefined);
-  const adminSlice = createAdminSlice(undefined);
-  const shareSlice = createShareSlice(undefined);
-  const uploadsSlice = createUploadsSlice(undefined);
+  const appSlice = createAppSlice({ ...appInitialState, page, now: Date.now() });
+  const explorerSlice = createExplorerSlice(explorerInitialState);
+  const adminSlice = createAdminSlice(adminInitialState);
+  const shareSlice = createShareSlice(shareInitialState);
+  const uploadsSlice = createUploadsSlice(uploadsInitialState);
 
   const actions = {
     app: appSlice.actions,
