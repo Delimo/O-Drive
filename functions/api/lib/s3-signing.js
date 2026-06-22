@@ -1,4 +1,6 @@
 const _keyCache = new Map();
+const KEY_CACHE_TTL = 3600000;
+const KEY_CACHE_MAX_SIZE = 200;
 
 function cacheKey(secret, date, region, service) {
   return `${secret}\0${date}\0${region}\0${service}`;
@@ -42,12 +44,16 @@ async function hmac(key, value) {
 async function signingKey(secret, date, region, service) {
   const ck = cacheKey(secret, date, region, service);
   const cached = _keyCache.get(ck);
-  if (cached) return cached;
+  if (cached && Date.now() - cached.ts < KEY_CACHE_TTL) return cached.key;
   const kDate = await hmac(new TextEncoder().encode(`AWS4${secret}`), date);
   const kRegion = await hmac(kDate, region);
   const kService = await hmac(kRegion, service);
   const result = await hmac(kService, "aws4_request");
-  _keyCache.set(ck, result);
+  if (_keyCache.size >= KEY_CACHE_MAX_SIZE) {
+    const oldest = _keyCache.entries().next().value;
+    if (oldest) _keyCache.delete(oldest[0]);
+  }
+  _keyCache.set(ck, { key: result, ts: Date.now() });
   return result;
 }
 

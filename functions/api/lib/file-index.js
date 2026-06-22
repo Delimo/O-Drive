@@ -120,6 +120,7 @@ async function _ensureFileIndexTable(env) {
     } catch (_) {}
     return true;
   } catch (_) {
+    console.warn("[file-index] Failed to ensure file_index table");
     return false;
   }
 }
@@ -175,7 +176,9 @@ async function ensureStorageUsageTable(env) {
         PRIMARY KEY (storage_id, object_key)
       )`,
     ).run();
-  } catch (_) {}
+  } catch (_) {
+    console.warn("[file-index] Failed to ensure storage_usage table");
+  }
 }
 
 async function addStorageUsage(env, storageId, objectKey, size) {
@@ -556,6 +559,7 @@ function rowMatchesSearchFilters(row, filters = {}) {
 
 const searchCache = new Map();
 const SEARCH_CACHE_TTL = 10000;
+const SEARCH_CACHE_MAX_SIZE = 500;
 
 export async function searchFileIndex(
   env,
@@ -627,9 +631,14 @@ export async function searchFileIndex(
       scanned: page.length,
       scanLimitReached: false,
     };
+    if (searchCache.size >= SEARCH_CACHE_MAX_SIZE) {
+      const oldest = searchCache.entries().next().value;
+      if (oldest) searchCache.delete(oldest[0]);
+    }
     searchCache.set(cacheKey, { data, ts: Date.now() });
     return data;
   } catch (_) {
+    console.warn("[file-index] searchFileIndex query failed");
     return null;
   }
 }
@@ -691,6 +700,7 @@ export async function getIndexedStats(env) {
       })),
     };
   } catch (_) {
+    console.warn("[file-index] getIndexedStats batch query failed");
     return null;
   }
 }

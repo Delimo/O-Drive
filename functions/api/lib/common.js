@@ -186,7 +186,9 @@ export async function addLog(env, request, action, details) {
         .bind(action, detailText, ip, Date.now())
         .run();
       await cleanupLogs(env);
-    } catch (_) {}
+    } catch (_) {
+      console.warn("[common] addLog fallback insert failed");
+    }
   }
 }
 
@@ -207,7 +209,9 @@ export async function cleanupLogs(env, now = Date.now()) {
       const r2 = await env.D1.prepare("DELETE FROM logs WHERE id <= ?").bind(cutoff.id).run();
       total += r2?.meta?.changes || 0;
     }
-  } catch (_) {}
+  } catch (_) {
+    console.warn("[common] cleanupLogs row-limit delete failed");
+  }
   return total;
 }
 
@@ -235,7 +239,9 @@ export async function recordSystemWarning(
       )
       .run();
     await cleanupSystemWarnings(env, createdAt);
-  } catch (_) {}
+  } catch (_) {
+    console.warn("[common] recordSystemWarning insert failed");
+  }
 }
 
 async function cleanupSystemWarnings(env, now = Date.now()) {

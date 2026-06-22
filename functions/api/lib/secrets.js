@@ -19,13 +19,9 @@ export function tokenSecretStatus(env) {
 
 export function getTokenSecret(env) {
   const secret = env?.TOKEN_SECRET || env?.ADMIN_PASSWORD;
-  if (
-    !secret &&
-    typeof process !== "undefined" &&
-    process?.env?.NODE_ENV !== "test"
-  ) {
+  if (!secret) {
     console.warn(
-      "[WARN] Neither TOKEN_SECRET nor ADMIN_PASSWORD is set. Falling back to insecure default key.",
+      "[WARN] Neither TOKEN_SECRET nor ADMIN_PASSWORD is set. Falling back to insecure default key \"o-drive\".",
     );
   }
   return String(secret || "o-drive");

@@ -157,7 +157,9 @@ async function checkUnlockAttempts(env, request, path) {
         ),
       };
     }
-  } catch (_) {}
+  } catch (_) {
+    console.warn("[protected-paths] checkUnlockAttempts query failed, allowing access");
+  }
   return { ok: true, ip };
 }
 
