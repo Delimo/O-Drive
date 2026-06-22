@@ -1,0 +1,18 @@
+# Copy this file to .dev.vars for local development.
+# Keep real secrets only in .dev.vars or in Cloudflare Pages settings.
+# Do not commit real usernames, passwords, tokens, database IDs, or bucket names.
+
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me-to-a-long-random-password
+TOKEN_SECRET=change-me-to-a-48-byte-random-base64url-secret
+ALLOW_GUEST=false
+
+PATH_UNLOCK_MAX_ATTEMPTS=5
+PATH_UNLOCK_LOCK_MINUTES=15
+
+DOWNLOAD_BURST_THRESHOLD=30
+DOWNLOAD_BURST_WINDOW_SECONDS=300
+DOWNLOAD_BURST_COOLDOWN_SECONDS=1800
+DOWNLOAD_BURST_BLOCK_SECONDS=600
+
+LOGIN_ALERT_COOLDOWN_SECONDS=1800
