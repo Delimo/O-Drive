@@ -1439,9 +1439,3 @@
   padding-bottom: 0 !important;
 }
 
-.explorer-card::after {
-  content: '';
-  flex-shrink: 0;
-  height: 24px;
-}
-

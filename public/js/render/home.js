@@ -70,6 +70,7 @@ export function createHomeRenderers(deps) {
 
       <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col" id="explorerCard">
         ${renderExplorerContent(state, entries, selectedEntries)}
+        <div class="flex-shrink-0 h-6"></div>
       </div>
     `;
   }
