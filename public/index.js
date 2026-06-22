@@ -283,7 +283,7 @@ function render() {
   const state = store.getState();
   const html = `
     <div data-region="header"></div>
-    ${page === 'home' ? '<div data-region="explorer"></div>' : renderMain(state)}
+    ${page === 'home' ? '<div data-region="explorer" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>' : renderMain(state)}
     ${page === 'home' ? '<div data-region="detail-drawer"></div>' : ''}
     <div data-region="modal"></div>
     <div data-region="toast"></div>
