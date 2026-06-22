@@ -12,7 +12,10 @@ function taskId() {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+let _taskTableReady;
+
 async function ensureTaskTable(env) {
+  if (_taskTableReady) return;
   await env.D1.prepare(
     `CREATE TABLE IF NOT EXISTS file_tasks (
       id TEXT PRIMARY KEY,
@@ -29,6 +32,7 @@ async function ensureTaskTable(env) {
       finished_at INTEGER NOT NULL DEFAULT 0
     )`,
   ).run();
+  _taskTableReady = true;
 }
 
 export async function cleanupFileTasks(

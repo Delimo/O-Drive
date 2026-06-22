@@ -5,6 +5,7 @@ import {
   isReservedKey,
   jsonResponse,
   normalizeName,
+  parseCookie,
 } from "./common.js";
 import { handleDownloadOrPreview } from "./file-reads.js";
 import { signHmac } from "./secrets.js";
@@ -75,15 +76,6 @@ function isSecureRequest(request) {
 function cookieAttributes(request, maxAge = SHARE_ACCESS_TTL_SECONDS) {
   const secure = isSecureRequest(request) ? "; Secure" : "";
   return `Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
-}
-
-function parseCookie(request, name) {
-  const header = request.headers.get("Cookie") || "";
-  for (const part of header.split(";")) {
-    const [key, ...rest] = part.trim().split("=");
-    if (key === name) return rest.join("=");
-  }
-  return null;
 }
 
 function shareAccessCookieName(token) {
@@ -244,8 +236,13 @@ async function cleanupExpiredShares(
         ? "exhausted"
         : "expired",
     );
-    await env.D1.prepare("DELETE FROM share_links WHERE token = ?")
-      .bind(row.token)
+  }
+  if (expiredRows.length) {
+    const tokens = expiredRows.map((r) => r.token);
+    await env.D1.prepare(
+      `DELETE FROM share_links WHERE token IN (${tokens.map(() => "?").join(",")})`,
+    )
+      .bind(...tokens)
       .run();
   }
   return expiredRows.length;

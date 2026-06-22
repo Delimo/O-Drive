@@ -2,14 +2,6 @@ import { resolveExistingObjectLocation, storageGet } from "./storage.js";
 
 const THUMBNAIL_RESIZE_TIMEOUT_MS = 1500;
 
-function encodeR2Key(key) {
-  return String(key || "")
-    .split("/")
-    .filter(Boolean)
-    .map(encodeURIComponent)
-    .join("/");
-}
-
 function isImageKey(key) {
   return /\.(jpe?g|png|gif|webp|avif)$/i.test(key);
 }
@@ -76,19 +68,45 @@ export async function handleThumbnail(env, request, r2Key, context) {
     return hit;
   }
 
+  // Call storage directly instead of routing through /api/preview/ pipeline
+  let sourceObj;
+  try {
+    const location = await resolveExistingObjectLocation(env, r2Key);
+    sourceObj = await storageGet(env, location.storageId, location.objectKey);
+  } catch (_) {}
+
+  if (!sourceObj) return new Response("404", { status: 404 });
+
+  // Validate content type is actually an image
+  const contentType = sourceObj.httpMetadata?.contentType || "";
+  if (contentType && !contentType.startsWith("image/") && !contentType.startsWith("application/octet-stream")) {
+    return new Response("Not an image", { status: 415 });
+  }
+
   const sourceUrl = new URL(request.url);
-  sourceUrl.pathname = `/api/preview/${encodeR2Key(r2Key)}`;
+  sourceUrl.pathname = `/api/preview/thumb-source`;
   sourceUrl.search = "";
 
   let response;
   try {
     response = await resizedImageResponse(request, sourceUrl, width, height);
   } catch (e) {
-    response = await originalImageResponse(env, r2Key);
+    response = new Response(sourceObj.body, {
+      headers: {
+        "Content-Type": contentType || "application/octet-stream",
+        "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      },
+    });
   }
 
-  if (!response.ok) response = await originalImageResponse(env, r2Key);
-  if (!response.ok) return response;
+  if (!response.ok) {
+    response = new Response(sourceObj.body, {
+      headers: {
+        "Content-Type": contentType || "application/octet-stream",
+        "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      },
+    });
+  }
 
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", "public, max-age=86400, s-maxage=604800");

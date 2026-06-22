@@ -126,14 +126,12 @@ export async function handleZipDownload(
   }
 
   const allEntries = [];
-  for (const rawPath of rawPaths) {
-    const entries = await resolveZipEntries(
-      env,
-      rawPath,
-      hiddenPaths,
-      auth,
-      protectedPaths,
-    );
+  const results = await Promise.all(
+    rawPaths.map((rawPath) =>
+      resolveZipEntries(env, rawPath, hiddenPaths, auth, protectedPaths),
+    ),
+  );
+  for (const entries of results) {
     if (entries) allEntries.push(...entries);
   }
 

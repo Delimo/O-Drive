@@ -248,6 +248,23 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
       const url = endpoint.url;
+      const parsed = new URL(url);
+      const hostname = parsed.hostname.toLowerCase();
+      if (
+        hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname === "0.0.0.0" ||
+        hostname === "[::1]" ||
+        hostname.startsWith("10.") ||
+        hostname.startsWith("172.") && (Number(hostname.split(".")[1]) >= 16 && Number(hostname.split(".")[1]) <= 31) ||
+        hostname.startsWith("192.168.") ||
+        hostname === "169.254.169.254"
+      ) {
+        return {
+          ok: false, status: 0, error: "Webhook URL points to private IP range",
+          durationMs: Date.now() - started,
+        };
+      }
       const res = await fetch(
         url,
         buildRequestInit(endpoint, payload, controller),
@@ -472,6 +489,7 @@ export function notifyFileRenamed(envUrls, oldPath, newName) {
 }
 
 export async function loadWebhookEndpoints(env) {
+  if (env._webhookEndpoints) return env._webhookEndpoints;
   let items = [];
   try {
     const row = await env.D1.prepare(
@@ -485,7 +503,8 @@ export async function loadWebhookEndpoints(env) {
       err?.message || "Webhook settings load failed",
     );
   }
-  return normalizeWebhookEndpoints(items);
+  env._webhookEndpoints = normalizeWebhookEndpoints(items);
+  return env._webhookEndpoints;
 }
 
 export function notifyDownloadBurst(envUrls, alert) {

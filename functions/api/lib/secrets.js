@@ -27,14 +27,22 @@ export function getTokenSecret(env) {
   return String(secret || "o-drive");
 }
 
-export async function signHmac(env, value) {
+async function hmacKey(env, usage) {
+  const cacheKey = usage === "sign" ? "_hmacSignKey" : "_hmacVerifyKey";
+  if (env[cacheKey]) return env[cacheKey];
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(getTokenSecret(env)),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    [usage],
   );
+  env[cacheKey] = key;
+  return key;
+}
+
+export async function signHmac(env, value) {
+  const key = await hmacKey(env, "sign");
   const sig = await crypto.subtle.sign(
     "HMAC",
     key,
@@ -45,13 +53,7 @@ export async function signHmac(env, value) {
 
 export async function verifyHmac(env, value, signature) {
   if (!value || !signature) return false;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(getTokenSecret(env)),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["verify"],
-  );
+  const key = await hmacKey(env, "verify");
   return crypto.subtle.verify(
     "HMAC",
     key,

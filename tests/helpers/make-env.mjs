@@ -458,6 +458,12 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const idx = shareRows.findIndex(row => row.token === token);
               if (idx >= 0) shareRows.splice(idx, 1);
             }
+            if (/DELETE FROM share_links WHERE token IN/i.test(sql)) {
+              const tokens = new Set((statement.bound || []).map(t => String(t)));
+              for (let i = shareRows.length - 1; i >= 0; i--) {
+                if (tokens.has(String(shareRows[i].token))) { shareRows.splice(i, 1); changes++; }
+              }
+            }
             if (/UPDATE share_links SET last_accessed_at = \? WHERE token = \?/i.test(sql)) {
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) row.last_accessed_at = statement.bound?.[0];
@@ -627,6 +633,18 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/SELECT COUNT\(\*\) as count FROM file_index/i.test(sql)) return { count: fileIndexRows.length };
             if (/SELECT COUNT\(\*\) as count FROM path_access_attempts/i.test(sql)) return { count: pathAttemptRows.length };
+            if (/INSERT INTO login_attempts.*RETURNING\s+attempts/i.test(sql)) {
+              const ip = statement.bound?.[0];
+              const ts = statement.bound?.[1];
+              const row = loginAttemptRows.find(item => item.ip === ip);
+              if (row) {
+                row.attempts += 1;
+                row.last_attempt = ts;
+                return { attempts: row.attempts };
+              }
+              loginAttemptRows.push({ ip, attempts: 1, last_attempt: ts });
+              return { attempts: 1 };
+            }
             if (/SELECT attempts, last_attempt FROM login_attempts WHERE ip = \?/i.test(sql)) {
               const ip = statement.bound?.[0];
               return loginAttemptRows.find(row => row.ip === ip) || null;

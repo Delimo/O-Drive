@@ -230,11 +230,17 @@ export function publicStorageConfig(config, usage = {}) {
 
 export async function storageUsage(env) {
   const config = await loadStorageConfig(env);
+  const spaceIds = (config.spaces || []).map((s) => s.id);
+  const results = await Promise.all([
+    getIndexedStorageUsed(env, "r2"),
+    ...spaceIds.map((id) => getIndexedStorageUsed(env, id)),
+  ]);
+  const r2UsedBytes = results[0];
   const spaces = {};
-  for (const space of config.spaces || []) {
-    spaces[space.id] = await getIndexedStorageUsed(env, space.id);
+  for (let i = 0; i < spaceIds.length; i++) {
+    spaces[spaceIds[i]] = results[i + 1];
   }
-  return { r2UsedBytes: await getIndexedStorageUsed(env, "r2"), spaces };
+  return { r2UsedBytes, spaces };
 }
 
 export function storageQuotaForConfig(config, storageId = "r2") {
@@ -555,20 +561,31 @@ export async function storageDelete(env, storageId, key) {
 }
 
 export async function storageCopy(env, sourceStorageId, sourceKey, destStorageId, destKey, options = {}) {
-  const adapter = await getStorageAdapter(env, sourceStorageId);
-  if (adapter.provider !== "r2") {
-    const obj = await storageGet(env, sourceStorageId, sourceKey);
-    if (!obj) return false;
-    await storagePut(env, destStorageId, destKey, obj.body, { httpMetadata: obj.httpMetadata, ...options });
+  const srcAdapter = await getStorageAdapter(env, sourceStorageId);
+  const dstAdapter = await getStorageAdapter(env, destStorageId);
+
+  // R2-to-R2 same-bucket copy
+  if (sourceStorageId === destStorageId && srcAdapter.provider === "r2") {
+    await srcAdapter.bucket.copy(sourceKey, destKey, options);
     return true;
   }
-  if (sourceStorageId !== destStorageId) {
-    const obj = await storageGet(env, sourceStorageId, sourceKey);
-    if (!obj) return false;
-    await storagePut(env, destStorageId, destKey, obj.body, { httpMetadata: obj.httpMetadata, ...options });
+
+  // S3-to-S3 same-space copy via server-side CopyObject
+  if (sourceStorageId === destStorageId && srcAdapter.provider === "s3") {
+    const space = srcAdapter.space;
+    const copySource = encodeURI(`/${space.bucket}/${space.prefix || ""}${sourceKey}`);
+    const headers = {
+      "x-amz-copy-source": copySource,
+      "content-type": options.httpMetadata?.contentType || "",
+    };
+    await signedS3Request(space, "PUT", destKey, { headers });
     return true;
   }
-  await adapter.bucket.copy(sourceKey, destKey, options);
+
+  // Cross-storage copy: download then upload
+  const obj = await storageGet(env, sourceStorageId, sourceKey);
+  if (!obj) return false;
+  await storagePut(env, destStorageId, destKey, obj.body, { httpMetadata: obj.httpMetadata, ...options });
   return true;
 }
 

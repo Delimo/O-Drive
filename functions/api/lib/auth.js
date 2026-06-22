@@ -4,6 +4,7 @@ import {
   encodeBase64Url,
   ensureCoreTables,
   waitForWebhook,
+  parseCookie,
 } from "./common.js";
 import { signHmac, verifyHmac } from "./secrets.js";
 import { loadWebhookEndpoints, notifyLoginBurst } from "./webhooks.js";
@@ -30,15 +31,6 @@ function cookieName(request) {
 function cookieAttributes(request, maxAge = SESSION_TTL_SECONDS) {
   const secure = isSecureRequest(request) ? "; Secure" : "";
   return `Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
-}
-
-function parseCookie(request, name) {
-  const header = request.headers.get("Cookie") || "";
-  for (const part of header.split(";")) {
-    const [key, ...rest] = part.trim().split("=");
-    if (key === name) return rest.join("=");
-  }
-  return null;
 }
 
 export function verifyCsrf(request, auth) {
@@ -98,15 +90,10 @@ async function checkLoginLocked(env, ip) {
 
 async function recordLoginFailure(env, ip) {
   try {
-    await env.D1.prepare(
-      "INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt",
+    const row = await env.D1.prepare(
+      "INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt RETURNING attempts",
     )
       .bind(ip, Date.now())
-      .run();
-    const row = await env.D1.prepare(
-      "SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?",
-    )
-      .bind(ip)
       .first();
     return Number(row?.attempts || 0);
   } catch (e) {}

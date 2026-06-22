@@ -4,6 +4,7 @@ import {
   normalizeHiddenPath,
   encodeBase64Url,
   decodeBase64UrlJson,
+  parseCookie,
 } from "./common.js";
 import { signHmac, verifyHmac } from "./secrets.js";
 import { ensureProtectedTables } from "./schema.js";
@@ -89,13 +90,7 @@ function normalizeProtectedPath(path) {
 }
 
 function cookieValue(request, name) {
-  const cookie = request.headers.get("Cookie") || "";
-  return (
-    cookie
-      .split("; ")
-      .find((row) => row.startsWith(`${name}=`))
-      ?.slice(name.length + 1) || ""
-  );
+  return parseCookie(request, name) || "";
 }
 
 async function readAccessCookie(request, env) {

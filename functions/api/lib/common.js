@@ -6,6 +6,7 @@ const SYSTEM_WARNING_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const SYSTEM_WARNING_RETENTION_ROWS = 100;
 const LOG_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 const LOG_RETENTION_ROWS = 2000;
+const LOG_CLEANUP_PROBABILITY = 0.05; // 5% chance on each log write
 
 /**
  * Cloudflare Workers environment bindings.
@@ -119,6 +120,21 @@ export function normalizeHiddenPath(path) {
  * @param {string[]} hiddenPaths - List of hidden path prefixes
  * @returns {boolean}
  */
+/**
+ * Parse a named cookie from a request.
+ * @param {Request} request
+ * @param {string} name
+ * @returns {string|null}
+ */
+export function parseCookie(request, name) {
+  const header = request.headers.get("Cookie") || "";
+  for (const part of header.split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) return rest.join("=");
+  }
+  return null;
+}
+
 export function isHiddenKey(key, hiddenPaths) {
   return hiddenPaths.some((hp) => key === hp || key.startsWith(hp + "/"));
 }
@@ -185,7 +201,6 @@ export async function addLog(env, request, action, details) {
       )
         .bind(action, detailText, ip, Date.now())
         .run();
-      await cleanupLogs(env);
     } catch (_) {
       console.warn("[common] addLog fallback insert failed");
     }
