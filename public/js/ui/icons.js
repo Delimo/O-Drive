@@ -126,6 +126,7 @@ export const icons = {
   bell: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7v3l-2 3h18l-2-3V9a7 7 0 0 0-7-7ZM9 18a3 3 0 0 0 6 0"/></svg>',
   sun: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 7a5 5 0 100 10 5 5 0 000-10Zm0-4a1 1 0 011 1v1.07a1 1 0 01-2 0V4a1 1 0 011-1Zm0 17.93a1 1 0 011 1V21a1 1 0 01-2 0v-1.07a1 1 0 011-1ZM4.22 4.22a1 1 0 011.42 0l.71.71A1 1 0 014.93 6.35l-.71-.71a1 1 0 010-1.42Zm12.73 12.73a1 1 0 011.42 0l.71.71a1 1 0 01-1.42 1.42l-.71-.71a1 1 0 010-1.42ZM2 11a1 1 0 011-1h1.07a1 1 0 010 2H3a1 1 0 01-1-1Zm17.93 0a1 1 0 011-1H22a1 1 0 010 2h-1.07a1 1 0 01-1-1ZM4.22 19.78a1 1 0 010-1.42l.71-.71a1 1 0 011.42 1.42l-.71.71a1 1 0 01-1.42 0Zm12.73-12.73a1 1 0 010-1.42l.71-.71a1 1 0 011.42 1.42l-.71.71a1 1 0 01-1.42 0Z"/></svg>',
   moon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 13.5A8.5 8.5 0 1 1 11 2.5c4.5 2 6 6.5 6 6.5s2.5 2 3.5 4.5Z"/></svg>',
+  system: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Zm2 0v10h12V5H6Zm-3 15a1 1 0 0 1 1-1h16a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1Zm4-3.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0Zm3.5-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>',
   pause:
     '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg>',

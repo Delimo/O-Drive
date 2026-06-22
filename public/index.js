@@ -389,7 +389,7 @@ function renderHeader(state) {
             <input type="search" value="${escapeHtml(searchValue)}" placeholder="搜索文件..." data-role="search-input" aria-label="搜索文件" class="w-44 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all">
           </div>
         ` : ''}
-        <button class="header-icon-btn header-theme-btn" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
+        <button class="header-icon-btn header-theme-btn" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span><span class="icon">${icons.system}</span></button>
         ${role === 'admin' ? `
         <div class="relative" data-component="notifications">
           <button class="header-icon-btn notif-bell" data-action="toggle-notifications" aria-label="通知">
