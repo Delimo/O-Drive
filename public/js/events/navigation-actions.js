@@ -25,18 +25,24 @@ export function registerNavigationActions(documentRef, windowRef, store, actions
     if (action === "toggle-theme") {
       const root = document.documentElement;
       const stored = localStorage.getItem("theme");
-      if (!stored) {
-        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
-        root.setAttribute("data-theme", next);
-        try { localStorage.setItem("theme", next); } catch (_) {}
-      } else if (stored === "light") {
-        root.setAttribute("data-theme", "dark");
-        try { localStorage.setItem("theme", "dark"); } catch (_) {}
+      const current = root.getAttribute("data-theme");
+      let nextStored, nextTheme;
+      if (stored === "light" || (!stored && current === "light")) {
+        nextStored = "dark";
+        nextTheme = "dark";
+      } else if (stored === "dark" || (!stored && current === "dark")) {
+        nextStored = "system";
+        nextTheme = null;
       } else {
-        try { localStorage.removeItem("theme"); } catch (_) {}
-        const prefersDark = windowRef.matchMedia("(prefers-color-scheme: dark)").matches;
-        root.setAttribute("data-theme", prefersDark ? "dark" : "light");
+        nextStored = "light";
+        nextTheme = "light";
       }
+      if (nextTheme) {
+        root.setAttribute("data-theme", nextTheme);
+      } else {
+        root.removeAttribute("data-theme");
+      }
+      try { localStorage.setItem("theme", nextStored); } catch (_) {}
       return;
     }
 

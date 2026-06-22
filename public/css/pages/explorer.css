@@ -1434,3 +1434,7 @@
 [data-theme="dark"] .bg-sky-600 { background-color: #0284c7; }
 [data-theme="dark"] .hover\:bg-sky-700:hover { background-color: #0369a1; }
 [data-theme="dark"] .focus\:border-sky-500:focus { border-color: #0ea5e9; }
+
+.explorer-card > :last-child {
+  margin-bottom: 24px;
+}
