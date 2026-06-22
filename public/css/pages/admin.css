@@ -3,7 +3,7 @@
   --card-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02);
   --card-shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.04), 0 4px 6px -2px rgba(0,0,0,0.02);
   --card-bg: var(--panel);
-  --card-border: rgba(0,0,0,0.05);
+  --card-border: var(--line);
   --section-gap: 24px;
 }
 
@@ -11,7 +11,7 @@
 .admin-card, .admin-section-card, .sys-status-card {
   padding: 24px !important;
   border-radius: var(--card-radius);
-  background: white !important;
+  background: var(--panel) !important;
   border: 1px solid var(--card-border) !important;
   box-shadow: var(--card-shadow);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -19,13 +19,13 @@
 
 .admin-card:hover {
   box-shadow: var(--card-shadow-hover);
-  border-color: rgba(0,0,0,0.1) !important;
+  border-color: var(--line-strong) !important;
 }
 
 /* 列表条目优化 */
 .latest-item-compact, .env-item, .maint-item {
   padding: 16px !important;
-  background: #f8fafc !important; /* slate-50 */
+  background: var(--panel-soft) !important;
   border: 1px solid transparent !important;
   border-radius: 12px !important;
   transition: all 0.15s ease;
@@ -33,9 +33,9 @@
 }
 
 .latest-item-compact:hover {
-  background: white !important;
-  border-color: rgba(0,0,0,0.1) !important;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  background: var(--panel) !important;
+  border-color: var(--line-strong) !important;
+  box-shadow: var(--card-shadow-hover);
   transform: translateY(-1px);
 }
 
@@ -52,7 +52,7 @@
 .admin-value, .mini-stat-value {
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
   letter-spacing: -0.025em;
-  color: #1e293b; /* slate-800 */
+  color: var(--text);
 }
 
 /* 按钮行美化 */
@@ -70,10 +70,10 @@
 
 /* Tab 切换栏优化 */
 .admin-tab-bar {
-  background: #f1f5f9;
+  background: var(--panel-soft);
   padding: 4px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid var(--line);
   margin-bottom: 20px;
 }
 
@@ -83,9 +83,9 @@
 }
 
 .admin-tab-active {
-  background: white !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  color: #0f172a !important; /* slate-900 */
+  background: var(--panel) !important;
+  box-shadow: var(--card-shadow);
+  color: var(--text) !important;
 }
 
 .admin-section-card {
@@ -953,7 +953,7 @@
   font-size: 11px;
   padding: 1px 5px;
   border-radius: 4px;
-  background: rgba(0,0,0,0.07);
+  background: var(--subtle-bg);
 }
 
 .share-filter-active .share-filter-count {
@@ -1130,4 +1130,46 @@
   text-align: center;
   font-size: 13px;
   color: var(--muted);
+}
+
+/* ===== Dark Mode: Tailwind utility overrides ===== */
+[data-theme="dark"] .text-slate-800 { color: var(--text); }
+[data-theme="dark"] .text-slate-900 { color: var(--text); }
+[data-theme="dark"] .text-slate-700 { color: #cbd5e1; }
+[data-theme="dark"] .text-slate-600 { color: #94a3b8; }
+[data-theme="dark"] .text-slate-500 { color: #64748b; }
+[data-theme="dark"] .text-slate-400 { color: #475569; }
+
+[data-theme="dark"] .bg-white { background-color: var(--panel); }
+[data-theme="dark"] .bg-\[\#fafbfc\] { background-color: var(--panel-soft); }
+[data-theme="dark"] .bg-slate-50 { background-color: var(--panel-soft); }
+[data-theme="dark"] .bg-slate-100 { background-color: var(--subtle-bg); }
+[data-theme="dark"] .bg-slate-900 { background-color: #0f172a; }
+
+[data-theme="dark"] .border-slate-200 { border-color: var(--line); }
+[data-theme="dark"] .border-slate-200\/60 { border-color: var(--line); }
+[data-theme="dark"] .border-slate-300 { border-color: var(--line-strong); }
+[data-theme="dark"] .border-slate-800 { border-color: var(--line); }
+
+[data-theme="dark"] .hover\:bg-slate-50:hover { background-color: var(--hover-bg); }
+[data-theme="dark"] .hover\:bg-slate-100:hover { background-color: var(--hover-bg); }
+
+[data-theme="dark"] .focus\:bg-white:focus { background-color: var(--panel); }
+[data-theme="dark"] .focus\:border-slate-300:focus { border-color: var(--line-strong); }
+
+[data-theme="dark"] .admin-card,
+[data-theme="dark"] .admin-section-card,
+[data-theme="dark"] .sys-status-card {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+}
+
+[data-theme="dark"] .admin-tab-active {
+  background: var(--panel-strong) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="dark"] .admin-tab-bar {
+  background: var(--panel-soft);
+  border-color: var(--line);
 }
