@@ -294,9 +294,13 @@ function render() {
   next.innerHTML = html;
   morphdom(root, next, { childrenOnly: true });
   renderHeaderRegion();
+  renderModal();
+  renderToast();
+  renderDropOverlay();
   if (page === 'home') {
     renderExplorerRegion();
     renderDetailDrawerRegion();
+    renderUploads();
   }
 }
 
