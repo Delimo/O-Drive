@@ -68,7 +68,37 @@
   font-size: 13px;
 }
 
-/* Tab 按钮样式 - 使用与云盘页相同的按钮样式 */
+/* Tab 切换栏 */
+.admin-tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.admin-tab-btn {
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.admin-tab-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.admin-tab-active {
+  background: var(--panel-soft) !important;
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+  font-weight: 600;
+}
 
 .admin-section-card {
   padding: 16px 18px;
@@ -1144,6 +1174,16 @@
 [data-theme="dark"] .sys-status-card {
   background: var(--panel) !important;
   border-color: var(--line) !important;
+}
+
+[data-theme="dark"] .admin-tab-active {
+  background: var(--subtle-bg) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="dark"] .admin-tab-btn:hover {
+  background: var(--hover-bg);
 }
 
 
