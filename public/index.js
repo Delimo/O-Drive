@@ -16,7 +16,6 @@ import { renderMarkdown, isMarkdownName } from './js/utils/markdown.js';
 import { icons } from './js/ui/icons.js';
 import { createRootStore } from './js/state/store.js';
 import { createDeferredAction, syncHomeUrl as syncHomeUrlHelper, openDownload as openDownloadHelper, readDroppedEntries } from './js/utils/helpers.js';
-import { cleanupAudioContext } from './js/state/thunks.js';
 import morphdom from './js/vendor/morphdom.js';
 
 const root = document.getElementById('app');
@@ -269,7 +268,7 @@ function render() {
                 <div>
                   <h3 class="details-panel-title">文件详细</h3>
                 </div>
-                <button class="details-close" data-action="clear-selected" aria-label="关闭详情面板">×</button>
+                <button class="details-close" data-action="clear-selected">×</button>
               </div>
               <div class="details-drawer-body">
                 ${sharedRenderInspector(selected, state)}
@@ -337,12 +336,12 @@ function renderHeader(state) {
         ${page === 'home' ? `
           <div class="search-bar relative">
             <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
-            <input type="search" value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(searchPlaceholder)}" data-role="search-input" aria-label="搜索文件" class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all" ${searchDisabled ? 'disabled' : ''}>
+            <input type="search" value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(searchPlaceholder)}" data-role="search-input" class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all" ${searchDisabled ? 'disabled' : ''}>
           </div>
         ` : `
           <div class="search-bar relative">
             <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
-            <input type="search" value="" placeholder="搜索文件..." aria-label="搜索文件" class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
+            <input type="search" value="" placeholder="搜索文件..." class="w-56 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all opacity-40" disabled>
           </div>
         `}
         <button class="header-icon-btn header-theme-btn" data-action="toggle-theme" aria-label="切换主题"><span class="icon">${icons.sun}</span><span class="icon">${icons.moon}</span></button>
@@ -464,13 +463,8 @@ store.dispatch(thunks.loadRole()).then(async () => {
 });
 
 window.addEventListener('beforeunload', () => {
-  cleanupAudioContext();
   destroyEvents();
   unsubscribe();
   if (notifPollTimer) clearInterval(notifPollTimer);
-});
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) cleanupAudioContext();
 });
 

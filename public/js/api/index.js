@@ -411,23 +411,14 @@ export function createApiLayer(deps) {
           };
         }
 
-        xhr.onload = () => {
-          let data = null;
-          if (xhr.responseText) {
-            try {
-              data = JSON.parse(xhr.responseText);
-            } catch (_) {
-              data = xhr.responseText;
-            }
-          }
+        xhr.onload = () =>
           resolve({
             response: {
               ok: xhr.status >= 200 && xhr.status < 300,
               status: xhr.status,
             },
-            data,
+            data: xhr.responseText ? JSON.parse(xhr.responseText) : null,
           });
-        };
         xhr.onerror = () =>
           resolve({ response: { ok: false, status: 0 }, data: null });
         xhr.send(blob);
