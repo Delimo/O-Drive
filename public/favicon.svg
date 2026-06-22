@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="cloud" x1="14" y1="22" x2="50" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.52" stop-color="#e9e5ff"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-color="#111827" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <ellipse cx="22" cy="38" rx="12" ry="9.5" fill="url(#cloud)"/>
+    <ellipse cx="36" cy="31.5" rx="16" ry="14" fill="url(#cloud)"/>
+    <ellipse cx="47" cy="39" rx="12" ry="9.8" fill="url(#cloud)"/>
+    <rect x="20" y="34" width="29" height="14" rx="7" fill="url(#cloud)"/>
+  </g>
+</svg>

@@ -1,0 +1,63 @@
+export const icons = {
+  cloud: '<img src="/favicon.svg" alt="" aria-hidden="true">',
+  folder:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2Z"/></svg>',
+  image:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+  video:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>',
+  audio:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  pdf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12h1.5v1.5a.5.5 0 0 1-1 0V12Zm0 3h2m-2 0a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 1 0v1.5a.5.5 0 0 1-.5.5Zm4 0v-3h1.5a.5.5 0 0 1 0 1H14v2h-1"/></svg>',
+  text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>',
+  archive:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>',
+  app: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  search:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+  stats:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18.25V13m5 5.25V8m5 10.25V11m4 7.25H3"/></svg>',
+  refresh:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 5v5h-5m-6 9a7 7 0 1 1 5.4-11.47L20 10"/></svg>',
+  spinner:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" class="spinner-icon"><path d="M12 2a10 10 0 0 1 10 10" /></svg>',
+  upload:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V6m0 0 3.5 3.5M12 6 8.5 9.5M4 17.75A2.25 2.25 0 0 0 6.25 20h11.5A2.25 2.25 0 0 0 20 17.75"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  download:
+    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v7.69l2.72-2.72a.75.75 0 1 1 1.06 1.06l-4 4a.75.75 0 0 1-1.06 0l-4-4a.75.75 0 0 1 1.06-1.06l2.72 2.72V3a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd"/><path d="M3 15.75a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75ZM3 18.75a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z"/></svg>',
+  eye: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path fill-rule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 0 1 0-1.113ZM17.25 12a5.25 5.25 0 1 1-10.5 0 5.25 5.25 0 0 1 10.5 0Z" clip-rule="evenodd"/></svg>',
+  logout:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5.75H6.75A1.75 1.75 0 0 0 5 7.5v9a1.75 1.75 0 0 0 1.75 1.75H10M14 8l4 4-4 4m4-4H9"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V8a5 5 0 1 1 10 0v2m-9 0h8.5A1.5 1.5 0 0 1 18 11.5v7A1.5 1.5 0 0 1 16.5 20h-9A1.5 1.5 0 0 1 6 18.5v-7A1.5 1.5 0 0 1 7.5 10Z"/></svg>',
+  trash:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.75h6l.5 2H19v1.5h-1l-.62 10.04A1.75 1.75 0 0 1 15.63 20H8.37a1.75 1.75 0 0 1-1.75-1.71L6 8.25H5v-1.5h3.5l.5-2Zm.75 5.5v6.5m4.5-6.5v6.5"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>',
+  list: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h2.5M10 6.5h9M5 12h2.5M10 12h9M5 17.5h2.5M10 17.5h9"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9.75A1.75 1.75 0 0 1 10.75 8h8.5A1.75 1.75 0 0 1 21 9.75v9.5A1.75 1.75 0 0 1 19.25 21h-8.5A1.75 1.75 0 0 1 9 19.25v-9.5ZM4.75 3h8.5A1.75 1.75 0 0 1 15 4.75V6"/></svg>',
+  move: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18m0-18 3 3m-3-3-3 3m3 15 3-3m-3 3-3-3M3 12h18m-18 0 3-3m-3 3 3 3m15-3-3-3m3 3-3 3"/></svg>',
+  paste:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.75h6M10 3h4a1 1 0 0 1 1 1v1H9V4a1 1 0 0 1 1-1Zm-3 3h10A1.75 1.75 0 0 1 18.75 8.5v10.75A1.75 1.75 0 0 1 17 21H7A1.75 1.75 0 0 1 5.25 19.25V8.5A1.75 1.75 0 0 1 7 6.75Z"/></svg>',
+  check:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 9.2 17 19 7.5"/></svg>',
+  link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 13.5 13.5 10.5m-6.25 6.25 2.5-2.5a3 3 0 0 0 0-4.25 3 3 0 0 0-4.25 0L3 12.5a3 3 0 0 0 4.25 4.25Zm9.5-9.5-2.5 2.5a3 3 0 0 0 0 4.25 3 3 0 0 0 4.25 0L21 11.5a3 3 0 0 0-4.25-4.25Z"/></svg>',
+  share:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 8a3 3 0 1 0-2.65-4.41M9 14l6-3m-6 0 6 3M9 10a3 3 0 1 0-2.65 4.41M15 16a3 3 0 1 0 2.65 4.41"/></svg>',
+  restore:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7v5h5M20 17a8 8 0 1 1-2.34-5.66L20 12"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Zm8.8-13.8 3.4 3.4"/></svg>',
+  save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.75A1.75 1.75 0 0 1 6.75 3h8.38c.46 0 .9.18 1.22.5l2.15 2.15c.32.32.5.76.5 1.22v12.38A1.75 1.75 0 0 1 17.25 21H6.75A1.75 1.75 0 0 1 5 19.25V4.75Zm3 0v4.5h7v-3.5m-5 9h4"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm8.706-1.442c1.146-.593 2.43.21 2.126 1.704l-.709 2.836.042-.02a.75.75 0 0 1 .67 1.34l-.04.022c-1.147.593-2.438-.21-2.132-1.704l.71-2.836-.042.02a.75.75 0 1 1-.671-1.34l.041-.022ZM12 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clip-rule="evenodd"/></svg>',
+  arrowLeft:
+    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.28 7.72a.75.75 0 0 1 0 1.06l-2.47 2.47H21a.75.75 0 0 1 0 1.5H4.81l2.47 2.47a.75.75 0 1 1-1.06 1.06l-3.75-3.75a.75.75 0 0 1 0-1.06l3.75-3.75a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/></svg>',
+  close:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7v3l-2 3h18l-2-3V9a7 7 0 0 0-7-7ZM9 18a3 3 0 0 0 6 0"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2m-1.78-7.78-1.42 1.42M5.64 17.64l-1.42 1.42"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13.5A8.5 8.5 0 1 1 11 2.5c4.5 2 6 6.5 6 6.5s2.5 2 3.5 4.5Z"/></svg>',
+  pause:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>',
+  play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>',
+};
