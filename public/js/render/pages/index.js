@@ -147,7 +147,7 @@ export function createPageRenderers(deps) {
     }
 
     return `
-      <div class="toolbar-card flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-3 shadow-sm">
+      <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
         <div class="admin-tab-bar">
           ${ADMIN_TABS.map(
             (tab) => `
@@ -161,7 +161,7 @@ export function createPageRenderers(deps) {
           ).join("")}
         </div>
       </div>
-      <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm overflow-hidden flex flex-col">
+      <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
         ${renderAdminActiveTab(admin, activeTab)}
       </div>
     `;
