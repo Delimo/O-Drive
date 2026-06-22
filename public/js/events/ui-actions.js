@@ -165,20 +165,6 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         return;
       }
 
-      if (form === "add-storage-space") {
-        const config = store.getState().admin.storageConfig;
-        if (!config) return;
-        const space = { name: String(data.get("name") || "").trim(), endpoint: String(data.get("endpoint") || "").trim(), region: String(data.get("region") || "auto").trim(), bucket: String(data.get("bucket") || "").trim(), accessKeyId: String(data.get("accessKeyId") || "").trim(), secretAccessKey: String(data.get("secretAccessKey") || "").trim(), prefix: String(data.get("prefix") || "").trim(), quotaBytes: parseInt(String(data.get("quotaBytes") || "0"), 10), enabled: data.get("enabled") === "on", overflowTarget: data.get("overflowTarget") === "on" };
-        if (!space.name || !space.bucket) {
-          dispatchToast("error", "名称和存储桶为必填项");
-          return;
-        }
-        store.dispatch(actions.app.setModal(null));
-        const updatedSpaces = [...(config.spaces || []), space];
-        store.dispatch(thunks.saveAdminStorageConfig({ ...config, spaces: updatedSpaces }));
-        return;
-      }
-
       if (form === "add-webhook" || form === "edit-webhook") {
         const modal = store.getState().app.modal;
         if (!modal) return;
@@ -204,19 +190,6 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         return;
       }
 
-      if (form === "add-storage-binding") {
-        const config = store.getState().admin.storageConfig;
-        if (!config) return;
-        const binding = { path: String(data.get("path") || "").trim(), storageId: String(data.get("storageId") || "").trim() };
-        if (!binding.path || !binding.storageId) {
-          dispatchToast("error", "路径和存储空间为必填项");
-          return;
-        }
-        store.dispatch(actions.app.setModal(null));
-        const updatedBindings = [...(config.bindings || []), binding];
-        store.dispatch(thunks.saveAdminStorageConfig({ ...config, bindings: updatedBindings }));
-        return;
-      }
     },
 
     handleMediaQuery: (e) => {

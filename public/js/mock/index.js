@@ -360,28 +360,6 @@ export const mockStorageConfig = {
     usedFormatted: "3.0 GB",
     usedPercent: 30,
   },
-  overflowEnabled: true,
-  overflowThresholdPercent: 85,
-  spaces: [
-    {
-      id: "backup-s3",
-      name: "Backup S3",
-      provider: "s3",
-      endpoint: "https://s3.us-east-1.amazonaws.com",
-      region: "us-east-1",
-      bucket: "my-backup-bucket",
-      prefix: "odrive/",
-      quotaBytes: 53687091200,
-      quotaFormatted: "50 GB",
-      usedBytes: 10737418240,
-      usedFormatted: "10 GB",
-      usedPercent: 20,
-      enabled: true,
-      overflowTarget: true,
-      hasSecret: true,
-    },
-  ],
-  bindings: [{ path: "/backup", storageId: "backup-s3" }],
 };
 
 export const mockReadme = `# O-Drive 使用说明

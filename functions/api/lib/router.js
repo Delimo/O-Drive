@@ -42,7 +42,7 @@ import {
   handleAdminNotifications,
   loadWebhookEndpoints,
 } from "./admin.js";
-import { handleAdminStorage, handleAdminStorageTest } from "./storage.js";
+import { handleAdminStorage } from "./storage.js";
 import {
   handleAdminMaintenance,
   handleAdminMaintenanceAction,
@@ -137,8 +137,6 @@ export async function resolveAdminRoute(
     return await handleTrashRetention(env, request, method);
   if (path === "/api/admin/settings/quota")
     return await handleAdminQuota(env, request, method);
-  if (path === "/api/admin/settings/storage/test" && method === "POST")
-    return await handleAdminStorageTest(env, request);
   if (path === "/api/admin/settings/storage")
     return await handleAdminStorage(env, request, method);
   if (path === "/api/admin/settings/webhooks")

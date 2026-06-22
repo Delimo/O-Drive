@@ -11,9 +11,7 @@ import {
   searchFileIndex,
 } from "./file-index.js";
 import {
-  loadStorageConfig,
   resolveExistingObjectLocation,
-  resolveStorageIdForPath,
   storageGet,
   storageHead,
   storageList,
@@ -33,23 +31,6 @@ function mapEntry(o) {
 
 function cleanPath(path = "") {
   return String(path || "").replace(/^\/+|\/+$/g, "");
-}
-
-function virtualBindingFolders(bindings = [], currentKey = "") {
-  const current = cleanPath(currentKey);
-  const prefix = current ? `${current}/` : "";
-  const names = new Set();
-  for (const binding of bindings || []) {
-    const path = cleanPath(binding.path);
-    if (!path || (current && !path.startsWith(prefix))) continue;
-    const rest = current ? path.slice(prefix.length) : path;
-    if (!rest || rest.includes("/")) continue;
-    names.add(rest);
-  }
-  return [...names].map((name) => {
-    const fullKey = current ? `${current}/${name}` : name;
-    return { name, path: "/" + fullKey, fullKey, virtual: true };
-  });
 }
 
 export async function handleSearch(
@@ -91,7 +72,6 @@ export async function handleSearch(
   const matches = [];
   let nextCursor = "";
   let scanned = 0;
-  const storageId = await resolveStorageIdForPath(env, scope);
 
   do {
     const pageLimit = Math.max(
@@ -100,14 +80,14 @@ export async function handleSearch(
     );
     const listed = await storageList(
       env,
-      storageId,
+      "r2",
       { prefix: scope, cursor, limit: pageLimit },
       { maxObjects: pageLimit },
     );
     const objects = listed.objects || [];
     scanned += objects.length;
     const pageMatches = objects
-      .map((obj) => mapEntry({ ...obj, storageId }))
+      .map((obj) => mapEntry({ ...obj, storageId: "r2" }))
       .filter(
         (f) =>
           f.name.toLowerCase().includes(q) &&
@@ -217,13 +197,9 @@ export async function handleListFiles(
     );
   }
   const prefix = r2Key ? r2Key + "/" : "";
-  const storageId = await resolveStorageIdForPath(env, r2Key);
-  const listed = await storageList(env, storageId, { prefix, delimiter: "/" });
-  const config = await loadStorageConfig(env);
+  const listed = await storageList(env, "r2", { prefix, delimiter: "/" });
   const indexed = await listIndexedDirectory(env, r2Key);
   const folderMap = new Map();
-  for (const folder of virtualBindingFolders(config.bindings, r2Key))
-    folderMap.set(folder.fullKey, folder);
   for (const folder of indexed.folders || [])
     folderMap.set(folder.fullKey, folder);
   for (const p of listed.delimitedPrefixes || []) {
@@ -249,7 +225,7 @@ export async function handleListFiles(
   const fileMap = new Map();
   for (const file of indexed.files || []) fileMap.set(file.fullKey, file);
   for (const obj of listed.objects || []) {
-    const file = mapEntry({ ...obj, storageId });
+    const file = mapEntry({ ...obj, storageId: "r2" });
     fileMap.set(file.fullKey, file);
   }
   const files = await markProtection(
@@ -265,7 +241,7 @@ export async function handleListFiles(
     auth,
     protectedPaths,
   );
-  return jsonResponse({ folders, files, storageId });
+  return jsonResponse({ folders, files, storageId: "r2" });
 }
 
 function parseByteRange(rangeHeader) {

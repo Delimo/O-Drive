@@ -424,25 +424,6 @@ export function createAdminThunks(deps, context) {
       }
     },
 
-    testAdminStorageSpace: (space) => async (dispatch) => {
-      if (mock) {
-        dispatchToast("error", "设计预览模式下不可操作");
-        return;
-      }
-      try {
-        const { response, data } = await adminApi.testStorageSpace(space);
-        if (!response.ok) throw new Error(data?.message || "连接测试失败");
-        dispatchToast(
-          data.success ? "success" : "error",
-          data.success
-            ? `连接成功（${data.durationMs}ms）`
-            : `连接失败: ${data.error || ""}`,
-        );
-      } catch (error) {
-        dispatchToast("error", error.message || "连接测试失败");
-      }
-    },
-
     loadAdminWebhooks: () => async (dispatch) => {
       dispatch(actions.admin.setWebhooksLoading(true));
       if (mock) {

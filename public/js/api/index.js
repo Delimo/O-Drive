@@ -383,13 +383,6 @@ export function createApiLayer(deps) {
         csrf: true,
       });
     },
-    testStorageSpace(space) {
-      return request("/api/admin/settings/storage/test", {
-        method: "POST",
-        json: space,
-        csrf: true,
-      });
-    },
     webhooks() {
       return request("/api/admin/settings/webhooks");
     },

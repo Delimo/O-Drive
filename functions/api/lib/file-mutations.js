@@ -15,11 +15,7 @@ import { getFileIndexEntry, upsertFileIndex } from "./file-index.js";
 import { copyTree, mapWithConcurrency } from "./r2-tree.js";
 import {
   checkStorageQuota,
-  chooseUploadStorage,
-  loadStorageConfig,
-  resolveStorageIdForPath,
   resolveExistingStorageId,
-  saveStorageConfig,
   storageAbortMultipartUpload,
   storageCompleteMultipartUpload,
   storageCreateMultipartUpload,
@@ -73,7 +69,7 @@ function assertPathList(paths) {
 /**
  * Check if a key exists (as object or prefix).
  * Fast path: file index lookup only (covers all managed files).
- * Full path: fallback to R2/S3 storage check for orphaned objects.
+ * Full path: fallback to R2 storage check for orphaned objects.
  */
 async function keyExists(env, key) {
   const entry = await getFileIndexEntry(env, key);
@@ -434,44 +430,20 @@ export async function handleOperationEstimate(env, request) {
  * @returns {Promise<Response>}
  */
 export async function handleMkdir(env, request, r2Key) {
-  const { folderName, storageId: requestedStorageId = "r2" } =
-    await request.json();
+  const { folderName } = await request.json();
   const cleanName = normalizeName(folderName);
   const dir = r2Key ? normalizeUserKey(r2Key) + "/" : "";
   const folderKey = dir + cleanName;
   const key = folderKey + "/.folder";
   assertUserKey(key);
   await assertTargetAvailable(env, folderKey);
-  const storageId =
-    String(requestedStorageId || "r2")
-      .trim()
-      .toLowerCase() || "r2";
-  const config = await loadStorageConfig(env);
-  const allowed = new Set([
-    "r2",
-    ...(config.spaces || [])
-      .filter((item) => item.enabled !== false)
-      .map((item) => item.id),
-  ]);
-  if (!allowed.has(storageId))
-    return jsonResponse({ success: false, message: "目标存储桶不可用" }, 400);
-  const inheritedStorageId = await resolveStorageIdForPath(env, folderKey);
-  const bindingApplied = storageId !== inheritedStorageId;
-  if (storageId !== inheritedStorageId) {
-    const bindings = [
-      ...(config.bindings || []).filter((item) => item.path !== folderKey),
-      { path: folderKey, storageId },
-    ];
-    await saveStorageConfig(env, { ...config, bindings });
-  }
-  await storagePut(env, storageId, key, new Uint8Array(0));
+  await storagePut(env, "r2", key, new Uint8Array(0));
   await addLog(env, request, "MKDIR", cleanName);
   return jsonResponse({
     success: true,
     key: folderKey,
     path: `/${folderKey}/`,
-    storageId,
-    bindingApplied,
+    storageId: "r2",
   });
 }
 
@@ -493,14 +465,10 @@ export async function handleUpload(env, request, r2Key) {
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped)
     return jsonResponse({ success: true, skipped: true, key });
-  const selected = await chooseUploadStorage(
-    env,
-    resolved.key,
-    Number(file.size || 0),
-  );
+  const storageId = "r2";
   const quota = await checkStorageQuota(
     env,
-    selected.storageId,
+    storageId,
     Number(file.size || 0),
   );
   if (!quota.allowed) {
@@ -508,20 +476,20 @@ export async function handleUpload(env, request, r2Key) {
       {
         success: false,
         code: "QUOTA_EXCEEDED",
-        storageId: selected.storageId,
+        storageId,
         message: `${quota.storageName} 空间配额不足。已使用 ${formatQuotaBytes(quota.used)} / ${formatQuotaBytes(quota.quota)}，本次需要 ${formatQuotaBytes(file.size || 0)}。`,
       },
       507,
     );
   }
-  await storagePut(env, selected.storageId, resolved.key, file.stream(), {
+  await storagePut(env, storageId, resolved.key, file.stream(), {
     httpMetadata: { contentType: file.type },
   });
   await upsertFileIndex(env, resolved.key, {
     size: file.size,
     contentType: file.type,
     uploaded: Date.now(),
-    storageId: selected.storageId,
+    storageId,
   });
   await addLog(
     env,
@@ -533,9 +501,7 @@ export async function handleUpload(env, request, r2Key) {
     success: true,
     key: resolved.key,
     renamed: resolved.key !== key,
-    storageId: selected.storageId,
-    overflowed: selected.overflowed,
-    warning: selected.warning || "",
+    storageId,
   });
 }
 
@@ -571,41 +537,30 @@ export async function handleMultipartCreate(env, request) {
   assertUserKey(key);
   const resolved = await resolveUploadConflict(env, key, conflict);
   if (resolved.skipped) return jsonResponse({ key, skipped: true });
+  const storageId = "r2";
   const incomingBytes = Number(totalSize || size || 0);
-  const selected = await chooseUploadStorage(env, resolved.key, incomingBytes);
   if (incomingBytes > 0) {
-    const quota = await checkStorageQuota(
-      env,
-      selected.storageId,
-      incomingBytes,
-    );
+    const quota = await checkStorageQuota(env, storageId, incomingBytes);
     if (!quota.allowed) {
       return jsonResponse(
         {
           success: false,
           code: "QUOTA_EXCEEDED",
-          storageId: selected.storageId,
+          storageId,
           message: `${quota.storageName} 空间配额不足。剩余 ${formatQuotaBytes(quota.remaining)} / ${formatQuotaBytes(quota.quota)}。`,
         },
         507,
       );
     }
   }
-  const upload = await storageCreateMultipartUpload(
-    env,
-    selected.storageId,
-    resolved.key,
-    {
-      httpMetadata: { contentType: type || "application/octet-stream" },
-    },
-  );
+  const upload = await storageCreateMultipartUpload(env, storageId, resolved.key, {
+    httpMetadata: { contentType: type || "application/octet-stream" },
+  });
   return jsonResponse({
     key: upload.key,
     uploadId: upload.uploadId,
-    storageId: selected.storageId,
+    storageId,
     renamed: resolved.key !== key,
-    overflowed: selected.overflowed,
-    warning: selected.warning || "",
   });
 }
 

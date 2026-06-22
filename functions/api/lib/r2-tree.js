@@ -1,4 +1,3 @@
-import { assertCompleteListing } from "./common.js";
 import {
   countFileIndexObjectRefs,
   deleteFileIndexKey,
@@ -8,9 +7,6 @@ import {
 } from "./file-index.js";
 import {
   resolveExistingObjectLocation,
-  resolveExistingStorageId,
-  resolveStorageIdForPath,
-  storageCopy,
   storageDelete,
   storageGet,
   storageList,
@@ -31,24 +27,17 @@ export async function mapWithConcurrency(items, limit, worker) {
   await Promise.all(workers);
 }
 
-export async function copyR2Object(
-  env,
-  sourceKey,
-  targetKey,
-  targetStorageId = "",
-) {
+export async function copyR2Object(env, sourceKey, targetKey) {
   const sourceLocation = await resolveExistingObjectLocation(env, sourceKey);
-  const sourceStorageId = sourceLocation.storageId;
   const sourceObjectKey = sourceLocation.objectKey;
-  const destStorageId = targetStorageId || sourceStorageId;
-  const obj = await storageGet(env, sourceStorageId, sourceObjectKey);
+  const obj = await storageGet(env, "r2", sourceObjectKey);
   if (!obj) return false;
-  await storagePut(env, destStorageId, targetKey, obj.body, {
+  await storagePut(env, "r2", targetKey, obj.body, {
     httpMetadata: obj.httpMetadata,
   });
   await upsertFileIndex(env, targetKey, {
     ...obj,
-    storageId: destStorageId,
+    storageId: "r2",
     objectKey: targetKey,
   });
   return true;
@@ -84,36 +73,33 @@ async function ensureSourceIndexed(env, path, location, obj) {
 
 export async function copyTree(env, sourceKey, targetKey, move = false) {
   const sourceLocation = await resolveExistingObjectLocation(env, sourceKey);
-  const sourceStorageId = sourceLocation.storageId;
-  const targetStorageId = await resolveStorageIdForPath(env, targetKey);
   const sourceObjectKey = sourceLocation.objectKey;
-  const obj = await storageGet(env, sourceStorageId, sourceObjectKey);
-  const listed = await storageList(env, sourceStorageId, {
+  const obj = await storageGet(env, "r2", sourceObjectKey);
+  const listed = await storageList(env, "r2", {
     prefix: sourceKey + "/",
   });
-  assertCompleteListing(listed, `Path ${sourceKey}`);
   const subtreeEntries = new Map();
 
   if (obj) {
-    if (!move && sourceStorageId === targetStorageId) {
+    if (!move) {
       await ensureSourceIndexed(env, sourceKey, sourceLocation, obj);
       await upsertFileIndex(env, targetKey, {
         ...obj,
-        storageId: sourceStorageId,
+        storageId: "r2",
         objectKey: sourceObjectKey,
       });
     } else {
-      await storagePut(env, targetStorageId, targetKey, obj.body, {
+      await storagePut(env, "r2", targetKey, obj.body, {
         httpMetadata: obj.httpMetadata,
       });
       await upsertFileIndex(env, targetKey, {
         ...obj,
-        storageId: targetStorageId,
+        storageId: "r2",
         objectKey: targetKey,
       });
     }
     if (move) {
-      await deletePathEntry(env, sourceKey, sourceStorageId, sourceObjectKey);
+      await deletePathEntry(env, sourceKey, "r2", sourceObjectKey);
     }
   }
 
@@ -128,36 +114,27 @@ export async function copyTree(env, sourceKey, targetKey, move = false) {
     const logicalKey = item.path || item.key;
     const nextKey = targetKey + logicalKey.slice(sourceKey.length);
     const subLocation = await resolveExistingObjectLocation(env, logicalKey);
-    const subObj = await storageGet(
-      env,
-      subLocation.storageId,
-      subLocation.objectKey,
-    );
+    const subObj = await storageGet(env, "r2", subLocation.objectKey);
     if (subObj) {
-      if (!move && subLocation.storageId === targetStorageId) {
+      if (!move) {
         await ensureSourceIndexed(env, logicalKey, subLocation, subObj);
         await upsertFileIndex(env, nextKey, {
           ...subObj,
-          storageId: subLocation.storageId,
+          storageId: "r2",
           objectKey: subLocation.objectKey,
         });
       } else {
-        await storagePut(env, targetStorageId, nextKey, subObj.body, {
+        await storagePut(env, "r2", nextKey, subObj.body, {
           httpMetadata: subObj.httpMetadata,
         });
         await upsertFileIndex(env, nextKey, {
           ...subObj,
-          storageId: targetStorageId,
+          storageId: "r2",
           objectKey: nextKey,
         });
       }
       if (move) {
-        await deletePathEntry(
-          env,
-          logicalKey,
-          subLocation.storageId,
-          subLocation.objectKey,
-        );
+        await deletePathEntry(env, logicalKey, "r2", subLocation.objectKey);
       }
     }
   });

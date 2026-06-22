@@ -108,65 +108,6 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
-    if (action === "show-add-storage-space") {
-      store.dispatch(actions.app.setModal({ type: "add-storage-space", loading: false, error: "", name: "", endpoint: "", region: "auto", bucket: "", accessKeyId: "", secretAccessKey: "", prefix: "", quotaBytes: "", enabled: true, overflowTarget: false }));
-      return;
-    }
-
-    if (action === "confirm-delete-storage-space") {
-      const spaceId = actionNode.dataset.id || key;
-      const spaceName = actionNode.dataset.name || spaceId;
-      store.dispatch(actions.app.setModal({ type: "confirm-delete-storage-space", loading: false, error: "", id: spaceId, name: spaceName }));
-      return;
-    }
-
-    if (action === "execute-delete-storage-space") {
-      const modal = store.getState().app.modal;
-      if (!modal) return;
-      const config = store.getState().admin.storageConfig;
-      if (!config) return;
-      const updatedSpaces = (config.spaces || []).filter((s) => s.id !== modal.id);
-      const updatedBindings = (config.bindings || []).filter((b) => b.storageId !== modal.id);
-      store.dispatch(actions.app.setModal(null));
-      store.dispatch(thunks.saveAdminStorageConfig({ ...config, spaces: updatedSpaces, bindings: updatedBindings }));
-      return;
-    }
-
-    if (action === "show-add-storage-binding") {
-      const config = store.getState().admin.storageConfig;
-      const storageOptions = [{ id: "r2", name: "Cloudflare R2" }, ...(config?.spaces || []).map((s) => ({ id: s.id, name: s.name }))];
-      store.dispatch(actions.app.setModal({ type: "add-storage-binding", loading: false, error: "", path: "", storageId: storageOptions[0]?.id || "", storageOptions }));
-      return;
-    }
-
-    if (action === "confirm-delete-storage-binding") {
-      const bindPath = actionNode.dataset.path || key;
-      store.dispatch(actions.app.setModal({ type: "confirm-delete-storage-binding", loading: false, error: "", path: bindPath }));
-      return;
-    }
-
-    if (action === "execute-delete-storage-binding") {
-      const modal = store.getState().app.modal;
-      if (!modal) return;
-      const config = store.getState().admin.storageConfig;
-      if (!config) return;
-      const updatedBindings = (config.bindings || []).filter((b) => b.path !== modal.path);
-      store.dispatch(actions.app.setModal(null));
-      store.dispatch(thunks.saveAdminStorageConfig({ ...config, bindings: updatedBindings }));
-      return;
-    }
-
-    if (action === "test-storage-space") {
-      const spaceId = actionNode.dataset.id || key;
-      const config = store.getState().admin.storageConfig;
-      const space = (config?.spaces || []).find((s) => s.id === spaceId);
-      if (space) {
-        dispatchToast("info", `正在测试 ${space.name} 的连接...`);
-        store.dispatch(thunks.testAdminStorageSpace(space));
-      }
-      return;
-    }
-
     if (action === "refresh-admin-webhooks") {
       store.dispatch(thunks.loadAdminWebhooks());
       return;
