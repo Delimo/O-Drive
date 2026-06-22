@@ -5,7 +5,7 @@
  *
  * Configured from the admin Webhook settings stored in D1.
  */
-import { ensureCoreTables, recordSystemWarning } from "./common.js";
+import { ensureCoreTables, recordSystemWarning } from "./common/index.js";
 import { createNotification } from "./notifications.js";
 
 /**

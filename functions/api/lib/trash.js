@@ -1,9 +1,9 @@
-import { addLog, assertCompleteListing, jsonResponse } from "./common.js";
+import { addLog, assertCompleteListing, jsonResponse } from "./common/index.js";
 import {
   getFileIndexEntry,
   listFileIndexPrefix,
   upsertFileIndex,
-} from "./file-index.js";
+} from "./file-index/index.js";
 import {
   copyR2Object,
   deletePathEntry,

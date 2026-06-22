@@ -4,7 +4,7 @@ import {
   listFileIndexPrefix,
   updateFileIndexObjectKey,
   upsertFileIndex,
-} from "./file-index.js";
+} from "./file-index/index.js";
 import {
   resolveExistingObjectLocation,
   storageDelete,

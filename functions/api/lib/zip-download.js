@@ -3,7 +3,7 @@ import {
   isHiddenKey,
   isReservedKey,
   assertCompleteListing,
-} from "./common.js";
+} from "./common/index.js";
 import { checkProtectedAccess } from "./protected-paths.js";
 import { createZipStream } from "./zip-stream.js";
 import {

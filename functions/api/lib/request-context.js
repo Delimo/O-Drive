@@ -1,4 +1,4 @@
-import { isHiddenKey, isReservedKey } from "./common.js";
+import { isHiddenKey, isReservedKey } from "./common/index.js";
 
 const keyPrefixes = [
   ["/api/files/", 11],
@@ -9,12 +9,26 @@ const keyPrefixes = [
   ["/api/save-text/", 15],
 ];
 
+let _hiddenPathsCache = null;
+let _hiddenPathsCacheTime = 0;
+const HIDDEN_PATHS_CACHE_TTL = 30000;
+
+export function clearHiddenPathsCache() {
+  _hiddenPathsCache = null;
+  _hiddenPathsCacheTime = 0;
+}
+
 export async function loadHiddenPaths(env) {
+  if (_hiddenPathsCache && Date.now() - _hiddenPathsCacheTime < HIDDEN_PATHS_CACHE_TTL) {
+    return _hiddenPathsCache;
+  }
   try {
     const res = await env.D1.prepare(
       "SELECT key FROM settings WHERE value = 'hidden'",
     ).all();
-    return res.results.map((r) => r.key).filter(Boolean);
+    _hiddenPathsCache = res.results.map((r) => r.key).filter(Boolean);
+    _hiddenPathsCacheTime = Date.now();
+    return _hiddenPathsCache;
   } catch (e) {
     return [];
   }

@@ -3,12 +3,12 @@ import {
   formatBytes,
   jsonResponse,
   listR2Objects,
-} from "./common.js";
+} from "./common/index.js";
 import {
   getFileIndexEntry,
   getFileIndexStorageId,
   getIndexedStorageUsed,
-} from "./file-index.js";
+} from "./file-index/index.js";
 import { parseCapacityBytes } from "./capacity.js";
 
 const STORAGE_CONFIG_KEY = "storage_config_v1";

@@ -8,40 +8,7 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
     if (action === "set-admin-tab") {
       const tab = actionNode.dataset.tab || "overview";
       store.dispatch(actions.admin.setActiveTab(tab));
-      const admin = store.getState().admin;
-      if (tab === "system") {
-        if (!admin.health) store.dispatch(thunks.loadAdminHealth());
-        if (!admin.quota) store.dispatch(thunks.loadAdminQuota());
-        if (admin.adminNotifHistory.length === 0) store.dispatch(thunks.loadAdminNotifications());
-        if (admin.webhooks.length === 0) store.dispatch(thunks.loadAdminWebhooks());
-        if (admin.webhookDeliveries.length === 0) store.dispatch(thunks.loadAdminWebhookDeliveries());
-        return;
-      }
-      if (tab === "storage") {
-        if (!admin.storageConfig) store.dispatch(thunks.loadAdminStorageConfig());
-        if (!admin.trashRetention) store.dispatch(thunks.loadTrashRetention());
-        return;
-      }
-      if (tab === "logs" && admin.logs.length === 0) {
-        store.dispatch(thunks.loadAdminLogs(1));
-        return;
-      }
-      if (tab === "paths") {
-        if (admin.protectedPaths.length === 0) store.dispatch(thunks.loadAdminProtectedPaths());
-        if (admin.hiddenPaths.length === 0) store.dispatch(thunks.loadAdminHiddenPaths());
-        return;
-      }
-      if (tab === "webhooks") {
-        if (admin.webhooks.length === 0) store.dispatch(thunks.loadAdminWebhooks());
-        if (admin.webhookDeliveries.length === 0) store.dispatch(thunks.loadAdminWebhookDeliveries());
-        return;
-      }
-      if (tab === "maintenance") {
-        if (!admin.maintenance) store.dispatch(thunks.loadMaintenanceSnapshot());
-        if (admin.tasks.length === 0) store.dispatch(thunks.loadTasks());
-        if (!admin.trashRetention) store.dispatch(thunks.loadTrashRetention());
-        return;
-      }
+      store.dispatch(thunks.loadTabData(tab));
       return;
     }
 

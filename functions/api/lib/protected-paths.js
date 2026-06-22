@@ -5,7 +5,7 @@ import {
   encodeBase64Url,
   decodeBase64UrlJson,
   parseCookie,
-} from "./common.js";
+} from "./common/index.js";
 import { signHmac, verifyHmac } from "./secrets.js";
 import { ensureProtectedTables } from "./schema.js";
 
@@ -201,13 +201,25 @@ function hasPathAccess(access, rule) {
   );
 }
 
+let _protectedPathsCache = null;
+let _protectedPathsCacheTime = 0;
+const PROTECTED_PATHS_CACHE_TTL = 30000;
+
+export function clearProtectedPathsCache() {
+  _protectedPathsCache = null;
+  _protectedPathsCacheTime = 0;
+}
+
 export async function loadProtectedPaths(env) {
+  if (_protectedPathsCache && Date.now() - _protectedPathsCacheTime < PROTECTED_PATHS_CACHE_TTL) {
+    return _protectedPathsCache;
+  }
   try {
     await ensureTable(env);
     const res = await env.D1.prepare(
       "SELECT path, salt, password_hash, note, show_name, created_at FROM path_passwords ORDER BY path ASC",
     ).all();
-    return (res.results || []).map((row) => ({
+    _protectedPathsCache = (res.results || []).map((row) => ({
       path: row.path,
       salt: row.salt,
       password_hash: row.password_hash,
@@ -215,6 +227,8 @@ export async function loadProtectedPaths(env) {
       show_name: Number(row.show_name ?? 1) === 1,
       created_at: row.created_at,
     }));
+    _protectedPathsCacheTime = Date.now();
+    return _protectedPathsCache;
   } catch (_) {
     return [];
   }
@@ -282,6 +296,7 @@ export async function handleProtectedSettings(env, request, method, url) {
       "PROTECT",
       `设置访问密码 ${path}${showName ? "" : "（访客隐藏名称）"}`,
     );
+    clearProtectedPathsCache();
     return jsonResponse({ success: true });
   }
   if (method === "DELETE") {
@@ -289,6 +304,7 @@ export async function handleProtectedSettings(env, request, method, url) {
     await env.D1.prepare("DELETE FROM path_passwords WHERE path = ?")
       .bind(path)
       .run();
+    clearProtectedPathsCache();
     await addLog(env, request, "UNPROTECT", `删除访问密码 ${path}`);
     return jsonResponse({ success: true });
   }

@@ -14,7 +14,7 @@ import {
   handleMultipartComplete,
   handleMultipartAbort,
   handleSaveText,
-} from "./file-mutations.js";
+} from "./file-mutations/index.js";
 import {
   handleTrashList,
   handleTrashRestore,
@@ -59,7 +59,7 @@ import {
   jsonResponse,
   recordSystemWarning,
   waitForWebhook,
-} from "./common.js";
+} from "./common/index.js";
 import {
   checkDownloadBlocked,
   recordDownloadBurst,

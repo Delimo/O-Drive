@@ -1,4 +1,5 @@
-import { addLog, jsonResponse, normalizeHiddenPath } from "./common.js";
+import { addLog, jsonResponse, normalizeHiddenPath } from "./common/index.js";
+import { clearHiddenPathsCache } from "./request-context.js";
 
 export async function handleHiddenSettings(
   env,
@@ -17,6 +18,7 @@ export async function handleHiddenSettings(
       .bind(targetPath)
       .run();
     await addLog(env, request, "HIDE", `隐藏路径 ${targetPath}`);
+    clearHiddenPathsCache();
     return jsonResponse({ success: true });
   }
   if (method === "DELETE") {
@@ -25,6 +27,7 @@ export async function handleHiddenSettings(
       .bind(targetPath)
       .run();
     await addLog(env, request, "UNHIDE", `取消隐藏路径 ${targetPath}`);
+    clearHiddenPathsCache();
     return jsonResponse({ success: true });
   }
   return jsonResponse({ message: "Method Not Allowed" }, 405);

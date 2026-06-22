@@ -1,4 +1,4 @@
-import { jsonResponse } from "./common.js";
+import { jsonResponse } from "./common/index.js";
 
 const NOTIFY_TABLE =
   "CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL, message TEXT NOT NULL, path TEXT DEFAULT '', read INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)";

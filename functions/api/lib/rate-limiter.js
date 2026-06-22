@@ -1,32 +1,64 @@
 /**
- * @fileoverview Rate limiting utilities using D1.
+ * @fileoverview Rate limiting utilities using in-memory Map + TTL.
  */
+
+const ipRequests = new Map();
+const CLEANUP_INTERVAL = 60000;
+let lastCleanup = 0;
+
+export function resetRateLimiter() {
+  ipRequests.clear();
+  lastCleanup = 0;
+}
+
 export function getClientIp(request) {
   return request.headers.get("cf-connecting-ip") || "unknown";
 }
 
-export async function checkRateLimit(db, key, maxRequests = 60, windowMs = 60000) {
+export function checkRateLimit(key, maxRequests = 60, windowMs = 60000) {
   const now = Date.now();
   const windowStart = now - windowMs;
-  try {
-    await db.prepare("DELETE FROM api_rate_limits WHERE window_start < ?").bind(windowStart).run();
-    const row = await db.prepare("SELECT COUNT(*) as count FROM api_rate_limits WHERE key = ? AND window_start >= ?").bind(key, windowStart).first();
-    const count = Number(row?.count || 0);
-    if (count >= maxRequests) {
-      return { allowed: false, remaining: 0, retryAfter: Math.ceil(windowMs / 1000) };
-    }
-    await db.prepare("INSERT INTO api_rate_limits (key, window_start, level, source) VALUES (?, ?, ?, ?)").bind(key, now, 'global', 'api').run();
-    return { allowed: true, remaining: maxRequests - count - 1, retryAfter: 0 };
-  } catch {
-    return { allowed: true, remaining: maxRequests, retryAfter: 0 };
+
+  let timestamps = ipRequests.get(key);
+  if (!timestamps) {
+    timestamps = [];
+    ipRequests.set(key, timestamps);
   }
+
+  let valid = 0;
+  for (let i = 0; i < timestamps.length; i++) {
+    if (timestamps[i] >= windowStart) timestamps[valid++] = timestamps[i];
+  }
+  timestamps.length = valid;
+
+  if (timestamps.length >= maxRequests) {
+    const retryAfter = Math.ceil((timestamps[0] + windowMs - now) / 1000);
+    return { allowed: false, remaining: 0, retryAfter };
+  }
+
+  timestamps.push(now);
+
+  if (ipRequests.size > 10000 && now - lastCleanup > CLEANUP_INTERVAL) {
+    lastCleanup = now;
+    const cutoff = now - 120000;
+    for (const [k, vals] of ipRequests) {
+      let v = 0;
+      for (let i = 0; i < vals.length; i++) {
+        if (vals[i] >= cutoff) vals[v++] = vals[i];
+      }
+      vals.length = v;
+      if (vals.length === 0) ipRequests.delete(k);
+    }
+  }
+
+  return { allowed: true, remaining: maxRequests - timestamps.length, retryAfter: 0 };
 }
 
 export function withRateLimit(handler, options = {}) {
   const { maxRequests = 60, windowMs = 60000, keyFn } = options;
   return async (request, env, ...args) => {
     const key = keyFn ? keyFn(request, env) : `ip:${getClientIp(request)}`;
-    const result = await checkRateLimit(env.D1, key, maxRequests, windowMs);
+    const result = checkRateLimit(key, maxRequests, windowMs);
     if (!result.allowed) {
       return Response.json(
         { success: false, code: "RATE_LIMITED", message: "Rate limit exceeded" },

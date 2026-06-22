@@ -1,5 +1,5 @@
-import { formatBytes } from "./common.js";
-import { indexedFileCount, syncFileIndexFromR2 } from "./file-index.js";
+import { formatBytes } from "./common/index.js";
+import { indexedFileCount, syncFileIndexFromR2 } from "./file-index/index.js";
 
 const QUOTA_CONFIG_KEY = "storage_quota_bytes";
 

@@ -5,14 +5,14 @@ import {
   jsonResponse,
   listR2Objects,
   recordSystemWarning,
-} from "./common.js";
+} from "./common/index.js";
 import {
   fileIndexStatus,
   getIndexedStats,
   indexedFileCount,
   indexedFileKind,
   syncFileIndexFromR2,
-} from "./file-index.js";
+} from "./file-index/index.js";
 import { checkStorageQuota, listConfiguredStorages } from "./storage.js";
 
 function fileKind(key) {

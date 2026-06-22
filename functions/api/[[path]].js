@@ -1,4 +1,4 @@
-import { ensureCoreTables, jsonResponse, assertBodySize } from './lib/common.js';
+import { ensureCoreTables, jsonResponse, assertBodySize } from './lib/common/index.js';
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
 import { loadProtectedPaths, checkProtectedAccess } from './lib/protected-paths.js';
 import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin } from './lib/request-context.js';
@@ -66,7 +66,7 @@ export async function onRequest(context) {
 
     // Global API rate limit: 120 requests per minute per IP (skip file download streams)
     if (!path.startsWith('/api/download/') && !path.startsWith('/api/preview/') && !path.startsWith('/api/thumbnail/')) {
-      const rl = await checkRateLimit(env.D1, `ip:${getClientIp(request)}`, 120, 60000);
+      const rl = checkRateLimit(`ip:${getClientIp(request)}`, 120, 60000);
       if (!rl.allowed) {
         return jsonResponse(
           { success: false, code: 'RATE_LIMITED', message: 'Rate limit exceeded' },

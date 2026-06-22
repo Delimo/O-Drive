@@ -3,13 +3,13 @@ import {
   formatBytes,
   isHiddenKey,
   isReservedKey,
-} from "./common.js";
+} from "./common/index.js";
 import { checkProtectedAccess, markProtection } from "./protected-paths.js";
 import {
   indexedFileKind,
   listIndexedDirectory,
   searchFileIndex,
-} from "./file-index.js";
+} from "./file-index/index.js";
 import {
   resolveExistingObjectLocation,
   storageGet,

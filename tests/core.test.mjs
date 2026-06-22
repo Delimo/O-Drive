@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 
 import { onRequest } from '../functions/api/[[path]].js';
-import { recordSystemWarning } from '../functions/api/lib/common.js';
+import { recordSystemWarning } from '../functions/api/lib/common/index.js';
 import { handleListFiles, handleDownloadOrPreview, handleSearch } from '../functions/api/lib/file-reads.js';
 import {
   handleMultipartCreate,
@@ -20,13 +20,13 @@ import {
   handleTrashRetention,
   handlePaste,
   handleBatchDelete,
-} from '../functions/api/lib/file-mutations.js';
+} from '../functions/api/lib/file-mutations/index.js';
 import { handleAdminHealth, handleAdminLogs, handleAdminQuota, handleAdminStats } from '../functions/api/lib/admin.js';
 import { handleAdminStorage } from '../functions/api/lib/storage.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
-import { clearStorageUsedCache, getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index.js';
+import { clearStorageUsedCache, getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index/index.js';
 import { createFileTask, updateFileTask } from '../functions/api/lib/tasks.js';
 import {
   handleProtectedSettings,
@@ -36,6 +36,9 @@ import {
 } from '../functions/api/lib/protected-paths.js';
 
 import { makeEnv } from './helpers/make-env.mjs';
+import { resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
+
+test.beforeEach(() => { resetRateLimiter(); });
 
 test('list files filters empty root folders and hidden paths for guests', async () => {
   const env = makeEnv({
@@ -895,7 +898,7 @@ test('batch delete moves files into trash and restore returns them', async () =>
     ],
   });
 
-  const batchDelete = await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  const batchDelete = await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['docs/readme.txt'] }),
     headers: { 'Content-Type': 'application/json' },
@@ -930,7 +933,7 @@ test('batch delete reports partial failures', async () => {
     ],
   });
 
-  const res = await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  const res = await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['docs/readme.txt', 'docs/missing.txt'] }),
     headers: { 'Content-Type': 'application/json' },
@@ -949,7 +952,7 @@ test('batch delete preserves serial-like behavior for duplicate paths', async ()
     ],
   });
 
-  const res = await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  const res = await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['docs/readme.txt', 'docs/readme.txt'] }),
     headers: { 'Content-Type': 'application/json' },
@@ -972,7 +975,7 @@ test('batch delete reports oversized folders instead of silently truncating', as
   }));
   const env = makeEnv({ objects, listPageSize: 10000 });
 
-  const res = await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  const res = await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['docs'] }),
     headers: { 'Content-Type': 'application/json' },
@@ -1148,7 +1151,7 @@ test('trash items can be purged permanently', async () => {
     ],
   });
 
-  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['docs/temp.txt'] }),
     headers: { 'Content-Type': 'application/json' },
@@ -1178,13 +1181,13 @@ test('trash list can filter by path, kind, and trashed date', async () => {
 
   const realNow = Date.now;
   Date.now = () => new Date('2026-02-01T00:00:00Z').getTime();
-  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['docs/alpha.txt'] }),
     headers: { 'Content-Type': 'application/json' },
   }));
   Date.now = () => new Date('2026-03-01T00:00:00Z').getTime();
-  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['photos/beta.jpg'] }),
     headers: { 'Content-Type': 'application/json' },
@@ -2054,6 +2057,7 @@ test('webhook delivery records are capped while showing the latest page', async 
     const cookie = login.headers.get('Set-Cookie');
 
     for (let i = 0; i < 205; i++) {
+      if (i % 100 === 0) resetRateLimiter();
       const res = await onRequest({
         env,
         request: new Request('https://example.com/api/admin/settings/webhooks', {
@@ -2673,13 +2677,13 @@ test('trash can be cleared and cleanup respects retention setting', async () => 
 
   const realNow = Date.now;
   Date.now = () => realNow() - 10 * 24 * 60 * 60 * 1000;
-  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['old.txt'] }),
     headers: { 'Content-Type': 'application/json' },
   }));
   Date.now = realNow;
-  await (await import('../functions/api/lib/file-mutations.js')).handleBatchDelete(env, new Request('https://example.com', {
+  await (await import('../functions/api/lib/file-mutations/index.js')).handleBatchDelete(env, new Request('https://example.com', {
     method: 'POST',
     body: JSON.stringify({ paths: ['new.txt'] }),
     headers: { 'Content-Type': 'application/json' },

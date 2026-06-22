@@ -739,13 +739,53 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM file_index WHERE lower\(name\) LIKE \?/i.test(sql)) {
               const like = String(statement.bound?.[0] || '').replace(/%/g, '');
               let rows = fileIndexRows.filter(row => row.name.toLowerCase().includes(like));
+              let pi = 1;
               if (/path = \? OR path LIKE \?/i.test(sql)) {
-                const scope = statement.bound?.[1];
-                const prefix = String(statement.bound?.[2] || '').replace(/%$/, '');
+                const scope = statement.bound?.[pi++];
+                const prefix = String(statement.bound?.[pi++] || '').replace(/%$/, '');
                 rows = rows.filter(row => row.path === scope || row.path.startsWith(prefix));
               }
-              const limit = statement.bound?.[statement.bound.length - 2] ?? rows.length;
-              const offset = statement.bound?.[statement.bound.length - 1] ?? 0;
+              if (/path > \?/i.test(sql)) {
+                const keysetCursor = statement.bound?.[pi++] || '';
+                if (keysetCursor) rows = rows.filter(row => row.path > keysetCursor);
+              }
+              const hiddenCount = (sql.match(/path NOT LIKE \? AND path != \?/gi) || []).length;
+              for (let h = 0; h < hiddenCount; h++) {
+                const val = String(statement.bound?.[pi++] || '');
+                pi++;
+                if (val.endsWith('/%')) {
+                  const prefix = val.slice(0, -2);
+                  rows = rows.filter(row => !String(row.path || '').startsWith(prefix));
+                }
+              }
+              if (/kind = \?/i.test(sql) && pi < (statement.bound?.length || 0)) {
+                const kind = statement.bound?.[pi++];
+                if (kind && kind !== 'all' && kind !== 'file') rows = rows.filter(row => row.kind === kind);
+              }
+              if (/size >= \?/i.test(sql) && pi < (statement.bound?.length || 0)) {
+                const min = Number(statement.bound?.[pi++]);
+                if (Number.isFinite(min)) rows = rows.filter(row => Number(row.size || 0) >= min);
+              }
+              if (/size <= \?/i.test(sql) && pi < (statement.bound?.length || 0)) {
+                const max = Number(statement.bound?.[pi++]);
+                if (Number.isFinite(max)) rows = rows.filter(row => Number(row.size || 0) <= max);
+              }
+              if (/uploaded_at >= \?/i.test(sql) && pi < (statement.bound?.length || 0)) {
+                const from = Number(statement.bound?.[pi++]);
+                if (Number.isFinite(from)) rows = rows.filter(row => Number(row.uploaded_at || row.updated_at || 0) >= from);
+              }
+              if (/uploaded_at <= \?/i.test(sql) && pi < (statement.bound?.length || 0)) {
+                const to = Number(statement.bound?.[pi++]);
+                if (Number.isFinite(to)) rows = rows.filter(row => Number(row.uploaded_at || row.updated_at || 0) <= to);
+              }
+              let limit, offset;
+              if (/OFFSET \?/i.test(sql)) {
+                limit = statement.bound?.[statement.bound.length - 2] ?? rows.length;
+                offset = statement.bound?.[statement.bound.length - 1] ?? 0;
+              } else {
+                limit = statement.bound?.[statement.bound.length - 1] ?? rows.length;
+                offset = 0;
+              }
               return { results: rows.sort((a, b) => a.path.localeCompare(b.path)).slice(offset, offset + limit) };
             }
             if (/SELECT \* FROM file_index WHERE parent = \?/i.test(sql)) {

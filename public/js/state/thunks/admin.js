@@ -659,5 +659,55 @@ export function createAdminThunks(deps, context) {
         dispatch(actions.admin.setAdminNotifHistoryLoading(false));
       }
     },
+
+    loadTabData: (tabId) => async (dispatch, getState) => {
+      const admin = getState().admin;
+      const t = context.getThunks();
+      switch (tabId) {
+        case "overview":
+          if (!admin.stats) dispatch(t.loadAdminStats());
+          break;
+        case "shares":
+          if (admin.shares.length === 0 && !admin.sharesLoading)
+            dispatch(t.loadAdminShares());
+          break;
+        case "logs":
+          if (admin.logs.length === 0 && !admin.logsLoading)
+            dispatch(t.loadAdminLogs(1));
+          break;
+        case "paths":
+          if (admin.protectedPaths.length === 0 && !admin.protectedPathsLoading)
+            dispatch(t.loadAdminProtectedPaths());
+          if (admin.hiddenPaths.length === 0 && !admin.hiddenPathsLoading)
+            dispatch(t.loadAdminHiddenPaths());
+          break;
+        case "storage":
+          if (!admin.storageConfig && !admin.storageConfigLoading)
+            dispatch(t.loadAdminStorageConfig());
+          if (!admin.trashRetention && !admin.trashRetentionLoading)
+            dispatch(t.loadTrashRetention());
+          break;
+        case "maintenance":
+          if (!admin.maintenance && !admin.maintenanceLoading)
+            dispatch(t.loadMaintenanceSnapshot());
+          if (admin.tasks.length === 0 && !admin.tasksLoading)
+            dispatch(t.loadTasks());
+          if (!admin.trashRetention && !admin.trashRetentionLoading)
+            dispatch(t.loadTrashRetention());
+          break;
+        case "system":
+          if (!admin.health && !admin.healthLoading)
+            dispatch(t.loadAdminHealth());
+          if (!admin.quota && !admin.quotaLoading)
+            dispatch(t.loadAdminQuota());
+          if (admin.adminNotifHistory.length === 0 && !admin.adminNotifHistoryLoading)
+            dispatch(t.loadAdminNotifications());
+          if (admin.webhooks.length === 0 && !admin.webhooksLoading)
+            dispatch(t.loadAdminWebhooks());
+          if (admin.webhookDeliveries.length === 0 && !admin.webhookDeliveriesLoading)
+            dispatch(t.loadAdminWebhookDeliveries());
+          break;
+      }
+    },
   };
 }

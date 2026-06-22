@@ -14,7 +14,7 @@ import { inferKind, iconForKind as iconForKindBase, iconClass, isProtectedEntry,
 import { escapeHtml, humanError, splitUploadTarget } from './js/utils/text.js';
 import { renderMarkdown, isMarkdownName } from './js/utils/markdown.js';
 import { icons, fileTypeIcons } from './js/ui/icons.js';
-import { createRootStore } from './js/state/store.js';
+import { createRootStore } from './js/state/index.js';
 import { createDeferredAction, syncHomeUrl as syncHomeUrlHelper, openDownload as openDownloadHelper, readDroppedEntries } from './js/utils/helpers.js';
 import { cleanupAudioContext } from './js/state/thunks/index.js';
 import morphdom from './js/vendor/morphdom.js';
@@ -281,30 +281,10 @@ function renderRegion(container, htmlString) {
 
 function render() {
   const state = store.getState();
-  const selected = page === 'home' ? getSelectedEntry(state) : null;
   const html = `
-    ${renderHeader(state)}
-    ${renderMain(state)}
-    ${
-      page === 'home'
-        ? `
-          <div class="details-drawer-wrap ${selected ? 'is-open' : ''}">
-            <div class="details-drawer-backdrop" data-action="clear-selected"></div>
-            <aside class="details-drawer ${selected ? 'is-open' : ''}">
-              <div class="details-drawer-head">
-                <div>
-                  <h3 class="details-panel-title">文件详细</h3>
-                </div>
-                <button class="details-close" data-action="clear-selected" aria-label="关闭详情面板">×</button>
-              </div>
-              <div class="details-drawer-body">
-                ${sharedRenderInspector(selected, state)}
-              </div>
-            </aside>
-          </div>
-        `
-        : ''
-    }
+    <div data-region="header"></div>
+    ${page === 'home' ? '<div data-region="explorer"></div>' : renderMain(state)}
+    ${page === 'home' ? '<div data-region="detail-drawer"></div>' : ''}
     <div data-region="modal"></div>
     <div data-region="toast"></div>
     <div data-region="drop-overlay"></div>
@@ -313,6 +293,47 @@ function render() {
   const next = root.cloneNode(false);
   next.innerHTML = html;
   morphdom(root, next, { childrenOnly: true });
+  renderHeaderRegion();
+  if (page === 'home') {
+    renderExplorerRegion();
+    renderDetailDrawerRegion();
+  }
+}
+
+function renderHeaderRegion() {
+  const state = store.getState();
+  const el = root.querySelector('[data-region="header"]');
+  if (el) renderRegion(el, renderHeader(state));
+}
+
+function renderDetailDrawerRegion() {
+  const state = store.getState();
+  const selected = page === 'home' ? getSelectedEntry(state) : null;
+  const el = root.querySelector('[data-region="detail-drawer"]');
+  if (!el) return;
+  const html = selected ? `
+    <div class="details-drawer-wrap is-open">
+      <div class="details-drawer-backdrop" data-action="clear-selected"></div>
+      <aside class="details-drawer is-open">
+        <div class="details-drawer-head">
+          <div>
+            <h3 class="details-panel-title">文件详细</h3>
+          </div>
+          <button class="details-close" data-action="clear-selected" aria-label="关闭详情面板">×</button>
+        </div>
+        <div class="details-drawer-body">
+          ${sharedRenderInspector(selected, state)}
+        </div>
+      </aside>
+    </div>
+  ` : '';
+  renderRegion(el, html);
+}
+
+function renderExplorerRegion() {
+  const state = store.getState();
+  const el = root.querySelector('[data-region="explorer"]');
+  if (el && page === 'home') renderRegion(el, homeRenderer(state));
 }
 
 function renderModal() {
@@ -423,9 +444,17 @@ function navigateToExplorerPath(path = '') {
 let notifPollTimer = null;
 function startNotificationPolling(store, thunks) {
   if (notifPollTimer) clearInterval(notifPollTimer);
-  notifPollTimer = setInterval(() => {
+  function poll() {
     store.dispatch(thunks.loadNotifications());
-  }, 30000);
+  }
+  notifPollTimer = setInterval(poll, 30000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (notifPollTimer) { clearInterval(notifPollTimer); notifPollTimer = null; }
+    } else {
+      if (!notifPollTimer) notifPollTimer = setInterval(poll, 30000);
+    }
+  });
 }
 
 function subscribeSlice(selector, fn) {
@@ -440,14 +469,22 @@ function subscribeSlice(selector, fn) {
 }
 
 const unsubscribers = [
-  subscribeSlice(
-    s => page === 'home' ? s.explorer : page === 'admin' ? s.admin : page === 'share' ? s.share : null,
-    render,
-  ),
   ...(page === 'home' ? [
-    subscribeSlice(s => s.admin.notifOpen, render),
-    subscribeSlice(s => s.admin.notificationsUnread, render),
-    subscribeSlice(s => s.admin.notifications, render),
+    subscribeSlice(s => s.app.role, renderHeaderRegion),
+    subscribeSlice(s => s.admin.notifOpen, renderHeaderRegion),
+    subscribeSlice(s => s.admin.notificationsUnread, renderHeaderRegion),
+    subscribeSlice(s => s.admin.notifications, renderHeaderRegion),
+    subscribeSlice(s => s.explorer.selectedKey, renderDetailDrawerRegion),
+    subscribeSlice(
+      s => `${s.explorer.folders?.length}|${s.explorer.files?.length}|${s.explorer.sort}|${s.explorer.view}|${s.explorer.filter}|${s.explorer.loading}|${s.explorer.query}|${s.explorer.trashMode}|${s.explorer.searching}|${s.explorer.hasMore}|${s.explorer.selectedKeys?.length}|${s.explorer.trashSelectedKeys?.length}|${s.explorer.trashBatchBusy}|${s.explorer.clipboard?.paths?.length}|${s.explorer.showFilters}|${s.explorer.filterKind}|${s.explorer.filterMinSize}|${s.explorer.filterMaxSize}|${s.explorer.filterDateFrom}|${s.explorer.filterDateTo}`,
+      renderExplorerRegion,
+    ),
+  ] : []),
+  ...(page === 'admin' ? [
+    subscribeSlice(s => s.admin, render),
+  ] : []),
+  ...(page === 'share' ? [
+    subscribeSlice(s => s.share, render),
   ] : []),
   subscribeSlice(s => s.app.modal, renderModal),
   subscribeSlice(s => s.app.toast, renderToast),
@@ -473,17 +510,6 @@ store.dispatch(thunks.loadRole()).then(async () => {
     if (store.getState().app.role === 'admin') {
       await Promise.all([
         store.dispatch(thunks.loadAdminStats()),
-        store.dispatch(thunks.loadAdminShares()),
-        store.dispatch(thunks.loadAdminHealth()),
-        store.dispatch(thunks.loadAdminLogs(1)),
-        store.dispatch(thunks.loadAdminQuota()),
-        store.dispatch(thunks.loadAdminProtectedPaths()),
-        store.dispatch(thunks.loadAdminHiddenPaths()),
-        store.dispatch(thunks.loadAdminStorageConfig()),
-        store.dispatch(thunks.loadAdminWebhooks()),
-        store.dispatch(thunks.loadAdminWebhookDeliveries()),
-        store.dispatch(thunks.loadMaintenanceSnapshot()),
-        store.dispatch(thunks.loadTasks()),
         store.dispatch(thunks.loadNotifications()),
       ]);
       startNotificationPolling(store, thunks);

@@ -1,4 +1,4 @@
-import { ensureCoreTables, jsonResponse } from "./common.js";
+import { ensureCoreTables, jsonResponse } from "./common/index.js";
 import { tokenSecretStatus } from "./secrets.js";
 
 async function checkDb(env) {

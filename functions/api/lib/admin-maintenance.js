@@ -6,8 +6,8 @@ import {
   isReservedKey,
   jsonResponse,
   listR2Objects,
-} from "./common.js";
-import { fileIndexStatus, rebuildFileIndex } from "./file-index.js";
+} from "./common/index.js";
+import { fileIndexStatus, rebuildFileIndex } from "./file-index/index.js";
 import { mapWithConcurrency } from "./r2-tree.js";
 import { cleanupFileTasks } from "./tasks.js";
 

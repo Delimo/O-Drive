@@ -1,4 +1,4 @@
-import { addLog, jsonResponse } from "./common.js";
+import { addLog, jsonResponse } from "./common/index.js";
 import {
   loadWebhookEndpoints,
   normalizeWebhookEndpoints,

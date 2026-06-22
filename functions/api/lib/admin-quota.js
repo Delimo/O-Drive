@@ -2,7 +2,7 @@ import {
   addLog,
   formatBytes as formatQuotaBytes,
   jsonResponse,
-} from "./common.js";
+} from "./common/index.js";
 import {
   getStorageQuota,
   setStorageQuota,

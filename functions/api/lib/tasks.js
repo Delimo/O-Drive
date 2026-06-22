@@ -1,5 +1,5 @@
-import { addLog, apiError, jsonResponse } from "./common.js";
-import { handleBatchDelete, handlePaste } from "./file-mutations.js";
+import { addLog, apiError, jsonResponse } from "./common/index.js";
+import { handleBatchDelete, handlePaste } from "./file-mutations/index.js";
 
 const TASK_TYPES = ["paste", "delete", "upload"];
 const TASK_STATUSES = ["queued", "running", "completed", "partial", "failed"];

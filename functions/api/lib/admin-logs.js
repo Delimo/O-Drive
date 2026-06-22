@@ -1,4 +1,4 @@
-import { jsonResponse } from "./common.js";
+import { jsonResponse } from "./common/index.js";
 
 export async function handleAdminLogs(env, url) {
   const page = Math.max(1, Number(url.searchParams.get("page") || "1"));

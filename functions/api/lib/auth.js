@@ -5,7 +5,7 @@ import {
   ensureCoreTables,
   waitForWebhook,
   parseCookie,
-} from "./common.js";
+} from "./common/index.js";
 import { signHmac, verifyHmac } from "./secrets.js";
 import { loadWebhookEndpoints, notifyLoginBurst } from "./webhooks.js";
 

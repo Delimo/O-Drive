@@ -1,4 +1,4 @@
-import { base64UrlToUint8Array, encodeBase64Url } from "./common.js";
+import { base64UrlToUint8Array, encodeBase64Url } from "./common/index.js";
 
 export const RECOMMENDED_TOKEN_SECRET_LENGTH = 32;
 

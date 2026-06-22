@@ -6,7 +6,7 @@ import {
   jsonResponse,
   normalizeName,
   parseCookie,
-} from "./common.js";
+} from "./common/index.js";
 import { handleDownloadOrPreview } from "./file-reads.js";
 import { signHmac } from "./secrets.js";
 import { ensureShareTable } from "./schema.js";
