@@ -1435,7 +1435,5 @@
 [data-theme="dark"] .hover\:bg-sky-700:hover { background-color: #0369a1; }
 [data-theme="dark"] .focus\:border-sky-500:focus { border-color: #0ea5e9; }
 
-.explorer-card {
-  padding-bottom: 0 !important;
-}
+
 
