@@ -68,25 +68,7 @@
   font-size: 13px;
 }
 
-/* Tab 切换栏优化 */
-.admin-tab-bar {
-  background: var(--panel-soft);
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  margin-bottom: 20px;
-}
-
-.admin-tab-btn {
-  padding: 8px 20px;
-  border-radius: 8px;
-}
-
-.admin-tab-active {
-  background: var(--panel) !important;
-  box-shadow: var(--card-shadow);
-  color: var(--text) !important;
-}
+/* Tab 按钮样式 - 使用与云盘页相同的按钮样式 */
 
 .admin-section-card {
   padding: 16px 18px;
@@ -1164,12 +1146,4 @@
   border-color: var(--line) !important;
 }
 
-[data-theme="dark"] .admin-tab-active {
-  background: var(--panel-strong) !important;
-  color: var(--text) !important;
-}
 
-[data-theme="dark"] .admin-tab-bar {
-  background: var(--panel-soft);
-  border-color: var(--line);
-}
