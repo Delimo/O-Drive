@@ -1,5 +1,5 @@
-export function formatBytes(bytes) {
-  const size = Number(bytes || 0);
+export function formatBytes(value) {
+  const size = Number(value || 0);
   if (!Number.isFinite(size) || size <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   const index = Math.min(
