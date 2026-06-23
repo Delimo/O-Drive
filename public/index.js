@@ -517,6 +517,8 @@ store.dispatch(thunks.loadRole()).then(async () => {
         store.dispatch(thunks.loadNotifications()),
       ]);
       startNotificationPolling(store, thunks);
+    } else {
+      window.location.href = '/';
     }
   } else if (page === 'share') {
     await store.dispatch(thunks.loadShare());
