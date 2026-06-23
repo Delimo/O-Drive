@@ -9,7 +9,6 @@
 
 /* 统一卡片样式 */
 .admin-card, .admin-section-card, .sys-status-card {
-  padding: 24px !important;
   border-radius: var(--card-radius);
   background: var(--panel) !important;
   border: 1px solid var(--card-border) !important;
