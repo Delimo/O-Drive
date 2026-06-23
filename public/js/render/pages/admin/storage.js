@@ -95,44 +95,69 @@ export function createStorageRenderer({
     } else {
       const currentDays = trashRetention?.days ?? 0;
       retentionHtml = `
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:8px;">
-          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
-            <label style="font-size:13px;color:var(--muted);">保留天数（0 为不自动清理）</label>
-            <input class="input" type="number" min="0" max="3650" value="${currentDays}" data-binding="trash-retention-days" style="max-width:200px;">
+        <div class="sr-retention-form">
+          <div class="sr-retention-input-group">
+            <label class="sr-retention-label">保留天数（0 为不自动清理）</label>
+            <div class="sr-retention-row">
+              <input class="input" type="number" min="0" max="3650" value="${currentDays}" data-binding="trash-retention-days">
+              <button class="btn btn-primary" type="button" data-action="save-trash-retention" ${trashCleanupBusy ? "disabled" : ""}>保存设置</button>
+            </div>
           </div>
-          <button class="btn btn-primary toolbar-btn" type="button" data-action="save-trash-retention" ${trashCleanupBusy ? "disabled" : ""}>
-            保存设置
-          </button>
-          ${currentDays > 0 ? `<span style="font-size:12px;color:var(--muted);align-self:center;">超过 ${currentDays} 天的回收站项目将被自动清除</span>` : '<span style="font-size:12px;color:var(--warning);align-self:center;">未设置保留天数，不会自动清理</span>'}
+          ${currentDays > 0
+            ? `<div class="sr-retention-hint"><span class="badge badge-info">自动清理</span> 超过 ${currentDays} 天的回收站项目将被自动清除</div>`
+            : `<div class="sr-retention-hint"><span class="badge badge-warning">未设置</span> 未设置保留天数，不会自动清理</div>`}
         </div>
       `;
     }
 
     return `
-      <div class="admin-section-compact">
-        <section>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <h3>Cloudflare R2</h3>
-            <button class="btn toolbar-btn" type="button" data-action="show-edit-storage-quota" ${storageConfigSaving ? "disabled" : ""}>编辑配额</button>
+      <div class="ov-page">
+        <div class="ov-page-header">
+          <div>
+            <h2 class="ov-page-title">存储</h2>
+            <p class="ov-page-desc">存储空间用量与回收站策略</p>
           </div>
-          <div class="sys-status-card" style="margin:0;">
-            <div class="env-item">
-              <div class="env-item-head">
-                <span class="env-item-name">${escapeHtml(r2.name || "Cloudflare R2")}</span>
-                <span class="env-status env-status-ok">正常</span>
+        </div>
+
+        <div class="admin-grid">
+          <div class="admin-card span-7">
+            <div class="admin-card-header">
+              <div class="admin-card-icon" style="background:rgba(14,116,144,0.1);color:#0e7490">${icons.stats}</div>
+              <span class="admin-label">${escapeHtml(r2.name || "Cloudflare R2")}</span>
+              <span class="sr-status-dot" style="background:${usageBarColor}"></span>
+              <span style="font-size:11px;color:var(--muted);margin-left:auto;">已用 ${usagePercent}%</span>
+            </div>
+            <div class="sr-usage-body">
+              <div class="sr-usage-numbers">
+                <span class="sr-usage-used">${escapeHtml(r2.usedFormatted || "0")}</span>
+                <span class="sr-usage-sep">/</span>
+                <span class="sr-usage-quota">${escapeHtml(r2.quotaFormatted || "未设置")}</span>
               </div>
-              <div class="env-item-desc">${escapeHtml(r2.usedFormatted || "0")} / ${escapeHtml(r2.quotaFormatted || "未设置")} · 已用 ${usagePercent}%</div>
-              <div style="margin:8px 0 0;height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
-                <div style="height:100%;width:${Math.min(usagePercent, 100)}%;background:${usageBarColor};border-radius:3px;transition:width .3s;"></div>
+              <div class="sr-usage-track">
+                <div class="sr-usage-fill" style="width:${Math.min(usagePercent, 100)}%;background:${usageBarColor}"></div>
               </div>
             </div>
           </div>
-        </section>
+          <div class="admin-card span-5">
+            <div class="admin-card-header">
+              <div class="admin-card-icon" style="background:rgba(217,119,6,0.1);color:#d97706">${icons.settings || icons.edit}</div>
+              <span class="admin-label">操作</span>
+            </div>
+            <div class="sr-actions">
+              <button class="btn toolbar-btn" type="button" data-action="show-edit-storage-quota" ${storageConfigSaving ? "disabled" : ""}>
+                ${icons.edit} 编辑配额
+              </button>
+            </div>
+          </div>
+        </div>
 
-        <section>
-          <h3>回收站保留设置</h3>
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div class="admin-card-icon" style="background:rgba(5,150,105,0.1);color:#059669">${icons.trash}</div>
+            <span class="admin-label">回收站保留设置</span>
+          </div>
           ${retentionHtml}
-        </section>
+        </div>
       </div>
     `;
   }

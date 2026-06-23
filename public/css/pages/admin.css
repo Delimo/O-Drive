@@ -1471,6 +1471,127 @@
   gap: 8px;
 }
 
+/* ─── Storage Redesign ─────────────────────────── */
+
+.sr-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sr-usage-body {
+  margin-top: 8px;
+}
+
+.sr-usage-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sr-usage-used {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.sr-usage-sep {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.sr-usage-quota {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.sr-usage-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--track-bg, rgba(148,163,184,0.12));
+  overflow: hidden;
+}
+
+.sr-usage-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .4s ease;
+}
+
+.sr-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.sr-actions .btn {
+  justify-content: center;
+}
+
+.sr-retention-form {
+  margin-top: 4px;
+}
+
+.sr-retention-input-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.sr-retention-label {
+  width: 100%;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.sr-retention-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.sr-retention-row .input {
+  max-width: 140px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+
+.sr-retention-row .input:focus {
+  border-color: rgba(14,116,144,0.3);
+  box-shadow: 0 0 0 2px rgba(14,116,144,0.06);
+}
+
+.sr-retention-row .btn-primary {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+.sr-retention-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 1024px) {
   .ov2-hero {
