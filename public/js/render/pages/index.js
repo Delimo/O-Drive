@@ -142,9 +142,6 @@ export function createPageRenderers(deps) {
             `,
             ).join("")}
           </div>
-          <div class="flex items-center gap-2">
-            <a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" href="/">返回云盘</a>
-          </div>
         </div>
         <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
           ${renderEmptyStateCompact("需要管理员登录", "登录后即可查看文件统计、索引状态、分享记录和后续管理模块。", icons.lock)}
