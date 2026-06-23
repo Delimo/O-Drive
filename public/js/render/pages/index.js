@@ -132,9 +132,15 @@ export function createPageRenderers(deps) {
 
     if (role !== "admin") {
       return `
-        <div class="header-card flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
-          <div class="flex items-center gap-3">
-            <span class="text-sm font-bold text-slate-800">管理控制台</span>
+        <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+          <div class="admin-tab-bar">
+            ${ADMIN_TABS.map(
+              (tab) => `
+              <button class="admin-tab-btn" type="button" disabled>
+                ${tab.label}
+              </button>
+            `,
+            ).join("")}
           </div>
           <div class="flex items-center gap-2">
             <a class="px-4 py-1.5 text-sm font-semibold border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors" href="/">返回云盘</a>
