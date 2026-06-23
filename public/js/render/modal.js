@@ -419,7 +419,6 @@ export function createModalRenderers(deps) {
             ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在执行，请稍候...</div>' : ""}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-maintenance-action" ${modal.loading ? "disabled" : ""}>
-                ${icons.trash}
                 <span>${modal.loading ? "执行中..." : "确认执行"}</span>
               </button>
               <button class="btn" type="button" data-action="close-modal" ${modal.loading ? "disabled" : ""}>取消</button>

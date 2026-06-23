@@ -1,7 +1,7 @@
 export function createAdminComponents({ icons, escapeHtml }) {
   function renderEmptyCard({ icon, title, description, action }) {
     const actionHtml = action
-      ? `<div class="mt-3"><button class="btn toolbar-btn" type="button" data-action="${escapeHtml(action.action)}">${icon || icons.lock}<span>${escapeHtml(action.label)}</span></button></div>`
+      ? `<div class="mt-3"><button class="btn toolbar-btn" type="button" data-action="${escapeHtml(action.action)}">${escapeHtml(action.label)}</button></div>`
       : "";
 
     return `
@@ -25,7 +25,7 @@ export function createAdminComponents({ icons, escapeHtml }) {
 
   function renderErrorCard({ icon, error, onRetry }) {
     const retryHtml = onRetry
-      ? `<div class="mt-3"><button class="btn toolbar-btn" type="button" data-action="${escapeHtml(onRetry)}">${icons.refresh}<span>重新加载</span></button></div>`
+      ? `<div class="mt-3"><button class="btn toolbar-btn" type="button" data-action="${escapeHtml(onRetry)}">重新加载</button></div>`
       : "";
 
     return `
@@ -61,7 +61,7 @@ export function createAdminComponents({ icons, escapeHtml }) {
   function renderRefreshButton(action) {
     return `
       <button class="btn toolbar-btn" type="button" data-action="${escapeHtml(action)}">
-        ${icons.refresh}<span>刷新</span>
+        刷新
       </button>
     `;
   }

@@ -248,7 +248,7 @@ export function createSystemRenderer({
             <h3 class="sys-status-title">系统状态</h3>
             <p class="sys-status-desc">检查部署绑定、索引状态和维护入口。</p>
           </div>
-          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-health" data-action2="refresh-admin-maintenance">${icons.refresh}<span>刷新</span></button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-health" data-action2="refresh-admin-maintenance">刷新</button>
         </div>
         <div class="sys-status-body">
           <div class="sys-status-left">
@@ -364,7 +364,7 @@ export function createSystemRenderer({
       notifHtml = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <span style="font-size:13px;color:var(--muted);">共 ${items.length} 条通知${notificationsUnread ? `，${notificationsUnread} 条未读` : ""}</span>
-          <button class="btn toolbar-btn" type="button" data-action="mark-all-notifications-read" ${notificationsUnread ? "" : "disabled"}>${icons.check}<span>全部已读</span></button>
+          <button class="btn toolbar-btn" type="button" data-action="mark-all-notifications-read" ${notificationsUnread ? "" : "disabled"}>全部已读</button>
         </div>
         ${
           items.length === 0
@@ -385,7 +385,7 @@ export function createSystemRenderer({
                         <span class="status-dot" style="background:${n.read ? "var(--muted)" : "var(--primary)"}"></span>
                         <span style="font-weight:${n.read ? "normal" : "600"};">${escapeHtml(n.message)}</span>
                       </div>
-                      ${n.read ? "" : `<button class="btn btn-small btn-ghost" type="button" data-action="admin-mark-notif-read" data-notif-id="${n.id}">${icons.check}</button>`}
+                      ${n.read ? "" : `<button class="btn btn-small btn-ghost" type="button" data-action="admin-mark-notif-read" data-notif-id="${n.id}">✓</button>`}
                     </div>
                     <div class="latest-copy">${formatRelative(n.created_at)}</div>
                   </article>
@@ -403,7 +403,7 @@ export function createSystemRenderer({
       webhooksHtml = `
         <div class="empty-state">
           <p class="empty-copy">${escapeHtml(webhooksError)}</p>
-          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">${icons.refresh}<span>重新加载</span></button></div>
+          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">重新加载</button></div>
         </div>
       `;
     } else if (webhooksLoading) {
@@ -434,9 +434,9 @@ export function createSystemRenderer({
                   ${!item.enabled ? '<span class="toolbar-tag tag-expired">已禁用</span>' : ""}
                 </div>
                 <div class="btn-row">
-                  <button class="btn toolbar-btn" type="button" data-action="test-webhook" data-id="${escapeHtml(item.id)}">${icons.eye}<span>测试</span></button>
-                  <button class="btn toolbar-btn" type="button" data-action="edit-webhook" data-id="${escapeHtml(item.id)}">${icons.edit}<span>编辑</span></button>
-                  <button class="btn btn-danger" type="button" data-action="confirm-delete-webhook" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">${icons.trash}<span>删除</span></button>
+                  <button class="btn toolbar-btn" type="button" data-action="test-webhook" data-id="${escapeHtml(item.id)}">测试</button>
+                  <button class="btn toolbar-btn" type="button" data-action="edit-webhook" data-id="${escapeHtml(item.id)}">编辑</button>
+                  <button class="btn btn-danger" type="button" data-action="confirm-delete-webhook" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">删除</button>
                 </div>
               </div>
               <div class="latest-copy">
@@ -503,7 +503,7 @@ export function createSystemRenderer({
             <h3 class="sys-status-title">系统健康</h3>
             <p class="sys-status-desc">管理系统环境、查看存储配额、通知消息与配置 Webhook。</p>
           </div>
-          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-health" data-action2="refresh-admin-quota">${icons.refresh}<span>刷新</span></button>
+          <button class="btn toolbar-btn" type="button" data-action="refresh-admin-health" data-action2="refresh-admin-quota">刷新</button>
         </div>
         <div class="sys-status-body">
           <div class="sys-status-left">
@@ -536,7 +536,7 @@ export function createSystemRenderer({
                   <div style="display:flex;align-items:center;gap:8px;">
                     <span>Webhook 配置</span>
                   </div>
-                  <button class="btn btn-primary btn-small" type="button" data-action="show-add-webhook" style="margin-left:auto;margin-right:12px;">${icons.plus}<span>添加</span></button>
+                  <button class="btn btn-primary btn-small" type="button" data-action="show-add-webhook" style="margin-left:auto;margin-right:12px;">添加</button>
                   <span class="expand-icon">▼</span>
                 </summary>
                 <div style="margin-top:16px;">

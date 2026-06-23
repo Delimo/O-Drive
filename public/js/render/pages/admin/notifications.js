@@ -19,7 +19,7 @@ export function createNotificationsRenderer({
     return `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <span style="font-size:14px;color:var(--muted);">共 ${items.length} 条通知${notificationsUnread ? `，${notificationsUnread} 条未读` : ""}</span>
-        <button class="btn toolbar-btn" type="button" data-action="refresh-admin-notifications">${icons.refresh}<span>刷新</span></button>
+        <button class="btn toolbar-btn" type="button" data-action="refresh-admin-notifications">刷新</button>
       </div>
       ${
         items.length === 0
@@ -47,7 +47,7 @@ export function createNotificationsRenderer({
                       <td style="white-space:nowrap;font-size:12px;color:var(--muted);">${formatRelative(n.created_at)}</td>
                       <td>${escapeHtml(n.message)}</td>
                       <td>${n.read ? '<span class="table-tag">已读</span>' : '<span class="table-tag table-tag-unread">未读</span>'}</td>
-                      <td>${n.read ? "" : `<button class="btn btn-small btn-ghost" type="button" data-action="admin-mark-notif-read" data-notif-id="${n.id}">${icons.check}</button>`}</td>
+                      <td>${n.read ? "" : `<button class="btn btn-small btn-ghost" type="button" data-action="admin-mark-notif-read" data-notif-id="${n.id}">✓</button>`}</td>
                     </tr>
                   `,
                     )

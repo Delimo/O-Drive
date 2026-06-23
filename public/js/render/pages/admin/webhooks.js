@@ -15,7 +15,7 @@ export function createWebhooksRenderer({
         <div class="empty-state">
           <div class="empty-orb">${icons.link}</div>
           <p class="empty-copy">${escapeHtml(webhooksError)}</p>
-          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">${icons.refresh}<span>重新加载</span></button></div>
+          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">重新加载</button></div>
         </div>
       `;
     }
@@ -47,9 +47,9 @@ export function createWebhooksRenderer({
                       ${!item.enabled ? '<span class="toolbar-tag tag-expired">已禁用</span>' : ""}
                     </div>
                     <div class="btn-row">
-                      <button class="btn toolbar-btn" type="button" data-action="test-webhook" data-id="${escapeHtml(item.id)}">${icons.eye}<span>测试</span></button>
-                      <button class="btn toolbar-btn" type="button" data-action="edit-webhook" data-id="${escapeHtml(item.id)}">${icons.edit}<span>编辑</span></button>
-                      <button class="btn btn-danger" type="button" data-action="confirm-delete-webhook" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">${icons.trash}<span>删除</span></button>
+                      <button class="btn toolbar-btn" type="button" data-action="test-webhook" data-id="${escapeHtml(item.id)}">测试</button>
+                      <button class="btn toolbar-btn" type="button" data-action="edit-webhook" data-id="${escapeHtml(item.id)}">编辑</button>
+                      <button class="btn btn-danger" type="button" data-action="confirm-delete-webhook" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">删除</button>
                     </div>
                   </div>
                   <div style="font-size:13px;color:var(--muted);">
@@ -122,7 +122,7 @@ export function createWebhooksRenderer({
         <div class="empty-state">
           <div class="empty-orb">${icons.link}</div>
           <p class="empty-copy">${escapeHtml(webhooksError)}</p>
-          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">${icons.refresh}<span>重新加载</span></button></div>
+          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">重新加载</button></div>
         </div>
       `;
     } else if (webhooksLoading) {
@@ -153,9 +153,9 @@ export function createWebhooksRenderer({
                   ${!item.enabled ? '<span class="toolbar-tag tag-expired">已禁用</span>' : ""}
                 </div>
                 <div class="btn-row">
-                  <button class="btn toolbar-btn" type="button" data-action="test-webhook" data-id="${escapeHtml(item.id)}">${icons.eye}<span>测试</span></button>
-                  <button class="btn toolbar-btn" type="button" data-action="edit-webhook" data-id="${escapeHtml(item.id)}">${icons.edit}<span>编辑</span></button>
-                  <button class="btn btn-danger" type="button" data-action="confirm-delete-webhook" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">${icons.trash}<span>删除</span></button>
+                  <button class="btn toolbar-btn" type="button" data-action="test-webhook" data-id="${escapeHtml(item.id)}">测试</button>
+                  <button class="btn toolbar-btn" type="button" data-action="edit-webhook" data-id="${escapeHtml(item.id)}">编辑</button>
+                  <button class="btn btn-danger" type="button" data-action="confirm-delete-webhook" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">删除</button>
                 </div>
               </div>
               <div class="latest-copy">

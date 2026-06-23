@@ -217,10 +217,10 @@ export function createMaintenanceRenderer({
             <input class="input" type="number" min="0" max="3650" value="${currentDays}" data-binding="trash-retention-days" style="max-width:200px;">
           </div>
           <button class="btn btn-primary toolbar-btn" type="button" data-action="save-trash-retention" ${trashCleanupBusy ? "disabled" : ""}>
-            ${icons.edit}<span>保存设置</span>
+            保存设置
           </button>
           <button class="btn toolbar-btn" type="button" data-action="cleanup-trash-by-retention" ${trashCleanupBusy ? "disabled" : ""}>
-            ${trashCleanupBusy ? icons.spinner : icons.trash}<span>${trashCleanupBusy ? "清理中..." : "按保留天数清理"}</span>
+            ${trashCleanupBusy ? "清理中..." : "按保留天数清理"}
           </button>
           ${currentDays > 0 ? `<span style="font-size:12px;color:var(--muted);align-self:center;">超过 ${currentDays} 天的回收站项目将被自动清除</span>` : '<span style="font-size:12px;color:var(--warning);align-self:center;">未设置保留天数，不会自动清理</span>'}
         </div>

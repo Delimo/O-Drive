@@ -23,7 +23,7 @@ export function createLogsRenderer({
         <div class="empty-state">
           <div class="empty-orb">${icons.lock}</div>
           <p class="empty-copy">${escapeHtml(logsError)}</p>
-          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-logs">${icons.refresh}<span>重新加载</span></button></div>
+          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-logs">重新加载</button></div>
         </div>
       `;
     }
@@ -47,7 +47,7 @@ export function createLogsRenderer({
           <input class="input" type="date" value="${escapeHtml(logsFilter.to || "")}" data-action-change="set-logs-filter" data-key="to" style="width:auto;padding:2px 6px;">
         </div>
         <button class="btn toolbar-btn" type="button" data-action="export-logs-csv">
-          ${icons.download}<span>导出 CSV</span>
+          导出 CSV
         </button>
       </div>
       ${

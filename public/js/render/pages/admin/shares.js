@@ -62,11 +62,10 @@ export function createSharesRenderer({
           </div>
           <div class="btn-row">
             <button class="btn toolbar-btn" type="button" style="min-height:32px;padding:0 10px;font-size:12px;" data-action="copy-share-link" data-key="${escapeHtml(token)}">
-              ${icons.link}<span>复制链接</span>
+              复制链接
             </button>
             <button class="btn ${deleting ? "btn-primary" : "btn-danger"}" type="button" style="min-height:32px;padding:0 10px;font-size:12px;" data-action="confirm-delete-share" data-key="${escapeHtml(token)}" data-name="${escapeHtml(item?.name || token)}">
-              ${icons.trash}
-              <span>${deleting ? "删除中..." : "删除"}</span>
+              ${deleting ? "删除中..." : "删除"}
             </button>
           </div>
         </div>
@@ -176,7 +175,7 @@ export function createSharesRenderer({
           <option value="exhausted" ${shareFilter === "exhausted" ? "selected" : ""}>次数已用尽</option>
         </select>
         <button class="btn btn-danger toolbar-btn" type="button" data-action="confirm-cleanup-expired-shares">
-          ${icons.trash}<span>清理过期</span>
+          清理过期
         </button>
       </div>
       ${

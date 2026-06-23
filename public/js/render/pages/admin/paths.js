@@ -44,7 +44,7 @@ export function createPathsRenderer({
                             <span class="toolbar-tag">${safeText(path)}</span>
                           </div>
                           <button class="btn btn-danger" type="button" data-action="confirm-delete-protected-path" data-path="${escapeHtml(path)}">
-                            ${icons.trash}<span>删除</span>
+                            删除
                           </button>
                         </div>
                         ${note ? `<div class="latest-copy">${escapeHtml(note)}</div>` : ""}
@@ -93,7 +93,7 @@ export function createPathsRenderer({
                             <span>${safeText(path)}</span>
                           </div>
                           <button class="btn btn-danger" type="button" data-action="confirm-delete-hidden-path" data-path="${escapeHtml(path)}">
-                            ${icons.trash}<span>取消隐藏</span>
+                            取消隐藏
                           </button>
                         </div>
                       </article>
@@ -143,7 +143,7 @@ export function createPathsRenderer({
                     <span class="toolbar-tag">${safeText(path)}</span>
                   </div>
                   <button class="btn btn-danger" type="button" data-action="confirm-delete-protected-path" data-path="${escapeHtml(path)}">
-                    ${icons.trash}<span>删除</span>
+                    删除
                   </button>
                 </div>
                 ${note ? `<div class="latest-copy">${escapeHtml(note)}</div>` : ""}
@@ -184,7 +184,7 @@ export function createPathsRenderer({
                     <span>${safeText(path)}</span>
                   </div>
                   <button class="btn btn-danger" type="button" data-action="confirm-delete-hidden-path" data-path="${escapeHtml(path)}">
-                    ${icons.trash}<span>取消隐藏</span>
+                    取消隐藏
                   </button>
                 </div>
               </article>
@@ -201,7 +201,7 @@ export function createPathsRenderer({
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <h3>受保护路径</h3>
             <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-protected-path">
-              ${icons.plus}<span>添加</span>
+              添加
             </button>
           </div>
           ${protectedHtml}
@@ -210,7 +210,7 @@ export function createPathsRenderer({
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <h3>隐藏路径</h3>
             <button class="btn btn-primary toolbar-btn" type="button" data-action="show-add-hidden-path">
-              ${icons.plus}<span>添加</span>
+              添加
             </button>
           </div>
           ${hiddenHtml}

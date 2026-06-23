@@ -47,7 +47,7 @@ export function createStorageRenderer({
             <div class="mini-stat-meta">已用 ${usagePercent}%</div>
           </div>
           <div class="btn-row" style="margin-top:8px;">
-            <button class="btn toolbar-btn" type="button" data-action="show-edit-storage-quota" ${storageConfigSaving ? "disabled" : ""}>${icons.edit}<span>编辑配额</span></button>
+            <button class="btn toolbar-btn" type="button" data-action="show-edit-storage-quota" ${storageConfigSaving ? "disabled" : ""}>编辑配额</button>
           </div>
         </div>
       </div>
@@ -101,7 +101,7 @@ export function createStorageRenderer({
             <input class="input" type="number" min="0" max="3650" value="${currentDays}" data-binding="trash-retention-days" style="max-width:200px;">
           </div>
           <button class="btn btn-primary toolbar-btn" type="button" data-action="save-trash-retention" ${trashCleanupBusy ? "disabled" : ""}>
-            ${icons.edit}<span>保存设置</span>
+            保存设置
           </button>
           ${currentDays > 0 ? `<span style="font-size:12px;color:var(--muted);align-self:center;">超过 ${currentDays} 天的回收站项目将被自动清除</span>` : '<span style="font-size:12px;color:var(--warning);align-self:center;">未设置保留天数，不会自动清理</span>'}
         </div>
@@ -113,7 +113,7 @@ export function createStorageRenderer({
         <section>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <h3>Cloudflare R2</h3>
-            <button class="btn toolbar-btn" type="button" data-action="show-edit-storage-quota" ${storageConfigSaving ? "disabled" : ""}>${icons.edit}<span>编辑配额</span></button>
+            <button class="btn toolbar-btn" type="button" data-action="show-edit-storage-quota" ${storageConfigSaving ? "disabled" : ""}>编辑配额</button>
           </div>
           <div class="sys-status-card" style="margin:0;">
             <div class="env-item">
