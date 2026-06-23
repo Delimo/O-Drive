@@ -62,7 +62,7 @@ export function createOverviewRenderer({
             <p class="ov-page-desc">系统整体运行状态与资源统计</p>
           </div>
           <button class="btn toolbar-btn" type="button" data-action="refresh-admin">
-            ${icons.refresh}<span>刷新</span>
+            刷新
           </button>
         </div>
 
@@ -95,7 +95,7 @@ export function createOverviewRenderer({
             </div>
             <div class="ov-hero-action">
               <button class="btn btn-primary btn-small" type="button" data-action="confirm-maintenance-action" data-maintenance-action="rebuild-index" data-maintenance-label="重建文件索引">
-                ${icons.refresh}<span>重建索引</span>
+                重建索引
               </button>
             </div>
           </div>
@@ -214,8 +214,7 @@ export function createOverviewRenderer({
           <p class="empty-copy">${escapeHtml(error)}</p>
           <div style="margin-top:18px;">
             <button class="btn btn-primary" type="button" data-action="refresh-admin">
-              ${icons.refresh}
-              <span>重新加载</span>
+              重新加载
             </button>
           </div>
         </div>
