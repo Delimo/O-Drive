@@ -1185,4 +1185,471 @@
   background: var(--hover-bg);
 }
 
+/* ─── Overview Redesign ─────────────────────────── */
+
+.ov-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ov-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ov-page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.ov-page-desc {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ─── Hero Stats ─── */
+.ov-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.ov-hero-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .2s ease, transform .15s ease;
+}
+
+.ov-hero-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  transform: translateY(-1px);
+}
+
+.ov-hero-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.ov-hero-blue::before { background: linear-gradient(90deg, #0e7490, #06b6d4); }
+.ov-hero-amber::before { background: linear-gradient(90deg, #d97706, #f59e0b); }
+.ov-hero-green::before { background: linear-gradient(90deg, #059669, #10b981); }
+.ov-hero-purple::before { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
+
+.ov-hero-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.ov-hero-blue .ov-hero-icon { background: rgba(14,116,144,0.1); color: #0e7490; }
+.ov-hero-amber .ov-hero-icon { background: rgba(217,119,6,0.1); color: #d97706; }
+.ov-hero-green .ov-hero-icon { background: rgba(5,150,105,0.1); color: #059669; }
+.ov-hero-purple .ov-hero-icon { background: rgba(124,58,237,0.1); color: #7c3aed; }
+
+.ov-hero-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ov-hero-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ov-hero-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.ov-hero-value {
+  margin-top: 2px;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.ov-hero-value-sm {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ov-hero-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.ov-hero-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.ov-hero-bar {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--track-bg, rgba(148,163,184,0.12));
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.ov-hero-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width .4s ease;
+}
+
+.ov-hero-action {
+  margin-top: 4px;
+}
+
+/* ─── Quick Bar ─── */
+.ov-quick-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  flex-wrap: wrap;
+}
+
+.ov-quick-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.ov-quick-item strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ov-quick-icon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+
+.ov-quick-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ov-quick-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--line-strong, rgba(148,163,184,0.3));
+  flex-shrink: 0;
+}
+
+/* ─── Two Column Layout ─── */
+.ov-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ─── Section Card ─── */
+.ov-section-card {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02);
+  transition: box-shadow .2s ease;
+}
+
+.ov-section-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.ov-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ov-section-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.ov-section-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.ov-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/* ─── Ring Chart ─── */
+.ov-type-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ov-ring-wrap {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+}
+
+.ov-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ov-ring-total {
+  font-size: 14px;
+  font-weight: 800;
+  fill: var(--text);
+  transform: rotate(90deg);
+  transform-origin: 50% 50%;
+}
+
+.ov-ring-label {
+  font-size: 7px;
+  fill: var(--muted);
+  transform: rotate(90deg);
+  transform-origin: 50% 50%;
+}
+
+/* ─── Legend ─── */
+.ov-type-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ov-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ov-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ov-legend-name {
+  flex: 1;
+  color: var(--text);
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-legend-count {
+  font-weight: 700;
+  color: var(--text);
+  min-width: 24px;
+  text-align: right;
+}
+
+.ov-legend-pct {
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ─── Alert List ─── */
+.ov-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ov-alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  transition: border-color .15s ease;
+}
+
+.ov-alert-item:hover {
+  border-color: var(--line-strong);
+}
+
+.ov-alert-item[data-level="warning"] {
+  background: rgba(183,110,17,0.04);
+  border-color: rgba(183,110,17,0.12);
+}
+
+.ov-alert-item[data-level="ok"] {
+  background: rgba(22,163,74,0.04);
+  border-color: rgba(22,163,74,0.12);
+}
+
+.ov-alert-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.ov-alert-item[data-level="warning"] .ov-alert-dot { background: #d97706; }
+.ov-alert-item[data-level="ok"] .ov-alert-dot { background: #16a34a; }
+
+.ov-alert-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ov-alert-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-alert-body {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ─── Recent Grid ─── */
+.ov-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.ov-recent-chip {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.ov-recent-chip:hover {
+  background: var(--panel);
+  border-color: var(--line-strong);
+}
+
+.ov-recent-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-recent-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* ─── Empty State ─── */
+.ov-empty {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 12px 0;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  .ov-hero-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .ov-hero-stats {
+    grid-template-columns: 1fr;
+  }
+  .ov-two-col {
+    grid-template-columns: 1fr;
+  }
+  .ov-type-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ov-ring-wrap {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+  }
+  .ov-quick-bar {
+    gap: 8px;
+  }
+  .ov-quick-dot {
+    display: none;
+  }
+  .ov-recent-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
