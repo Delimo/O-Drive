@@ -1349,11 +1349,12 @@
   .ov-system-middle {
     grid-template-columns: 1fr;
   }
-  .ov-rules-inline-fields {
-    flex-direction: column;
+  .ov-storage-bottom {
+    grid-template-columns: 1fr;
   }
-  .ov-rules-inline-actions {
-    flex-wrap: wrap;
+  .ov-rules-editor {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
   }
 }
 
@@ -1381,11 +1382,12 @@
   .ov-system-bottom {
     grid-template-columns: 1fr;
   }
-  .ov-rules-inline-fields {
-    flex-direction: column;
+  .ov-storage-bottom {
+    grid-template-columns: 1fr;
   }
-  .ov-rules-inline-actions {
-    flex-wrap: wrap;
+  .ov-rules-editor {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
   }
 }
 
@@ -1438,9 +1440,13 @@
 .ov-storage-bottom {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 0;
   flex: 1;
   min-height: 0;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  overflow: hidden;
 }
 
 /* ─── Quota Card ─── */
@@ -1453,6 +1459,16 @@
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.ov-rules-editor {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
   overflow: hidden;
 }
 
@@ -1801,8 +1817,8 @@
   flex-shrink: 0;
 }
 
-/* ─── Rules Card Full ─── */
-.ov-rules-card-full {
+/* ─── Rules Editor ─── */
+.ov-rules-editor {
   display: flex;
   flex-direction: column;
   border-radius: 12px;
@@ -1811,76 +1827,38 @@
   overflow: hidden;
 }
 
-.ov-rules-card-full-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
+.ov-rules-editor-header {
+  padding: 16px;
   border-bottom: 1px solid var(--line);
 }
 
-.ov-rules-card-full-title {
+.ov-rules-editor-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ov-rules-editor-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
   margin: 0;
 }
 
-.ov-rules-card-full-count {
+.ov-rules-editor-desc {
   font-size: 12px;
   color: var(--muted);
+  margin: 0;
 }
 
-.ov-rules-card-full-body {
+.ov-rules-editor-body {
   padding: 16px;
-}
-
-/* ─── Rules Editor Inline ─── */
-.ov-rules-editor-inline {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.ov-rules-inline-fields {
-  display: flex;
-  gap: 8px;
-}
-
-.ov-rules-inline-fields .input {
+  gap: 16px;
   flex: 1;
-}
-
-.ov-rules-inline-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.ov-rules-checkbox-sm {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.ov-rules-checkbox-sm input {
-  accent-color: var(--accent);
-}
-
-/* ─── Rules Divider ─── */
-.ov-rules-divider {
-  height: 1px;
-  background: var(--line);
-  margin: 16px 0;
-}
-
-/* ─── Rules List Inline ─── */
-.ov-rules-list-inline {
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .ov-rules-field {
@@ -1940,6 +1918,15 @@
 }
 
 /* ─── Rules List ─── */
+.ov-rules-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  overflow: hidden;
+}
+
 .ov-rules-list-header {
   display: flex;
   align-items: center;

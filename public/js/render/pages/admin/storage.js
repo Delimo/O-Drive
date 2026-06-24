@@ -87,76 +87,95 @@ export function createStorageRenderer({
         </div>
 
         <div class="ov-storage-bottom">
-          <div class="ov-rules-card-full">
-            <div class="ov-rules-card-full-header">
-              <h3 class="ov-rules-card-full-title">规则</h3>
-              <span class="ov-rules-card-full-count">${(protectedPaths || []).length + (hiddenPaths || []).length} 条规则</span>
+          <div class="ov-rules-editor">
+            <div class="ov-rules-editor-header">
+              <div class="ov-rules-editor-title-row">
+                <h3 class="ov-rules-editor-title">规则编辑</h3>
+                <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule">保存规则</button>
+              </div>
+              <p class="ov-rules-editor-desc">路径可以是目录，也可以是具体文件。</p>
             </div>
-            <div class="ov-rules-card-full-body">
-              <div class="ov-rules-editor-inline">
-                <div class="ov-rules-inline-fields">
-                  <input class="input" type="text" placeholder="路径 /客户资料/" data-action-input="set-rule-path">
-                  <input class="input" type="password" placeholder="密码（可选）" data-action-input="set-rule-password">
-                  <input class="input" type="text" placeholder="备注（可选）" data-action-input="set-rule-note">
-                </div>
-                <div class="ov-rules-inline-actions">
-                  <label class="ov-rules-checkbox-sm">
-                    <input type="checkbox" data-action-change="toggle-rule-hide">
-                    <span>隐藏</span>
-                  </label>
-                  <label class="ov-rules-checkbox-sm">
-                    <input type="checkbox" checked data-action-change="toggle-rule-show-name">
-                    <span>显示名称</span>
-                  </label>
-                  <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule">添加</button>
-                </div>
+            <div class="ov-rules-editor-body">
+              <div class="ov-rules-field">
+                <label class="ov-rules-label">路径</label>
+                <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path">
               </div>
-              <div class="ov-rules-divider"></div>
-              <div class="ov-rules-list-inline">
-                ${(protectedPaths || []).length === 0 && (hiddenPaths || []).length === 0
-                  ? `<div class="ov-empty-inline">暂无规则</div>`
-                  : `
-                    <div class="ov-rules-table-wrap">
-                      <table class="ov-rules-table">
-                        <thead>
-                          <tr>
-                            <th>路径</th>
-                            <th>类型</th>
-                            <th>备注</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          ${(hiddenPaths || []).map(item => {
-                            const path = String(item?.path || item?.folder || "/");
-                            const note = item?.note || "";
-                            return `
-                              <tr>
-                                <td class="ov-td-mono">${safeText(path)}</td>
-                                <td><span class="ov-badge ov-badge-purple">隐藏</span></td>
-                                <td class="ov-td-muted">${safeText(note, "-")}</td>
-                                <td><button class="btn btn-sm" type="button" data-action="confirm-delete-hidden-path" data-path="${escapeHtml(path)}">移除</button></td>
-                              </tr>
-                            `;
-                          }).join("")}
-                          ${(protectedPaths || []).map(item => {
-                            const path = String(item?.path || item?.folder || "/");
-                            const note = item?.note || "";
-                            const showName = item?.showName;
-                            return `
-                              <tr>
-                                <td class="ov-td-mono">${safeText(path)}</td>
-                                <td><span class="ov-badge ov-badge-accent">${showName ? '密码(显示)' : '密码(隐藏)'}</span></td>
-                                <td class="ov-td-muted">${safeText(note, "-")}</td>
-                                <td><button class="btn btn-sm" type="button" data-action="confirm-delete-protected-path" data-path="${escapeHtml(path)}">移除</button></td>
-                              </tr>
-                            `;
-                          }).join("")}
-                        </tbody>
-                      </table>
-                    </div>
-                  `}
+              <div class="ov-rules-field">
+                <label class="ov-rules-label">访问密码</label>
+                <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
               </div>
+              <div class="ov-rules-field">
+                <label class="ov-rules-label">备注</label>
+                <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
+              </div>
+              <div class="ov-rules-options">
+                <label class="ov-rules-checkbox">
+                  <input type="checkbox" data-action-change="toggle-rule-hide">
+                  <span class="ov-rules-checkbox-label">
+                    <span class="ov-rules-checkbox-title">隐藏路径</span>
+                    <span class="ov-rules-checkbox-desc">从访客文件列表移除</span>
+                  </span>
+                </label>
+                <label class="ov-rules-checkbox">
+                  <input type="checkbox" checked data-action-change="toggle-rule-show-name">
+                  <span class="ov-rules-checkbox-label">
+                    <span class="ov-rules-checkbox-title">名称可见</span>
+                    <span class="ov-rules-checkbox-desc">受密码保护时仍显示名称</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="ov-rules-list">
+            <div class="ov-rules-list-header">
+              <h3 class="ov-rules-list-title">规则列表</h3>
+              <span class="ov-rules-list-count">${(protectedPaths || []).length + (hiddenPaths || []).length} 条规则</span>
+            </div>
+            <div class="ov-rules-list-body">
+              ${(protectedPaths || []).length === 0 && (hiddenPaths || []).length === 0
+                ? `<div class="ov-empty-inline">暂无访问控制规则</div>`
+                : `
+                  <div class="ov-rules-table-wrap">
+                    <table class="ov-rules-table">
+                      <thead>
+                        <tr>
+                          <th>路径</th>
+                          <th>类型</th>
+                          <th>备注</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${(hiddenPaths || []).map(item => {
+                          const path = String(item?.path || item?.folder || "/");
+                          const note = item?.note || "";
+                          return `
+                            <tr>
+                              <td class="ov-td-mono">${safeText(path)}</td>
+                              <td><span class="ov-badge ov-badge-purple">隐藏</span></td>
+                              <td class="ov-td-muted">${safeText(note, "-")}</td>
+                              <td><button class="btn btn-sm" type="button" data-action="confirm-delete-hidden-path" data-path="${escapeHtml(path)}">移除</button></td>
+                            </tr>
+                          `;
+                        }).join("")}
+                        ${(protectedPaths || []).map(item => {
+                          const path = String(item?.path || item?.folder || "/");
+                          const note = item?.note || "";
+                          const showName = item?.showName;
+                          return `
+                            <tr>
+                              <td class="ov-td-mono">${safeText(path)}</td>
+                              <td><span class="ov-badge ov-badge-accent">${showName ? '密码(显示)' : '密码(隐藏)'}</span></td>
+                              <td class="ov-td-muted">${safeText(note, "-")}</td>
+                              <td><button class="btn btn-sm" type="button" data-action="confirm-delete-protected-path" data-path="${escapeHtml(path)}">移除</button></td>
+                            </tr>
+                          `;
+                        }).join("")}
+                      </tbody>
+                    </table>
+                  </div>
+                `}
             </div>
           </div>
         </div>
