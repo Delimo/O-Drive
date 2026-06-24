@@ -2,18 +2,10 @@ export function createStorageRenderer({
   safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
 }) {
 
-  const MAINTENANCE_ACTIONS = [
-    { action: "rebuild-index", label: "同步元数据库索引", desc: "对齐元数据库数据状态。", danger: false },
-    { action: "clear-cache", label: "清理缓存数据库", desc: "强制刷洗 Redis 本地暂存层。", danger: false },
-    { action: "purge-trash", label: "同步清除废弃文件", desc: "物理清除已过期回收站数据。", danger: true }
-  ];
-
   function renderStorageSection(admin) {
     const {
       storageConfig, storageConfigLoading, storageConfigError,
-      trashRetention, trashRetentionLoading, trashCleanupBusy,
-      maintenance, maintenanceLoading, maintenanceError,
-      tasks = [], tasksLoading
+      trashRetention, trashRetentionLoading, trashCleanupBusy
     } = admin;
 
     if (storageConfigError) {
@@ -31,12 +23,12 @@ export function createStorageRenderer({
       <div class="ov-storage">
         <div class="ov-storage-header">
           <div class="ov-storage-title-group">
-            <h2 class="ov-storage-title">存储与维护</h2>
-            <p class="ov-storage-desc">存储配额、回收站策略与系统运维</p>
+            <h2 class="ov-storage-title">存储管理</h2>
+            <p class="ov-storage-desc">R2存储桶配额与回收站策略</p>
           </div>
         </div>
 
-        <div class="ov-storage-top">
+        <div class="ov-storage-content">
           <div class="ov-storage-quota">
             <div class="ov-quota-header">
               <span class="ov-quota-title">存储配额</span>
@@ -88,53 +80,6 @@ export function createStorageRenderer({
                   ${trashCleanupBusy ? '清理中...' : '立即清理'}
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="ov-storage-bottom">
-          <div class="ov-maintenance">
-            <div class="ov-maintenance-header">
-              <span class="ov-maintenance-title">运维指令</span>
-            </div>
-            <div class="ov-maintenance-body">
-              ${MAINTENANCE_ACTIONS.map(act => `
-                <div class="ov-maintenance-item">
-                  <div class="ov-maintenance-info">
-                    <span class="ov-maintenance-name" style="color:${act.danger ? 'var(--danger)' : 'var(--text)'};">${escapeHtml(act.label)}</span>
-                    <span class="ov-maintenance-desc">${escapeHtml(act.desc)}</span>
-                  </div>
-                  <button class="btn ${act.danger ? 'btn-danger' : ''} btn-sm" type="button"
-                          data-action="confirm-maintenance-action"
-                          data-maintenance-action="${escapeHtml(act.action)}"
-                          data-maintenance-label="${escapeHtml(act.label)}">执行</button>
-                </div>
-              `).join("")}
-            </div>
-          </div>
-
-          <div class="ov-tasks">
-            <div class="ov-tasks-header">
-              <span class="ov-tasks-title">后台调度</span>
-              <button class="btn btn-sm" type="button" data-action="refresh-tasks">刷新</button>
-            </div>
-            <div class="ov-tasks-body">
-              ${tasksLoading
-                ? `<div class="ov-empty-inline">载入中...</div>`
-                : tasks.length === 0
-                  ? `<div class="ov-empty-inline">无待命或执行中的系统队列</div>`
-                  : `<div class="ov-tasks-list">
-                      ${tasks.map(tsk => `
-                        <div class="ov-task-item">
-                          <div class="ov-task-info">
-                            <span class="ov-task-status">队列: ${escapeHtml(tsk.status || "挂起")}</span>
-                            <span class="ov-task-time">启动于 ${formatTime(tsk.createdAt)}</span>
-                          </div>
-                          <span class="ov-badge ov-badge-info">${tsk.completed || 0}/${tsk.total || 0}</span>
-                        </div>
-                      `).join("")}
-                    </div>`
-              }
             </div>
           </div>
         </div>
