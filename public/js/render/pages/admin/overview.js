@@ -113,15 +113,32 @@ export function createOverviewRenderer({
 
             <div class="ov-section">
               <div class="ov-section-head">
-                <span class="ov-section-title">索引状态</span>
+                <span class="ov-section-title">维护中心</span>
                 <span class="ov-badge ${index.recommendation === '正常' ? 'ov-badge-ok' : 'ov-badge-warn'}">${escapeHtml(index.recommendation || "正常")}</span>
               </div>
-              <div class="ov-section-body" style="display:flex;flex-direction:column;gap:10px;">
-                <div class="ov-index-row">
-                  <span class="ov-index-label">索引记录</span>
-                  <span class="ov-index-value">${safeText(index.count, "0")}</span>
+              <div class="ov-section-body" style="display:flex;flex-direction:column;gap:8px;">
+                <div class="ov-maint-item">
+                  <div class="ov-maint-info">
+                    <span class="ov-maint-label">索引记录</span>
+                    <span class="ov-maint-value">${safeText(index.count, "0")}</span>
+                  </div>
+                  ${index.latestUpdatedAt ? `<span class="ov-maint-time">${formatRelative(index.latestUpdatedAt)}</span>` : ''}
                 </div>
-                <button class="btn btn-primary btn-sm" type="button"
+                <div class="ov-maint-item">
+                  <div class="ov-maint-info">
+                    <span class="ov-maint-label">回收站占用</span>
+                    <span class="ov-maint-value">${safeText(trash.sizeFormatted, "0 B")}</span>
+                  </div>
+                  <span class="ov-maint-count">${safeText(trash.count, "0")} 项</span>
+                </div>
+                <div class="ov-maint-item">
+                  <div class="ov-maint-info">
+                    <span class="ov-maint-label">缩略图缓存</span>
+                    <span class="ov-maint-value">.thumbs/</span>
+                  </div>
+                  <span class="ov-maint-tag">系统前缀</span>
+                </div>
+                <button class="btn btn-primary btn-sm" type="button" style="margin-top:4px;"
                         data-action="confirm-maintenance-action"
                         data-maintenance-action="rebuild-index"
                         data-maintenance-label="重建文件索引">重建索引</button>
