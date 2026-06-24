@@ -5,7 +5,9 @@ export function createStorageRenderer({
   function renderStorageSection(admin) {
     const {
       storageConfig, storageConfigLoading, storageConfigError,
-      trashRetention, trashRetentionLoading, trashCleanupBusy
+      trashRetention, trashRetentionLoading, trashCleanupBusy,
+      protectedPaths = [], protectedPathsLoading, protectedPathsError,
+      hiddenPaths = [], hiddenPathsLoading, hiddenPathsError
     } = admin;
 
     if (storageConfigError) {
@@ -79,6 +81,86 @@ export function createStorageRenderer({
                         data-action="cleanup-trash-by-retention" ${trashCleanupBusy ? 'disabled' : ''}>
                   ${trashCleanupBusy ? '清理中...' : '立即清理'}
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ov-storage-paths">
+            <div class="ov-path-section">
+              <div class="ov-path-header">
+                <div class="ov-path-title-group">
+                  <span class="ov-path-dot" style="background:var(--accent);"></span>
+                  <span class="ov-path-title">受保护路径</span>
+                </div>
+                <button class="btn btn-sm" type="button" data-action="show-add-protected-path">添加</button>
+              </div>
+              <div class="ov-path-body">
+                ${protectedPathsLoading
+                  ? `<div class="ov-empty-inline">载入中...</div>`
+                  : protectedPathsError
+                    ? `<div class="ov-empty-inline" style="color:var(--danger);">${escapeHtml(protectedPathsError)}</div>`
+                    : protectedPaths.length === 0
+                      ? `<div class="ov-empty-inline">尚未配置受保护路径</div>`
+                      : `<div class="ov-path-list">
+                          ${protectedPaths.map(item => {
+                            const path = String(item?.path || item?.folder || "/");
+                            const note = item?.note || "";
+                            const name = item?.showName || path;
+                            return `
+                              <div class="ov-path-item">
+                                <div class="ov-path-item-info">
+                                  <span class="ov-path-item-dot" style="background:var(--accent);"></span>
+                                  <span class="ov-path-item-name">${safeText(name)}</span>
+                                  <code class="ov-path-item-code">${safeText(path)}</code>
+                                </div>
+                                <button class="btn btn-sm" type="button"
+                                        data-action="confirm-delete-protected-path"
+                                        data-path="${escapeHtml(path)}">移除</button>
+                              </div>
+                              ${note ? `<div class="ov-path-item-note">${escapeHtml(note)}</div>` : ""}
+                            `;
+                          }).join("")}
+                        </div>`
+                }
+              </div>
+            </div>
+
+            <div class="ov-path-section">
+              <div class="ov-path-header">
+                <div class="ov-path-title-group">
+                  <span class="ov-path-dot" style="background:#8b5cf6;"></span>
+                  <span class="ov-path-title">隐藏路径</span>
+                </div>
+                <button class="btn btn-sm" type="button" data-action="show-add-hidden-path">添加</button>
+              </div>
+              <div class="ov-path-body">
+                ${hiddenPathsLoading
+                  ? `<div class="ov-empty-inline">载入中...</div>`
+                  : hiddenPathsError
+                    ? `<div class="ov-empty-inline" style="color:var(--danger);">${escapeHtml(hiddenPathsError)}</div>`
+                    : hiddenPaths.length === 0
+                      ? `<div class="ov-empty-inline">尚未配置隐藏路径</div>`
+                      : `<div class="ov-path-list">
+                          ${hiddenPaths.map(item => {
+                            const path = String(item?.path || item?.folder || "/");
+                            const note = item?.note || "";
+                            const name = item?.showName || path;
+                            return `
+                              <div class="ov-path-item">
+                                <div class="ov-path-item-info">
+                                  <span class="ov-path-item-dot" style="background:#8b5cf6;"></span>
+                                  <span class="ov-path-item-name">${safeText(name)}</span>
+                                  <code class="ov-path-item-code">${safeText(path)}</code>
+                                </div>
+                                <button class="btn btn-sm" type="button"
+                                        data-action="confirm-delete-hidden-path"
+                                        data-path="${escapeHtml(path)}">移除</button>
+                              </div>
+                              ${note ? `<div class="ov-path-item-note">${escapeHtml(note)}</div>` : ""}
+                            `;
+                          }).join("")}
+                        </div>`
+                }
               </div>
             </div>
           </div>
