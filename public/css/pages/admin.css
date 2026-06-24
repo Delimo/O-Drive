@@ -1297,7 +1297,8 @@
   .ov-overview-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  .ov-storage-content,
+  .ov-storage-top,
+  .ov-storage-bottom,
   .ov-shares-content,
   .ov-system-top,
   .ov-system-middle {
@@ -1321,8 +1322,9 @@
     align-items: flex-start;
     gap: 8px;
   }
-  .ov-storage-content,
-  .ov-shares-paths,
+  .ov-storage-top,
+  .ov-storage-bottom,
+  .ov-shares-content,
   .ov-system-top,
   .ov-system-middle,
   .ov-system-bottom {
