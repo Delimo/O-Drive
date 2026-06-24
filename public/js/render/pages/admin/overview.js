@@ -118,5 +118,24 @@ export function createOverviewRenderer({
     `;
   }
 
-  return { renderAdminStatsGrid };
+  function renderAdminErrorState(error) {
+    return `
+      <div class="ap">
+        <div class="ap-head">
+          <div>
+            <h2 class="ap-title">概览控制台</h2>
+            <p class="ap-desc">节点文件存储诊断与分类指标分析</p>
+          </div>
+        </div>
+        <div class="ap-card">
+          <div class="ap-card-body" style="text-align:center;padding:32px 20px;">
+            <p style="margin:0 0 12px;color:var(--danger);font-size:13px;">${escapeHtml(error)}</p>
+            <button class="ap-btn" type="button" data-action="refresh-admin">重新加载</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return { renderAdminStatsGrid, renderAdminErrorState };
 }

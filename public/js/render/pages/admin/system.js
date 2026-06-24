@@ -4,16 +4,19 @@ export function createSystemRenderer({
 
   function renderSystemSection(admin) {
     const {
-      health = {}, healthLoading, healthError,
-      adminNotifHistory = [], adminNotifHistoryLoading, notificationsUnread = 0,
-      webhooks = [], webhooksLoading
+      healthLoading, healthError,
+      adminNotifHistoryLoading, notificationsUnread = 0,
+      webhooksLoading
     } = admin;
+
+    const healthData = admin.health || {};
+    const sysComponents = healthData.components || {};
+    const adminNotifHistory = admin.adminNotifHistory || [];
+    const webhooks = admin.webhooks || [];
 
     if (healthError) {
       return components.renderErrorCard({ icon: "", error: healthError, onRetry: "refresh-admin-health" });
     }
-
-    const sysComponents = health.components || {};
 
     return `
       <div class="ap">
