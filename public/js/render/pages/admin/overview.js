@@ -3,6 +3,7 @@ export function createOverviewRenderer({
 }) {
 
   function getExtBadge(fileName) {
+    if (!fileName) return `<span class="ap-ext ap-ext-default">file</span>`;
     const ext = fileName.split('.').pop().toLowerCase().slice(0, 4) || 'file';
     let cls = 'ap-ext-default';
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) cls = 'ap-ext-img';
@@ -79,8 +80,8 @@ export function createOverviewRenderer({
               ${latest && latest.length > 0 ? latest.map(file => `
                 <div class="ap-file-row">
                   <div class="ap-file-row-main">
-                    ${getExtBadge(file.name)}
-                    <span class="ap-file-row-name">${escapeHtml(file.name)}</span>
+                    ${getExtBadge(file.key)}
+                    <span class="ap-file-row-name">${escapeHtml(file.key)}</span>
                   </div>
                   <div class="ap-file-row-meta">
                     <span>${safeText(file.sizeFormatted)}</span>
