@@ -13,58 +13,63 @@ export function createSharesRenderer({
     }
 
     return `
-      <div class="ov-page" style="display:flex; flex-direction:column; gap:12px; height:100%; overflow:hidden; font-family:system-ui, sans-serif;">
-        <div class="ov-page-header" style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="ap">
+        <div class="ap-head">
           <div>
-            <h2 class="ov-page-title" style="margin:0; font-size:16px; font-weight:600; color:var(--text);">外链管理</h2>
-            <p class="ov-page-desc" style="margin:2px 0 0; font-size:11px; color:var(--muted);">管理本系统内下发的所有外链及其状态</p>
+            <h2 class="ap-title">外链管理</h2>
+            <p class="ap-desc">管理本系统内下发的所有外链及其状态</p>
           </div>
-          <button class="btn btn-danger" type="button" data-action="confirm-cleanup-expired-shares" style="font-size:11px; padding:4px 8px; border-radius:4px;">
-            清理过期链接
-          </button>
+          <button class="ap-btn ap-btn-danger" type="button" data-action="confirm-cleanup-expired-shares">清理过期</button>
         </div>
 
-        <!-- 扁平检索控制行 -->
-        <div style="display:flex; gap:8px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:8px 0; align-items:center;">
-          <input class="input" type="text" data-action-input="set-shares-search" value="${escapeHtml(shareSearch)}" placeholder="搜索文件名、令牌等..." style="flex:1; padding:5px 8px; font-size:12px; border:1px solid var(--line); border-radius:4px; background:transparent;">
-          <select class="input" data-action-change="set-shares-filter" style="width:110px; padding:5px; font-size:12px; border:1px solid var(--line); border-radius:4px; background:transparent;">
+        <div class="ap-filter-bar">
+          <input class="ap-input ap-input-search" type="text"
+                 data-action-input="set-shares-search" value="${escapeHtml(shareSearch)}"
+                 placeholder="搜索文件名、令牌...">
+          <select class="ap-input ap-input-select" data-action-change="set-shares-filter">
             <option value="all" ${shareFilter === "all" ? "selected" : ""}>全部状态</option>
-            <option value="active" ${shareFilter === "active" ? "selected" : ""}>仅有效</option>
+            <option value="active" ${shareFilter === "active" ? "selected" : ""}>有效</option>
             <option value="expired" ${shareFilter === "expired" ? "selected" : ""}>已过期</option>
             <option value="exhausted" ${shareFilter === "exhausted" ? "selected" : ""}>额度耗尽</option>
           </select>
         </div>
 
-        <!-- 外链条目列表（高度严格受限防溢出） -->
-        <div style="flex:1; overflow-y:auto; max-height:240px; display:flex; flex-direction:column;">
-          ${shares.length === 0 ? `
-            <p style="text-align:center; color:var(--muted); font-size:12px; padding:32px 0; margin:0;">无符合条件的外链</p>
-          ` : shares.map(share => {
-              const isExpired = share.expired || (share.expiresAt && share.expiresAt < Date.now());
-              const isExhausted = share.exhausted;
-              const isActive = !isExpired && !isExhausted;
-              
-              return `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); gap:12px; font-size:12px;">
-                  <div style="min-width:0; flex:1;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                      <span style="font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:280px;">${safeText(share.name, "未命名资源")}</span>
-                      <span style="width:5px; height:5px; border-radius:50%; background:${isActive ? "#10b981" : "var(--danger)"};"></span>
-                      ${share.hasPassword ? `<span style="font-size:10px; color:var(--muted);">🔒 加密</span>` : ""}
+        <div class="ap-list" style="flex:1;overflow-y:auto;">
+          ${shares.length === 0
+            ? `<p class="ap-empty-inline">无符合条件的外链</p>`
+            : shares.map(share => {
+                const isExpired = share.expired || (share.expiresAt && share.expiresAt < Date.now());
+                const isExhausted = share.exhausted;
+                const isActive = !isExpired && !isExhausted;
+                const statusCls = isExpired ? 'ap-badge-error' : isExhausted ? 'ap-badge-warn' : 'ap-badge-ok';
+                const statusText = isExpired ? '已过期' : isExhausted ? '耗尽' : '有效';
+
+                return `
+                  <div class="ap-list-row" style="padding:12px 14px;">
+                    <div class="ap-list-row-main" style="flex:1;min-width:0;">
+                      <div class="ap-row" style="align-items:center;gap:6px;min-width:0;">
+                        <span style="width:6px;height:6px;border-radius:1px;background:${isActive ? '#10b981' : 'var(--danger)'};flex-shrink:0;"></span>
+                        <span class="ap-list-row-name" style="max-width:260px;">${safeText(share.name, "未命名资源")}</span>
+                        <span class="ap-badge ${statusCls}">${statusText}</span>
+                        ${share.hasPassword ? `<span class="ap-tag">加密</span>` : ""}
+                      </div>
+                      <div class="ap-row" style="gap:12px;margin-top:4px;font-size:11px;color:var(--muted);flex-wrap:wrap;">
+                        <span>路径: ${escapeHtml(share.path)}</span>
+                        <span>下载: ${share.downloadCount}/${share.maxDownloads || "∞"}</span>
+                        ${share.expiresAt ? `<span>到期: ${formatTime(share.expiresAt)}</span>` : ""}
+                      </div>
                     </div>
-                    <div style="font-size:11px; color:var(--muted); margin-top:2px; display:flex; gap:12px;">
-                      <span>路径: ${escapeHtml(share.path)}</span>
-                      <span>已下载: ${share.downloadCount}/${share.maxDownloads || "∞"} 次</span>
-                      ${share.expiresAt ? `<span>有效期: ${formatTime(share.expiresAt)}</span>` : ""}
+                    <div class="ap-row" style="gap:4px;flex-shrink:0;">
+                      <button class="ap-btn ap-btn-sm ap-btn-ghost" type="button"
+                              data-action="copy-share-link" data-key="${escapeHtml(share.token)}">复制</button>
+                      <button class="ap-btn ap-btn-sm ap-btn-danger" type="button"
+                              data-action="confirm-delete-share"
+                              data-key="${escapeHtml(share.token)}"
+                              data-name="${escapeHtml(share.name)}">移除</button>
                     </div>
                   </div>
-                  <div style="display:flex; gap:4px; flex-shrink:0;">
-                    <button class="btn" type="button" data-action="copy-share-link" data-key="${escapeHtml(share.token)}" style="font-size:11px; padding:3px 6px; border:1px solid var(--line); border-radius:4px; background:transparent;">复制</button>
-                    <button class="btn btn-danger" type="button" data-action="confirm-delete-share" data-key="${escapeHtml(share.token)}" data-name="${escapeHtml(share.name)}" style="font-size:11px; padding:3px 6px; border-radius:4px;">移除</button>
-                  </div>
-                </div>
-              `;
-            }).join("")}
+                `;
+              }).join("")}
         </div>
       </div>
     `;
