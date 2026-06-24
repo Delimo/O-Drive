@@ -13,40 +13,40 @@ export function createLogsRenderer({
     }
 
     return `
-      <div class="ap">
-        <div class="ap-head">
-          <div>
-            <h2 class="ap-title">审计日志</h2>
-            <p class="ap-desc">记录平台所有的管理员安全及数据更改行为</p>
+      <div class="ov-logs">
+        <div class="ov-logs-header">
+          <div class="ov-logs-title-group">
+            <h2 class="ov-logs-title">审计日志</h2>
+            <p class="ov-logs-desc">记录平台所有的管理员安全及数据更改行为</p>
           </div>
         </div>
 
-        <div class="ap-filter-bar">
-          <input class="ap-input ap-input-search" type="text"
+        <div class="ov-logs-filter">
+          <input class="input" type="text"
                  data-action-input="set-logs-filter" data-key="q"
                  value="${escapeHtml(logsFilter.q || "")}" placeholder="过滤关键词...">
-          <select class="ap-input ap-input-select" data-action-change="set-logs-filter" data-key="action">
+          <select class="input" data-action-change="set-logs-filter" data-key="action">
             <option value="">全部事件</option>
             <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传</option>
             <option value="delete" ${logsFilter.action === "delete" ? "selected" : ""}>删除</option>
             <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>共享</option>
             <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>安全登录</option>
           </select>
-          <div class="ap-row" style="align-items:center;gap:4px;">
-            <input class="ap-input" type="date" data-action-change="set-logs-filter" data-key="from"
-                   value="${escapeHtml(logsFilter.from || "")}" style="width:120px;font-size:11px;">
-            <span style="color:var(--muted);">–</span>
-            <input class="ap-input" type="date" data-action-change="set-logs-filter" data-key="to"
-                   value="${escapeHtml(logsFilter.to || "")}" style="width:120px;font-size:11px;">
+          <div class="ov-logs-date-range">
+            <input class="input" type="date" data-action-change="set-logs-filter" data-key="from"
+                   value="${escapeHtml(logsFilter.from || "")}">
+            <span class="ov-logs-date-sep">–</span>
+            <input class="input" type="date" data-action-change="set-logs-filter" data-key="to"
+                   value="${escapeHtml(logsFilter.to || "")}">
           </div>
         </div>
 
-        <div class="ap-card" style="overflow:hidden;">
+        <div class="ov-logs-content">
           ${logs.length === 0
-            ? `<p class="ap-empty-inline" style="padding:24px;">无匹配行为日志</p>`
+            ? `<div class="ov-empty-inline">无匹配行为日志</div>`
             : `
-              <div style="overflow-x:auto;">
-                <table class="ap-table">
+              <div class="ov-logs-table-wrap">
+                <table class="ov-logs-table">
                   <thead>
                     <tr>
                       <th>操作时间</th>
@@ -57,26 +57,26 @@ export function createLogsRenderer({
                   </thead>
                   <tbody>
                     ${logs.map(log => {
-                      const actCls = log.action === "delete" ? 'ap-act-danger' : log.action === "login" ? 'ap-act-ok' : '';
+                      const actCls = log.action === "delete" ? 'ov-action-danger' : log.action === "login" ? 'ov-action-ok' : '';
                       return `
                         <tr>
-                          <td class="ap-td-muted">${formatTime(log.createdAt)}</td>
-                          <td><span class="ap-action-tag ${actCls}">${escapeHtml(log.action)}</span></td>
-                          <td class="ap-td-mono">${safeText(log.path, "-")}</td>
-                          <td class="ap-td-mono ap-td-muted">${safeText(log.ip, "-")}</td>
+                          <td class="ov-td-muted">${formatTime(log.createdAt)}</td>
+                          <td><span class="ov-action-tag ${actCls}">${escapeHtml(log.action)}</span></td>
+                          <td class="ov-td-mono">${safeText(log.path, "-")}</td>
+                          <td class="ov-td-mono ov-td-muted">${safeText(log.ip, "-")}</td>
                         </tr>
                       `;
                     }).join("")}
                   </tbody>
                 </table>
               </div>
-              <div class="ap-pagination">
-                <span class="ap-desc-text" style="margin:0;">第 ${logsPage} / ${logsTotalPages} 页</span>
-                <div class="ap-row" style="gap:4px;">
-                  <button class="ap-btn ap-btn-sm ap-btn-ghost" type="button"
+              <div class="ov-logs-pagination">
+                <span class="ov-logs-page-info">第 ${logsPage} / ${logsTotalPages} 页</span>
+                <div class="ov-logs-page-btns">
+                  <button class="btn btn-sm" type="button"
                           data-action="set-logs-page" data-page="${logsPage - 1}"
                           ${logsPage <= 1 ? "disabled" : ""}>上页</button>
-                  <button class="ap-btn ap-btn-sm ap-btn-ghost" type="button"
+                  <button class="btn btn-sm" type="button"
                           data-action="set-logs-page" data-page="${logsPage + 1}"
                           ${logsPage >= logsTotalPages ? "disabled" : ""}>下页</button>
                 </div>

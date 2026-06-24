@@ -1,5 +1,5 @@
 export function createSystemRenderer({
-  safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
+  safeText, escapeHtml, renderEmptyState, renderEmptyStateCompact, formatTime, formatRelative, components
 }) {
 
   function renderSystemSection(admin) {
@@ -19,31 +19,33 @@ export function createSystemRenderer({
     }
 
     return `
-      <div class="ap">
-        <div class="ap-head">
-          <div>
-            <h2 class="ap-title">节点与分发</h2>
-            <p class="ap-desc">节点健康心跳及 Webhooks 回调自动化</p>
+      <div class="ov-system">
+        <div class="ov-system-header">
+          <div class="ov-system-title-group">
+            <h2 class="ov-system-title">系统监控</h2>
+            <p class="ov-system-desc">节点健康心跳、Webhooks与内部公告</p>
           </div>
-          <button class="ap-btn" type="button" data-action="refresh-admin-health" data-action2="refresh-admin-quota">刷新诊断</button>
+          <button class="btn" type="button" data-action="refresh-admin-health" data-action2="refresh-admin-quota">
+            刷新诊断
+          </button>
         </div>
 
-        <div class="ap-grid">
-          <div class="ap-card ap-col-7">
-            <div class="ap-card-head">
-              <span class="ap-lbl" style="margin:0;">组件探针</span>
+        <div class="ov-system-top">
+          <div class="ov-health">
+            <div class="ov-health-header">
+              <span class="ov-health-title">组件探针</span>
             </div>
-            <div class="ap-card-body" style="padding:0;">
+            <div class="ov-health-body">
               ${healthLoading
-                ? `<p class="ap-empty-inline">诊断中...</p>`
-                : `<div class="ap-grid" style="grid-template-columns:repeat(2,1fr);gap:0;">
+                ? `<div class="ov-empty-inline">诊断中...</div>`
+                : `<div class="ov-health-grid">
                     ${Object.entries(sysComponents).map(([name, statusObj]) => {
                       const isOk = statusObj.status === "ok";
                       return `
-                        <div class="ap-probe" style="border-right:1px solid var(--line);border-bottom:1px solid var(--line);">
-                          <span class="ap-probe-name">${escapeHtml(name)}</span>
-                          <span class="ap-probe-status ${isOk ? 'ap-probe-ok' : 'ap-probe-err'}">
-                            <span style="width:5px;height:5px;border-radius:1px;background:currentColor;flex-shrink:0;"></span>
+                        <div class="ov-health-item">
+                          <span class="ov-health-name">${escapeHtml(name)}</span>
+                          <span class="ov-health-status ${isOk ? 'ov-health-ok' : 'ov-health-err'}">
+                            <span class="ov-health-dot"></span>
                             ${isOk ? "ONLINE" : "OFFLINE"}
                           </span>
                         </div>
@@ -52,59 +54,63 @@ export function createSystemRenderer({
                   </div>`
               }
             </div>
-
-            <div style="border-top:1px solid var(--line);">
-              <div class="ap-card-head" style="padding:10px 14px;">
-                <span class="ap-lbl" style="margin:0;">Webhooks</span>
-                <button class="ap-btn ap-btn-sm" type="button" data-action="show-add-webhook">+ 新增</button>
-              </div>
-              <div class="ap-card-body" style="overflow-y:auto;max-height:140px;padding:0;">
-                ${webhooksLoading
-                  ? `<p class="ap-empty-inline">载入中...</p>`
-                  : webhooks.length === 0
-                    ? `<p class="ap-empty-inline">无配置的 Webhook 回调点</p>`
-                    : `<div class="ap-list">
-                        ${webhooks.map(hook => `
-                          <div class="ap-list-row" style="padding:8px 14px;">
-                            <div class="ap-list-row-main" style="flex:1;min-width:0;">
-                              <span class="ap-list-row-name">${escapeHtml(hook.name)}</span>
-                              <code style="font-size:10px;color:var(--muted);margin-left:4px;">${escapeHtml(hook.method || "POST")}</code>
-                            </div>
-                            <div class="ap-row" style="gap:4px;flex-shrink:0;">
-                              <button class="ap-btn ap-btn-sm ap-btn-ghost" type="button"
-                                      data-action="edit-webhook" data-id="${escapeHtml(hook.id)}">编辑</button>
-                              <button class="ap-btn ap-btn-sm ap-btn-danger" type="button"
-                                      data-action="confirm-delete-webhook"
-                                      data-id="${escapeHtml(hook.id)}"
-                                      data-name="${escapeHtml(hook.name)}">删除</button>
-                            </div>
-                          </div>
-                        `).join("")}
-                      </div>`
-                }
-              </div>
-            </div>
           </div>
 
-          <div class="ap-card ap-col-5">
-            <div class="ap-card-head">
-              <span class="ap-lbl" style="margin:0;">内部公告板</span>
-              ${notificationsUnread > 0 ? `<button class="ap-btn ap-btn-sm ap-btn-ghost" type="button" data-action="mark-all-notifications-read">全标已读</button>` : ""}
+          <div class="ov-notifications">
+            <div class="ov-notif-header">
+              <span class="ov-notif-title">内部公告板</span>
+              ${notificationsUnread > 0 ? `<button class="btn btn-sm" type="button" data-action="mark-all-notifications-read">全标已读</button>` : ""}
             </div>
-            <div class="ap-card-body" style="overflow-y:auto;max-height:280px;">
+            <div class="ov-notif-body">
               ${adminNotifHistoryLoading
-                ? `<p class="ap-empty-inline">拉取中...</p>`
+                ? `<div class="ov-empty-inline">拉取中...</div>`
                 : adminNotifHistory.length === 0
-                  ? `<p class="ap-empty-inline">公告板暂空无内容</p>`
-                  : `<div class="ap-list">
+                  ? `<div class="ov-empty-inline">公告板暂空无内容</div>`
+                  : `<div class="ov-notif-list">
                       ${adminNotifHistory.map(notif => `
-                        <div class="ap-notif ${!notif.read ? 'ap-notif-unread' : ''}">
-                          <div class="ap-notif-body">
-                            <p class="ap-notif-msg">${escapeHtml(notif.message)}</p>
-                            <span class="ap-notif-time">${formatTime(notif.created_at)}</span>
+                        <div class="ov-notif-item ${!notif.read ? 'ov-notif-unread' : ''}">
+                          <div class="ov-notif-content">
+                            <p class="ov-notif-msg">${escapeHtml(notif.message)}</p>
+                            <span class="ov-notif-time">${formatRelative(notif.created_at)}</span>
                           </div>
-                          ${!notif.read ? `<button class="ap-notif-check" type="button"
-                            data-action="admin-mark-notif-read" data-notif-id="${escapeHtml(notif.id)}">&#10003;</button>` : ""}
+                          ${!notif.read ? `<button class="ov-notif-check" type="button"
+                            data-action="admin-mark-notif-read" data-notif-id="${escapeHtml(notif.id)}">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                          </button>` : ""}
+                        </div>
+                      `).join("")}
+                    </div>`
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="ov-system-bottom">
+          <div class="ov-webhooks">
+            <div class="ov-webhook-header">
+              <span class="ov-webhook-title">Webhooks</span>
+              <button class="btn btn-sm" type="button" data-action="show-add-webhook">添加</button>
+            </div>
+            <div class="ov-webhook-body">
+              ${webhooksLoading
+                ? `<div class="ov-empty-inline">载入中...</div>`
+                : webhooks.length === 0
+                  ? `<div class="ov-empty-inline">无配置的 Webhook 回调点</div>`
+                  : `<div class="ov-webhook-list">
+                      ${webhooks.map(hook => `
+                        <div class="ov-webhook-item">
+                          <div class="ov-webhook-info">
+                            <span class="ov-webhook-name">${escapeHtml(hook.name)}</span>
+                            <code class="ov-webhook-method">${escapeHtml(hook.method || "POST")}</code>
+                          </div>
+                          <div class="ov-webhook-actions">
+                            <button class="btn btn-sm" type="button"
+                                    data-action="edit-webhook" data-id="${escapeHtml(hook.id)}">编辑</button>
+                            <button class="btn btn-danger btn-sm" type="button"
+                                    data-action="confirm-delete-webhook"
+                                    data-id="${escapeHtml(hook.id)}"
+                                    data-name="${escapeHtml(hook.name)}">删除</button>
+                          </div>
                         </div>
                       `).join("")}
                     </div>`

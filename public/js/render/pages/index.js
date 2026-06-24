@@ -2,17 +2,15 @@ import { createShareUtils } from "./admin/utils.js";
 import { createAdminComponents } from "./admin/components.js";
 import { createOverviewRenderer } from "./admin/overview.js";
 import { createLogsRenderer } from "./admin/logs.js";
-import { createSettingsRenderer } from "./admin/settings.js";
+import { createStorageRenderer } from "./admin/storage.js";
 import { createSharesRenderer } from "./admin/shares.js";
-import { createWebhooksRenderer } from "./admin/webhooks.js";
+import { createSystemRenderer } from "./admin/system.js";
 
 const ADMIN_TABS = [
   { id: "overview", label: "概览" },
   { id: "storage", label: "存储" },
   { id: "shares", label: "分享" },
-  { id: "paths", label: "路径" },
   { id: "logs", label: "日志" },
-  { id: "maintenance", label: "维护" },
   { id: "system", label: "系统" },
 ];
 
@@ -49,14 +47,12 @@ export function createPageRenderers(deps) {
     components,
   });
 
-  const settings = createSettingsRenderer({
+  const storage = createStorageRenderer({
     safeText: shareUtils.safeText,
     escapeHtml,
-    renderEmptyState,
     renderEmptyStateCompact,
     formatBytes,
     formatTime,
-    formatRelative,
     components,
   });
 
@@ -76,11 +72,12 @@ export function createPageRenderers(deps) {
     components,
   });
 
-  const webhooks = createWebhooksRenderer({
+  const system = createSystemRenderer({
     safeText: shareUtils.safeText,
     escapeHtml,
     renderEmptyState,
     renderEmptyStateCompact,
+    formatTime,
     formatRelative,
     components,
   });
@@ -100,18 +97,14 @@ export function createPageRenderers(deps) {
             "后台接口已接通，但当前还没有可展示的概览结果。",
           );
         return overview.renderAdminStatsGrid(admin.stats);
-      case "system":
-        return settings.renderSystemSection(admin);
       case "storage":
-        return settings.renderStorageSection(admin);
-      case "logs":
-        return logs.renderAdminLogsSection(admin);
-      case "paths":
-        return settings.renderPathManagementSection(admin);
-      case "maintenance":
-        return settings.renderAdminMaintenanceSection(admin);
+        return storage.renderStorageSection(admin);
       case "shares":
         return shares.renderAdminSharesSection(admin);
+      case "logs":
+        return logs.renderAdminLogsSection(admin);
+      case "system":
+        return system.renderSystemSection(admin);
       default:
         return "";
     }
