@@ -22,7 +22,9 @@ export function createOverviewRenderer({
 
   function renderAdminStatsGrid(stats) {
     if (!stats) return ``;
-    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {} } = stats;
+    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {}, attention = [] } = stats;
+    const warnings = attention.filter(i => i.level === "warning");
+    const anomalies = { total: warnings.length, items: warnings };
 
     const breakdownItems = Object.entries(breakdown || {});
     const totalBreakdown = breakdownItems.reduce((sum, [_, val]) => sum + (val.count || 0), 0) || 1;
@@ -142,9 +144,9 @@ export function createOverviewRenderer({
                   <div class="ov-maint-item">
                     <div class="ov-maint-info">
                       <span class="ov-maint-label">异常</span>
-                      <span class="ov-maint-value">${safeText(anomaly?.total || "0")}</span>
+                      <span class="ov-maint-value">${safeText(anomalies.total, "0")}</span>
                     </div>
-                    ${anomaly?.total > 0 
+                    ${anomalies.total > 0 
                       ? `<span class="ov-maint-tag" style="background:rgba(239,68,68,0.1);color:#ef4444;">需处理</span>`
                       : `<span class="ov-maint-tag" style="background:rgba(16,185,129,0.1);color:#10b981;">正常</span>`}
                   </div>
