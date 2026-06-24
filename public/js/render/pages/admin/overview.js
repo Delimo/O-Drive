@@ -158,24 +158,52 @@ export function createOverviewRenderer({
             <div class="ov-section">
               <div class="ov-section-head">
                 <span class="ov-section-title">类型分布</span>
+                <button class="btn btn-sm" type="button" data-action="refresh-admin">刷新</button>
               </div>
-              <div class="ov-section-body ov-breakdown-list">
-                ${breakdownItems.length > 0 ? breakdownItems.map(([category, info]) => {
-                  const count = info.count || 0;
-                  const pct = Math.min(100, Math.round((count / totalBreakdown) * 100));
-                  const color = category === '图片' ? '#10b981' : category === '视频' ? '#8b5cf6' : category === '音频' ? '#ec4899' : category === '文档' ? '#0e7490' : 'var(--accent)';
+              <div class="ov-section-body ov-breakdown-chart">
+                ${breakdownItems.length > 0 ? (() => {
+                  const colors = ['#10b981', '#8b5cf6', '#ec4899', '#0e7490', '#f59e0b', '#64748b'];
+                  let offset = 0;
+                  const radius = 60;
+                  const circumference = 2 * Math.PI * radius;
+                  const segments = breakdownItems.map(([category, info], i) => {
+                    const count = info.count || 0;
+                    const pct = Math.min(100, Math.round((count / totalBreakdown) * 100));
+                    const color = colors[i % colors.length];
+                    const dashLength = (pct / 100) * circumference;
+                    const dashOffset = -offset;
+                    offset += dashLength;
+                    return { category, count, pct, color, dashLength, dashOffset };
+                  });
                   return `
-                    <div class="ov-breakdown-item">
-                      <div class="ov-breakdown-header">
-                        <span class="ov-breakdown-name">${escapeHtml(category)}</span>
-                        <span class="ov-breakdown-val">${count} (${pct}%)</span>
-                      </div>
-                      <div class="ov-breakdown-track">
-                        <div class="ov-breakdown-fill" style="width:${pct}%;background:${color};"></div>
-                      </div>
+                    <div class="ov-chart-left">
+                      <svg viewBox="0 0 160 160" class="ov-donut">
+                        <circle cx="80" cy="80" r="${radius}" fill="none" stroke="var(--line)" stroke-width="16"/>
+                        ${segments.map(s => `
+                          <circle cx="80" cy="80" r="${radius}" fill="none" 
+                                  stroke="${s.color}" stroke-width="16"
+                                  stroke-dasharray="${s.dashLength} ${circumference - s.dashLength}"
+                                  stroke-dashoffset="${s.dashOffset}"
+                                  transform="rotate(-90 80 80)"/>
+                        `).join("")}
+                        <text x="80" y="76" text-anchor="middle" class="ov-donut-total">${totalBreakdown}</text>
+                        <text x="80" y="92" text-anchor="middle" class="ov-donut-label">总文件</text>
+                      </svg>
+                    </div>
+                    <div class="ov-chart-right">
+                      ${segments.map(s => `
+                        <div class="ov-chart-legend-item">
+                          <span class="ov-chart-legend-dot" style="background:${s.color};"></span>
+                          <span class="ov-chart-legend-name">${escapeHtml(s.category)}</span>
+                          <span class="ov-chart-legend-val">${s.count}</span>
+                          <div class="ov-chart-legend-bar">
+                            <div class="ov-chart-legend-fill" style="width:${s.pct}%;background:${s.color};"></div>
+                          </div>
+                        </div>
+                      `).join("")}
                     </div>
                   `;
-                }).join("") : `
+                })() : `
                   <div class="ov-empty-inline">暂无分类数据</div>
                 `}
               </div>
