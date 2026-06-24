@@ -238,9 +238,59 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
     if (count > 0) {
       items.push({
         level: "warning",
-        title: "系统提醒待查看",
-        body: `当前记录了 ${count} 条系统提醒，可以在系统状态页查看来源。`,
-        tab: "health",
+        title: "其他异常",
+        body: `当前记录了 ${count} 条系统异常，可以在系统状态页查看详情。`,
+        tab: "system",
+        action: "maintenance-action",
+        actionArgs: ["cleanup-warnings"],
+      });
+    }
+  } catch (_) {}
+  try {
+    const loginFails = await env.D1.prepare(
+      "SELECT COUNT(*) as count FROM login_attempts WHERE attempts >= 3",
+    ).first();
+    const count = Number(loginFails?.count || 0);
+    if (count > 0) {
+      items.push({
+        level: "warning",
+        title: "登录异常",
+        body: `当前有 ${count} 个 IP 触发登录限制，可能遭受暴力破解。`,
+        tab: "system",
+        action: "maintenance-action",
+        actionArgs: ["cleanup-login-attempts"],
+      });
+    }
+  } catch (_) {}
+  try {
+    const downloadBlocked = await env.D1.prepare(
+      "SELECT COUNT(*) as count FROM download_bursts WHERE blocked_until > ?",
+    ).bind(Date.now()).first();
+    const count = Number(downloadBlocked?.count || 0);
+    if (count > 0) {
+      items.push({
+        level: "warning",
+        title: "下载异常",
+        body: `当前有 ${count} 个 IP 被临时禁止下载，检测到异常下载行为。`,
+        tab: "system",
+        action: "maintenance-action",
+        actionArgs: ["cleanup-download-bursts"],
+      });
+    }
+  } catch (_) {}
+  try {
+    const unlockFails = await env.D1.prepare(
+      "SELECT COUNT(*) as count FROM path_access_attempts WHERE attempts >= 3",
+    ).first();
+    const count = Number(unlockFails?.count || 0);
+    if (count > 0) {
+      items.push({
+        level: "warning",
+        title: "路径解锁异常",
+        body: `当前有 ${count} 条记录触发路径解锁限制，可能遭受暴力破解。`,
+        tab: "system",
+        action: "maintenance-action",
+        actionArgs: ["cleanup-access-attempts"],
       });
     }
   } catch (_) {}

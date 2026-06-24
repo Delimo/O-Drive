@@ -111,6 +111,30 @@ export async function handleAdminMaintenanceAction(env, request) {
     await addLog(env, request, "MAINTENANCE", `清理访问失败记录 ${deleted} 项`);
     return jsonResponse({ success: true, action, deleted });
   }
+  if (action === "cleanup-login-attempts") {
+    let deleted = 0;
+    try {
+      const row = await env.D1.prepare(
+        "SELECT COUNT(*) as count FROM login_attempts",
+      ).first();
+      deleted = Number(row?.count || 0);
+      await env.D1.prepare("DELETE FROM login_attempts").run();
+    } catch (_) {}
+    await addLog(env, request, "MAINTENANCE", `清理登录失败记录 ${deleted} 项`);
+    return jsonResponse({ success: true, action, deleted });
+  }
+  if (action === "cleanup-download-bursts") {
+    let deleted = 0;
+    try {
+      const row = await env.D1.prepare(
+        "SELECT COUNT(*) as count FROM download_bursts",
+      ).first();
+      deleted = Number(row?.count || 0);
+      await env.D1.prepare("DELETE FROM download_bursts").run();
+    } catch (_) {}
+    await addLog(env, request, "MAINTENANCE", `清理下载异常记录 ${deleted} 项`);
+    return jsonResponse({ success: true, action, deleted });
+  }
   if (action === "cleanup-thumbnails") {
     const result = await deletePrefix(env, ".thumbs/");
     await addLog(

@@ -1042,9 +1042,15 @@
 
 /* ─── Recent List ─── */
 .ov-recent-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+}
+
+@media (max-width: 1200px) {
+  .ov-recent-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ov-recent-item {
