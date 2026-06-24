@@ -1,5 +1,4 @@
 export function createNotificationsRenderer({
-  icons,
   escapeHtml,
   renderEmptyStateCompact,
   formatRelative,
@@ -12,7 +11,6 @@ export function createNotificationsRenderer({
       return renderEmptyStateCompact(
         "加载中",
         "正在获取通知历史...",
-        icons.bell,
       );
     }
     const items = adminNotifHistory || [];
@@ -26,7 +24,6 @@ export function createNotificationsRenderer({
           ? renderEmptyStateCompact(
               "暂无通知",
               "目前还没有任何通知记录。",
-              icons.bell,
             )
           : `
             <div class="table-wrap">

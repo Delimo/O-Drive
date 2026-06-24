@@ -1,5 +1,4 @@
 export function createWebhooksRenderer({
-  icons,
   safeText,
   escapeHtml,
   renderEmptyState,
@@ -13,7 +12,7 @@ export function createWebhooksRenderer({
     if (webhooksError) {
       return `
         <div class="empty-state">
-          <div class="empty-orb">${icons.link}</div>
+          <div class="empty-orb"></div>
           <p class="empty-copy">${escapeHtml(webhooksError)}</p>
           <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">重新加载</button></div>
         </div>
@@ -21,7 +20,7 @@ export function createWebhooksRenderer({
     }
 
     if (webhooksLoading) {
-      return renderEmptyState("加载中", "正在加载 Webhook 配置...", icons.link);
+      return renderEmptyState("加载中", "正在加载 Webhook 配置...");
     }
 
     return `
@@ -30,7 +29,6 @@ export function createWebhooksRenderer({
           ? renderEmptyState(
               "暂无 Webhook",
               "还没有配置任何 Webhook。添加后可在文件操作或管理事件时收到通知。",
-              icons.link,
             )
           : `
             <div class="latest-list">
@@ -73,12 +71,11 @@ export function createWebhooksRenderer({
     return `
       ${
         webhookDeliveriesLoading
-          ? renderEmptyState("加载中", "正在加载投递记录...", icons.list)
+          ? renderEmptyState("加载中", "正在加载投递记录...")
           : webhookDeliveries.length === 0
             ? renderEmptyState(
                 "暂无投递记录",
                 "还没有任何 Webhook 投递记录。",
-                icons.list,
               )
             : `
               <div class="latest-list">
@@ -120,7 +117,7 @@ export function createWebhooksRenderer({
     if (webhooksError) {
       webhooksHtml = `
         <div class="empty-state">
-          <div class="empty-orb">${icons.link}</div>
+          <div class="empty-orb"></div>
           <p class="empty-copy">${escapeHtml(webhooksError)}</p>
           <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-webhooks">重新加载</button></div>
         </div>
@@ -129,13 +126,11 @@ export function createWebhooksRenderer({
       webhooksHtml = renderEmptyStateCompact(
         "加载中",
         "正在加载 Webhook 配置...",
-        icons.link,
       );
     } else if (webhooks.length === 0) {
       webhooksHtml = renderEmptyStateCompact(
         "暂无 Webhook",
         "还没有配置任何 Webhook。添加后可在文件操作或管理事件时收到通知。",
-        icons.link,
       );
     } else {
       webhooksHtml = `
@@ -176,13 +171,11 @@ export function createWebhooksRenderer({
       deliveriesHtml = renderEmptyStateCompact(
         "加载中",
         "正在加载投递记录...",
-        icons.list,
       );
     } else if (webhookDeliveries.length === 0) {
       deliveriesHtml = renderEmptyStateCompact(
         "暂无投递记录",
         "还没有任何 Webhook 投递记录。",
-        icons.list,
       );
     } else {
       deliveriesHtml = `

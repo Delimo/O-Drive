@@ -1,85 +1,68 @@
 export function createLogsRenderer({
-  icons, safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
+  safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
 }) {
 
   function renderAdminLogsSection(admin) {
     const { logs = [], logsLoading, logsError, logsPage = 1, logsTotalPages = 1, logsFilter = {} } = admin;
 
     if (logsError) {
-      return components.renderErrorCard({ icon: icons.refresh, error: logsError, onRetry: "refresh-admin-logs" });
+      return components.renderErrorCard({ icon: "", error: logsError, onRetry: "refresh-admin-logs" });
     }
     if (logsLoading) {
-      return renderEmptyStateCompact("正在读取审计日志", "正在加载列表...", icons.spinner);
+      return renderEmptyStateCompact("载入中", "读取日志流...", "");
     }
 
     return `
-      <div class="ov-page" style="display:flex; flex-direction:column; gap:16px;">
+      <div class="ov-page" style="display:flex; flex-direction:column; gap:12px; height:100%; overflow:hidden; font-family:system-ui, sans-serif;">
         <div class="ov-page-header" style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <h2 class="ov-page-title" style="margin:0; font-size:20px; font-weight:700; color:var(--text);">系统日志</h2>
-            <p class="ov-page-desc" style="margin:4px 0 0; font-size:13px; color:var(--muted);">审查平台管理员和系统后台行为的安全和运行记录</p>
+            <h2 class="ov-page-title" style="margin:0; font-size:16px; font-weight:600; color:var(--text);">审计日志</h2>
+            <p class="ov-page-desc" style="margin:2px 0 0; font-size:11px; color:var(--muted);">记录平台所有的管理员安全及数据更改行为</p>
           </div>
         </div>
 
-        <!-- 检索工具箱 -->
-        <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:center;">
-          <!-- 关键词 -->
-          <div style="position:relative;">
-            <input class="input" type="text" data-action-input="set-logs-filter" data-key="q" value="${escapeHtml(logsFilter.q || "")}" placeholder="搜索路径、操作员、IP..." style="width:100%; padding:8px 12px 8px 30px; font-size:13px; border-radius:8px; border:1px solid var(--line); background:var(--panel-soft);">
-            <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--muted);">${icons.search}</span>
-          </div>
-          <!-- 操作过滤 -->
-          <select class="input" data-action-change="set-logs-filter" data-key="action" style="padding:8px; font-size:13px; border-radius:8px; border:1px solid var(--line); background:var(--panel-soft);">
-            <option value="">全部行为 (All)</option>
-            <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传 (Upload)</option>
-            <option value="delete" ${logsFilter.action === "delete" ? "selected" : ""}>删除 (Delete)</option>
-            <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>分享 (Share)</option>
-            <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>安全登录 (Login)</option>
+        <!-- 扁平紧凑筛选项 -->
+        <div style="display:flex; gap:8px; align-items:center; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:6px 0;">
+          <input class="input" type="text" data-action-input="set-logs-filter" data-key="q" value="${escapeHtml(logsFilter.q || "")}" placeholder="过滤关键词..." style="flex:1.5; padding:4px 8px; font-size:11px; border:1px solid var(--line); border-radius:4px; background:transparent;">
+          <select class="input" data-action-change="set-logs-filter" data-key="action" style="flex:1; padding:4px; font-size:11px; border:1px solid var(--line); border-radius:4px; background:transparent;">
+            <option value="">全部事件</option>
+            <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传</option>
+            <option value="delete" ${logsFilter.action === "delete" ? "selected" : ""}>删除</option>
+            <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>共享</option>
+            <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>安全登录</option>
           </select>
-          <!-- 起始时间 -->
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:12px; color:var(--muted); flex-shrink:0;">起:</span>
-            <input class="input" type="date" data-action-change="set-logs-filter" data-key="from" value="${escapeHtml(logsFilter.from || "")}" style="width:100%; padding:6px; font-size:12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-soft);">
-          </div>
-          <!-- 截止时间 -->
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:12px; color:var(--muted); flex-shrink:0;">止:</span>
-            <input class="input" type="date" data-action-change="set-logs-filter" data-key="to" value="${escapeHtml(logsFilter.to || "")}" style="width:100%; padding:6px; font-size:12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-soft);">
+          <div style="display:flex; align-items:center; gap:2px; font-size:10px; color:var(--muted);">
+            <span>时间段:</span>
+            <input class="input" type="date" data-action-change="set-logs-filter" data-key="from" value="${escapeHtml(logsFilter.from || "")}" style="padding:2px 4px; border:1px solid var(--line); background:transparent; font-size:10px;">
+            <span>-</span>
+            <input class="input" type="date" data-action-change="set-logs-filter" data-key="to" value="${escapeHtml(logsFilter.to || "")}" style="padding:2px 4px; border:1px solid var(--line); background:transparent; font-size:10px;">
           </div>
         </div>
 
-        <!-- 日志主体表格 -->
-        <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden;">
+        <!-- 日志表格（行高与容量缩减，高度严格在 190px 以内） -->
+        <div style="display:flex; flex-direction:column; flex:1; min-h-0;">
           ${logs.length === 0 ? `
-            <p style="text-align:center; color:var(--muted); font-size:13px; padding:48px 12px; margin:0;">无匹配审计日志</p>
+            <p style="text-align:center; color:var(--muted); font-size:11px; padding:24px 0;">无匹配行为日志</p>
           ` : `
-            <div style="overflow-x:auto;">
-              <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+            <div style="overflow-y:auto; max-height:190px; border-bottom:1px solid var(--line);">
+              <table style="width:100%; border-collapse:collapse; text-align:left; font-size:11px;">
                 <thead>
-                  <tr style="border-bottom:1px solid var(--line); background:var(--panel-soft); color:var(--muted);">
-                    <th style="padding:12px 16px; font-weight:600;">时间</th>
-                    <th style="padding:12px 16px; font-weight:600;">操作</th>
-                    <th style="padding:12px 16px; font-weight:600;">资源路径</th>
-                    <th style="padding:12px 16px; font-weight:600;">操作人</th>
-                    <th style="padding:12px 16px; font-weight:600;">IP 地址</th>
+                  <tr style="border-bottom:1px solid var(--line); color:var(--muted);">
+                    <th style="padding:6px 8px; font-weight:500;">操作时间</th>
+                    <th style="padding:6px 8px; font-weight:500;">动作行为</th>
+                    <th style="padding:6px 8px; font-weight:500;">目标资源路径</th>
+                    <th style="padding:6px 8px; font-weight:500;">IP</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${logs.map(log => {
-                    const actColor = log.action === "delete" ? "var(--danger)" : log.action === "login" ? "#10b981" : "var(--accent)";
+                    const actColor = log.action === "delete" ? "var(--danger)" : log.action === "login" ? "#10b981" : "var(--text)";
                     return `
-                      <tr style="border-bottom:1px solid var(--line); color:var(--text);">
-                        <td style="padding:12px 16px; color:var(--muted); white-space:nowrap;">${formatTime(log.createdAt)}</td>
-                        <td style="padding:12px 16px;">
-                          <span style="font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase; background:var(--panel-soft); color:${actColor};">
-                            ${escapeHtml(log.action)}
-                          </span>
-                        </td>
-                        <td style="padding:12px 16px; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:monospace;">
-                          ${safeText(log.path, "-")}
-                        </td>
-                        <td style="padding:12px 16px; font-weight:500;">${safeText(log.user, "System")}</td>
-                        <td style="padding:12px 16px; color:var(--muted); font-family:monospace;">${safeText(log.ip, "-")}</td>
+                      <tr style="border-bottom:1px dashed var(--line); color:var(--text);">
+                        <td style="padding:6px 8px; color:var(--muted); white-space:nowrap;">${formatTime(log.createdAt)}</td>
+                        <td style="padding:6px 8px; font-weight:600; color:${actColor}; text-transform:uppercase; font-size:10px;">${escapeHtml(log.action)}</td>
+                        <td style="padding:6px 8px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:monospace;">${safeText(log.path, "-")}</td>
+                        <td style="padding:6px 8px; color:var(--muted); font-family:monospace;">${safeText(log.ip, "-")}</td>
                       </tr>
                     `;
                   }).join("")}
@@ -87,16 +70,12 @@ export function createLogsRenderer({
               </table>
             </div>
 
-            <!-- 分页管理器 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-top:1px solid var(--line); background:var(--panel-soft);">
-              <span style="font-size:12px; color:var(--muted);">第 ${logsPage} / ${logsTotalPages} 页</span>
-              <div style="display:flex; gap:6px;">
-                <button class="btn" type="button" data-action="set-logs-page" data-page="${logsPage - 1}" 
-                        style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel);"
-                        ${logsPage <= 1 ? "disabled" : ""}>上一页</button>
-                <button class="btn" type="button" data-action="set-logs-page" data-page="${logsPage + 1}" 
-                        style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel);"
-                        ${logsPage >= logsTotalPages ? "disabled" : ""}>下一页</button>
+            <!-- 扁平翻页栏 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; font-size:11px;">
+              <span style="color:var(--muted);">第 ${logsPage} / ${logsTotalPages} 页</span>
+              <div style="display:flex; gap:4px;">
+                <button class="btn" type="button" data-action="set-logs-page" data-page="${logsPage - 1}" style="font-size:10px; padding:2px 6px; border:1px solid var(--line); border-radius:4px; background:transparent;" ${logsPage <= 1 ? "disabled" : ""}>上页</button>
+                <button class="btn" type="button" data-action="set-logs-page" data-page="${logsPage + 1}" style="font-size:10px; padding:2px 6px; border:1px solid var(--line); border-radius:4px; background:transparent;" ${logsPage >= logsTotalPages ? "disabled" : ""}>下页</button>
               </div>
             </div>
           `}

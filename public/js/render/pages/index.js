@@ -18,7 +18,6 @@ const ADMIN_TABS = [
 
 export function createPageRenderers(deps) {
   const {
-    icons,
     escapeHtml,
     renderEmptyState,
     renderEmptyStateCompact,
@@ -28,10 +27,9 @@ export function createPageRenderers(deps) {
   } = deps;
 
   const shareUtils = createShareUtils({ escapeHtml });
-  const components = createAdminComponents({ icons, escapeHtml });
+  const components = createAdminComponents({ escapeHtml });
 
   const overview = createOverviewRenderer({
-    icons,
     safeText: shareUtils.safeText,
     escapeHtml,
     renderEmptyStateCompact,
@@ -42,7 +40,6 @@ export function createPageRenderers(deps) {
   });
 
   const logs = createLogsRenderer({
-    icons,
     safeText: shareUtils.safeText,
     escapeHtml,
     renderEmptyState,
@@ -53,7 +50,6 @@ export function createPageRenderers(deps) {
   });
 
   const settings = createSettingsRenderer({
-    icons,
     safeText: shareUtils.safeText,
     escapeHtml,
     renderEmptyState,
@@ -65,7 +61,6 @@ export function createPageRenderers(deps) {
   });
 
   const shares = createSharesRenderer({
-    icons,
     safeText: shareUtils.safeText,
     escapeHtml,
     renderEmptyState,
@@ -82,7 +77,6 @@ export function createPageRenderers(deps) {
   });
 
   const webhooks = createWebhooksRenderer({
-    icons,
     safeText: shareUtils.safeText,
     escapeHtml,
     renderEmptyState,
@@ -98,14 +92,12 @@ export function createPageRenderers(deps) {
           return renderEmptyStateCompact(
             "正在加载概览",
             "正在统计文件数量、索引状态与回收站信息。",
-            icons.stats,
           );
         if (admin.error) return overview.renderAdminErrorState(admin.error);
         if (!admin.stats)
           return renderEmptyStateCompact(
             "暂无概览数据",
             "后台接口已接通，但当前还没有可展示的概览结果。",
-            icons.stats,
           );
         return overview.renderAdminStatsGrid(admin.stats);
       case "system":
@@ -144,7 +136,7 @@ export function createPageRenderers(deps) {
           </div>
         </div>
         <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col">
-          ${renderEmptyStateCompact("需要管理员登录", "登录后即可查看文件统计、索引状态、分享记录和后续管理模块。", icons.lock)}
+          ${renderEmptyStateCompact("需要管理员登录", "登录后即可查看文件统计、索引状态、分享记录和后续管理模块。")}
         </div>
       `;
     }

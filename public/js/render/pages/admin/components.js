@@ -1,4 +1,4 @@
-export function createAdminComponents({ icons, escapeHtml }) {
+export function createAdminComponents({ escapeHtml }) {
   function renderEmptyCard({ icon, title, description, action }) {
     const actionHtml = action
       ? `<div class="mt-3"><button class="btn toolbar-btn" type="button" data-action="${escapeHtml(action.action)}">${escapeHtml(action.label)}</button></div>`
@@ -6,7 +6,7 @@ export function createAdminComponents({ icons, escapeHtml }) {
 
     return `
       <div class="empty-state">
-        <div class="empty-orb">${icon || icons.lock}</div>
+        <div class="empty-orb">${icon || ""}</div>
         <p class="empty-copy">${escapeHtml(description || "")}</p>
         ${actionHtml}
       </div>
@@ -16,7 +16,7 @@ export function createAdminComponents({ icons, escapeHtml }) {
   function renderLoadingCard({ icon, title, description }) {
     return `
       <div class="empty-state-compact">
-        <div class="empty-orb">${icon || icons.loading}</div>
+        <div class="empty-orb">${icon || ""}</div>
         <h3 class="empty-title">${escapeHtml(title || "加载中")}</h3>
         <p class="empty-copy">${escapeHtml(description || "")}</p>
       </div>
@@ -30,7 +30,7 @@ export function createAdminComponents({ icons, escapeHtml }) {
 
     return `
       <div class="empty-state">
-        <div class="empty-orb">${icon || icons.lock}</div>
+        <div class="empty-orb">${icon || ""}</div>
         <p class="empty-copy">${escapeHtml(error)}</p>
         ${retryHtml}
       </div>

@@ -1,102 +1,84 @@
 export function createStorageRenderer({
-  icons, safeText, escapeHtml, renderEmptyStateCompact, formatBytes, components
+  safeText, escapeHtml, renderEmptyStateCompact, components
 }) {
-  
   function renderStorageSection(admin) {
     const { storageConfig, storageConfigLoading, storageConfigError, trashRetention, trashRetentionLoading, trashCleanupBusy } = admin;
 
     if (storageConfigError) {
-      return components.renderErrorCard({ icon: icons.refresh, error: storageConfigError, onRetry: "refresh-admin-storage-config" });
+      return components.renderErrorCard({ icon: "", error: storageConfigError, onRetry: "refresh-admin-storage-config" });
     }
     if (storageConfigLoading || !storageConfig) {
-      return renderEmptyStateCompact("正在加载存储配置", "读取云端参数中...", icons.spinner);
+      return renderEmptyStateCompact("载入中", "读取存储桶配额...", "");
     }
 
     const r2 = storageConfig.r2 || {};
     const usedPercent = r2.usedPercent || 0;
 
     return `
-      <div class="ov-page" style="display:flex; flex-direction:column; gap:16px;">
+      <div class="ov-page" style="display:flex; flex-direction:column; gap:16px; height:100%; overflow:hidden; font-family:system-ui, sans-serif;">
         <div class="ov-page-header">
           <div>
-            <h2 class="ov-page-title" style="margin:0; font-size:20px; font-weight:700; color:var(--text);">存储管理</h2>
-            <p class="ov-page-desc" style="margin:4px 0 0; font-size:13px; color:var(--muted);">查看 R2 云存储配额及配置回收站保留期限</p>
+            <h2 class="ov-page-title" style="margin:0; font-size:16px; font-weight:600; color:var(--text);">储存管理</h2>
+            <p class="ov-page-desc" style="margin:2px 0 0; font-size:11px; color:var(--muted);">控制 R2 存储桶配额及设置文件临时保留周期</p>
           </div>
         </div>
 
-        <div class="admin-grid" style="display:grid; grid-template-columns: repeat(12, 1fr); gap:16px;">
-          <!-- 存储配额卡片 (7 columns) -->
-          <div style="grid-column: span 7; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:24px; border-top:1px solid var(--line); padding-top:16px; flex:1; min-h-0;">
+          <!-- 存储配额 -->
+          <div style="display:flex; flex-direction:column; justify-content:space-between;">
             <div>
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
-                <div>
-                  <span class="admin-label" style="font-size:11px; text-transform:uppercase; color:var(--muted); letter-spacing:0.05em;">Cloudflare R2</span>
-                  <h3 style="margin:4px 0 0; font-size:18px; font-weight:700; color:var(--text);">${escapeHtml(r2.name || "未连接存储桶")}</h3>
-                </div>
-                <button class="btn" type="button" data-action="show-edit-storage-quota" style="font-size:12px; font-weight:600; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel); color:var(--text);">
-                  调整配额限制
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px;">
+                <span style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">R2 实例：${escapeHtml(r2.name || "bucket")}</span>
+                <button class="btn" type="button" data-action="show-edit-storage-quota" style="font-size:11px; padding:3px 8px; border:1px solid var(--line); border-radius:4px; background:transparent;">
+                  调整限额
                 </button>
               </div>
 
-              <div style="margin:24px 0;">
-                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px;">
-                  <span style="color:var(--muted);">存储使用进度</span>
-                  <span style="font-weight:600; color:var(--text);">${usedPercent}% (${safeText(r2.usedFormatted)} / ${safeText(r2.quotaFormatted)})</span>
+              <div style="margin:12px 0;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+                  <span style="color:var(--text);">空间已用百分比</span>
+                  <span style="font-weight:600; color:var(--text);">${usedPercent}%</span>
                 </div>
-                <!-- 优化后的进度轨 -->
-                <div style="height:12px; background:var(--track-bg); border-radius:6px; overflow:hidden;">
-                  <div style="width:${usedPercent}%; height:100%; background:linear-gradient(90deg, var(--accent) 0%, #06b6d4 100%); border-radius:6px; transition: width 0.3s ease;"></div>
+                <!-- 极简纤细轨道线 -->
+                <div style="height:3px; background:var(--track-bg); overflow:hidden;">
+                  <div style="width:${usedPercent}%; height:100%; background:var(--accent);"></div>
                 </div>
               </div>
             </div>
 
-            <div style="display:flex; gap:16px; border-top:1px solid var(--line); padding-top:16px; margin-top:8px;">
-              <div style="flex:1;">
-                <span style="font-size:11px; color:var(--muted);">已使用</span>
-                <div style="font-size:16px; font-weight:600; color:var(--text); margin-top:2px;">${safeText(r2.usedFormatted)}</div>
+            <div style="display:flex; gap:16px; font-size:12px; border-top:1px solid var(--line); padding-top:12px;">
+              <div>
+                <span style="color:var(--muted);">已使用容量</span>
+                <div style="font-weight:600; color:var(--text); margin-top:2px;">${safeText(r2.usedFormatted)}</div>
               </div>
-              <div style="flex:1; border-left:1px solid var(--line); padding-left:16px;">
-                <span style="font-size:11px; color:var(--muted);">总限额</span>
-                <div style="font-size:16px; font-weight:600; color:var(--text); margin-top:2px;">${safeText(r2.quotaFormatted)}</div>
+              <div style="border-left:1px solid var(--line); padding-left:16px;">
+                <span style="color:var(--muted);">配额总上限</span>
+                <div style="font-weight:600; color:var(--text); margin-top:2px;">${safeText(r2.quotaFormatted)}</div>
               </div>
             </div>
           </div>
 
-          <!-- 回收站策略卡片 (5 columns) -->
-          <div style="grid-column: span 5; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+          <!-- 回收站控制 -->
+          <div style="display:flex; flex-direction:column; justify-content:space-between; border-left:1px solid var(--line); padding-left:24px;">
             <div>
-              <h3 style="margin:0 0 8px 0; font-size:15px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px;">
-                <span style="width:18px; height:18px; color:var(--danger);">${icons.trash}</span> 回收站与文件清理
-              </h3>
-              <p style="font-size:13px; color:var(--muted); line-height:1.4; margin:0 0 16px 0;">
-                设置文件删除后的保留时间。保留期到期后系统会自动清理其数据。
-              </p>
+              <h3 style="margin:0 0 4px 0; font-size:13px; font-weight:600; color:var(--text);">过期自动垃圾清理</h3>
+              <p style="font-size:11px; color:var(--muted); line-height:1.4; margin-bottom:12px;">设置已删除文件在系统内被永久抹除前的暂存天数。</p>
 
-              <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
-                <label style="font-size:12px; font-weight:600; color:var(--text);">自动清理周期</label>
-                <div style="display:flex; gap:8px;">
-                  <div style="position:relative; flex:1;">
-                    <input class="input" type="number" data-binding="trash-retention-days" 
-                           value="${trashRetention ? trashRetention.days : 7}" min="1" max="365"
-                           style="width:100%; padding:8px 12px; padding-right:40px; border:1px solid var(--line); border-radius:8px; background:var(--panel-soft); font-size:13px;"
-                           ${trashRetentionLoading ? 'disabled' : ''}>
-                    <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--muted);">天</span>
-                  </div>
-                  <button class="btn btn-primary" type="button" data-action="save-trash-retention" 
-                          style="padding:0 16px; font-size:13px; font-weight:600; border-radius:8px;"
-                          ${trashRetentionLoading ? 'disabled' : ''}>
-                    保存设置
-                  </button>
+              <div style="display:flex; gap:6px;">
+                <div style="position:relative; flex:1;">
+                  <input class="input" type="number" data-binding="trash-retention-days" value="${trashRetention ? trashRetention.days : 7}" style="width:100%; padding:5px 8px; font-size:12px; border:1px solid var(--line); border-radius:4px; background:transparent;">
+                  <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--muted);">天</span>
                 </div>
+                <button class="btn btn-primary" type="button" data-action="save-trash-retention" style="font-size:11px; padding:0 12px; border-radius:4px;">
+                  保存
+                </button>
               </div>
             </div>
 
-            <div style="border-top:1px solid var(--line); padding-top:16px; display:flex; align-items:center; justify-content:space-between;">
-              <span style="font-size:12px; color:var(--muted);">需要立即释放空间吗？</span>
-              <button class="btn btn-danger" type="button" data-action="cleanup-trash-by-retention"
-                      style="font-size:12px; padding:6px 12px; border-radius:8px;"
-                      ${trashCleanupBusy ? 'disabled' : ''}>
-                ${trashCleanupBusy ? '清理中...' : '即刻启动清理'}
+            <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--line); padding-top:12px; font-size:11px;">
+              <span style="color:var(--muted);">强制清空回收站：</span>
+              <button class="btn btn-danger" type="button" data-action="cleanup-trash-by-retention" style="font-size:11px; padding:3px 8px; border-radius:4px;" ${trashCleanupBusy ? 'disabled' : ''}>
+                ${trashCleanupBusy ? '清理中...' : '立即同步清理'}
               </button>
             </div>
           </div>
