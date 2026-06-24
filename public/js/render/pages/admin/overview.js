@@ -1,196 +1,156 @@
 export function createOverviewRenderer({
-  icons,
-  safeText,
-  escapeHtml,
-  renderEmptyStateCompact,
-  formatBytes,
-  formatTime,
-  formatRelative,
-  components,
+  icons, safeText, escapeHtml, renderEmptyStateCompact, formatBytes, formatTime
 }) {
-  function renderRingChart(breakdown) {
-    const entries = Object.entries(breakdown);
-    if (!entries.length) return "";
+  
+  // 渲染文件分类进度条
+  function renderBreakdownList(breakdown) {
+    const items = Object.entries(breakdown || {});
+    if (items.length === 0) return `<p style="color:var(--muted); font-size:13px; text-align:center; padding:12px;">暂无分类数据</p>`;
+    
+    // 计算总数以便画比例条
+    const totalCount = items.reduce((sum, [_, val]) => sum + (val.count || 0), 0) || 1;
 
-    const colors = ["#0e7490", "#f59e0b", "#8b5cf6", "#10b981", "#ef4444", "#6366f1", "#ec4899", "#14b8a6"];
-    const radius = 38;
-    const circumference = 2 * Math.PI * radius;
-    const total = entries.reduce((s, [, v]) => s + (v.count || 0), 0);
-    if (!total) return "";
-
-    let offset = 0;
-    const segments = entries.map(([key, val], i) => {
-      const pct = (val.count || 0) / total;
-      const len = pct * circumference;
-      const seg = `<circle cx="50" cy="50" r="${radius}" fill="none" stroke="${colors[i % colors.length]}" stroke-width="10" stroke-dasharray="${len} ${circumference - len}" stroke-dashoffset="${-offset}" stroke-linecap="round" />`;
-      offset += len;
-      return seg;
-    });
-
-    return `
-      <div class="ov2-ring-wrap">
-        <svg class="ov2-ring-svg" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="${radius}" fill="none" stroke="var(--track-bg, rgba(148,163,184,0.12))" stroke-width="10" />
-          ${segments.join("")}
-          <text x="50" y="48" text-anchor="middle" class="ov2-ring-total">${safeText(total, "0")}</text>
-          <text x="50" y="58" text-anchor="middle" class="ov2-ring-label">总计</text>
-        </svg>
-      </div>
-    `;
+    return items.map(([category, info]) => {
+      const count = info.count || 0;
+      const pct = Math.min(100, Math.round((count / totalCount) * 100));
+      return `
+        <div style="margin-bottom: 12px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+            <span style="color:var(--text); font-weight:500;">${escapeHtml(category)}</span>
+            <span style="color:var(--muted);">${count} 个 (${pct}%)</span>
+          </div>
+          <div style="height:6px; background:var(--track-bg); border-radius:3px; overflow:hidden;">
+            <div style="width:${pct}%; height:100%; background:var(--accent); border-radius:3px;"></div>
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 
   function renderAdminStatsGrid(stats) {
-    const breakdown = stats.breakdown || {};
-    const latest = (stats.latest || []).slice(0, 4);
-    const attention = stats.attention || [];
-    const fileCount = stats.files?.count || 0;
-    const totalSize = stats.files?.totalSizeFormatted || "0 B";
-    const folders = stats.files?.folderMarkers || 0;
-    const trashCount = stats.trash?.count || 0;
-    const trashSize = stats.trash?.sizeFormatted || "0 B";
-    const trashPct = Math.min(stats.trash?.percentOfFiles || 0, 100);
-    const indexRec = stats.index?.recommendation || "等待初始化";
-    const indexCount = stats.index?.count || 0;
-    const indexTime = stats.index?.latestUpdatedAt ? formatTime(stats.index.latestUpdatedAt) : "未知";
-    const sharesTotal = stats.shares?.total || 0;
-    const latestUpload = stats.latest?.[0]?.uploaded ? formatRelative(stats.latest[0].uploaded) : "暂无";
-    const fileColors = ["#0e7490", "#f59e0b", "#8b5cf6", "#10b981", "#ef4444", "#6366f1", "#ec4899", "#14b8a6"];
+    if (!stats) return renderEmptyStateCompact("暂无数据", "请尝试刷新页面", icons.stats);
 
-    const typeChips = Object.entries(breakdown).length
-      ? Object.entries(breakdown).map(([key, val], i) => {
-          const pct = fileCount ? ((val.count || 0) / fileCount * 100).toFixed(1) : "0";
-          return `
-            <div class="type-chip">
-              <div class="type-chip-name">
-                <span class="ov2-chip-dot" style="background:${fileColors[i % fileColors.length]}"></span>
-                ${safeText(key)}
-              </div>
-              <div class="type-chip-meta">${safeText(val.count || 0, "0")} 个文件 · ${pct}%</div>
-            </div>
-          `;
-        }).join("")
-      : '<div class="ov2-empty">暂无分类数据</div>';
-
-    const alertItems = attention.length
-      ? attention.map((item) => {
-          const level = item.level || "info";
-          const dotColor = level === "warning" ? "#d97706" : level === "ok" ? "#16a34a" : "var(--accent)";
-          return `
-            <div class="attention-item" data-level="${safeText(level)}">
-              <div class="attention-title">
-                <span class="ov2-alert-dot" style="background:${dotColor}"></span>
-                ${safeText(item.title || "系统提示")}
-              </div>
-              ${item.body ? `<div class="attention-copy">${safeText(item.body)}</div>` : ""}
-            </div>
-          `;
-        }).join("")
-      : '<div class="ov2-empty">暂无系统提醒</div>';
-
-    const recentItems = latest.length
-      ? latest.map((item) => `
-          <div class="latest-chip">
-            <div class="latest-chip-name">${safeText(item.name || item.key || "")}</div>
-            <div class="latest-chip-meta">${safeText(item.sizeFormatted || formatBytes(item.size || 0), "0 B")} · ${safeText(formatRelative(item.uploaded || 0), "刚刚")}</div>
-          </div>
-        `).join("")
-      : '<div class="ov2-empty ov2-empty-full">暂无最近资源记录</div>';
+    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], attention = [], breakdown = {} } = stats;
 
     return `
-      <div class="ov-page">
-        <div class="ov-page-header">
+      <div class="ov-page" style="display:flex; flex-direction:column; gap:16px;">
+        <!-- 头部标题 -->
+        <div class="ov-page-header" style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <h2 class="ov-page-title">后台概览</h2>
-            <p class="ov-page-desc">系统整体运行状态与资源统计</p>
+            <h2 class="ov-page-title" style="margin:0; font-size:20px; font-weight:700; color:var(--text);">系统概览</h2>
+            <p class="ov-page-desc" style="margin:4px 0 0; font-size:13px; color:var(--muted);">实时掌握系统运行状态与文件存储动态</p>
           </div>
-          <button class="btn toolbar-btn" type="button" data-action="refresh-admin">刷新</button>
+          <button class="btn" type="button" data-action="refresh-admin" style="display:flex; align-items:center; gap:6px; padding:6px 12px; font-size:13px; border:1px solid var(--line); border-radius:8px; background:var(--panel);">
+            <span style="width:14px; height:14px; display:inline-block;">${icons.refresh}</span> 刷新数据
+          </button>
         </div>
 
-        <div class="ov2-hero">
-          <div class="ov2-hero-card">
-            <div class="ov2-hero-icon" style="background:rgba(14,116,144,0.1);color:#0e7490">${icons.stats}</div>
-            <div class="ov2-hero-body">
-              <span class="admin-label">文件总数</span>
-              <div class="admin-value">${safeText(fileCount, "0")}</div>
-              <div class="admin-copy">${safeText(totalSize)} · ${safeText(folders, "0")} 个文件夹</div>
+        <!-- 四宫格核心指标 -->
+        <div class="ov2-hero" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+          <div class="ov2-hero-card" style="display:flex; align-items:center; gap:14px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="width:40px; height:40px; border-radius:8px; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; flex-shrink:0;">${icons.file}</div>
+            <div>
+              <span style="font-size:11px; text-transform:uppercase; color:var(--muted); letter-spacing:0.05em;">总文件数</span>
+              <div style="font-size:20px; font-weight:700; color:var(--text); margin-top:2px;">${safeText(files.count, "0")}</div>
             </div>
           </div>
-          <div class="ov2-hero-card">
-            <div class="ov2-hero-icon" style="background:rgba(217,119,6,0.1);color:#d97706">${icons.trash}</div>
-            <div class="ov2-hero-body">
-              <span class="admin-label">回收站</span>
-              <div class="admin-value">${safeText(trashCount, "0")}<span class="admin-value-unit">项</span></div>
-              <div class="admin-copy">${safeText(trashSize)} · 占比 ${safeText(trashPct, "0")}%</div>
-              <div class="ov2-hero-track">
-                <div class="ov2-hero-fill" style="width:${trashPct}%;background:#d97706"></div>
+          <div class="ov2-hero-card" style="display:flex; align-items:center; gap:14px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="width:40px; height:40px; border-radius:8px; background:rgba(16,185,129,0.08); color:#10b981; display:grid; place-items:center; flex-shrink:0;">${icons.stats}</div>
+            <div>
+              <span style="font-size:11px; text-transform:uppercase; color:var(--muted); letter-spacing:0.05em;">存储用量</span>
+              <div style="font-size:20px; font-weight:700; color:var(--text); margin-top:2px;">${safeText(files.totalSizeFormatted, "0 B")}</div>
+            </div>
+          </div>
+          <div class="ov2-hero-card" style="display:flex; align-items:center; gap:14px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="width:40px; height:40px; border-radius:8px; background:rgba(245,158,11,0.08); color:#f59e0b; display:grid; place-items:center; flex-shrink:0;">${icons.share}</div>
+            <div>
+              <span style="font-size:11px; text-transform:uppercase; color:var(--muted); letter-spacing:0.05em;">活跃链接</span>
+              <div style="font-size:20px; font-weight:700; color:var(--text); margin-top:2px;">${safeText(shares.total, "0")}</div>
+            </div>
+          </div>
+          <div class="ov2-hero-card" style="display:flex; align-items:center; gap:14px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="width:40px; height:40px; border-radius:8px; background:rgba(239,68,68,0.08); color:#ef4444; display:grid; place-items:center; flex-shrink:0;">${icons.trash}</div>
+            <div>
+              <span style="font-size:11px; text-transform:uppercase; color:var(--muted); letter-spacing:0.05em;">待清垃圾</span>
+              <div style="font-size:20px; font-weight:700; color:var(--text); margin-top:2px;">${safeText(trash.count, "0")}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 详细信息栅格 -->
+        <div class="admin-grid" style="display:grid; grid-template-columns: repeat(12, 1fr); gap:16px;">
+          
+          <!-- 左侧：提醒状态 + 最近上传 (8 columns) -->
+          <div style="grid-column: span 8; display:flex; flex-direction:column; gap:16px;">
+            
+            <!-- 系统提醒 -->
+            ${attention && attention.length > 0 ? `
+              <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px;">
+                <h3 style="margin:0 0 10px 0; font-size:14px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:6px;">
+                  <span style="width:16px; height:16px; color:var(--warning);">${icons.info}</span> 待处理关注项
+                </h3>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  ${attention.map(item => `
+                    <div style="display:flex; gap:10px; padding:10px; background:var(--panel-soft); border-left:4px solid ${item.level === 'warning' ? 'var(--warning)' : 'var(--accent)'}; border-radius:0 8px 8px 0;">
+                      <div style="font-size:13px; font-weight:600; color:var(--text);">${escapeHtml(item.title)}:</div>
+                      <div style="font-size:13px; color:var(--muted); flex:1;">${escapeHtml(item.body)}</div>
+                    </div>
+                  `).join("")}
+                </div>
               </div>
-            </div>
-          </div>
-          <div class="ov2-hero-card">
-            <div class="ov2-hero-icon" style="background:rgba(5,150,105,0.1);color:#059669">${icons.eye}</div>
-            <div class="ov2-hero-body">
-              <span class="admin-label">索引状态</span>
-              <div class="admin-value" style="font-size:20px">${safeText(indexRec)}</div>
-              <div class="admin-copy">${safeText(indexCount, "0")} 条 · ${safeText(indexTime)}</div>
-              <button class="btn btn-primary btn-small" style="margin-top:6px" type="button" data-action="confirm-maintenance-action" data-maintenance-action="rebuild-index" data-maintenance-label="重建文件索引">重建索引</button>
-            </div>
-          </div>
-          <div class="ov2-hero-card">
-            <div class="ov2-hero-icon" style="background:rgba(124,58,237,0.1);color:#7c3aed">${icons.share}</div>
-            <div class="ov2-hero-body">
-              <span class="admin-label">分享</span>
-              <div class="admin-value">${safeText(sharesTotal, "0")}</div>
-              <div class="admin-copy">最近上传 ${safeText(latestUpload)}</div>
-            </div>
-          </div>
-        </div>
+            ` : ""}
 
-        <div class="admin-grid">
-          <div class="admin-card span-7">
-            <div class="admin-card-header">
-              <div class="admin-card-icon">${icons.grid}</div>
-              <span class="admin-label">文件类型分布</span>
-            </div>
-            <div class="ov2-type-body">
-              ${renderRingChart(breakdown)}
-              <div class="type-grid" style="flex:1">${typeChips}</div>
+            <!-- 最近上传列表 -->
+            <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px;">
+              <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600; color:var(--text);">最近上传文件</h3>
+              ${latest && latest.length > 0 ? `
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  ${latest.map(file => `
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px; background:var(--panel-soft); border-radius:8px; border:1px solid var(--line);">
+                      <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                        <span style="width:18px; height:18px; color:var(--muted); flex-shrink:0;">${icons.file}</span>
+                        <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px; font-weight:500; color:var(--text);">${escapeHtml(file.name)}</div>
+                      </div>
+                      <div style="display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted); flex-shrink:0;">
+                        <span>${safeText(file.sizeFormatted)}</span>
+                        <span>${formatTime(file.uploaded)}</span>
+                      </div>
+                    </div>
+                  `).join("")}
+                </div>
+              ` : `<p style="color:var(--muted); font-size:13px; text-align:center; padding:24px 0;">暂无最近上传记录</p>`}
             </div>
           </div>
-          <div class="admin-card span-5">
-            <div class="admin-card-header">
-              <div class="admin-card-icon" style="background:rgba(217,119,6,0.1);color:#d97706">${icons.bell}</div>
-              <span class="admin-label">系统提醒</span>
-              ${attention.length ? `<span class="badge badge-warning">${attention.length}</span>` : ""}
-            </div>
-            <div class="attention-list-compact">${alertItems}</div>
-          </div>
-        </div>
 
-        <div class="admin-card">
-          <div class="admin-card-header">
-            <div class="admin-card-icon">${icons.list}</div>
-            <span class="admin-label">最近活动</span>
-          </div>
-          <div class="latest-grid">${recentItems}</div>
-        </div>
-      </div>
-    `;
-  }
+          <!-- 右侧：文件类别分布 + 索引状态 (4 columns) -->
+          <div style="grid-column: span 4; display:flex; flex-direction:column; gap:16px;">
+            <!-- 文件分类占比 -->
+            <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px;">
+              <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600; color:var(--text);">文件类型分布</h3>
+              ${renderBreakdownList(breakdown)}
+            </div>
 
-  function renderAdminErrorState(error) {
-    return `
-      <div class="empty-state">
-        <div>
-          <div class="empty-orb">${icons.lock}</div>
-          <h3 class="empty-title">概览加载失败</h3>
-          <p class="empty-copy">${escapeHtml(error)}</p>
-          <div style="margin-top:18px;">
-            <button class="btn btn-primary" type="button" data-action="refresh-admin">重新加载</button>
+            <!-- 文件索引管理 -->
+            <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px;">
+              <h3 style="margin:0 0 8px 0; font-size:14px; font-weight:600; color:var(--text);">数据索引状态</h3>
+              <div style="font-size:13px; color:var(--muted); margin-bottom:12px; line-height:1.4;">
+                <div>重建状态: <span style="font-weight:600; color:var(--accent);">${escapeHtml(index.recommendation || "未知")}</span></div>
+                <div style="margin-top:4px;">记录总数: ${safeText(index.count, "0")} 行</div>
+                ${index.latestUpdatedAt ? `<div style="font-size:11px; margin-top:4px;">最后更新: ${formatTime(index.latestUpdatedAt)}</div>` : ""}
+              </div>
+              <button class="btn btn-primary" type="button" 
+                      data-action="confirm-maintenance-action" 
+                      data-maintenance-action="rebuild-index" 
+                      data-maintenance-label="重建文件索引"
+                      style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:8px; border-radius:8px; font-size:12px; font-weight:600;">
+                <span style="width:14px; height:14px;">${icons.grid}</span> 立即重建索引
+              </button>
+            </div>
           </div>
         </div>
       </div>
     `;
   }
 
-  return { renderAdminStatsGrid, renderAdminErrorState };
+  return { renderAdminStatsGrid };
 }
