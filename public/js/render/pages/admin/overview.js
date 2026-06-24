@@ -1,117 +1,159 @@
 export function createOverviewRenderer({
-  safeText, escapeHtml, formatTime
+  safeText, escapeHtml, formatTime, formatRelative
 }) {
 
-  function getExtBadge(fileName) {
-    if (!fileName) return `<span class="ap-ext ap-ext-default">file</span>`;
-    const ext = fileName.split('.').pop().toLowerCase().slice(0, 4) || 'file';
-    let cls = 'ap-ext-default';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) cls = 'ap-ext-img';
-    else if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) cls = 'ap-ext-video';
-    else if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) cls = 'ap-ext-audio';
-    else if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md'].includes(ext)) cls = 'ap-ext-doc';
-    else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) cls = 'ap-ext-archive';
-    return `<span class="ap-ext ${cls}">${ext}</span>`;
+  function getExtColor(ext) {
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return '#10b981';
+    if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) return '#8b5cf6';
+    if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return '#ec4899';
+    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md'].includes(ext)) return '#0e7490';
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return '#f59e0b';
+    return '#64748b';
   }
 
-  function renderBreakdownList(breakdown) {
-    const items = Object.entries(breakdown || {});
-    if (items.length === 0) return `<p class="ap-empty-inline">暂无数据</p>`;
-    const totalCount = items.reduce((sum, [_, val]) => sum + (val.count || 0), 0) || 1;
-    const colorMap = { '图片': '#10b981', '视频': '#8b5cf6', '音频': '#ec4899', '文档': '#0e7490' };
-
-    return items.map(([category, info]) => {
-      const count = info.count || 0;
-      const pct = Math.min(100, Math.round((count / totalCount) * 100));
-      const color = colorMap[category] || 'var(--accent)';
-      return `
-        <div class="ap-bar-row">
-          <div class="ap-bar-head">
-            <span class="ap-bar-name">${escapeHtml(category)}</span>
-            <span class="ap-bar-val">${count} (${pct}%)</span>
-          </div>
-          <div class="ap-track">
-            <div class="ap-fill" style="width:${pct}%;background:${color};"></div>
-          </div>
-        </div>
-      `;
-    }).join("");
+  function getExtBg(ext) {
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'rgba(16,185,129,0.1)';
+    if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) return 'rgba(139,92,246,0.1)';
+    if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return 'rgba(236,72,153,0.1)';
+    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md'].includes(ext)) return 'rgba(14,116,144,0.1)';
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'rgba(245,158,11,0.1)';
+    return 'rgba(100,116,139,0.1)';
   }
 
   function renderAdminStatsGrid(stats) {
     if (!stats) return ``;
     const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {} } = stats;
 
+    const breakdownItems = Object.entries(breakdown || {});
+    const totalBreakdown = breakdownItems.reduce((sum, [_, val]) => sum + (val.count || 0), 0) || 1;
+
     return `
-      <div class="ap">
-        <div class="ap-head">
-          <div>
-            <h2 class="ap-title">概览控制台</h2>
-            <p class="ap-desc">节点文件存储诊断与分类指标分析</p>
+      <div class="ov-overview">
+        <div class="ov-overview-header">
+          <div class="ov-overview-title-group">
+            <h2 class="ov-overview-title">系统概览</h2>
+            <p class="ov-overview-desc">存储状态与文件指标一览</p>
           </div>
-          <button class="ap-btn" type="button" data-action="refresh-admin">刷新状态</button>
+          <button class="btn" type="button" data-action="refresh-admin">
+            <span class="icon">${''}</span>
+            刷新
+          </button>
         </div>
 
-        <div class="ap-ov-stats">
-          <div class="ap-ov-stat">
-            <span class="ap-ov-stat-label">文件总量</span>
-            <span class="ap-ov-stat-val">${safeText(files.count, "0")}</span>
-          </div>
-          <div class="ap-ov-stat">
-            <span class="ap-ov-stat-label">占用空间</span>
-            <span class="ap-ov-stat-val">${safeText(files.totalSizeFormatted, "0 B")}</span>
-          </div>
-          <div class="ap-ov-stat">
-            <span class="ap-ov-stat-label">共享链接</span>
-            <span class="ap-ov-stat-val">${safeText(shares.total, "0")}</span>
-          </div>
-          <div class="ap-ov-stat">
-            <span class="ap-ov-stat-label">待清垃圾</span>
-            <span class="ap-ov-stat-val">${safeText(trash.count, "0")}</span>
-          </div>
-        </div>
-
-        <div class="ap-grid">
-          <div class="ap-card ap-col-7">
-            <div class="ap-card-head">
-              <span class="ap-lbl" style="margin:0;">最近上传</span>
+        <div class="ov-overview-stats">
+          <div class="ov-stat-card">
+            <div class="ov-stat-icon" style="background:rgba(14,116,144,0.1);color:#0e7490;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
             </div>
-            <div class="ap-card-body" style="overflow-y:auto;max-height:220px;">
-              ${latest && latest.length > 0 ? latest.map(file => `
-                <div class="ap-file-row">
-                  <div class="ap-file-row-main">
-                    ${getExtBadge(file.key)}
-                    <span class="ap-file-row-name">${escapeHtml(file.key)}</span>
-                  </div>
-                  <div class="ap-file-row-meta">
-                    <span>${safeText(file.sizeFormatted)}</span>
-                    <span>${formatTime(file.uploaded)}</span>
-                  </div>
+            <div class="ov-stat-body">
+              <span class="ov-stat-label">文件总量</span>
+              <span class="ov-stat-value">${safeText(files.count, "0")}</span>
+            </div>
+          </div>
+
+          <div class="ov-stat-card">
+            <div class="ov-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div class="ov-stat-body">
+              <span class="ov-stat-label">占用空间</span>
+              <span class="ov-stat-value">${safeText(files.totalSizeFormatted, "0 B")}</span>
+            </div>
+          </div>
+
+          <div class="ov-stat-card">
+            <div class="ov-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </div>
+            <div class="ov-stat-body">
+              <span class="ov-stat-label">分享链接</span>
+              <span class="ov-stat-value">${safeText(shares.total, "0")}</span>
+            </div>
+          </div>
+
+          <div class="ov-stat-card">
+            <div class="ov-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </div>
+            <div class="ov-stat-body">
+              <span class="ov-stat-label">回收站</span>
+              <span class="ov-stat-value">${safeText(trash.count, "0")}</span>
+              <span class="ov-stat-sub">${safeText(trash.sizeFormatted, "0 B")}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ov-overview-grid">
+          <div class="ov-overview-left">
+            <div class="ov-section">
+              <div class="ov-section-head">
+                <span class="ov-section-title">最近上传</span>
+              </div>
+              <div class="ov-section-body ov-recent-list">
+                ${latest && latest.length > 0 ? latest.map(file => {
+                  const ext = (file.key || '').split('.').pop().toLowerCase();
+                  const extColor = getExtColor(ext);
+                  const extBg = getExtBg(ext);
+                  return `
+                    <div class="ov-recent-item">
+                      <div class="ov-recent-icon" style="background:${extBg};color:${extColor};">
+                        <span style="font-size:10px;font-weight:700;text-transform:uppercase;">${escapeHtml(ext.slice(0,4))}</span>
+                      </div>
+                      <div class="ov-recent-info">
+                        <span class="ov-recent-name">${escapeHtml(file.key)}</span>
+                        <span class="ov-recent-meta">${safeText(file.sizeFormatted)} · ${formatRelative(file.uploaded)}</span>
+                      </div>
+                    </div>
+                  `;
+                }).join("") : `
+                  <div class="ov-empty-inline">暂无上传记录</div>
+                `}
+              </div>
+            </div>
+
+            <div class="ov-section">
+              <div class="ov-section-head">
+                <span class="ov-section-title">索引状态</span>
+                <span class="ov-badge ${index.recommendation === '正常' ? 'ov-badge-ok' : 'ov-badge-warn'}">${escapeHtml(index.recommendation || "正常")}</span>
+              </div>
+              <div class="ov-section-body" style="display:flex;flex-direction:column;gap:10px;">
+                <div class="ov-index-row">
+                  <span class="ov-index-label">索引记录</span>
+                  <span class="ov-index-value">${safeText(index.count, "0")}</span>
                 </div>
-              `).join("") : `<p class="ap-empty-inline">暂无上传记录</p>`}
+                <button class="btn btn-primary btn-sm" type="button"
+                        data-action="confirm-maintenance-action"
+                        data-maintenance-action="rebuild-index"
+                        data-maintenance-label="重建文件索引">重建索引</button>
+              </div>
             </div>
           </div>
 
-          <div class="ap-card ap-col-5">
-            <div class="ap-card-head">
-              <span class="ap-lbl" style="margin:0;">类型分布</span>
-            </div>
-            <div class="ap-card-body" style="overflow-y:auto;max-height:130px;">
-              ${renderBreakdownList(breakdown)}
-            </div>
-            <div style="border-top:1px solid var(--line);padding:10px 14px;">
-              <div class="ap-row" style="justify-content:space-between;font-size:11px;">
-                <span class="ap-desc-text" style="margin:0;">索引状态</span>
-                <span class="ap-badge ap-badge-info">${escapeHtml(index.recommendation || "正常")}</span>
+          <div class="ov-overview-right">
+            <div class="ov-section">
+              <div class="ov-section-head">
+                <span class="ov-section-title">类型分布</span>
               </div>
-              <div class="ap-row" style="justify-content:space-between;font-size:11px;margin-top:4px;">
-                <span class="ap-desc-text" style="margin:0;">索引记录</span>
-                <span style="font-weight:600;color:var(--text);">${safeText(index.count, "0")}</span>
+              <div class="ov-section-body ov-breakdown-list">
+                ${breakdownItems.length > 0 ? breakdownItems.map(([category, info]) => {
+                  const count = info.count || 0;
+                  const pct = Math.min(100, Math.round((count / totalBreakdown) * 100));
+                  const color = category === '图片' ? '#10b981' : category === '视频' ? '#8b5cf6' : category === '音频' ? '#ec4899' : category === '文档' ? '#0e7490' : 'var(--accent)';
+                  return `
+                    <div class="ov-breakdown-item">
+                      <div class="ov-breakdown-header">
+                        <span class="ov-breakdown-name">${escapeHtml(category)}</span>
+                        <span class="ov-breakdown-val">${count} (${pct}%)</span>
+                      </div>
+                      <div class="ov-breakdown-track">
+                        <div class="ov-breakdown-fill" style="width:${pct}%;background:${color};"></div>
+                      </div>
+                    </div>
+                  `;
+                }).join("") : `
+                  <div class="ov-empty-inline">暂无分类数据</div>
+                `}
               </div>
-              <button class="ap-btn ap-btn-primary ap-btn-full" style="margin-top:8px;" type="button"
-                      data-action="confirm-maintenance-action"
-                      data-maintenance-action="rebuild-index"
-                      data-maintenance-label="重建文件索引">重建文件索引</button>
             </div>
           </div>
         </div>
@@ -121,18 +163,19 @@ export function createOverviewRenderer({
 
   function renderAdminErrorState(error) {
     return `
-      <div class="ap">
-        <div class="ap-head">
-          <div>
-            <h2 class="ap-title">概览控制台</h2>
-            <p class="ap-desc">节点文件存储诊断与分类指标分析</p>
+      <div class="ov-overview">
+        <div class="ov-overview-header">
+          <div class="ov-overview-title-group">
+            <h2 class="ov-overview-title">系统概览</h2>
+            <p class="ov-overview-desc">存储状态与文件指标一览</p>
           </div>
         </div>
-        <div class="ap-card">
-          <div class="ap-card-body" style="text-align:center;padding:32px 20px;">
-            <p style="margin:0 0 12px;color:var(--danger);font-size:13px;">${escapeHtml(error)}</p>
-            <button class="ap-btn" type="button" data-action="refresh-admin">重新加载</button>
+        <div class="ov-overview-error">
+          <div class="ov-error-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
+          <p class="ov-error-text">${escapeHtml(error)}</p>
+          <button class="btn" type="button" data-action="refresh-admin">重新加载</button>
         </div>
       </div>
     `;
