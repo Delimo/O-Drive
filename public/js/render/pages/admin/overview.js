@@ -22,9 +22,10 @@ export function createOverviewRenderer({
 
   function renderAdminStatsGrid(stats) {
     if (!stats) return ``;
-    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {}, attention = [] } = stats;
+    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {}, attention = [], logs = {}, tasks = {} } = stats;
     const warnings = attention.filter(i => i.level === "warning");
     const anomalies = { total: warnings.length, items: warnings };
+    const recentFiles = latest.slice(0, 6);
 
     const breakdownItems = Object.entries(breakdown || {});
     const totalBreakdown = breakdownItems.reduce((sum, [_, val]) => sum + (val.count || 0), 0) || 1;
@@ -92,7 +93,7 @@ export function createOverviewRenderer({
                 <span class="ov-section-title">最近上传</span>
               </div>
               <div class="ov-section-body ov-recent-list">
-                ${latest && latest.length > 0 ? latest.map(file => {
+                ${recentFiles && recentFiles.length > 0 ? recentFiles.map(file => {
                   const ext = (file.key || '').split('.').pop().toLowerCase();
                   const extColor = getExtColor(ext);
                   const extBg = getExtBg(ext);
@@ -148,6 +149,20 @@ export function createOverviewRenderer({
                     ${anomalies.total > 0 
                       ? `<span class="ov-maint-tag" style="background:rgba(239,68,68,0.1);color:#ef4444;">需处理</span>`
                       : `<span class="ov-maint-tag" style="background:rgba(16,185,129,0.1);color:#10b981;">正常</span>`}
+                  </div>
+                  <div class="ov-maint-item">
+                    <div class="ov-maint-info">
+                      <span class="ov-maint-label">操作日志</span>
+                      <span class="ov-maint-value">${safeText(logs.count, "0")}</span>
+                    </div>
+                    <span class="ov-maint-tag">条记录</span>
+                  </div>
+                  <div class="ov-maint-item">
+                    <div class="ov-maint-info">
+                      <span class="ov-maint-label">已完成任务</span>
+                      <span class="ov-maint-value">${safeText(tasks.completed, "0")}</span>
+                    </div>
+                    <span class="ov-maint-tag">项完成</span>
                   </div>
                 </div>
               </div>

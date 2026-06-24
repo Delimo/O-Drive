@@ -81,6 +81,7 @@ export async function handleAdminStats(env, context = {}) {
 async function adminDbStats(env) {
   let trash = { count: 0, size: 0, sizeFormatted: "0 B" };
   let logs = { count: 0 };
+  let tasks = { completed: 0 };
   await ensureCoreTables(env);
   try {
     const trashCount = await env.D1.prepare(
@@ -117,7 +118,19 @@ async function adminDbStats(env) {
       err?.message || "Log stats failed",
     );
   }
-  return { trash, logs };
+  try {
+    const taskCount = await env.D1.prepare(
+      "SELECT COUNT(*) as count FROM file_tasks WHERE status = 'completed'",
+    ).first();
+    tasks = { completed: Number(taskCount?.count || 0) };
+  } catch (err) {
+    await recordSystemWarning(
+      env,
+      "admin.stats",
+      err?.message || "Tasks stats failed",
+    );
+  }
+  return { trash, logs, tasks };
 }
 
 async function overviewIndexStatus(env, listed = null) {
