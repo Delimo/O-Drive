@@ -1,87 +1,106 @@
 export function createLogsRenderer({
-  icons,
-  safeText,
-  escapeHtml,
-  renderEmptyState,
-  renderEmptyStateCompact,
-  formatTime,
-  formatRelative,
-  components,
+  icons, safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
 }) {
+
   function renderAdminLogsSection(admin) {
-    const { logs, logsLoading, logsError, logsPage, logsTotalPages, logsFilter } = admin;
+    const { logs = [], logsLoading, logsError, logsPage = 1, logsTotalPages = 1, logsFilter = {} } = admin;
 
     if (logsError) {
-      return `
-        <div class="empty-state">
-          <div class="empty-orb">${icons.lock}</div>
-          <p class="empty-copy">${escapeHtml(logsError)}</p>
-          <div style="margin-top:12px;"><button class="btn toolbar-btn" type="button" data-action="refresh-admin-logs">重新加载</button></div>
-        </div>
-      `;
+      return components.renderErrorCard({ icon: icons.refresh, error: logsError, onRetry: "refresh-admin-logs" });
+    }
+    if (logsLoading) {
+      return renderEmptyStateCompact("正在读取审计日志", "正在加载列表...", icons.spinner);
     }
 
     return `
-      <div class="ov-page">
-        <div class="ov-page-header">
+      <div class="ov-page" style="display:flex; flex-direction:column; gap:16px;">
+        <div class="ov-page-header" style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <h2 class="ov-page-title">操作日志</h2>
-            <p class="ov-page-desc">系统操作记录与审计追踪</p>
+            <h2 class="ov-page-title" style="margin:0; font-size:20px; font-weight:700; color:var(--text);">系统日志</h2>
+            <p class="ov-page-desc" style="margin:4px 0 0; font-size:13px; color:var(--muted);">审查平台管理员和系统后台行为的安全和运行记录</p>
           </div>
-          <button class="btn toolbar-btn" type="button" data-action="export-logs-csv">导出 CSV</button>
         </div>
 
-        <div class="admin-card">
-          <div class="admin-card-header" style="flex-wrap:wrap;gap:6px;">
-            <div class="admin-card-icon" style="background:rgba(14,116,144,0.1);color:#0e7490">${icons.search}</div>
-            <span class="admin-label">筛选</span>
-            <input class="input" type="text" placeholder="搜索关键字..." value="${escapeHtml(logsFilter.q || "")}" data-action-input="set-logs-filter" data-key="q" style="flex:1;min-width:120px;">
-            <select class="input" data-action-change="set-logs-filter" data-key="action" style="width:auto;">
-              <option value="">全部类型</option>
-              <option value="create" ${logsFilter.action === "create" ? "selected" : ""}>创建</option>
-              <option value="delete" ${logsFilter.action === "delete" ? "selected" : ""}>删除</option>
-              <option value="update" ${logsFilter.action === "update" ? "selected" : ""}>更新</option>
-              <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>分享</option>
-              <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>登录</option>
-              <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传</option>
-            </select>
-            <div style="display:flex;align-items:center;gap:4px;">
-              <span style="font-size:11px;color:var(--muted);">从</span>
-              <input class="input" type="date" value="${escapeHtml(logsFilter.from || "")}" data-action-change="set-logs-filter" data-key="from" style="width:auto;padding:2px 6px;min-height:28px;">
-              <span style="font-size:11px;color:var(--muted);">至</span>
-              <input class="input" type="date" value="${escapeHtml(logsFilter.to || "")}" data-action-change="set-logs-filter" data-key="to" style="width:auto;padding:2px 6px;min-height:28px;">
+        <!-- 检索工具箱 -->
+        <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:center;">
+          <!-- 关键词 -->
+          <div style="position:relative;">
+            <input class="input" type="text" data-action-input="set-logs-filter" data-key="q" value="${escapeHtml(logsFilter.q || "")}" placeholder="搜索路径、操作员、IP..." style="width:100%; padding:8px 12px 8px 30px; font-size:13px; border-radius:8px; border:1px solid var(--line); background:var(--panel-soft);">
+            <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--muted);">${icons.search}</span>
+          </div>
+          <!-- 操作过滤 -->
+          <select class="input" data-action-change="set-logs-filter" data-key="action" style="padding:8px; font-size:13px; border-radius:8px; border:1px solid var(--line); background:var(--panel-soft);">
+            <option value="">全部行为 (All)</option>
+            <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传 (Upload)</option>
+            <option value="delete" ${logsFilter.action === "delete" ? "selected" : ""}>删除 (Delete)</option>
+            <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>分享 (Share)</option>
+            <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>安全登录 (Login)</option>
+          </select>
+          <!-- 起始时间 -->
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:12px; color:var(--muted); flex-shrink:0;">起:</span>
+            <input class="input" type="date" data-action-change="set-logs-filter" data-key="from" value="${escapeHtml(logsFilter.from || "")}" style="width:100%; padding:6px; font-size:12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-soft);">
+          </div>
+          <!-- 截止时间 -->
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:12px; color:var(--muted); flex-shrink:0;">止:</span>
+            <input class="input" type="date" data-action-change="set-logs-filter" data-key="to" value="${escapeHtml(logsFilter.to || "")}" style="width:100%; padding:6px; font-size:12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-soft);">
+          </div>
+        </div>
+
+        <!-- 日志主体表格 -->
+        <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden;">
+          ${logs.length === 0 ? `
+            <p style="text-align:center; color:var(--muted); font-size:13px; padding:48px 12px; margin:0;">无匹配审计日志</p>
+          ` : `
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                <thead>
+                  <tr style="border-bottom:1px solid var(--line); background:var(--panel-soft); color:var(--muted);">
+                    <th style="padding:12px 16px; font-weight:600;">时间</th>
+                    <th style="padding:12px 16px; font-weight:600;">操作</th>
+                    <th style="padding:12px 16px; font-weight:600;">资源路径</th>
+                    <th style="padding:12px 16px; font-weight:600;">操作人</th>
+                    <th style="padding:12px 16px; font-weight:600;">IP 地址</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${logs.map(log => {
+                    const actColor = log.action === "delete" ? "var(--danger)" : log.action === "login" ? "#10b981" : "var(--accent)";
+                    return `
+                      <tr style="border-bottom:1px solid var(--line); color:var(--text);">
+                        <td style="padding:12px 16px; color:var(--muted); white-space:nowrap;">${formatTime(log.createdAt)}</td>
+                        <td style="padding:12px 16px;">
+                          <span style="font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase; background:var(--panel-soft); color:${actColor};">
+                            ${escapeHtml(log.action)}
+                          </span>
+                        </td>
+                        <td style="padding:12px 16px; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:monospace;">
+                          ${safeText(log.path, "-")}
+                        </td>
+                        <td style="padding:12px 16px; font-weight:500;">${safeText(log.user, "System")}</td>
+                        <td style="padding:12px 16px; color:var(--muted); font-family:monospace;">${safeText(log.ip, "-")}</td>
+                      </tr>
+                    `;
+                  }).join("")}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
 
-        ${
-          logsLoading
-            ? renderEmptyStateCompact("正在加载日志", "正在获取系统操作记录。", icons.refresh)
-            : logs.length === 0
-              ? renderEmptyStateCompact("暂无操作日志", "系统中还没有操作记录。", icons.list)
-              : `
-                <div class="admin-card" style="padding:0;">
-                  <div style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;">
-                    ${logs.map((item) => `
-                      <div class="latest-item-compact" style="padding:8px 10px;margin:0;">
-                        <div class="latest-title" style="font-size:12px;">${safeText(item.action || "操作")} · ${safeText(item.path || "/")}</div>
-                        <div class="latest-copy" style="font-size:11px;">
-                          ${item.user ? `用户 ${escapeHtml(item.user)}` : ""}
-                          ${item.ip ? ` · IP ${escapeHtml(item.ip)}` : ""}
-                          ${item.createdAt ? ` · ${formatTime(item.createdAt)} (${formatRelative(item.createdAt)})` : ""}
-                        </div>
-                        ${item.detail ? `<div class="latest-copy" style="margin-top:1px;color:var(--muted);font-size:11px;">${escapeHtml(item.detail)}</div>` : ""}
-                      </div>
-                    `).join("")}
-                  </div>
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;justify-content:center;">
-                  <button class="btn btn-muted" type="button" data-action="set-logs-page" data-page="${logsPage - 1}" ${logsPage <= 1 ? "disabled" : ""}>上一页</button>
-                  <span style="font-size:12px;color:var(--muted);">第 ${logsPage} / ${logsTotalPages || 1} 页</span>
-                  <button class="btn btn-muted" type="button" data-action="set-logs-page" data-page="${logsPage + 1}" ${logsPage >= logsTotalPages ? "disabled" : ""}>下一页</button>
-                </div>
-              `
-        }
+            <!-- 分页管理器 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-top:1px solid var(--line); background:var(--panel-soft);">
+              <span style="font-size:12px; color:var(--muted);">第 ${logsPage} / ${logsTotalPages} 页</span>
+              <div style="display:flex; gap:6px;">
+                <button class="btn" type="button" data-action="set-logs-page" data-page="${logsPage - 1}" 
+                        style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel);"
+                        ${logsPage <= 1 ? "disabled" : ""}>上一页</button>
+                <button class="btn" type="button" data-action="set-logs-page" data-page="${logsPage + 1}" 
+                        style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel);"
+                        ${logsPage >= logsTotalPages ? "disabled" : ""}>下一页</button>
+              </div>
+            </div>
+          `}
+        </div>
       </div>
     `;
   }

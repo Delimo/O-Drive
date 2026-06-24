@@ -1,91 +1,93 @@
 export function createPathsRenderer({
-  icons,
-  safeText,
-  escapeHtml,
-  renderEmptyStateCompact,
-  components,
+  icons, safeText, escapeHtml, renderEmptyStateCompact, components
 }) {
-  function renderPathManagementSection(admin) {
-    const { protectedPaths, protectedPathsLoading, protectedPathsError } = admin;
-    const { hiddenPaths, hiddenPathsLoading, hiddenPathsError } = admin;
 
-    let protectedHtml = "";
-    if (protectedPathsLoading) {
-      protectedHtml = renderEmptyStateCompact("正在加载受保护路径", "正在获取受保护路径列表。", icons.lock);
-    } else if (protectedPathsError) {
-      protectedHtml = `<div class="empty-state"><div class="empty-orb">${icons.lock}</div><p class="empty-copy">${escapeHtml(protectedPathsError)}</p></div>`;
-    } else if (protectedPaths.length === 0) {
-      protectedHtml = renderEmptyStateCompact("暂无受保护路径", "还没有设置任何受保护路径。", icons.lock);
-    } else {
-      protectedHtml = protectedPaths.map((item) => {
-        const path = String(item?.path || item?.folder || "/");
-        const note = item?.note || "";
-        const showName = item?.showName || "";
-        return `
-          <div class="attention-item">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-              <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
-                <span class="ov2-alert-dot" style="background:var(--accent);width:6px;height:6px;"></span>
-                <span style="font-weight:600;font-size:13px;">${safeText(showName || path)}</span>
-                <span class="toolbar-tag" style="font-size:11px;">${safeText(path)}</span>
+  function renderPathCard({ icon, iconBg, iconColor, title, addAction, items, emptyMsg, loading, error, deleteAction }) {
+    if (loading) return renderEmptyStateCompact("加载中", "正在获取数据...", icons.spinner);
+    if (error) return `<div class="empty-state-compact" style="padding:16px; text-align:center;"><p class="empty-copy" style="color:var(--danger);">${escapeHtml(error)}</p></div>`;
+    
+    const listHtml = items.length === 0
+      ? `<p style="padding:24px 0; text-align:center; color:var(--muted); font-size:13px; margin:0;">${escapeHtml(emptyMsg)}</p>`
+      : items.map(item => {
+          const path = String(item?.path || item?.folder || "/");
+          const note = item?.note || "";
+          const name = item?.showName || path;
+          return `
+            <div style="margin-bottom:8px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;
+                          padding:10px 12px; border-radius:8px; background:var(--panel-soft);
+                          border:1px solid var(--line);">
+                <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:${iconColor}; flex-shrink:0;"></span>
+                  <span style="font-weight:600; font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(name)}</span>
+                  <span class="toolbar-tag" style="font-size:11px; font-family:monospace; background:var(--line); padding:2px 6px; border-radius:4px; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(path)}</span>
+                </div>
+                <button class="btn btn-danger" type="button"
+                        data-action="${escapeHtml(deleteAction)}"
+                        data-path="${escapeHtml(path)}"
+                        style="min-height:28px; padding:0 10px; font-size:11px; border-radius:6px;">移除</button>
               </div>
-              <button class="btn btn-danger" type="button" data-action="confirm-delete-protected-path" data-path="${escapeHtml(path)}" style="min-height:28px;padding:0 8px;font-size:11px;">删除</button>
+              ${note ? `<div style="font-size:12px; color:var(--muted); margin:4px 0 8px 14px; line-height:1.4;">备注: ${escapeHtml(note)}</div>` : ""}
             </div>
-            ${note ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">${escapeHtml(note)}</div>` : ""}
-          </div>
-        `;
-      }).join("");
-    }
-
-    let hiddenHtml = "";
-    if (hiddenPathsLoading) {
-      hiddenHtml = renderEmptyStateCompact("正在加载隐藏路径", "正在获取隐藏路径列表。", icons.eye);
-    } else if (hiddenPathsError) {
-      hiddenHtml = `<div class="empty-state"><div class="empty-orb">${icons.eye}</div><p class="empty-copy">${escapeHtml(hiddenPathsError)}</p></div>`;
-    } else if (hiddenPaths.length === 0) {
-      hiddenHtml = renderEmptyStateCompact("暂无隐藏路径", "还没有设置任何隐藏路径。", icons.eye);
-    } else {
-      hiddenHtml = hiddenPaths.map((item) => {
-        const path = String(item?.path || "/");
-        return `
-          <div class="attention-item">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-              <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
-                <span class="ov2-alert-dot" style="background:#8b5cf6;width:6px;height:6px;"></span>
-                <span style="font-weight:600;font-size:13px;">${safeText(path)}</span>
-              </div>
-              <button class="btn btn-danger" type="button" data-action="confirm-delete-hidden-path" data-path="${escapeHtml(path)}" style="min-height:28px;padding:0 8px;font-size:11px;">取消隐藏</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
+          `;
+        }).join("");
 
     return `
-      <div class="ov-page">
+      <div class="admin-card" style="padding:0; background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; height:100%;">
+        <div style="display:flex; align-items:center; gap:8px; padding:14px 16px; border-bottom:1px solid var(--line);">
+          <div style="width:28px; height:28px; border-radius:6px; display:grid; place-items:center; background:${iconBg}; color:${iconColor}; flex-shrink:0;">
+            ${icon}
+          </div>
+          <span style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text); flex:1;">${escapeHtml(title)}</span>
+          <button class="btn btn-primary" type="button"
+                  data-action="${escapeHtml(addAction)}"
+                  style="min-height:28px; padding:0 12px; font-size:11px; font-weight:600; border-radius:6px;">添加路径</button>
+        </div>
+        <div style="padding:16px; flex:1; display:flex; flex-direction:column; gap:4px; overflow-y:auto;">${listHtml}</div>
+      </div>
+    `;
+  }
+
+  function renderPathManagementSection(admin) {
+    const { protectedPaths = [], protectedPathsLoading, protectedPathsError } = admin;
+    const { hiddenPaths = [], hiddenPathsLoading, hiddenPathsError } = admin;
+
+    return `
+      <div class="ov-page" style="display:flex; flex-direction:column; gap:16px;">
         <div class="ov-page-header">
           <div>
-            <h2 class="ov-page-title">路径管理</h2>
-            <p class="ov-page-desc">管理受保护路径与隐藏路径</p>
+            <h2 class="ov-page-title" style="margin:0; font-size:20px; font-weight:700; color:var(--text);">路径管理</h2>
+            <p class="ov-page-desc" style="margin:4px 0 0; font-size:13px; color:var(--muted);">设置需要强制输入权限密码的“受保护路径”，以及在前台界面不可见的“隐藏路径”</p>
           </div>
         </div>
-
-        <div class="admin-grid">
-          <div class="admin-card span-6">
-            <div class="admin-card-header">
-              <div class="admin-card-icon" style="background:rgba(14,116,144,0.1);color:#0e7490">${icons.lock}</div>
-              <span class="admin-label">受保护路径</span>
-              <button class="btn btn-primary" type="button" data-action="show-add-protected-path" style="margin-left:auto;min-height:28px;padding:0 8px;font-size:11px;">添加</button>
-            </div>
-            <div class="attention-list-compact">${protectedHtml}</div>
+        <div class="admin-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:16px;">
+          <div>
+            ${renderPathCard({
+              icon: icons.lock,
+              iconBg: "rgba(14,116,144,0.1)",
+              iconColor: "#0e7490",
+              title: "受保护路径 (Protected)",
+              addAction: "show-add-protected-path",
+              deleteAction: "confirm-delete-protected-path",
+              items: protectedPaths,
+              loading: protectedPathsLoading,
+              error: protectedPathsError,
+              emptyMsg: "目前没有设置受保护路径。",
+            })}
           </div>
-          <div class="admin-card span-6">
-            <div class="admin-card-header">
-              <div class="admin-card-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6">${icons.eye}</div>
-              <span class="admin-label">隐藏路径</span>
-              <button class="btn btn-primary" type="button" data-action="show-add-hidden-path" style="margin-left:auto;min-height:28px;padding:0 8px;font-size:11px;">添加</button>
-            </div>
-            <div class="attention-list-compact">${hiddenHtml}</div>
+          <div>
+            ${renderPathCard({
+              icon: icons.eye,
+              iconBg: "rgba(139,92,246,0.1)",
+              iconColor: "#8b5cf6",
+              title: "隐藏路径 (Hidden)",
+              addAction: "show-add-hidden-path",
+              deleteAction: "confirm-delete-hidden-path",
+              items: hiddenPaths,
+              loading: hiddenPathsLoading,
+              error: hiddenPathsError,
+              emptyMsg: "目前没有设置隐藏路径。",
+            })}
           </div>
         </div>
       </div>
