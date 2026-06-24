@@ -117,26 +117,37 @@ export function createOverviewRenderer({
                 <span class="ov-badge ${index.recommendation === '正常' ? 'ov-badge-ok' : 'ov-badge-warn'}">${escapeHtml(index.recommendation || "正常")}</span>
               </div>
               <div class="ov-section-body" style="display:flex;flex-direction:column;gap:8px;">
-                <div class="ov-maint-item">
-                  <div class="ov-maint-info">
-                    <span class="ov-maint-label">索引记录</span>
-                    <span class="ov-maint-value">${safeText(index.count, "0")}</span>
+                <div class="ov-maint-grid">
+                  <div class="ov-maint-item">
+                    <div class="ov-maint-info">
+                      <span class="ov-maint-label">索引记录</span>
+                      <span class="ov-maint-value">${safeText(index.count, "0")}</span>
+                    </div>
+                    ${index.latestUpdatedAt ? `<span class="ov-maint-time">${formatRelative(index.latestUpdatedAt)}</span>` : ''}
                   </div>
-                  ${index.latestUpdatedAt ? `<span class="ov-maint-time">${formatRelative(index.latestUpdatedAt)}</span>` : ''}
-                </div>
-                <div class="ov-maint-item">
-                  <div class="ov-maint-info">
-                    <span class="ov-maint-label">回收站占用</span>
-                    <span class="ov-maint-value">${safeText(trash.sizeFormatted, "0 B")}</span>
+                  <div class="ov-maint-item">
+                    <div class="ov-maint-info">
+                      <span class="ov-maint-label">回收站占用</span>
+                      <span class="ov-maint-value">${safeText(trash.sizeFormatted, "0 B")}</span>
+                    </div>
+                    <span class="ov-maint-count">${safeText(trash.count, "0")} 项</span>
                   </div>
-                  <span class="ov-maint-count">${safeText(trash.count, "0")} 项</span>
-                </div>
-                <div class="ov-maint-item">
-                  <div class="ov-maint-info">
-                    <span class="ov-maint-label">缩略图缓存</span>
-                    <span class="ov-maint-value">.thumbs/</span>
+                  <div class="ov-maint-item">
+                    <div class="ov-maint-info">
+                      <span class="ov-maint-label">缩略图缓存</span>
+                      <span class="ov-maint-value">.thumbs/</span>
+                    </div>
+                    <span class="ov-maint-tag">系统前缀</span>
                   </div>
-                  <span class="ov-maint-tag">系统前缀</span>
+                  <div class="ov-maint-item">
+                    <div class="ov-maint-info">
+                      <span class="ov-maint-label">异常</span>
+                      <span class="ov-maint-value">${safeText(anomaly?.total || "0")}</span>
+                    </div>
+                    ${anomaly?.total > 0 
+                      ? `<span class="ov-maint-tag" style="background:rgba(239,68,68,0.1);color:#ef4444;">需处理</span>`
+                      : `<span class="ov-maint-tag" style="background:rgba(16,185,129,0.1);color:#10b981;">正常</span>`}
+                  </div>
                 </div>
                 <button class="btn btn-primary btn-sm" type="button" style="margin-top:4px;"
                         data-action="confirm-maintenance-action"
