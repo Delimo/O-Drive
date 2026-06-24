@@ -91,7 +91,7 @@ export function createPageRenderers(deps) {
         if (admin.loading)
           return renderEmptyStateCompact(
             "正在加载概览",
-            "正在统计文件数量、索引状态与回收站信息。",
+            admin.statsLoadingHint || "正在统计文件数量、索引状态与回收站信息。",
           );
         if (admin.error) return overview.renderAdminErrorState(admin.error);
         if (!admin.stats)

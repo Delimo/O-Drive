@@ -280,7 +280,7 @@ export function createSharedRenderers(deps) {
     return `
       <div class="empty-state-compact">
         <div>
-          <div class="empty-orb">${icon}</div>
+          ${icon ? `<div class="empty-orb">${icon}</div>` : ""}
           <h3 class="empty-title">${escapeHtml(title)}</h3>
           <p class="empty-copy">${escapeHtml(copy)}</p>
         </div>

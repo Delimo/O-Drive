@@ -162,12 +162,26 @@ export function createAdminThunks(deps, context) {
         dispatch(actions.admin.setStats(m.mockAdminStats));
         return;
       }
+      let hintTimer = null;
+      let retryTimer = null;
       try {
+        hintTimer = setTimeout(() => {
+          dispatch(actions.admin.setStatsLoadingHint("索引数据量较大，正在后台处理，请耐心等待..."));
+        }, 15000);
         const { response, data } = await adminApi.stats();
         if (!response.ok) throw new Error(data?.message || "后台概览加载失败");
+        if (data?.indexing) {
+          dispatch(actions.admin.setStatsLoadingHint("文件索引正在后台构建中，10秒后自动刷新..."));
+          retryTimer = setTimeout(() => {
+            dispatch(getThunks().loadAdminStats());
+          }, 10000);
+          return;
+        }
         dispatch(actions.admin.setStats(data));
       } catch (error) {
         dispatch(actions.admin.setError(error.message || "后台概览加载失败"));
+      } finally {
+        if (hintTimer) clearTimeout(hintTimer);
       }
     },
 

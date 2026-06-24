@@ -19,7 +19,7 @@ function fileKind(key) {
   return indexedFileKind(key);
 }
 
-export async function handleAdminStats(env) {
+export async function handleAdminStats(env, context = {}) {
   if (await indexedFileCount(env)) {
     const indexed = await getIndexedStats(env);
     if (indexed) {
@@ -41,6 +41,14 @@ export async function handleAdminStats(env) {
         attention: await overviewAttention(env, indexed, dbStats, index),
       });
     }
+  }
+  if (typeof context?.waitUntil === "function") {
+    const syncPromise = syncFileIndexFromR2(env, { maxObjects: 20000 });
+    context.waitUntil(syncPromise.catch(() => {}));
+    return jsonResponse({
+      indexing: true,
+      attention: [{ type: "info", message: "文件索引正在后台构建中，请稍后刷新页面查看" }],
+    });
   }
   await syncFileIndexFromR2(env, { maxObjects: 20000 });
   if (await indexedFileCount(env)) {

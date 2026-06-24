@@ -2,6 +2,7 @@ import { createSlice } from "../create-slice.js";
 
 export const adminInitialState = {
   loading: false,
+  statsLoadingHint: "",
   activeTab: "overview",
   stats: null,
   shares: [],
@@ -68,7 +69,10 @@ export function createAdminSlice(initialState) {
         return { ...state, activeTab: action.payload || "overview" };
       },
       setLoading(state, action) {
-        return { ...state, loading: action.payload };
+        return { ...state, loading: action.payload, statsLoadingHint: "" };
+      },
+      setStatsLoadingHint(state, action) {
+        return { ...state, statsLoadingHint: action.payload };
       },
       setStats(state, action) {
         return { ...state, loading: false, error: "", stats: action.payload };

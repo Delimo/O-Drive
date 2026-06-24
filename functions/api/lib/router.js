@@ -123,7 +123,7 @@ export async function resolveAdminRoute(
   context = {},
 ) {
   if (path === "/api/admin/logs") return await handleAdminLogs(env, url);
-  if (path === "/api/admin/stats") return await handleAdminStats(env);
+  if (path === "/api/admin/stats") return await handleAdminStats(env, context);
   if (path === "/api/admin/health") return await handleAdminHealth(env);
   if (path === "/api/admin/maintenance" && method === "GET")
     return await handleAdminMaintenance(env);
