@@ -91,38 +91,39 @@ export function createStorageRenderer({
             <div class="ov-rules-card-left">
               <div class="ov-rules-editor-header">
                 <h3 class="ov-rules-editor-title">规则编辑</h3>
-                <p class="ov-rules-editor-desc">路径可以是目录，也可以是具体文件。</p>
               </div>
               <div class="ov-rules-editor-body">
-                <div class="ov-rules-field">
-                  <label class="ov-rules-label">路径</label>
-                  <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path">
+                <div class="ov-rules-row">
+                  <div class="ov-rules-field">
+                    <label class="ov-rules-label">路径</label>
+                    <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path">
+                  </div>
+                  <div class="ov-rules-field">
+                    <label class="ov-rules-label">访问密码</label>
+                    <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
+                  </div>
+                  <div class="ov-rules-field">
+                    <label class="ov-rules-label">备注</label>
+                    <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
+                  </div>
                 </div>
-                <div class="ov-rules-field">
-                  <label class="ov-rules-label">访问密码</label>
-                  <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
+                <div class="ov-rules-row">
+                  <div class="ov-rules-options">
+                    <label class="ov-rules-checkbox">
+                      <input type="checkbox" data-action-change="toggle-rule-hide">
+                      <span class="ov-rules-checkbox-label">
+                        <span class="ov-rules-checkbox-title">隐藏路径</span>
+                      </span>
+                    </label>
+                    <label class="ov-rules-checkbox">
+                      <input type="checkbox" checked data-action-change="toggle-rule-show-name">
+                      <span class="ov-rules-checkbox-label">
+                        <span class="ov-rules-checkbox-title">名称可见</span>
+                      </span>
+                    </label>
+                  </div>
+                  <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule">保存规则</button>
                 </div>
-                <div class="ov-rules-field">
-                  <label class="ov-rules-label">备注</label>
-                  <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
-                </div>
-                <div class="ov-rules-options">
-                  <label class="ov-rules-checkbox">
-                    <input type="checkbox" data-action-change="toggle-rule-hide">
-                    <span class="ov-rules-checkbox-label">
-                      <span class="ov-rules-checkbox-title">隐藏路径</span>
-                      <span class="ov-rules-checkbox-desc">从访客文件列表移除</span>
-                    </span>
-                  </label>
-                  <label class="ov-rules-checkbox">
-                    <input type="checkbox" checked data-action-change="toggle-rule-show-name">
-                    <span class="ov-rules-checkbox-label">
-                      <span class="ov-rules-checkbox-title">名称可见</span>
-                      <span class="ov-rules-checkbox-desc">受密码保护时仍显示名称</span>
-                    </span>
-                  </label>
-                </div>
-                <button class="btn btn-primary" type="button" style="width:100%;" data-action="save-access-rule">保存规则</button>
               </div>
             </div>
             <div class="ov-rules-card-divider"></div>
