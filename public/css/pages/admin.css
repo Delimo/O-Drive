@@ -1759,11 +1759,19 @@
   border-bottom: 1px solid var(--line);
 }
 
+.ov-rules-editor-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .ov-rules-editor-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
-  margin: 0 0 4px 0;
+  margin: 0;
 }
 
 .ov-rules-editor-desc {
@@ -1778,35 +1786,6 @@
   flex-direction: column;
   gap: 16px;
   flex: 1;
-}
-
-.ov-rules-type-group {
-  display: flex;
-  gap: 8px;
-}
-
-.ov-rules-type-btn {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--panel-soft);
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.ov-rules-type-btn:hover {
-  border-color: var(--line-strong);
-  color: var(--text);
-}
-
-.ov-rules-type-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
 }
 
 .ov-rules-field {

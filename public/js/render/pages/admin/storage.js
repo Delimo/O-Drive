@@ -89,15 +89,13 @@ export function createStorageRenderer({
         <div class="ov-storage-bottom">
           <div class="ov-rules-editor">
             <div class="ov-rules-editor-header">
-              <h3 class="ov-rules-editor-title">规则编辑</h3>
+              <div class="ov-rules-editor-title-row">
+                <h3 class="ov-rules-editor-title">规则编辑</h3>
+                <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule">保存规则</button>
+              </div>
               <p class="ov-rules-editor-desc">路径可以是目录，也可以是具体文件。</p>
             </div>
             <div class="ov-rules-editor-body">
-              <div class="ov-rules-type-group">
-                <button class="ov-rules-type-btn active" type="button" data-action="set-rule-type" data-type="hide">仅隐藏</button>
-                <button class="ov-rules-type-btn" type="button" data-action="set-rule-type" data-type="password">仅密码</button>
-                <button class="ov-rules-type-btn" type="button" data-action="set-rule-type" data-type="both">隐藏+密码</button>
-              </div>
               <div class="ov-rules-field">
                 <label class="ov-rules-label">路径</label>
                 <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path">
@@ -126,7 +124,6 @@ export function createStorageRenderer({
                   </span>
                 </label>
               </div>
-              <button class="btn btn-primary" type="button" style="width:100%;" data-action="save-access-rule">保存规则</button>
             </div>
           </div>
 

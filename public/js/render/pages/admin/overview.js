@@ -116,7 +116,6 @@ export function createOverviewRenderer({
             <div class="ov-section">
               <div class="ov-section-head">
                 <span class="ov-section-title">维护中心</span>
-                <span class="ov-badge ${index.recommendation === '正常' ? 'ov-badge-ok' : 'ov-badge-warn'}">${escapeHtml(index.recommendation || "正常")}</span>
               </div>
               <div class="ov-section-body" style="display:flex;flex-direction:column;gap:8px;">
                 <div class="ov-maint-grid">
@@ -151,10 +150,6 @@ export function createOverviewRenderer({
                       : `<span class="ov-maint-tag" style="background:rgba(16,185,129,0.1);color:#10b981;">正常</span>`}
                   </div>
                 </div>
-                <button class="btn btn-primary btn-sm" type="button" style="margin-top:4px;"
-                        data-action="confirm-maintenance-action"
-                        data-maintenance-action="rebuild-index"
-                        data-maintenance-label="重建文件索引">重建索引</button>
               </div>
             </div>
           </div>
