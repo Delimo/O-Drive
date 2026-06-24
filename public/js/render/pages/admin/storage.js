@@ -87,54 +87,34 @@ export function createStorageRenderer({
         </div>
 
         <div class="ov-storage-bottom">
-          <div class="ov-rules-card">
-            <div class="ov-rules-card-left">
-              <div class="ov-rules-editor-header">
-                <h3 class="ov-rules-editor-title">规则编辑</h3>
-              </div>
-              <div class="ov-rules-editor-body">
-                <div class="ov-rules-row">
-                  <div class="ov-rules-field">
-                    <label class="ov-rules-label">路径</label>
-                    <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path">
-                  </div>
-                  <div class="ov-rules-field">
-                    <label class="ov-rules-label">访问密码</label>
-                    <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
-                  </div>
-                  <div class="ov-rules-field">
-                    <label class="ov-rules-label">备注</label>
-                    <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
-                  </div>
-                </div>
-                <div class="ov-rules-row">
-                  <div class="ov-rules-options">
-                    <label class="ov-rules-checkbox">
-                      <input type="checkbox" data-action-change="toggle-rule-hide">
-                      <span class="ov-rules-checkbox-label">
-                        <span class="ov-rules-checkbox-title">隐藏路径</span>
-                      </span>
-                    </label>
-                    <label class="ov-rules-checkbox">
-                      <input type="checkbox" checked data-action-change="toggle-rule-show-name">
-                      <span class="ov-rules-checkbox-label">
-                        <span class="ov-rules-checkbox-title">名称可见</span>
-                      </span>
-                    </label>
-                  </div>
-                  <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule">保存规则</button>
-                </div>
-              </div>
+          <div class="ov-rules-card-full">
+            <div class="ov-rules-card-full-header">
+              <h3 class="ov-rules-card-full-title">规则</h3>
+              <span class="ov-rules-card-full-count">${(protectedPaths || []).length + (hiddenPaths || []).length} 条规则</span>
             </div>
-            <div class="ov-rules-card-divider"></div>
-            <div class="ov-rules-card-right">
-              <div class="ov-rules-list-header">
-                <h3 class="ov-rules-list-title">规则列表</h3>
-                <span class="ov-rules-list-count">${(protectedPaths || []).length + (hiddenPaths || []).length} 条规则</span>
+            <div class="ov-rules-card-full-body">
+              <div class="ov-rules-editor-inline">
+                <div class="ov-rules-inline-fields">
+                  <input class="input" type="text" placeholder="路径 /客户资料/" data-action-input="set-rule-path">
+                  <input class="input" type="password" placeholder="密码（可选）" data-action-input="set-rule-password">
+                  <input class="input" type="text" placeholder="备注（可选）" data-action-input="set-rule-note">
+                </div>
+                <div class="ov-rules-inline-actions">
+                  <label class="ov-rules-checkbox-sm">
+                    <input type="checkbox" data-action-change="toggle-rule-hide">
+                    <span>隐藏</span>
+                  </label>
+                  <label class="ov-rules-checkbox-sm">
+                    <input type="checkbox" checked data-action-change="toggle-rule-show-name">
+                    <span>显示名称</span>
+                  </label>
+                  <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule">添加</button>
+                </div>
               </div>
-              <div class="ov-rules-list-body">
+              <div class="ov-rules-divider"></div>
+              <div class="ov-rules-list-inline">
                 ${(protectedPaths || []).length === 0 && (hiddenPaths || []).length === 0
-                  ? `<div class="ov-empty-inline">暂无访问控制规则</div>`
+                  ? `<div class="ov-empty-inline">暂无规则</div>`
                   : `
                     <div class="ov-rules-table-wrap">
                       <table class="ov-rules-table">

@@ -1349,18 +1349,10 @@
   .ov-system-middle {
     grid-template-columns: 1fr;
   }
-  .ov-rules-card {
+  .ov-rules-inline-fields {
     flex-direction: column;
   }
-  .ov-rules-card-divider {
-    width: 100%;
-    height: 1px;
-  }
-  .ov-rules-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .ov-rules-row .ov-rules-options {
+  .ov-rules-inline-actions {
     flex-wrap: wrap;
   }
 }
@@ -1389,18 +1381,10 @@
   .ov-system-bottom {
     grid-template-columns: 1fr;
   }
-  .ov-rules-card {
+  .ov-rules-inline-fields {
     flex-direction: column;
   }
-  .ov-rules-card-divider {
-    width: 100%;
-    height: 1px;
-  }
-  .ov-rules-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .ov-rules-row .ov-rules-options {
+  .ov-rules-inline-actions {
     flex-wrap: wrap;
   }
 }
@@ -1817,80 +1801,86 @@
   flex-shrink: 0;
 }
 
-/* ─── Rules Card ─── */
-.ov-rules-card {
+/* ─── Rules Card Full ─── */
+.ov-rules-card-full {
   display: flex;
+  flex-direction: column;
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
   overflow: hidden;
 }
 
-.ov-rules-card-left {
-  flex: 1;
+.ov-rules-card-full-header {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.ov-rules-card-divider {
-  width: 1px;
-  background: var(--line);
-  flex-shrink: 0;
-}
-
-.ov-rules-card-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-/* ─── Rules Editor ─── */
-.ov-rules-editor-header {
-  padding: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
 }
 
-.ov-rules-editor-title {
+.ov-rules-card-full-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
-  margin: 0 0 4px 0;
-}
-
-.ov-rules-editor-desc {
-  font-size: 12px;
-  color: var(--muted);
   margin: 0;
 }
 
-.ov-rules-editor-body {
+.ov-rules-card-full-count {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ov-rules-card-full-body {
   padding: 16px;
+}
+
+/* ─── Rules Editor Inline ─── */
+.ov-rules-editor-inline {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex: 1;
 }
 
-.ov-rules-row {
+.ov-rules-inline-fields {
   display: flex;
-  gap: 12px;
-  align-items: flex-end;
+  gap: 8px;
 }
 
-.ov-rules-row .ov-rules-field {
+.ov-rules-inline-fields .input {
   flex: 1;
-  min-width: 0;
 }
 
-.ov-rules-row .ov-rules-options {
-  flex: none;
+.ov-rules-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.ov-rules-row .btn {
-  flex-shrink: 0;
-  height: 32px;
+.ov-rules-checkbox-sm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ov-rules-checkbox-sm input {
+  accent-color: var(--accent);
+}
+
+/* ─── Rules Divider ─── */
+.ov-rules-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 16px 0;
+}
+
+/* ─── Rules List Inline ─── */
+.ov-rules-list-inline {
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .ov-rules-field {
