@@ -2568,21 +2568,10 @@
 .ov-system-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: 12px;
   flex: 1;
   min-height: 0;
-}
-
-.ov-system-left {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ov-system-right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 /* ─── System Info Card ─── */
@@ -2593,6 +2582,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   overflow: hidden;
+  min-height: 0;
 }
 
 .ov-system-info-header {
@@ -2749,6 +2739,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   overflow: hidden;
+  min-height: 0;
 }
 
 .ov-maintenance-header,
@@ -2852,6 +2843,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   overflow: hidden;
+  min-height: 0;
 }
 
 .ov-health-header,

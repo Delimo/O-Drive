@@ -50,134 +50,130 @@ export function createSystemRenderer({
         </div>
 
         <div class="ov-system-grid">
-          <div class="ov-system-left">
-            <div class="ov-health">
-              <div class="ov-health-header">
-                <span class="ov-health-title">组件探针</span>
-                <span class="ov-health-count">${Object.keys(sysComponents).length} 项</span>
+          <div class="ov-health">
+            <div class="ov-health-header">
+              <span class="ov-health-title">组件探针</span>
+              <span class="ov-health-count">${Object.keys(sysComponents).length} 项</span>
+            </div>
+            <div class="ov-health-body">
+              ${healthLoading
+                ? `<div class="ov-empty-inline">诊断中...</div>`
+                : `<div class="ov-health-grid">
+                    ${Object.entries(sysComponents).map(([name, statusObj]) => {
+                      const isOk = statusObj.status === "ok";
+                      const isInfo = statusObj.status === "info";
+                      const statusClass = isOk ? 'ov-health-ok' : isInfo ? 'ov-health-info' : 'ov-health-err';
+                      return `
+                        <div class="ov-health-item">
+                          <div class="ov-health-item-info">
+                            <span class="ov-health-name">${escapeHtml(name)}</span>
+                            ${statusObj.message ? `<span class="ov-health-message">${escapeHtml(statusObj.message)}</span>` : ""}
+                          </div>
+                          <span class="ov-health-status ${statusClass}">
+                            <span class="ov-health-dot"></span>
+                            ${isOk ? "ONLINE" : isInfo ? "INFO" : "OFFLINE"}
+                          </span>
+                        </div>
+                      `;
+                    }).join("")}
+                  </div>`
+              }
+            </div>
+          </div>
+
+          <div class="ov-system-info-card">
+            <div class="ov-system-info-header">
+              <span class="ov-system-info-title">系统信息</span>
+            </div>
+            <div class="ov-system-info-body">
+              <div class="ov-system-info-grid">
+                <div class="ov-system-info-item">
+                  <span class="ov-system-info-label">版本</span>
+                  <span class="ov-system-info-value">v1.0.0</span>
+                </div>
+                <div class="ov-system-info-item">
+                  <span class="ov-system-info-label">环境</span>
+                  <span class="ov-system-info-value">${healthData.env?.guestEnabled !== undefined ? "生产" : "开发"}</span>
+                </div>
+                <div class="ov-system-info-item">
+                  <span class="ov-system-info-label">数据库表</span>
+                  <span class="ov-system-info-value">${dbTables.length} 张</span>
+                </div>
+                <div class="ov-system-info-item">
+                  <span class="ov-system-info-label">访客模式</span>
+                  <span class="ov-system-info-value">${healthData.env?.guestEnabled ? "启用" : "禁用"}</span>
+                </div>
               </div>
-              <div class="ov-health-body">
-                ${healthLoading
-                  ? `<div class="ov-empty-inline">诊断中...</div>`
-                  : `<div class="ov-health-grid">
-                      ${Object.entries(sysComponents).map(([name, statusObj]) => {
-                        const isOk = statusObj.status === "ok";
-                        const isInfo = statusObj.status === "info";
-                        const statusClass = isOk ? 'ov-health-ok' : isInfo ? 'ov-health-info' : 'ov-health-err';
+              ${warnings.length > 0 ? `
+                <div class="ov-system-warnings">
+                  <span class="ov-system-warnings-title">系统警告 (${warnings.length})</span>
+                  ${warnings.map(w => `
+                    <div class="ov-system-warning-item">
+                      <span class="ov-system-warning-msg">${escapeHtml(w.message || w.title || "未知警告")}</span>
+                    </div>
+                  `).join("")}
+                </div>
+              ` : ""}
+            </div>
+          </div>
+
+          <div class="ov-maintenance">
+            <div class="ov-maintenance-header">
+              <span class="ov-maintenance-title">运维指令</span>
+            </div>
+            <div class="ov-maintenance-body">
+              ${maintenanceLoading
+                ? `<div class="ov-empty-inline">载入中...</div>`
+                : maintenanceError
+                  ? `<div class="ov-empty-inline" style="color:var(--danger);">${escapeHtml(maintenanceError)}</div>`
+                  : MAINTENANCE_ACTIONS.map(act => `
+                    <div class="ov-maintenance-item">
+                      <div class="ov-maintenance-info">
+                        <span class="ov-maintenance-name" style="color:${act.danger ? 'var(--danger)' : 'var(--text)'};">${escapeHtml(act.label)}</span>
+                        <span class="ov-maintenance-desc">${escapeHtml(act.desc)}</span>
+                      </div>
+                      <button class="btn ${act.danger ? 'btn-danger' : ''} btn-sm" type="button"
+                              data-action="confirm-maintenance-action"
+                              data-maintenance-action="${escapeHtml(act.action)}"
+                              data-maintenance-label="${escapeHtml(act.label)}">执行</button>
+                    </div>
+                  `).join("")}
+            </div>
+          </div>
+
+          <div class="ov-tasks">
+            <div class="ov-tasks-header">
+              <span class="ov-tasks-title">后台调度</span>
+              <button class="btn btn-sm" type="button" data-action="refresh-tasks">刷新</button>
+            </div>
+            <div class="ov-tasks-body">
+              ${tasksLoading
+                ? `<div class="ov-empty-inline">载入中...</div>`
+                : tasks.length === 0
+                  ? `<div class="ov-tasks-empty">
+                      <span class="ov-tasks-empty-icon">📋</span>
+                      <span class="ov-tasks-empty-text">无待命或执行中的系统队列</span>
+                    </div>`
+                  : `<div class="ov-tasks-list">
+                      ${tasks.map(tsk => {
+                        const progress = tsk.total > 0 ? Math.round((tsk.completed || 0) / tsk.total * 100) : 0;
                         return `
-                          <div class="ov-health-item">
-                            <div class="ov-health-item-info">
-                              <span class="ov-health-name">${escapeHtml(name)}</span>
-                              ${statusObj.message ? `<span class="ov-health-message">${escapeHtml(statusObj.message)}</span>` : ""}
+                          <div class="ov-task-item">
+                            <div class="ov-task-info">
+                              <span class="ov-task-status">队列: ${escapeHtml(tsk.status || "挂起")}</span>
+                              <span class="ov-task-time">启动于 ${formatTime(tsk.createdAt)}</span>
                             </div>
-                            <span class="ov-health-status ${statusClass}">
-                              <span class="ov-health-dot"></span>
-                              ${isOk ? "ONLINE" : isInfo ? "INFO" : "OFFLINE"}
-                            </span>
+                            <div class="ov-task-progress">
+                              <div class="ov-task-progress-bar">
+                                <div class="ov-task-progress-fill" style="width:${progress}%"></div>
+                              </div>
+                              <span class="ov-task-progress-text">${tsk.completed || 0}/${tsk.total || 0}</span>
+                            </div>
                           </div>
                         `;
                       }).join("")}
                     </div>`
-                }
-              </div>
-            </div>
-
-            <div class="ov-maintenance">
-              <div class="ov-maintenance-header">
-                <span class="ov-maintenance-title">运维指令</span>
-              </div>
-              <div class="ov-maintenance-body">
-                ${maintenanceLoading
-                  ? `<div class="ov-empty-inline">载入中...</div>`
-                  : maintenanceError
-                    ? `<div class="ov-empty-inline" style="color:var(--danger);">${escapeHtml(maintenanceError)}</div>`
-                    : MAINTENANCE_ACTIONS.map(act => `
-                      <div class="ov-maintenance-item">
-                        <div class="ov-maintenance-info">
-                          <span class="ov-maintenance-name" style="color:${act.danger ? 'var(--danger)' : 'var(--text)'};">${escapeHtml(act.label)}</span>
-                          <span class="ov-maintenance-desc">${escapeHtml(act.desc)}</span>
-                        </div>
-                        <button class="btn ${act.danger ? 'btn-danger' : ''} btn-sm" type="button"
-                                data-action="confirm-maintenance-action"
-                                data-maintenance-action="${escapeHtml(act.action)}"
-                                data-maintenance-label="${escapeHtml(act.label)}">执行</button>
-                      </div>
-                    `).join("")}
-              </div>
-            </div>
-          </div>
-
-          <div class="ov-system-right">
-            <div class="ov-system-info-card">
-              <div class="ov-system-info-header">
-                <span class="ov-system-info-title">系统信息</span>
-              </div>
-              <div class="ov-system-info-body">
-                <div class="ov-system-info-grid">
-                  <div class="ov-system-info-item">
-                    <span class="ov-system-info-label">版本</span>
-                    <span class="ov-system-info-value">v1.0.0</span>
-                  </div>
-                  <div class="ov-system-info-item">
-                    <span class="ov-system-info-label">环境</span>
-                    <span class="ov-system-info-value">${healthData.env?.guestEnabled !== undefined ? "生产" : "开发"}</span>
-                  </div>
-                  <div class="ov-system-info-item">
-                    <span class="ov-system-info-label">数据库表</span>
-                    <span class="ov-system-info-value">${dbTables.length} 张</span>
-                  </div>
-                  <div class="ov-system-info-item">
-                    <span class="ov-system-info-label">访客模式</span>
-                    <span class="ov-system-info-value">${healthData.env?.guestEnabled ? "启用" : "禁用"}</span>
-                  </div>
-                </div>
-                ${warnings.length > 0 ? `
-                  <div class="ov-system-warnings">
-                    <span class="ov-system-warnings-title">系统警告 (${warnings.length})</span>
-                    ${warnings.map(w => `
-                      <div class="ov-system-warning-item">
-                        <span class="ov-system-warning-msg">${escapeHtml(w.message || w.title || "未知警告")}</span>
-                      </div>
-                    `).join("")}
-                  </div>
-                ` : ""}
-              </div>
-            </div>
-
-            <div class="ov-tasks">
-              <div class="ov-tasks-header">
-                <span class="ov-tasks-title">后台调度</span>
-                <button class="btn btn-sm" type="button" data-action="refresh-tasks">刷新</button>
-              </div>
-              <div class="ov-tasks-body">
-                ${tasksLoading
-                  ? `<div class="ov-empty-inline">载入中...</div>`
-                  : tasks.length === 0
-                    ? `<div class="ov-tasks-empty">
-                        <span class="ov-tasks-empty-icon">📋</span>
-                        <span class="ov-tasks-empty-text">无待命或执行中的系统队列</span>
-                      </div>`
-                    : `<div class="ov-tasks-list">
-                        ${tasks.map(tsk => {
-                          const progress = tsk.total > 0 ? Math.round((tsk.completed || 0) / tsk.total * 100) : 0;
-                          return `
-                            <div class="ov-task-item">
-                              <div class="ov-task-info">
-                                <span class="ov-task-status">队列: ${escapeHtml(tsk.status || "挂起")}</span>
-                                <span class="ov-task-time">启动于 ${formatTime(tsk.createdAt)}</span>
-                              </div>
-                              <div class="ov-task-progress">
-                                <div class="ov-task-progress-bar">
-                                  <div class="ov-task-progress-fill" style="width:${progress}%"></div>
-                                </div>
-                                <span class="ov-task-progress-text">${tsk.completed || 0}/${tsk.total || 0}</span>
-                              </div>
-                            </div>
-                          `;
-                        }).join("")}
-                      </div>`
-                }
-              </div>
+              }
             </div>
           </div>
         </div>
