@@ -1780,15 +1780,6 @@
 }
 
 /* ─── Rules Editor ─── */
-.ov-rules-editor {
-  display: flex;
-  flex-direction: column;
-  border-radius: 12px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  overflow: hidden;
-}
-
 .ov-rules-editor-header {
   padding: 16px;
   border-bottom: 1px solid var(--line);
