@@ -721,6 +721,12 @@ export function createAdminThunks(deps, context) {
           if (admin.webhookDeliveries.length === 0 && !admin.webhookDeliveriesLoading)
             dispatch(t.loadAdminWebhookDeliveries());
           break;
+        case "webhook":
+          if (admin.webhooks.length === 0 && !admin.webhooksLoading)
+            dispatch(t.loadAdminWebhooks());
+          if (admin.webhookDeliveries.length === 0 && !admin.webhookDeliveriesLoading)
+            dispatch(t.loadAdminWebhookDeliveries());
+          break;
       }
     },
   };

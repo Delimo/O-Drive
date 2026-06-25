@@ -202,8 +202,8 @@ settings.js 导出映射：
 | 刷新 | `refresh-admin-health` | — | system | 建议保留 |
 | 刷新 | `refresh-admin-quota` | — | system | 建议保留 |
 | 刷新 | `refresh-admin-storage-config` | — | storage | 建议保留 |
-| 刷新 | `refresh-admin-webhooks` | — | system | 建议保留 |
-| 刷新 | `refresh-admin-webhook-deliveries` | — | system | 建议保留 |
+| 刷新 | `refresh-admin-webhooks` | — | webhook | 建议保留 |
+| 刷新 | `refresh-admin-webhook-deliveries` | — | webhook | 建议保留 |
 | 刷新 | `refresh-admin-maintenance` | — | system | 建议保留 |
 | 刷新 | `refresh-admin-notifications` | — | system | 建议保留 |
 | 刷新 | `refresh-admin-protected-paths` | — | storage | 建议保留 |
@@ -212,12 +212,12 @@ settings.js 导出映射：
 | 弹窗 | `show-add-protected-path` | — | storage | **必留** |
 | 弹窗 | `show-add-hidden-path` | — | storage | **必留** |
 | 弹窗 | `show-edit-storage-quota` | — | storage | **必留** |
-| 弹窗 | `show-add-webhook` | — | system | **必留** |
-| 弹窗 | `edit-webhook` | `data-id` | system | **必留** |
+| 弹窗 | `show-add-webhook` | — | webhook | **必留** |
+| 弹窗 | `edit-webhook` | `data-id` | webhook | **必留** |
 | 弹窗 | `confirm-delete-share` | `data-key`, `data-name` | shares | **必留** |
 | 弹窗 | `confirm-delete-protected-path` | `data-path` | storage | **必留** |
 | 弹窗 | `confirm-delete-hidden-path` | `data-path` | storage | **必留** |
-| 弹窗 | `confirm-delete-webhook` | `data-id`, `data-name` | system | **必留** |
+| 弹窗 | `confirm-delete-webhook` | `data-id`, `data-name` | webhook | **必留** |
 | 弹窗 | `confirm-maintenance-action` | `data-maintenance-action`, `data-maintenance-label` | overview, system | **必留** |
 | 弹窗 | `confirm-cleanup-expired-shares` | — | shares | **必留** |
 | 执行 | `execute-delete-share` | `data-key` | admin-actions | 不要直接使用 |
@@ -240,7 +240,7 @@ settings.js 导出映射：
 | 导出 | `export-logs-csv` | — | logs | 可选 |
 | 通知 | `mark-all-notifications-read` | — | system | 建议保留 |
 | 通知 | `admin-mark-notif-read` | `data-notif-id` | system | 建议保留 |
-| 测试 | `test-webhook` | `data-id` | system | 可选 |
+| 测试 | `test-webhook` | `data-id` | webhook | 可选 |
 
 **规则：** 可以给按钮加 `style`、`class`、重写 HTML 结构、改按钮文字，**但不能改 `data-action` 的值**。
 
@@ -433,6 +433,8 @@ settings.js 导出映射：
 **渲染函数：** `renderAdminStatsGrid(stats)` + `renderAdminErrorState(error)`
 
 ⚠️ 注意是 `stats` 不是 `admin`，接收的是 `admin.stats` 子集。错误状态由 `index.js` 中的 `renderAdminActiveTab` 调用 `renderAdminErrorState` 处理。
+
+> **⚠️ 注意：** `index.js` 向 `overview` 传递了 `formatBytes`、`renderEmptyStateCompact`、`components`，但 `overview.js` 的 `createOverviewRenderer` **并未解构**这些参数（死依赖）。
 
 **数据形状：**
 ```
@@ -899,6 +901,7 @@ function renderXxxSection(admin) {
 - [ ] 没有在模板字符串中绑定事件（没有 `.addEventListener`、`onclick`）
 - [ ] 没有在 `renderAdminActiveTab` 之外的地方修改 `index.js`
 - [ ] 了解 `.ap-*` 和 `.ov-*` 两套 CSS 命名体系的区别
+- [ ] webhook.js 是独立 tab（第 6 个），与 webhooks.js（死代码）是不同文件
 
 ### 项目特有检查
 
