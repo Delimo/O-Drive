@@ -32,11 +32,12 @@ export async function mapWithConcurrency(items, limit, worker) {
 export async function copyR2Object(env, sourceKey, targetKey) {
   const sourceLocation = await resolveExistingObjectLocation(env, sourceKey);
   const sourceObjectKey = sourceLocation.objectKey;
+  const sourceHead = await storageHead(env, "r2", sourceObjectKey);
+  if (!sourceHead) return false;
   await storageCopy(env, "r2", sourceObjectKey, "r2", targetKey);
-  const meta = await storageHead(env, "r2", targetKey);
   await upsertFileIndex(env, targetKey, {
-    size: meta?.size,
-    httpMetadata: meta?.httpMetadata,
+    size: sourceHead.size,
+    httpMetadata: sourceHead.httpMetadata,
     storageId: "r2",
     objectKey: targetKey,
   });
@@ -90,10 +91,9 @@ export async function copyTree(env, sourceKey, targetKey, move = false) {
       });
     } else {
       await storageCopy(env, "r2", sourceObjectKey, "r2", targetKey);
-      const meta = await storageHead(env, "r2", targetKey);
       await upsertFileIndex(env, targetKey, {
-        size: meta?.size,
-        httpMetadata: meta?.httpMetadata,
+        size: obj.size,
+        httpMetadata: obj.httpMetadata,
         storageId: "r2",
         objectKey: targetKey,
       });
