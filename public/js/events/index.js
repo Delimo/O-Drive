@@ -159,6 +159,21 @@ export function registerAppEvents(deps) {
     opts,
   );
 
+  documentRef.addEventListener(
+    "cselect-change",
+    (event) => {
+      const { actionChange, key, value } = event.detail;
+      if (!actionChange) {
+        const cselect = event.target.closest(".cselect");
+        if (cselect && cselect.dataset.cselect === "quota-unit") {
+          const hiddenInput = cselect.parentElement.querySelector('input[name="r2QuotaUnit"]');
+          if (hiddenInput) hiddenInput.value = value;
+        }
+      }
+    },
+    opts,
+  );
+
   const mq = windowRef.matchMedia("(prefers-color-scheme: dark)");
   mq.addEventListener("change", uiActions.handleMediaQuery, opts);
 

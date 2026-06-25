@@ -328,10 +328,17 @@ export function createModalRenderers(deps) {
                        placeholder="输入数值"
                        value="${quotaGB >= 1 ? quotaGB.toFixed(2) : quotaMB.toFixed(2)}"
                        style="flex:1;">
-                <select class="inline-input" name="r2QuotaUnit" style="width:80px;flex-shrink:0;">
-                  <option value="GB" ${quotaGB >= 1 ? "selected" : ""}>GB</option>
-                  <option value="MB" ${quotaGB < 1 ? "selected" : ""}>MB</option>
-                </select>
+                <div class="cselect" style="width:80px;flex-shrink:0;" data-cselect="quota-unit">
+                  <button class="cselect-trigger" type="button" tabindex="0" style="min-height:36px;padding:0 8px;">
+                    <span class="cselect-value">${quotaGB >= 1 ? "GB" : "MB"}</span>
+                    <svg class="cselect-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                  <div class="cselect-dropdown">
+                    <div class="cselect-option ${quotaGB >= 1 ? "cselect-active" : ""}" data-value="GB">GB</div>
+                    <div class="cselect-option ${quotaGB < 1 ? "cselect-active" : ""}" data-value="MB">MB</div>
+                  </div>
+                </div>
+                <input type="hidden" name="r2QuotaUnit" value="${quotaGB >= 1 ? "GB" : "MB"}">
               </div>
               ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">设置为 0 表示不限制。保存后对所有上传生效。</div>'}
               <div class="btn-row" style="margin-top:6px;">

@@ -606,10 +606,10 @@ module.exports = {
 
 ```css
 @import "./css/base.css";      // 自定义 CSS 先加载
-@tailwind base;                 // Tailwind 的 reset 后加载，可能覆盖自定义样式
+@tailwind base;                 // Tailwind 的 reset 后加载
 ```
 
-应该是 `@tailwind base` 在最前面，然后自定义 CSS，然后 `@tailwind components`，最后 `@tailwind utilities`。
+> ⚠️ 已验证：此项目中 `@tailwind base` 放在 `@import` 前面会导致 Preflight 重置覆盖自定义样式，造成大面积样式失效。当前顺序（`@import` 在前）是正确的，**不应更改**。
 
 **其他：**
 - `admin.css` 有 4058 行，应按标签页拆分
@@ -742,5 +742,5 @@ Strict-Transport-Security: max-age=63072000; includeSubDomains; upgrade-insecure
 | 6 | cleanupLogs 去除自动清理 ✅ | 3 个文件 | 减少 D1 配额消耗 |
 | 7 | formatTime 缓存 ✅ | 1 个文件 | 前端渲染性能立竿见影 |
 | 8 | selectedKeys → Set ✅ | 2 个文件 | 渲染性能提升 |
-| 9 | CSS 去重 + darkMode 配置 ✅ | 4 个文件 | 减少 CSS 体积，可维护性 |
+| 9 | CSS 去重 + darkMode 配置 ✅ | 3 个文件（style.css 顺序保持不变） | 减少 CSS 体积，可维护性 |
 | 10 | Migration 0002 修复 ✅ | 1 个文件 | 新部署正确性 |

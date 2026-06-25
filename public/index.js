@@ -294,7 +294,6 @@ function render() {
   next.innerHTML = html;
   morphdom(root, next, { childrenOnly: true });
   renderHeaderRegion();
-  renderModal();
   renderToast();
   renderDropOverlay();
   if (page === 'home') {
@@ -347,7 +346,10 @@ function renderExplorerRegion() {
 function renderModal() {
   const state = store.getState();
   const el = root.querySelector('[data-region="modal"]');
-  if (el) renderRegion(el, modalRenderer(state));
+  if (el) {
+    renderRegion(el, modalRenderer(state));
+    bindCustomSelects(el);
+  }
 }
 
 function renderToast() {
