@@ -159,7 +159,92 @@ export function createSharesRenderer({
     `;
   }
 
-  function renderSharePage() { return ``; }
+  function renderSharePage(state) {
+    const { share } = state;
+    const { loading, error, item, requiresPassword, password } = share;
+
+    if (loading) {
+      return `
+        <div class="share-page">
+          <div class="empty-state-compact">
+            <div>
+              <div class="empty-orb"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+              <h3 class="empty-title">载入中</h3>
+              <p class="empty-copy">正在获取分享信息...</p>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    if (requiresPassword) {
+      return `
+        <div class="share-page">
+          <div class="share-card">
+            <div class="share-card-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h2 class="share-card-title">此分享需要密码</h2>
+            <p class="share-card-desc">${escapeHtml(error || "请输入访问密码以查看分享内容。")}</p>
+            <form class="share-card-form" data-form="share-unlock">
+              <input class="inline-input" name="share-password" type="password" placeholder="输入访问密码" value="${escapeHtml(password || "")}" required style="max-width:280px;">
+              <button class="btn btn-primary" type="submit">解锁</button>
+            </form>
+          </div>
+        </div>`;
+    }
+
+    if (error) {
+      return `
+        <div class="share-page">
+          <div class="share-card">
+            <div class="share-card-icon" style="color:var(--danger);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <h2 class="share-card-title">无法访问此分享</h2>
+            <p class="share-card-desc">${escapeHtml(error)}</p>
+          </div>
+        </div>`;
+    }
+
+    if (!item) {
+      return `
+        <div class="share-page">
+          <div class="empty-state-compact">
+            <div>
+              <div class="empty-orb"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+              <h3 class="empty-title">暂无分享内容</h3>
+              <p class="empty-copy">分享信息不可用。</p>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    const kind = item.contentType || "file";
+    const isPreviewable = item.allowPreview && ["image","video","audio","pdf","text/markdown","text/plain"].some(t => kind.includes(t));
+    const isDownloadable = item.allowDownload;
+    const sizeText = item.size ? formatBytes(item.size) : "";
+    const expiresText = item.expiresAt ? `有效期至 ${formatTime(item.expiresAt)}` : "永久有效";
+    const downloadsText = item.maxDownloads > 0 ? `下载 ${item.downloadCount}/${item.maxDownloads}` : "";
+
+    return `
+      <div class="share-page">
+        <div class="share-card">
+          <div class="share-card-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+          </div>
+          <h2 class="share-card-title">${safeText(item.name, "未命名文件")}</h2>
+          <div class="share-card-meta">
+            ${sizeText ? `<span>${escapeHtml(sizeText)}</span>` : ""}
+            <span>${escapeHtml(expiresText)}</span>
+            ${downloadsText ? `<span>${escapeHtml(downloadsText)}</span>` : ""}
+          </div>
+          <div class="share-card-actions">
+            ${isDownloadable ? `<a class="btn btn-primary" href="/api/share/${encodeURIComponent(share.token)}/download" target="_blank">下载文件</a>` : ""}
+            ${isPreviewable ? `<a class="btn" href="/api/share/${encodeURIComponent(share.token)}/preview" target="_blank">在线预览</a>` : ""}
+          </div>
+        </div>
+      </div>`;
+  }
 
   return { renderAdminSharesSection, renderSharePage };
 }
