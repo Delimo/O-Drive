@@ -281,11 +281,13 @@ function renderRegion(container, htmlString) {
 
 function render() {
   const state = store.getState();
+  const modalEl = root.querySelector('[data-region="modal"]');
+  const savedModal = modalEl ? modalEl.innerHTML : '';
   const html = `
     <div data-region="header"></div>
     ${page === 'home' ? '<div data-region="explorer" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>' : renderMain(state)}
     ${page === 'home' ? '<div data-region="detail-drawer"></div>' : ''}
-    <div data-region="modal"></div>
+    <div data-region="modal">${savedModal}</div>
     <div data-region="toast"></div>
     <div data-region="drop-overlay"></div>
     ${page === 'home' ? '<div data-region="uploads"></div>' : ''}
