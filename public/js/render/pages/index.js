@@ -158,5 +158,7 @@ export function createPageRenderers(deps) {
   return {
     renderAdminPage,
     renderSharePage: shares.renderSharePage,
+    bindCustomSelects: components.bindCustomSelects,
+    bindCustomDatePickers: components.bindCustomDatePickers,
   };
 }

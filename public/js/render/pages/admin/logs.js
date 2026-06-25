@@ -48,22 +48,38 @@ export function createLogsRenderer({
             <input class="input" type="text"
                    data-action-input="set-logs-filter" data-key="q"
                    value="${escapeHtml(logsFilter.q || "")}" placeholder="关键词：路径、详情、IP">
-            <select class="input" data-action-change="set-logs-filter" data-key="action">
-              <option value="">全部事件</option>
-              <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传</option>
-              <option value="delete" ${logsFilter.action === "delete" ? "selected" : ""}>删除</option>
-              <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>共享</option>
-              <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>安全登录</option>
-            </select>
+            ${components.renderCustomSelect({
+              value: logsFilter.action || "",
+              options: [
+                { value: "", label: "全部事件" },
+                { value: "upload", label: "上传" },
+                { value: "delete", label: "删除" },
+                { value: "share", label: "共享" },
+                { value: "login", label: "安全登录" },
+              ],
+              actionChange: "set-logs-filter",
+              dataKey: "action",
+              className: "ov-logs-action-select",
+            })}
             <input class="input" type="text"
                    data-action-input="set-logs-filter" data-key="ip"
                    value="${escapeHtml(logsFilter.ip || "")}" placeholder="IP">
             <div class="ov-logs-date-range">
-              <input class="input" type="date" data-action-change="set-logs-filter" data-key="from"
-                     value="${escapeHtml(logsFilter.from || "")}">
+              ${components.renderCustomDatePicker({
+                value: logsFilter.from || "",
+                placeholder: "开始日期",
+                actionChange: "set-logs-filter",
+                dataKey: "from",
+                className: "ov-logs-date-from",
+              })}
               <span class="ov-logs-date-sep">–</span>
-              <input class="input" type="date" data-action-change="set-logs-filter" data-key="to"
-                     value="${escapeHtml(logsFilter.to || "")}">
+              ${components.renderCustomDatePicker({
+                value: logsFilter.to || "",
+                placeholder: "结束日期",
+                actionChange: "set-logs-filter",
+                dataKey: "to",
+                className: "ov-logs-date-to",
+              })}
             </div>
             <div class="ov-logs-filter-actions">
               <button class="btn btn-primary" type="button" data-action="refresh-admin-logs">筛选</button>

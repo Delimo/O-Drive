@@ -230,7 +230,7 @@ const { renderHomePage: homeRenderer } = createHomeRenderers({
   thumbnailUrl: apiClient.thumbnailUrl,
 });
 
-const { renderAdminPage: adminRenderer, renderSharePage: shareRenderer } = createPageRenderers({
+const { renderAdminPage: adminRenderer, renderSharePage: shareRenderer, bindCustomSelects, bindCustomDatePickers } = createPageRenderers({
   icons,
   escapeHtml,
   renderEmptyState: sharedRenderEmptyState,
@@ -301,6 +301,10 @@ function render() {
     renderExplorerRegion();
     renderDetailDrawerRegion();
     renderUploads();
+  }
+  if (page === 'admin') {
+    bindCustomSelects(root);
+    bindCustomDatePickers(root);
   }
 }
 

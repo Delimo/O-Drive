@@ -121,12 +121,18 @@ export function createSharesRenderer({
             <input class="input ov-share-search" type="text"
                    data-action-input="set-shares-search" value="${escapeHtml(shareSearch)}"
                    placeholder="搜索文件名或路径">
-            <select class="input ov-share-select" data-action-change="set-shares-filter">
-              <option value="all" ${shareFilter === "all" ? "selected" : ""}>全部状态</option>
-              <option value="active" ${shareFilter === "active" ? "selected" : ""}>有效</option>
-              <option value="expired" ${shareFilter === "expired" ? "selected" : ""}>已失效</option>
-              <option value="exhausted" ${shareFilter === "exhausted" ? "selected" : ""}>已用尽</option>
-            </select>
+            ${components.renderCustomSelect({
+              value: shareFilter,
+              options: [
+                { value: "all", label: "全部状态" },
+                { value: "active", label: "有效" },
+                { value: "expired", label: "已失效" },
+                { value: "exhausted", label: "已用尽" },
+              ],
+              actionChange: "set-shares-filter",
+              dataKey: "",
+              className: "ov-share-status-select",
+            })}
             <div class="ov-share-filter-actions">
               <button class="btn btn-sm" type="button" data-action="filter-shares">筛选</button>
               <button class="btn btn-sm" type="button" data-action="reset-shares-filter">重置</button>

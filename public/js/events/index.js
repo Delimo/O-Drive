@@ -129,6 +129,36 @@ export function registerAppEvents(deps) {
 
   documentRef.addEventListener("submit", uiActions.handleSubmit, opts);
 
+  documentRef.addEventListener(
+    "cselect-change",
+    (event) => {
+      const { actionChange, key, value } = event.detail;
+      if (actionChange === "set-logs-filter") {
+        store.dispatch(actions.admin.setLogsFilter({ [key || "q"]: value }));
+        store.dispatch(thunks.loadAdminLogs(1));
+        return;
+      }
+      if (actionChange === "set-shares-filter") {
+        store.dispatch(actions.admin.setShareFilter(value));
+        return;
+      }
+    },
+    opts,
+  );
+
+  documentRef.addEventListener(
+    "cdate-change",
+    (event) => {
+      const { actionChange, key, value } = event.detail;
+      if (actionChange === "set-logs-filter") {
+        store.dispatch(actions.admin.setLogsFilter({ [key]: value }));
+        store.dispatch(thunks.loadAdminLogs(1));
+        return;
+      }
+    },
+    opts,
+  );
+
   const mq = windowRef.matchMedia("(prefers-color-scheme: dark)");
   mq.addEventListener("change", uiActions.handleMediaQuery, opts);
 
