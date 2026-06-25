@@ -1102,55 +1102,19 @@
 /* ─── Breakdown Chart ─── */
 .ov-breakdown-chart {
   display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 16px;
-}
-
-.ov-chart-left {
-  flex-shrink: 0;
-}
-
-.ov-donut {
-  width: 160px;
-  height: 160px;
-}
-
-.ov-donut-total {
-  font-size: 24px;
-  font-weight: 700;
-  fill: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.ov-donut-label {
-  font-size: 11px;
-  fill: var(--muted);
-}
-
-.ov-chart-right {
-  flex: 1;
-  display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 0;
+  padding: 14px;
 }
 
-.ov-chart-legend-item {
+.ov-breakdown-row {
   display: grid;
-  grid-template-columns: 8px 1fr auto 60px;
+  grid-template-columns: 56px 1fr 36px 42px;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.ov-chart-legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.ov-chart-legend-name {
+.ov-breakdown-name {
   font-size: 12px;
   font-weight: 500;
   color: var(--text);
@@ -1159,7 +1123,20 @@
   text-overflow: ellipsis;
 }
 
-.ov-chart-legend-val {
+.ov-breakdown-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--track-bg);
+  overflow: hidden;
+}
+
+.ov-breakdown-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.ov-breakdown-count {
   font-size: 12px;
   font-weight: 600;
   color: var(--text);
@@ -1167,26 +1144,11 @@
   text-align: right;
 }
 
-.ov-chart-legend-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--track-bg);
-  overflow: hidden;
-}
-
-.ov-chart-legend-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-@media (max-width: 1200px) {
-  .ov-breakdown-chart {
-    flex-direction: column;
-  }
-  .ov-chart-right {
-    width: 100%;
-  }
+.ov-breakdown-pct {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 /* ─── Index Status ─── */
