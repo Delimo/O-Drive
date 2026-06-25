@@ -1,6 +1,6 @@
 export function createSharesRenderer({
   safeText, escapeHtml, renderEmptyStateCompact, formatTime, formatRelative,
-  filterShares, getFilterLabel, getShareStatusTags, components
+  filterShares, getFilterLabel, getShareStatusTags, isShareActive, components
 }) {
 
   function renderAdminSharesSection(admin) {
