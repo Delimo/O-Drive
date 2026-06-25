@@ -21,7 +21,7 @@ export const adminInitialState = {
   logsError: "",
   logsPage: 1,
   logsTotalPages: 0,
-  logsFilter: { q: "", action: "", from: "", to: "" },
+  logsFilter: { q: "", action: "", ip: "", from: "", to: "" },
   quota: null,
   quotaLoading: false,
   quotaError: "",

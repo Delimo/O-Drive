@@ -35,7 +35,6 @@ export function createLogsRenderer({
     }
 
     const filterActionLabel = logsFilter.action ? getActionLabel(logsFilter.action) : "全部事件";
-    const activeRange = [logsFilter.from, logsFilter.to].filter(Boolean).length;
 
     return `
       <div class="ov-logs">
@@ -50,7 +49,7 @@ export function createLogsRenderer({
           <div class="ov-logs-filter-row">
             <input class="input" type="text"
                    data-action-input="set-logs-filter" data-key="q"
-                   value="${escapeHtml(logsFilter.q || "")}" placeholder="过滤关键词...">
+                   value="${escapeHtml(logsFilter.q || "")}" placeholder="关键词：路径、详情、IP">
             <select class="input" data-action-change="set-logs-filter" data-key="action">
               <option value="">全部事件</option>
               <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传</option>
@@ -58,8 +57,9 @@ export function createLogsRenderer({
               <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>共享</option>
               <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>安全登录</option>
             </select>
-          </div>
-          <div class="ov-logs-filter-row ov-logs-filter-row-bottom">
+            <input class="input" type="text"
+                   data-action-input="set-logs-filter" data-key="ip"
+                   value="${escapeHtml(logsFilter.ip || "")}" placeholder="IP">
             <div class="ov-logs-date-range">
               <input class="input" type="date" data-action-change="set-logs-filter" data-key="from"
                      value="${escapeHtml(logsFilter.from || "")}">
@@ -67,9 +67,9 @@ export function createLogsRenderer({
               <input class="input" type="date" data-action-change="set-logs-filter" data-key="to"
                      value="${escapeHtml(logsFilter.to || "")}">
             </div>
-            <div class="ov-logs-filter-meta">
-              <span>事件：${escapeHtml(filterActionLabel)}</span>
-              <span>日期范围：${escapeHtml(activeRange ? `${activeRange} 项已设定` : "未设置")}</span>
+            <div class="ov-logs-filter-actions">
+              <button class="btn btn-primary" type="button" data-action="refresh-admin-logs">筛选</button>
+              <button class="btn" type="button" data-action="reset-logs-filter">重置</button>
             </div>
           </div>
         </div>

@@ -1313,12 +1313,23 @@
   .ov-share-search {
     max-width: 100%;
   }
-  .ov-logs-filter-row,
-  .ov-logs-filter-row-bottom {
-    grid-template-columns: 1fr;
+  .ov-logs-filter-row {
+    flex-wrap: wrap;
   }
-  .ov-logs-filter-meta {
-    justify-content: flex-start;
+  .ov-logs-filter-row > .input:nth-of-type(1) {
+    flex: 1 1 280px;
+  }
+  .ov-logs-filter-row > .input:nth-of-type(2) {
+    flex: 0.8 1 180px;
+  }
+  .ov-logs-filter-row > .input:nth-of-type(3) {
+    flex: 0.6 1 140px;
+  }
+  .ov-logs-date-range {
+    flex: 1 1 240px;
+  }
+  .ov-logs-filter-actions {
+    width: 100%;
   }
   .ov-logs-summary {
     grid-template-columns: 1fr;
@@ -1372,10 +1383,18 @@
   .ov-logs-filter-shell {
     padding: 12px;
   }
-  .ov-logs-filter-meta {
+  .ov-logs-filter-row {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+    align-items: stretch;
+  }
+  .ov-logs-filter-row > .input:nth-of-type(1),
+  .ov-logs-filter-row > .input:nth-of-type(2),
+  .ov-logs-filter-row > .input:nth-of-type(3),
+  .ov-logs-date-range {
+    flex: 1 1 auto;
+  }
+  .ov-logs-filter-actions {
+    justify-content: flex-start;
   }
   .ov-overview-grid {
     grid-template-columns: 1fr;
@@ -1919,39 +1938,44 @@
 
 .ov-share-filter-row {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
 }
 
 .ov-share-search,
 .ov-share-select {
-  min-height: 46px;
-  border-radius: 10px;
+  min-height: 36px;
+  border-radius: 8px;
   border-color: var(--line);
   background: var(--panel);
   box-shadow: none;
+  font-size: 13px;
 }
 
 .ov-share-search {
   flex: 1;
-  max-width: 320px;
-  padding-left: 14px;
+  min-width: 0;
+  padding-left: 12px;
 }
 
 .ov-share-select {
-  padding-left: 14px;
+  width: 120px;
+  flex-shrink: 0;
+  padding-left: 8px;
 }
 
 .ov-share-filter-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .ov-share-filter-actions .btn {
-  min-width: 84px;
-  min-height: 46px;
-  border-radius: 10px;
+  min-width: 56px;
+  min-height: 36px;
+  border-radius: 8px;
+  font-size: 12px;
 }
 
 .ov-share-filter-meta {
@@ -2351,38 +2375,64 @@
 }
 
 .ov-logs-filter-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 12px;
+  display: flex;
   align-items: center;
-}
-
-.ov-logs-filter-row-bottom {
-  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .ov-logs-filter-row .input {
-  min-height: 46px;
-  border-radius: 10px;
+  min-width: 0;
+  min-height: 36px;
+  border-radius: 8px;
+  border-color: var(--line);
+  background: var(--panel);
+  box-shadow: none;
+  font-size: 13px;
 }
 
-.ov-logs-filter-meta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
-  font-size: 12px;
-  color: var(--muted);
+.ov-logs-filter-row > .input:nth-of-type(1) {
+  flex: 1.6;
+}
+
+.ov-logs-filter-row > .input:nth-of-type(2) {
+  flex: 0.9;
+}
+
+.ov-logs-filter-row > .input:nth-of-type(3) {
+  flex: 0.8;
 }
 
 .ov-logs-date-range {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex: 1.2;
+  min-width: 0;
+}
+
+.ov-logs-date-range .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.ov-logs-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ov-logs-filter-actions .btn {
+  min-height: 36px;
+  min-width: 56px;
+  border-radius: 8px;
+  font-size: 12px;
 }
 
 .ov-logs-date-sep {
   color: var(--muted);
+  flex-shrink: 0;
 }
 
 .ov-logs-content {

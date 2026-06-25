@@ -32,6 +32,12 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
+    if (action === "reset-logs-filter") {
+      store.dispatch(actions.admin.setLogsFilter({ q: "", action: "", ip: "", from: "", to: "" }));
+      store.dispatch(thunks.loadAdminLogs(1));
+      return;
+    }
+
     if (action === "refresh-admin-quota") {
       store.dispatch(thunks.loadAdminQuota());
       return;
