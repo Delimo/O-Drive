@@ -35,6 +35,14 @@ async function ensureTaskTable(env) {
   _taskTableReady = true;
 }
 
+let _lastTaskCleanup = 0;
+async function throttledCleanup(env) {
+  const now = Date.now();
+  if (now - _lastTaskCleanup < 60000) return;
+  _lastTaskCleanup = now;
+  await cleanupFileTasks(env);
+}
+
 export async function cleanupFileTasks(
   env,
   now = Date.now(),
@@ -59,17 +67,17 @@ export async function cleanupFileTasks(
     .catch(() => ({}));
   total += r1?.meta?.changes || 0;
   try {
-    const cutoff = await env.D1.prepare(
+    const rowCutoff = await env.D1.prepare(
       `SELECT id FROM file_tasks
        WHERE status NOT IN ('queued', 'running')
        ORDER BY id DESC LIMIT 1 OFFSET ?`,
     ).bind(TASK_RETENTION_ROWS).first();
-    if (cutoff?.id) {
+    if (rowCutoff?.id) {
       const r2 = await env.D1.prepare(
         `DELETE FROM file_tasks
          WHERE status NOT IN ('queued', 'running')
            AND id < ?`,
-      ).bind(cutoff.id).run();
+      ).bind(rowCutoff.id).run();
       total += r2?.meta?.changes || 0;
     }
   } catch (_) {}
@@ -215,7 +223,7 @@ function scheduleTask(env, request, context, task) {
 
 export async function createFileTask(env, request, context = {}) {
   await ensureTaskTable(env);
-  await cleanupFileTasks(env);
+  await throttledCleanup(env);
   const body = await request.json().catch(() => ({}));
   const type = String(body.type || "").trim();
   if (!TASK_TYPES.includes(type))
@@ -319,7 +327,7 @@ export async function updateFileTask(env, request, url) {
 
 export async function getFileTask(env, url) {
   await ensureTaskTable(env);
-  await cleanupFileTasks(env);
+  await throttledCleanup(env);
   const id = url.searchParams.get("id") || "";
   if (!id) {
     const limit = Math.min(

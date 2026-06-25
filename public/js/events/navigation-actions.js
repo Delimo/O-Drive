@@ -1,4 +1,4 @@
-export function registerNavigationActions(documentRef, windowRef, store, actions, thunks) {
+export function registerNavigationActions(documentRef, windowRef, store, actions, thunks, dispatchToast) {
   return (event) => {
     const actionNode = event.target.closest("[data-action]");
     if (!actionNode) return;

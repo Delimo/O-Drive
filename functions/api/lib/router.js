@@ -146,7 +146,7 @@ export async function resolveAdminRoute(
   if (path === "/api/admin/shares")
     return await handleAdminShares(env, request, method, url);
   if (path === "/api/notifications")
-    return await handleAdminNotifications(request, env);
+    return await handleAdminNotifications(env, request);
   if (path === "/api/tasks" && method === "POST")
     return await createFileTask(env, request, context);
   if (path === "/api/tasks" && method === "PATCH")

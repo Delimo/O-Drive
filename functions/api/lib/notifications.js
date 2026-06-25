@@ -58,7 +58,7 @@ export async function getUnreadCount(env) {
   return Number(row?.count || 0);
 }
 
-export async function handleAdminNotifications(request, env) {
+export async function handleAdminNotifications(env, request) {
   const url = new URL(request.url);
   if (request.method === "GET") {
     const limit = Math.min(

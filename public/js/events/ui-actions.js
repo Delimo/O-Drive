@@ -1,4 +1,5 @@
-export function registerUiActions(documentRef, windowRef, store, actions, thunks) {
+export function registerUiActions(documentRef, windowRef, store, actions, thunks, deps = {}) {
+  const { dispatchToast, getEntryPath } = deps;
   let filterSearchTimer = null;
   return {
     handleInput: (event) => {

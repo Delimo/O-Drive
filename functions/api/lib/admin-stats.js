@@ -19,28 +19,32 @@ function fileKind(key) {
   return indexedFileKind(key);
 }
 
+async function buildStatsResponse(env, context) {
+  const indexed = await getIndexedStats(env);
+  if (!indexed) return null;
+  const dbStats = await adminDbStats(env);
+  if (dbStats.trash)
+    dbStats.trash.percentOfFiles =
+      Number(indexed.files?.totalSize || 0) > 0
+        ? Math.round(
+            (Number(dbStats.trash.size || 0) /
+              Number(indexed.files.totalSize || 0)) *
+              100,
+          )
+        : 0;
+  const index = await overviewIndexStatus(env);
+  return jsonResponse({
+    ...indexed,
+    ...dbStats,
+    index,
+    attention: await overviewAttention(env, indexed, dbStats, index),
+  });
+}
+
 export async function handleAdminStats(env, context = {}) {
   if (await indexedFileCount(env)) {
-    const indexed = await getIndexedStats(env);
-    if (indexed) {
-      const dbStats = await adminDbStats(env);
-      if (dbStats.trash)
-        dbStats.trash.percentOfFiles =
-          Number(indexed.files?.totalSize || 0) > 0
-            ? Math.round(
-                (Number(dbStats.trash.size || 0) /
-                  Number(indexed.files.totalSize || 0)) *
-                  100,
-              )
-            : 0;
-      const index = await overviewIndexStatus(env);
-      return jsonResponse({
-        ...indexed,
-        ...dbStats,
-        index,
-        attention: await overviewAttention(env, indexed, dbStats, index),
-      });
-    }
+    const res = await buildStatsResponse(env, context);
+    if (res) return res;
   }
   if (typeof context?.waitUntil === "function") {
     const syncPromise = syncFileIndexFromR2(env, { maxObjects: 20000 });
@@ -52,26 +56,8 @@ export async function handleAdminStats(env, context = {}) {
   }
   await syncFileIndexFromR2(env, { maxObjects: 20000 });
   if (await indexedFileCount(env)) {
-    const indexed = await getIndexedStats(env);
-    if (indexed) {
-      const dbStats = await adminDbStats(env);
-      if (dbStats.trash)
-        dbStats.trash.percentOfFiles =
-          Number(indexed.files?.totalSize || 0) > 0
-            ? Math.round(
-                (Number(dbStats.trash.size || 0) /
-                  Number(indexed.files.totalSize || 0)) *
-                  100,
-              )
-            : 0;
-      const index = await overviewIndexStatus(env);
-      return jsonResponse({
-        ...indexed,
-        ...dbStats,
-        index,
-        attention: await overviewAttention(env, indexed, dbStats, index),
-      });
-    }
+    const res = await buildStatsResponse(env, context);
+    if (res) return res;
   }
   return jsonResponse({
     attention: [{ type: "warning", message: "文件索引为空，请先在维护页面重建索引" }],
@@ -79,57 +65,42 @@ export async function handleAdminStats(env, context = {}) {
 }
 
 async function adminDbStats(env) {
-  let trash = { count: 0, size: 0, sizeFormatted: "0 B" };
-  let logs = { count: 0 };
-  let tasks = { completed: 0 };
   await ensureCoreTables(env);
-  try {
-    const trashCount = await env.D1.prepare(
-      "SELECT COUNT(*) as count FROM trash",
-    ).first();
-    const trashRows = await env.D1.prepare(
-      "SELECT * FROM trash ORDER BY trashed_at DESC",
-    ).all();
-    const size = (trashRows.results || []).reduce(
-      (sum, row) => sum + Number(row.size || 0),
-      0,
-    );
-    trash = {
-      count: Number(trashCount?.count || 0),
-      size,
-      sizeFormatted: formatBytes(size),
-    };
-  } catch (err) {
-    await recordSystemWarning(
-      env,
-      "admin.stats",
-      err?.message || "Trash stats failed",
-    );
-  }
-  try {
-    const logCount = await env.D1.prepare(
+  const [trashResult, logResult, taskResult] = await Promise.allSettled([
+    env.D1.prepare(
+      "SELECT COUNT(*) as count, COALESCE(SUM(size), 0) as total FROM trash",
+    ).first(),
+    env.D1.prepare(
       "SELECT COUNT(*) as count FROM logs",
-    ).first();
-    logs = { count: Number(logCount?.count || 0) };
-  } catch (err) {
-    await recordSystemWarning(
-      env,
-      "admin.stats",
-      err?.message || "Log stats failed",
-    );
-  }
-  try {
-    const taskCount = await env.D1.prepare(
+    ).first(),
+    env.D1.prepare(
       "SELECT COUNT(*) as count FROM file_tasks WHERE status = 'completed'",
-    ).first();
-    tasks = { completed: Number(taskCount?.count || 0) };
-  } catch (err) {
-    await recordSystemWarning(
-      env,
-      "admin.stats",
-      err?.message || "Tasks stats failed",
-    );
+    ).first(),
+  ]);
+
+  const trashRow = trashResult.status === "fulfilled" ? trashResult.value : null;
+  if (trashResult.status === "rejected") {
+    await recordSystemWarning(env, "admin.stats", trashResult.reason?.message || "Trash stats failed");
   }
+  const trashSize = Number(trashRow?.total || 0);
+  const trash = {
+    count: Number(trashRow?.count || 0),
+    size: trashSize,
+    sizeFormatted: formatBytes(trashSize),
+  };
+
+  const logRow = logResult.status === "fulfilled" ? logResult.value : null;
+  if (logResult.status === "rejected") {
+    await recordSystemWarning(env, "admin.stats", logResult.reason?.message || "Log stats failed");
+  }
+  const logs = { count: Number(logRow?.count || 0) };
+
+  const taskRow = taskResult.status === "fulfilled" ? taskResult.value : null;
+  if (taskResult.status === "rejected") {
+    await recordSystemWarning(env, "admin.stats", taskResult.reason?.message || "Tasks stats failed");
+  }
+  const tasks = { completed: Number(taskRow?.count || 0) };
+
   return { trash, logs, tasks };
 }
 
@@ -229,84 +200,87 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
     });
   }
 
-  try {
-    const failed = await env.D1.prepare(
-      "SELECT COUNT(*) as count FROM webhook_deliveries WHERE ok = 0",
-    ).first();
-    const count = Number(failed?.count || 0);
-    if (count > 0) {
-      items.push({
-        level: "warning",
-        title: "Webhook 最近有失败投递",
-        body: `最近保留的投递记录中有 ${count} 条失败，建议检查目标地址或认证信息。`,
-        tab: "webhooks",
-      });
-    }
-  } catch (_) {}
-  try {
-    const warnings = await env.D1.prepare(
-      "SELECT COUNT(*) as count FROM system_warnings WHERE acknowledged_at = 0",
-    ).first();
-    const count = Number(warnings?.count || 0);
-    if (count > 0) {
-      items.push({
-        level: "warning",
-        title: "其他异常",
-        body: `当前记录了 ${count} 条系统异常，可以在系统状态页查看详情。`,
-        tab: "system",
-        action: "maintenance-action",
-        actionArgs: ["cleanup-warnings"],
-      });
-    }
-  } catch (_) {}
-  try {
-    const loginFails = await env.D1.prepare(
-      "SELECT COUNT(*) as count FROM login_attempts WHERE attempts >= 3",
-    ).first();
-    const count = Number(loginFails?.count || 0);
-    if (count > 0) {
-      items.push({
-        level: "warning",
-        title: "登录异常",
-        body: `当前有 ${count} 个 IP 触发登录限制，可能遭受暴力破解。`,
-        tab: "system",
-        action: "maintenance-action",
-        actionArgs: ["cleanup-login-attempts"],
-      });
-    }
-  } catch (_) {}
-  try {
-    const downloadBlocked = await env.D1.prepare(
-      "SELECT COUNT(*) as count FROM download_bursts WHERE blocked_until > ?",
-    ).bind(Date.now()).first();
-    const count = Number(downloadBlocked?.count || 0);
-    if (count > 0) {
-      items.push({
-        level: "warning",
-        title: "下载异常",
-        body: `当前有 ${count} 个 IP 被临时禁止下载，检测到异常下载行为。`,
-        tab: "system",
-        action: "maintenance-action",
-        actionArgs: ["cleanup-download-bursts"],
-      });
-    }
-  } catch (_) {}
-  try {
-    const unlockFails = await env.D1.prepare(
-      "SELECT COUNT(*) as count FROM path_access_attempts WHERE attempts >= 3",
-    ).first();
-    const count = Number(unlockFails?.count || 0);
-    if (count > 0) {
-      items.push({
-        level: "warning",
-        title: "路径解锁异常",
-        body: `当前有 ${count} 条记录触发路径解锁限制，可能遭受暴力破解。`,
-        tab: "system",
-        action: "maintenance-action",
-        actionArgs: ["cleanup-access-attempts"],
-      });
-    }
-  } catch (_) {}
+  const [webhookFails, sysWarnings, loginFails, downloadBlocked, unlockFails] =
+    await Promise.allSettled([
+      env.D1.prepare(
+        "SELECT COUNT(*) as count FROM webhook_deliveries WHERE ok = 0",
+      ).first(),
+      env.D1.prepare(
+        "SELECT COUNT(*) as count FROM system_warnings WHERE acknowledged_at = 0",
+      ).first(),
+      env.D1.prepare(
+        "SELECT COUNT(*) as count FROM login_attempts WHERE attempts >= 3",
+      ).first(),
+      env.D1.prepare(
+        "SELECT COUNT(*) as count FROM download_bursts WHERE blocked_until > ?",
+      ).bind(Date.now()).first(),
+      env.D1.prepare(
+        "SELECT COUNT(*) as count FROM path_access_attempts WHERE attempts >= 3",
+      ).first(),
+    ]);
+
+  if (webhookFails.status === "rejected") await recordSystemWarning(env, "admin.attention", webhookFails.reason?.message || "Webhook delivery count failed").catch(() => {});
+  const webhookFailCount = webhookFails.status === "fulfilled" ? Number(webhookFails.value?.count || 0) : 0;
+  if (webhookFailCount > 0) {
+    items.push({
+      level: "warning",
+      title: "Webhook 最近有失败投递",
+      body: `最近保留的投递记录中有 ${webhookFailCount} 条失败，建议检查目标地址或认证信息。`,
+      tab: "webhooks",
+    });
+  }
+
+  if (sysWarnings.status === "rejected") await recordSystemWarning(env, "admin.attention", sysWarnings.reason?.message || "System warnings count failed").catch(() => {});
+  const sysWarningCount = sysWarnings.status === "fulfilled" ? Number(sysWarnings.value?.count || 0) : 0;
+  if (sysWarningCount > 0) {
+    items.push({
+      level: "warning",
+      title: "其他异常",
+      body: `当前记录了 ${sysWarningCount} 条系统异常，可以在系统状态页查看详情。`,
+      tab: "system",
+      action: "maintenance-action",
+      actionArgs: ["cleanup-warnings"],
+    });
+  }
+
+  if (loginFails.status === "rejected") await recordSystemWarning(env, "admin.attention", loginFails.reason?.message || "Login attempts count failed").catch(() => {});
+  const loginFailCount = loginFails.status === "fulfilled" ? Number(loginFails.value?.count || 0) : 0;
+  if (loginFailCount > 0) {
+    items.push({
+      level: "warning",
+      title: "登录异常",
+      body: `当前有 ${loginFailCount} 个 IP 触发登录限制，可能遭受暴力破解。`,
+      tab: "system",
+      action: "maintenance-action",
+      actionArgs: ["cleanup-login-attempts"],
+    });
+  }
+
+  if (downloadBlocked.status === "rejected") await recordSystemWarning(env, "admin.attention", downloadBlocked.reason?.message || "Download bursts count failed").catch(() => {});
+  const downloadBlockedCount = downloadBlocked.status === "fulfilled" ? Number(downloadBlocked.value?.count || 0) : 0;
+  if (downloadBlockedCount > 0) {
+    items.push({
+      level: "warning",
+      title: "下载异常",
+      body: `当前有 ${downloadBlockedCount} 个 IP 被临时禁止下载，检测到异常下载行为。`,
+      tab: "system",
+      action: "maintenance-action",
+      actionArgs: ["cleanup-download-bursts"],
+    });
+  }
+
+  if (unlockFails.status === "rejected") await recordSystemWarning(env, "admin.attention", unlockFails.reason?.message || "Path access attempts count failed").catch(() => {});
+  const unlockFailCount = unlockFails.status === "fulfilled" ? Number(unlockFails.value?.count || 0) : 0;
+  if (unlockFailCount > 0) {
+    items.push({
+      level: "warning",
+      title: "路径解锁异常",
+      body: `当前有 ${unlockFailCount} 条记录触发路径解锁限制，可能遭受暴力破解。`,
+      tab: "system",
+      action: "maintenance-action",
+      actionArgs: ["cleanup-access-attempts"],
+    });
+  }
 
   for (const item of items) {
     if (item.tab === "health" && item.level === "warning" && !item.action) {
