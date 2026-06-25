@@ -5,6 +5,7 @@ import { createLogsRenderer } from "./admin/logs.js";
 import { createStorageRenderer } from "./admin/storage.js";
 import { createSharesRenderer } from "./admin/shares.js";
 import { createSystemRenderer } from "./admin/system.js";
+import { createWebhookRenderer } from "./admin/webhook.js";
 
 const ADMIN_TABS = [
   { id: "overview", label: "概览" },
@@ -12,6 +13,7 @@ const ADMIN_TABS = [
   { id: "shares", label: "分享" },
   { id: "logs", label: "日志" },
   { id: "system", label: "系统" },
+  { id: "webhook", label: "Webhooks" },
 ];
 
 export function createPageRenderers(deps) {
@@ -82,6 +84,13 @@ export function createPageRenderers(deps) {
     components,
   });
 
+  const webhook = createWebhookRenderer({
+    safeText: shareUtils.safeText,
+    escapeHtml,
+    renderEmptyStateCompact,
+    components,
+  });
+
   function renderAdminActiveTab(admin, activeTab) {
     switch (activeTab) {
       case "overview":
@@ -105,6 +114,8 @@ export function createPageRenderers(deps) {
         return logs.renderAdminLogsSection(admin);
       case "system":
         return system.renderSystemSection(admin);
+      case "webhook":
+        return webhook.renderWebhookSection(admin);
       default:
         return "";
     }
