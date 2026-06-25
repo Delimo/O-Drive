@@ -1304,6 +1304,16 @@
   .ov-overview-stats {
     grid-template-columns: repeat(2, 1fr);
   }
+  .ov-share-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-share-filter-row {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  }
+  .ov-share-filter-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
   .ov-storage-top,
   .ov-storage-bottom,
   .ov-shares-content,
@@ -1323,6 +1333,24 @@
 @media (max-width: 768px) {
   .ov-overview-stats {
     grid-template-columns: 1fr;
+  }
+  .ov-share-stats {
+    grid-template-columns: 1fr;
+  }
+  .ov-share-filter-row {
+    grid-template-columns: 1fr;
+  }
+  .ov-share-filter-actions {
+    justify-content: flex-start;
+  }
+  .ov-shares-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ov-shares-hero-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
   .ov-overview-grid {
     grid-template-columns: 1fr;
@@ -1769,6 +1797,280 @@
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+}
+
+.ov-shares-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ov-shares-hero .ov-shares-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ov-shares-hero .ov-shares-desc {
+  max-width: 760px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.ov-shares-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ov-share-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ov-share-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: #f7faff;
+  border: 1px solid rgba(187, 210, 255, 0.95);
+}
+
+.ov-share-stat-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ov-share-stat-value {
+  font-size: 31px;
+  line-height: 1;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.04em;
+}
+
+.ov-share-stat-success {
+  background: linear-gradient(180deg, #f7fbff 0%, #f9fcff 100%);
+}
+
+.ov-share-stat-danger {
+  background: linear-gradient(180deg, #f9fbff 0%, #fbfcff 100%);
+}
+
+.ov-share-stat-accent {
+  background: linear-gradient(180deg, #f8fbff 0%, #fbfdff 100%);
+}
+
+.ov-share-filter-shell {
+  padding: 14px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid rgba(187, 210, 255, 0.9);
+}
+
+.ov-share-filter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.ov-share-search,
+.ov-share-select {
+  min-height: 54px;
+  border-radius: 16px;
+  border-color: rgba(199, 216, 247, 0.95);
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.ov-share-search {
+  padding-left: 18px;
+}
+
+.ov-share-select {
+  padding-left: 16px;
+}
+
+.ov-share-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ov-share-filter-actions .btn {
+  min-width: 90px;
+  min-height: 54px;
+  border-radius: 16px;
+}
+
+.ov-share-panel {
+  flex: 1;
+  min-height: 0;
+  border-radius: 24px;
+}
+
+.ov-share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.ov-share-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(187, 210, 255, 0.82);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.ov-share-item:hover {
+  border-color: rgba(146, 173, 230, 0.92);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+  transform: translateY(-1px);
+}
+
+.ov-share-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ov-share-item-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ov-share-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.ov-share-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.ov-share-dot.is-on {
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+
+.ov-share-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 0;
+}
+
+.ov-share-path {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-share-meta {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ov-share-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ov-share-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--muted);
+}
+
+.ov-share-pill.tag-password {
+  background: rgba(107, 70, 193, 0.1);
+  color: #6b46c1;
+}
+
+.ov-share-pill.tag-active,
+.ov-share-pill.tag-preview,
+.ov-share-pill.tag-download,
+.ov-share-pill.tag-unlimited {
+  background: rgba(14, 116, 144, 0.1);
+  color: #0e7490;
+}
+
+.ov-share-pill.tag-expired,
+.ov-share-pill.tag-exhausted,
+.ov-share-pill.tag-no-preview,
+.ov-share-pill.tag-no-download {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.ov-share-pill.tag-soon {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+}
+
+.ov-share-empty {
+  min-height: 236px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 22px;
+  border: 1px dashed rgba(187, 210, 255, 0.95);
+  background: linear-gradient(180deg, rgba(247, 250, 255, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
+  color: #64748b;
+}
+
+.ov-share-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ov-share-empty-desc {
+  font-size: 13px;
+  color: #94a3b8;
 }
 
 /* ─── Paths Section ─── */
