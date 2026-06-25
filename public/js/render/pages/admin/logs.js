@@ -78,10 +78,6 @@ export function createLogsRenderer({
               <span class="ov-logs-summary-label">本页</span>
               <span class="ov-logs-summary-value">${escapeHtml(String(logs.length))}</span>
             </div>
-            <div class="ov-logs-summary-item">
-              <span class="ov-logs-summary-label">页码</span>
-              <span class="ov-logs-summary-value">${escapeHtml(String(logsPage))} / ${escapeHtml(String(logsTotalPages))}</span>
-            </div>
           </div>
 
           ${logs.length === 0
