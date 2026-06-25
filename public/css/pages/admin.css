@@ -665,6 +665,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+  flex: 1;
 }
 
 .admin-tab-btn {
@@ -1416,7 +1417,8 @@
   .ov-shares-content,
   .ov-system-top,
   .ov-system-middle,
-  .ov-system-bottom {
+  .ov-system-bottom,
+  .ov-system-grid {
     grid-template-columns: 1fr;
   }
   .ov-logs-pagination {
@@ -1439,6 +1441,9 @@
     align-items: flex-start;
   }
   .ov-webhook-events-grid {
+    grid-template-columns: 1fr;
+  }
+  .ov-system-info-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2630,6 +2635,182 @@
 .ov-system-bottom {
   flex: 1;
   min-height: 0;
+}
+
+/* ─── System Grid ─── */
+.ov-system-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ov-system-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ov-system-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── System Info Card ─── */
+.ov-system-info-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.ov-system-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ov-system-info-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-system-info-body {
+  padding: 16px;
+}
+
+.ov-system-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ov-system-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.ov-system-info-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ov-system-info-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ─── System Warnings ─── */
+.ov-system-warnings {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ov-system-warnings-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warning);
+}
+
+.ov-system-warning-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(217, 119, 6, 0.05);
+  border: 1px solid rgba(217, 119, 6, 0.15);
+}
+
+.ov-system-warning-msg {
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* ─── Health Count ─── */
+.ov-health-count {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ─── Health Message ─── */
+.ov-health-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ov-health-message {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ov-health-info {
+  color: var(--accent);
+}
+
+/* ─── Tasks Empty ─── */
+.ov-tasks-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.ov-tasks-empty-icon {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.ov-tasks-empty-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ─── Task Progress ─── */
+.ov-task-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ov-task-progress-bar {
+  width: 60px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--track-bg);
+  overflow: hidden;
+}
+
+.ov-task-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.ov-task-progress-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 40px;
 }
 
 /* ─── Maintenance Card ─── */
