@@ -228,7 +228,7 @@ export function createOverviewRenderer({
                       </div>
                       <div class="ov-recent-info">
                         <span class="ov-recent-name">${escapeHtml(file.key)}</span>
-                        <span class="ov-recent-meta">${safeText(file.sizeFormatted)} · ${formatRelative(file.uploaded)}</span>
+                        <span class="ov-recent-meta">${safeText(file.sizeFormatted)} · ${formatRelative(Math.floor(file.uploaded / 1000))}</span>
                       </div>
                     </div>
                   `;

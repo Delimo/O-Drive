@@ -223,7 +223,7 @@ export function createSharesRenderer({
     const isPreviewable = item.allowPreview && ["image","video","audio","pdf","text/markdown","text/plain"].some(t => kind.includes(t));
     const isDownloadable = item.allowDownload;
     const sizeText = item.size ? formatBytes(item.size) : "";
-    const expiresText = item.expiresAt ? `有效期至 ${formatTime(item.expiresAt)}` : "永久有效";
+    const expiresText = item.expiresAt ? `有效期至 ${formatTime(Math.floor(item.expiresAt / 1000))}` : "永久有效";
     const downloadsText = item.maxDownloads > 0 ? `下载 ${item.downloadCount}/${item.maxDownloads}` : "";
 
     return `

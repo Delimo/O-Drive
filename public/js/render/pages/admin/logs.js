@@ -5,6 +5,9 @@ export function createLogsRenderer({
     upload: "上传",
     delete: "删除",
     share: "分享",
+    share_create: "创建分享",
+    share_delete: "删除分享",
+    share_cleanup: "清理分享",
     login: "登录",
     mkdir: "新建文件夹",
     rename: "重命名",
@@ -54,7 +57,9 @@ export function createLogsRenderer({
                 { value: "", label: "全部事件" },
                 { value: "upload", label: "上传" },
                 { value: "delete", label: "删除" },
-                { value: "share", label: "共享" },
+                { value: "share_create", label: "创建分享" },
+                { value: "share_delete", label: "删除分享" },
+                { value: "trash", label: "移入回收站" },
                 { value: "login", label: "安全登录" },
               ],
               actionChange: "set-logs-filter",
@@ -111,7 +116,7 @@ export function createLogsRenderer({
                       const actLabel = getActionLabel(rawAction);
                       return `
                         <tr>
-                          <td class="ov-td-muted">${formatTime(log.createdAt)}</td>
+                          <td class="ov-td-muted">${formatTime(log.timestamp ? Math.floor(log.timestamp / 1000) : log.createdAt)}</td>
                           <td>
                             <span class="ov-action-tag ${actCls}" title="${escapeHtml(rawAction)}">
                               <span class="ov-action-main">${escapeHtml(actLabel)}</span>
