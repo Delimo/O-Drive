@@ -14,7 +14,7 @@ export async function handleSaveText(env, request, r2Key) {
     httpMetadata: { contentType: "text/plain" },
   });
   await upsertFileIndex(env, r2Key, {
-    size: body.content.length,
+    size: new TextEncoder().encode(body.content).byteLength,
     contentType: "text/plain",
     uploaded: Date.now(),
     storageId,

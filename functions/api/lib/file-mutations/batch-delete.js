@@ -3,8 +3,8 @@ import { resolveExistingStorageId, storageHead, storageList } from "../storage.j
 import { softDeleteTree } from "../trash.js";
 import { assertUserKey, assertPathList, mapPathResults } from "./helpers.js";
 
-export async function handleBatchDelete(env, request) {
-  const { paths } = await request.json();
+export async function handleBatchDelete(env, request, body) {
+  const { paths } = body || await request.json();
   const normalizedPaths = assertPathList(paths);
   const firstByPath = new Map();
   const uniquePaths = [];

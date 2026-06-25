@@ -12,8 +12,10 @@ import {
 import {
   resolveExistingObjectLocation,
   resolveExistingStorageId,
+  storageCopy,
   storageDelete,
   storageGet,
+  storageHead,
   storageList,
   storagePut,
 } from "./storage.js";
@@ -272,18 +274,15 @@ async function restoreTrashRecord(env, row, request) {
   await mapWithConcurrency(listed.objects || [], 6, async (item) => {
     const suffix = item.key.slice(row.trash_key.length);
     const target = row.original_key + suffix;
-    const obj = await storageGet(env, storageId, item.key);
-    if (obj) {
-      await storagePut(env, storageId, target, obj.body, {
-        httpMetadata: obj.httpMetadata,
-      });
-      await upsertFileIndex(env, target, {
-        ...obj,
-        storageId,
-        objectKey: target,
-      });
-      await storageDelete(env, storageId, item.key);
-    }
+    await storageCopy(env, storageId, item.key, storageId, target);
+    const meta = await storageHead(env, storageId, target);
+    await upsertFileIndex(env, target, {
+      size: meta?.size,
+      httpMetadata: meta?.httpMetadata,
+      storageId,
+      objectKey: target,
+    });
+    await storageDelete(env, storageId, item.key);
   });
 
   await env.D1.prepare("DELETE FROM trash WHERE id = ?").bind(row.id).run();

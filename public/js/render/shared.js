@@ -189,9 +189,9 @@ export function createSharedRenderers(deps) {
     return result;
   }
 
-  function renderEntryCard(item, state) {
+  function renderEntryCard(item, state, selectedSet) {
     const key = entryKey(item);
-    const picked = state.explorer.selectedKeys.includes(key);
+    const picked = selectedSet.has(key);
     const kind = item.kind || inferKind(item);
     const isFolder = kind === "folder";
     const isImage = kind === "image";

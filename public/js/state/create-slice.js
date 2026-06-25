@@ -29,8 +29,14 @@ export function combineReducers(reducers) {
 export function createStore(reducer, state) {
   let currentState = state;
   const listeners = new Set();
+  let batchDepth = 0;
 
-  return {
+  function notifyListeners() {
+    if (batchDepth > 0) return;
+    listeners.forEach((listener) => listener());
+  }
+
+  const store = {
     getState() {
       return currentState;
     },
@@ -40,11 +46,23 @@ export function createStore(reducer, state) {
     },
     dispatch(action) {
       if (typeof action === "function") {
-        return action(this.dispatch.bind(this), this.getState.bind(this));
+        return action(store.dispatch.bind(store), store.getState.bind(store));
       }
       currentState = reducer(currentState, action);
-      listeners.forEach((listener) => listener());
+      notifyListeners();
       return action;
     },
+    async batchDispatch(actions) {
+      batchDepth++;
+      try {
+        for (const action of actions) {
+          await store.dispatch(action);
+        }
+      } finally {
+        batchDepth--;
+        notifyListeners();
+      }
+    },
   };
+  return store;
 }

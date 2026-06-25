@@ -442,11 +442,13 @@ function renderMain(state) {
 }
 
 function navigateToExplorerPath(path = '') {
-  store.dispatch(actions.explorer.setTrashMode(false));
-  store.dispatch(actions.explorer.setPath(path));
-  store.dispatch(actions.explorer.setQuery(''));
-  store.dispatch(actions.explorer.setQueryDraft(''));
-  store.dispatch(thunks.loadExplorer());
+  store.batchDispatch([
+    actions.explorer.setTrashMode(false),
+    actions.explorer.setPath(path),
+    actions.explorer.setQuery(''),
+    actions.explorer.setQueryDraft(''),
+    thunks.loadExplorer(),
+  ]);
 }
 
 let notifPollTimer = null;

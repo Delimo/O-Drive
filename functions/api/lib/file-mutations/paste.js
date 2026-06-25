@@ -9,8 +9,8 @@ import {
   mapPathResults,
 } from "./helpers.js";
 
-export async function handlePaste(env, request) {
-  const { action, paths, targetDir } = await request.json();
+export async function handlePaste(env, request, body) {
+  const { action, paths, targetDir } = body || await request.json();
   if (!["copy", "move"].includes(action))
     return jsonResponse(
       { success: false, message: "Invalid paste action" },

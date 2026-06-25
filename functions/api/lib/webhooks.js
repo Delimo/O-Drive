@@ -326,7 +326,6 @@ async function recordDelivery(env, endpoint, event, result) {
         createdAt,
       )
       .run();
-    await cleanupWebhookDeliveries(env, createdAt);
   } catch (_) {}
 }
 

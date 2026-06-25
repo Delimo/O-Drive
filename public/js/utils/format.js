@@ -10,16 +10,18 @@ export function formatBytes(value) {
   return `${scaled >= 100 || index === 0 ? scaled.toFixed(0) : scaled.toFixed(1)} ${units[index]}`;
 }
 
+const _timeFmt = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 export function formatTime(value) {
   const time = Number(value || 0);
   if (!time) return "未知时间";
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(time * 1000));
+  return _timeFmt.format(new Date(time * 1000));
 }
 
 export function formatRelative(value) {

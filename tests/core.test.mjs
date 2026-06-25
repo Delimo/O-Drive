@@ -1454,7 +1454,7 @@ test('operation logs can be manually cleaned with retention policy', async () =>
 
     const listed = await handleAdminLogs(env, new URL('https://example.com/api/admin/logs?page=1&size=20'));
     const listedData = await listed.json();
-    assert.equal(listedData.totalPages, 100);
+    assert.equal(listedData.totalPages, 101);
     assert.equal(listedData.logs.length, 20);
     assert.equal(listedData.logs[0].details, '清理旧操作日志 8 条');
     assert.equal(listedData.logs[1].details, 'log-2004');

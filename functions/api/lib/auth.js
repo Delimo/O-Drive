@@ -16,6 +16,25 @@ function createCsrfToken() {
 }
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
+
+async function timingSafeEqual(a, b) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.generateKey(
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sigA = new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, encoder.encode(a)),
+  );
+  const sigB = new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, encoder.encode(b)),
+  );
+  if (sigA.length !== sigB.length) return false;
+  let diff = 0;
+  for (let i = 0; i < sigA.length; i++) diff |= sigA[i] ^ sigB[i];
+  return diff === 0;
+}
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
 const LOGIN_ALERT_COOLDOWN_MS = 30 * 60 * 1000;
@@ -165,7 +184,7 @@ export async function handleLogin(request, env, context = {}) {
     return jsonResponse({ success: false, message: "Too many attempts" }, 429);
   }
 
-  if (username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD) {
+  if (username === env.ADMIN_USERNAME && await timingSafeEqual(password, env.ADMIN_PASSWORD)) {
     try {
       await env.D1.prepare("DELETE FROM login_attempts WHERE ip = ?")
         .bind(ip)

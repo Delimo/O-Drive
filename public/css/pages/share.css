@@ -48,56 +48,6 @@
   margin: 8px 0;
 }
 
-.tag-active {
-  background: rgba(24, 121, 78, 0.1);
-  color: #18794e;
-}
-
-.tag-expired {
-  background: rgba(192, 57, 43, 0.1);
-  color: #c0392b;
-}
-
-.tag-soon {
-  background: rgba(183, 110, 17, 0.1);
-  color: #b76e11;
-}
-
-.tag-unlimited {
-  background: rgba(14, 116, 144, 0.1);
-  color: #0e7490;
-}
-
-.tag-password {
-  background: rgba(107, 70, 193, 0.1);
-  color: #6b46c1;
-}
-
-.tag-preview {
-  background: rgba(24, 121, 78, 0.1);
-  color: #18794e;
-}
-
-.tag-no-preview {
-  background: rgba(100, 116, 139, 0.1);
-  color: #64748b;
-}
-
-.tag-download {
-  background: rgba(14, 116, 144, 0.1);
-  color: #0e7490;
-}
-
-.tag-no-download {
-  background: rgba(100, 116, 139, 0.1);
-  color: #64748b;
-}
-
-.tag-exhausted {
-  background: rgba(192, 57, 43, 0.1);
-  color: #c0392b;
-}
-
 .share-item-expired {
   opacity: 0.7;
   border-left: 3px solid rgba(192, 57, 43, 0.4);

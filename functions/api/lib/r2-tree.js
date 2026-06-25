@@ -7,8 +7,10 @@ import {
 } from "./file-index/index.js";
 import {
   resolveExistingObjectLocation,
+  storageCopy,
   storageDelete,
   storageGet,
+  storageHead,
   storageList,
   storagePut,
 } from "./storage.js";
@@ -30,13 +32,11 @@ export async function mapWithConcurrency(items, limit, worker) {
 export async function copyR2Object(env, sourceKey, targetKey) {
   const sourceLocation = await resolveExistingObjectLocation(env, sourceKey);
   const sourceObjectKey = sourceLocation.objectKey;
-  const obj = await storageGet(env, "r2", sourceObjectKey);
-  if (!obj) return false;
-  await storagePut(env, "r2", targetKey, obj.body, {
-    httpMetadata: obj.httpMetadata,
-  });
+  await storageCopy(env, "r2", sourceObjectKey, "r2", targetKey);
+  const meta = await storageHead(env, "r2", targetKey);
   await upsertFileIndex(env, targetKey, {
-    ...obj,
+    size: meta?.size,
+    httpMetadata: meta?.httpMetadata,
     storageId: "r2",
     objectKey: targetKey,
   });
@@ -89,11 +89,11 @@ export async function copyTree(env, sourceKey, targetKey, move = false) {
         objectKey: sourceObjectKey,
       });
     } else {
-      await storagePut(env, "r2", targetKey, obj.body, {
-        httpMetadata: obj.httpMetadata,
-      });
+      await storageCopy(env, "r2", sourceObjectKey, "r2", targetKey);
+      const meta = await storageHead(env, "r2", targetKey);
       await upsertFileIndex(env, targetKey, {
-        ...obj,
+        size: meta?.size,
+        httpMetadata: meta?.httpMetadata,
         storageId: "r2",
         objectKey: targetKey,
       });
@@ -124,11 +124,11 @@ export async function copyTree(env, sourceKey, targetKey, move = false) {
           objectKey: subLocation.objectKey,
         });
       } else {
-        await storagePut(env, "r2", nextKey, subObj.body, {
-          httpMetadata: subObj.httpMetadata,
-        });
+        await storageCopy(env, "r2", subLocation.objectKey, "r2", nextKey);
+        const meta = await storageHead(env, "r2", nextKey);
         await upsertFileIndex(env, nextKey, {
-          ...subObj,
+          size: meta?.size,
+          httpMetadata: meta?.httpMetadata,
           storageId: "r2",
           objectKey: nextKey,
         });

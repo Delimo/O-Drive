@@ -81,13 +81,13 @@ export async function handleMultipartPart(env, request, url) {
   return jsonResponse(part);
 }
 
-export async function handleMultipartComplete(env, request) {
+export async function handleMultipartComplete(env, request, body) {
   const {
     key,
     uploadId,
     parts,
     storageId: bodyStorageId,
-  } = await request.json();
+  } = body || await request.json();
   if (!key || !uploadId || !Array.isArray(parts) || parts.length === 0) {
     return jsonResponse(
       { success: false, message: "Invalid multipart complete request" },

@@ -156,11 +156,8 @@ export async function resolveAdminRoute(
 
   // Paste
   if (path === "/api/paste" && method === "POST") {
-    const body = await request
-      .clone()
-      .json()
-      .catch(() => null);
-    const res = await handlePaste(env, request);
+    const body = await request.json().catch(() => null);
+    const res = await handlePaste(env, request, body);
     if (res.ok && body) {
       await notifyAfterOk(
         env,
@@ -175,11 +172,8 @@ export async function resolveAdminRoute(
 
   // Rename
   if (path.startsWith("/api/files/") && method === "PUT") {
-    const body = await request
-      .clone()
-      .json()
-      .catch(() => null);
-    const res = await handleRename(env, request, r2Key);
+    const body = await request.json().catch(() => null);
+    const res = await handleRename(env, request, r2Key, body);
     if (res.ok && body) {
       await notifyAfterOk(env, context, res, "file.renamed", {
         oldPath: "/" + r2Key,
@@ -191,11 +185,8 @@ export async function resolveAdminRoute(
 
   // Batch delete
   if (path === "/api/batch-delete") {
-    const body = await request
-      .clone()
-      .json()
-      .catch(() => null);
-    const res = await handleBatchDelete(env, request);
+    const body = await request.json().catch(() => null);
+    const res = await handleBatchDelete(env, request, body);
     if (res.ok && body) {
       await notifyAfterOk(env, context, res, "file.deleted", {
         paths: body.paths,
@@ -279,11 +270,8 @@ export async function resolveAdminRoute(
   }
 
   if (path === "/api/upload-multipart/complete" && method === "POST") {
-    const body = await request
-      .clone()
-      .json()
-      .catch(() => null);
-    const res = await handleMultipartComplete(env, request);
+    const body = await request.json().catch(() => null);
+    const res = await handleMultipartComplete(env, request, body);
     if (res.ok && body) {
       if (body.key)
         await notifyAfterOk(env, context, res, "file.uploaded", {

@@ -218,9 +218,10 @@ export function createHomeRenderers(deps) {
 
     if (entries.length) {
       const isList = explorer.view === "list";
+      const selectedSet = new Set(explorer.selectedKeys || []);
 
       if (isList) {
-        return renderListTable(state, entries, showBackButton, parentPath);
+        return renderListTable(state, entries, showBackButton, parentPath, selectedSet);
       }
 
       return `
@@ -239,7 +240,7 @@ export function createHomeRenderers(deps) {
           `
               : ""
           }
-          ${entries.map((item) => renderEntryCard(item, state)).join("")}
+          ${entries.map((item) => renderEntryCard(item, state, selectedSet)).join("")}
         </div>
       `;
     }
@@ -274,7 +275,7 @@ export function createHomeRenderers(deps) {
     return renderEmptyState(emptyTitle, emptyCopy, "<span></span>");
   }
 
-  function renderListTable(state, entries, showBackButton, parentPath) {
+  function renderListTable(state, entries, showBackButton, parentPath, selectedSet) {
     const explorer = state.explorer;
     const sortField = explorer.sortField || "name";
     const sortDir = explorer.sortDir || "asc";
@@ -335,16 +336,16 @@ export function createHomeRenderers(deps) {
             `
                 : ""
             }
-            ${entries.map((item) => renderListRow(item, state)).join("")}
+            ${entries.map((item) => renderListRow(item, state, selectedSet)).join("")}
           </tbody>
         </table>
       </div>
     `;
   }
 
-  function renderListRow(item, state) {
+  function renderListRow(item, state, selectedSet) {
     const key = entryKey(item);
-    const picked = state.explorer.selectedKeys.includes(key);
+    const picked = selectedSet.has(key);
     const kind = item.kind || inferKind(item);
     const isFolder = kind === "folder";
     const isImage = kind === "image";

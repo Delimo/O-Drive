@@ -30,12 +30,14 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     }
 
     if (action === "clear-search-filters") {
-      store.dispatch(actions.explorer.setFilterKind("all"));
-      store.dispatch(actions.explorer.setFilterMinSize(""));
-      store.dispatch(actions.explorer.setFilterMaxSize(""));
-      store.dispatch(actions.explorer.setFilterDateFrom(""));
-      store.dispatch(actions.explorer.setFilterDateTo(""));
-      store.dispatch(thunks.loadExplorer());
+      store.batchDispatch([
+        actions.explorer.setFilterKind("all"),
+        actions.explorer.setFilterMinSize(""),
+        actions.explorer.setFilterMaxSize(""),
+        actions.explorer.setFilterDateFrom(""),
+        actions.explorer.setFilterDateTo(""),
+        thunks.loadExplorer(),
+      ]);
       return;
     }
 
@@ -55,9 +57,11 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       const sortField = state.explorer.sortField || "name";
       const sortDir = state.explorer.sortDir || "asc";
       const dir = field === sortField && sortDir === "asc" ? "desc" : "asc";
-      store.dispatch(actions.explorer.setSortList({ field, dir }));
       const sortMap = { name: "smart", size: "size", time: "time" };
-      store.dispatch(actions.explorer.setSort(sortMap[field] || "smart"));
+      store.batchDispatch([
+        actions.explorer.setSortList({ field, dir }),
+        actions.explorer.setSort(sortMap[field] || "smart"),
+      ]);
       return;
     }
 
@@ -68,14 +72,16 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
 
     if (action === "toggle-trash") {
       const next = !state.explorer.trashMode;
-      store.dispatch(actions.explorer.setTrashMode(next));
-      store.dispatch(actions.explorer.setQuery(next ? state.explorer.query : ""));
-      store.dispatch(actions.explorer.setQueryDraft(next ? state.explorer.queryDraft : ""));
-      store.dispatch(actions.explorer.setPath(next ? "" : state.explorer.path));
-      store.dispatch(actions.explorer.setSelectedKeys([]));
-      store.dispatch(actions.explorer.setTrashSelectedKeys([]));
-      store.dispatch(actions.explorer.setClipboard(next ? null : state.explorer.clipboard));
-      store.dispatch(thunks.loadExplorer());
+      store.batchDispatch([
+        actions.explorer.setTrashMode(next),
+        actions.explorer.setQuery(next ? state.explorer.query : ""),
+        actions.explorer.setQueryDraft(next ? state.explorer.queryDraft : ""),
+        actions.explorer.setPath(next ? "" : state.explorer.path),
+        actions.explorer.setSelectedKeys([]),
+        actions.explorer.setTrashSelectedKeys([]),
+        actions.explorer.setClipboard(next ? null : state.explorer.clipboard),
+        thunks.loadExplorer(),
+      ]);
       return;
     }
 
@@ -127,9 +133,11 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     }
 
     if (action === "clear-selected") {
-      store.dispatch(actions.explorer.setSelection(""));
-      store.dispatch(actions.explorer.setSelectedKeys([]));
-      store.dispatch(actions.explorer.setTrashSelectedKeys([]));
+      store.batchDispatch([
+        actions.explorer.setSelection(""),
+        actions.explorer.setSelectedKeys([]),
+        actions.explorer.setTrashSelectedKeys([]),
+      ]);
       return;
     }
 
@@ -143,8 +151,10 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     if (action === "copy-selected" || action === "move-selected") {
       if (state.explorer.trashMode) return;
       const paths = collectSelectedPaths(state);
-      store.dispatch(actions.explorer.setClipboard({ action: action === "move-selected" ? "move" : "copy", paths }));
-      store.dispatch(actions.explorer.setSelectedKeys([]));
+      store.batchDispatch([
+        actions.explorer.setClipboard({ action: action === "move-selected" ? "move" : "copy", paths }),
+        actions.explorer.setSelectedKeys([]),
+      ]);
       dispatchToast("success", action === "move-selected" ? "已加入移动队列" : "已加入复制队列");
       return;
     }
@@ -165,8 +175,10 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     if (action === "execute-batch-paste") {
       const modal = state.app.modal;
       if (!modal) return;
-      store.dispatch(actions.app.setModal(null));
-      store.dispatch(thunks.pasteClipboard());
+      store.batchDispatch([
+        actions.app.setModal(null),
+        thunks.pasteClipboard(),
+      ]);
       return;
     }
 
@@ -181,8 +193,10 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     if (action === "execute-batch-delete") {
       const modal = state.app.modal;
       if (!modal || !modal.paths?.length) return;
-      store.dispatch(actions.app.setModal(null));
-      store.dispatch(thunks.batchDelete(modal.paths));
+      store.batchDispatch([
+        actions.app.setModal(null),
+        thunks.batchDelete(modal.paths),
+      ]);
       return;
     }
 

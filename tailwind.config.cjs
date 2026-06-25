@@ -4,6 +4,7 @@ module.exports = {
     "./public/**/*.html",
     "./public/**/*.js",
   ],
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {},
   },

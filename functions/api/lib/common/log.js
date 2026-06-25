@@ -29,7 +29,6 @@ export async function addLog(env, request, action, details) {
         Date.now(),
       )
       .run();
-    await cleanupLogs(env);
   } catch (e) {
     try {
       await env.D1.prepare(

@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import "./css/tokens.css";
 @import "./css/base.css";
 @import "./css/components/buttons.css";
@@ -9,7 +13,3 @@
 @import "./css/pages/share.css";
 @import "./css/pages/admin.css";
 @import "./css/responsive.css";
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;

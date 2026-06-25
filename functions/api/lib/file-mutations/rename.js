@@ -2,8 +2,8 @@ import { jsonResponse, normalizeName, addLog } from "../common/index.js";
 import { copyTree } from "../r2-tree.js";
 import { assertUserKey, normalizeUserKey, keyExists, assertTargetAvailable } from "./helpers.js";
 
-export async function handleRename(env, request, r2Key) {
-  const { newName } = await request.json();
+export async function handleRename(env, request, r2Key, body) {
+  const { newName } = body || await request.json();
   const cleanName = normalizeName(newName);
   r2Key = normalizeUserKey(r2Key);
   const parentDir = r2Key.includes("/")
