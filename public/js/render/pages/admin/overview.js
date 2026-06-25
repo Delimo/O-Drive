@@ -20,6 +20,128 @@ export function createOverviewRenderer({
     return 'rgba(100,116,139,0.1)';
   }
 
+  const BREAKDOWN_PRESETS = [
+    { keys: ['image', 'img', 'photo', 'pictures'], label: '图片', color: '#14b8a6', tint: 'rgba(20,184,166,0.16)' },
+    { keys: ['video', 'movie'], label: '视频', color: '#8b5cf6', tint: 'rgba(139,92,246,0.16)' },
+    { keys: ['audio', 'music'], label: '音频', color: '#ec4899', tint: 'rgba(236,72,153,0.16)' },
+    { keys: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md'], label: '文档', color: '#0ea5e9', tint: 'rgba(14,165,233,0.16)' },
+    { keys: ['zip', 'rar', '7z', 'tar', 'gz', 'archive'], label: '压缩包', color: '#f59e0b', tint: 'rgba(245,158,11,0.16)' },
+    { keys: ['exe', 'apk', 'dll', 'deb', 'rpm'], label: '程序', color: '#ef4444', tint: 'rgba(239,68,68,0.16)' },
+    { keys: ['folder'], label: '文件夹', color: '#22c55e', tint: 'rgba(34,197,94,0.16)' },
+  ];
+
+  function getBreakdownMeta(category, index = 0) {
+    const raw = String(category || '').trim();
+    const lowered = raw.toLowerCase();
+    const matched = BREAKDOWN_PRESETS.find(item => item.keys.includes(lowered));
+    const fallbackPalette = [
+      { label: '图片', color: '#14b8a6', tint: 'rgba(20,184,166,0.16)' },
+      { label: '视频', color: '#8b5cf6', tint: 'rgba(139,92,246,0.16)' },
+      { label: '音频', color: '#ec4899', tint: 'rgba(236,72,153,0.16)' },
+      { label: '文档', color: '#0ea5e9', tint: 'rgba(14,165,233,0.16)' },
+      { label: '压缩包', color: '#f59e0b', tint: 'rgba(245,158,11,0.16)' },
+      { label: '程序', color: '#ef4444', tint: 'rgba(239,68,68,0.16)' },
+      { label: '其他', color: '#94a3b8', tint: 'rgba(148,163,184,0.16)' },
+    ];
+
+    if (matched) {
+      return {
+        label: matched.label,
+        color: matched.color,
+        tint: matched.tint,
+        keyLabel: raw && raw !== matched.label ? raw : '',
+      };
+    }
+
+    if (lowered === 'other' || lowered === 'others' || raw === '其他') {
+      return {
+        label: '其他',
+        color: '#94a3b8',
+        tint: 'rgba(148,163,184,0.16)',
+        keyLabel: raw && raw !== '其他' ? raw : '',
+      };
+    }
+
+    const fallback = fallbackPalette[index % fallbackPalette.length];
+    return {
+      label: raw || '未分类',
+      color: fallback.color,
+      tint: fallback.tint,
+      keyLabel: raw && raw !== fallback.label ? raw : '',
+    };
+  }
+
+  function buildBreakdownModel(entries) {
+    const normalized = entries
+      .map(([category, info], index) => ({
+        category: String(category || '').trim(),
+        count: Number(info?.count || 0),
+        ...getBreakdownMeta(category, index),
+      }))
+      .filter(item => item.count > 0);
+
+    if (!normalized.length) {
+      return {
+        items: [],
+        total: 0,
+        categories: 0,
+        otherCount: 0,
+        dominant: null,
+        gradient: '',
+      };
+    }
+
+    const nonOther = normalized
+      .filter(item => {
+        const lowered = item.category.toLowerCase();
+        return lowered !== 'other' && lowered !== 'others' && lowered !== '其他';
+      })
+      .sort((a, b) => b.count - a.count);
+
+    const otherCount = normalized
+      .filter(item => {
+        const lowered = item.category.toLowerCase();
+        return lowered === 'other' || lowered === 'others' || lowered === '其他';
+      })
+      .reduce((sum, item) => sum + item.count, 0);
+
+    const visibleItems = nonOther.slice(0, 5);
+    const overflowCount = nonOther.slice(5).reduce((sum, item) => sum + item.count, 0);
+    const mergedOther = otherCount + overflowCount;
+
+    if (mergedOther > 0) {
+      visibleItems.push({
+        category: 'other',
+        label: '其他',
+        keyLabel: overflowCount > 0 ? '合并剩余' : '',
+        count: mergedOther,
+        color: '#94a3b8',
+        tint: 'rgba(148,163,184,0.16)',
+      });
+    }
+
+    const total = visibleItems.reduce((sum, item) => sum + item.count, 0);
+    let cursor = 0;
+    const gradient = total > 0
+      ? visibleItems.map((item) => {
+          const span = (item.count / total) * 360;
+          const start = cursor;
+          const end = cursor + span;
+          cursor = end;
+          return `${item.color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
+        }).join(', ')
+      : '';
+
+    return {
+      items: visibleItems,
+      total,
+      categories: normalized.length,
+      otherCount: mergedOther,
+      dominant: visibleItems[0] || null,
+      gradient,
+    };
+  }
+
   function renderAdminStatsGrid(stats) {
     if (!stats) return ``;
     const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {}, attention = [], logs = {}, tasks = {}, thumbnailsPresent = false } = stats;
@@ -28,7 +150,10 @@ export function createOverviewRenderer({
     const recentFiles = latest.slice(0, 6);
 
     const breakdownItems = Object.entries(breakdown || {});
-    const totalBreakdown = breakdownItems.reduce((sum, [_, val]) => sum + (val.count || 0), 0) || 1;
+    const breakdownModel = buildBreakdownModel(breakdownItems);
+    const dominantPct = breakdownModel.dominant && breakdownModel.total
+      ? Math.round((breakdownModel.dominant.count / breakdownModel.total) * 100)
+      : 0;
 
     return `
       <div class="ov-overview">
@@ -176,25 +301,72 @@ export function createOverviewRenderer({
                 <span class="ov-section-title">类型分布</span>
                 <button class="btn btn-sm" type="button" data-action="refresh-admin">刷新</button>
               </div>
-              <div class="ov-section-body ov-breakdown-chart">
-                ${breakdownItems.length > 0 ? (() => {
-                  const colors = ['#10b981', '#8b5cf6', '#ec4899', '#0e7490', '#f59e0b', '#64748b'];
-                  return breakdownItems.map(([category, info], i) => {
-                    const count = info.count || 0;
-                    const pct = Math.min(100, Math.round((count / totalBreakdown) * 100));
-                    const color = colors[i % colors.length];
-                    return `
-                      <div class="ov-breakdown-row">
-                        <span class="ov-breakdown-name">${escapeHtml(category)}</span>
-                        <div class="ov-breakdown-track">
-                          <div class="ov-breakdown-fill" style="width:${pct}%;background:${color};"></div>
+              <div class="ov-section-body ov-type-body">
+                ${breakdownModel.items.length > 0 ? `
+                  <div class="ov-type-panel">
+                    <div class="ov-type-hero">
+                      <div class="ov-type-donut" role="img" aria-label="文件类型分布">
+                        <div class="ov-type-donut-ring" style="background:${breakdownModel.gradient ? `conic-gradient(${breakdownModel.gradient})` : 'conic-gradient(#334155 0deg 360deg)'}"></div>
+                        <div class="ov-type-donut-core">
+                          <span class="ov-type-donut-kicker">文件类型</span>
+                          <strong class="ov-type-donut-total">${safeText(breakdownModel.total, "0")}</strong>
+                          <span class="ov-type-donut-sub">${safeText(breakdownModel.categories, "0")} 类</span>
                         </div>
-                        <span class="ov-breakdown-count">${count}</span>
-                        <span class="ov-breakdown-pct">${pct}%</span>
                       </div>
-                    `;
-                  }).join("");
-                })() : `
+                      <div class="ov-type-stats">
+                        <div class="ov-type-stat-card">
+                          <span class="ov-type-stat-label">主类型</span>
+                          <strong class="ov-type-stat-value">${escapeHtml(breakdownModel.dominant?.label || "暂无")}</strong>
+                          <span class="ov-type-stat-meta">${breakdownModel.dominant ? `${safeText(breakdownModel.dominant.count, "0")} 项 · ${dominantPct}%` : "暂无数据"}</span>
+                        </div>
+                        <div class="ov-type-stat-card">
+                          <span class="ov-type-stat-label">类型数</span>
+                          <strong class="ov-type-stat-value">${safeText(breakdownModel.categories, "0")}</strong>
+                          <span class="ov-type-stat-meta">已识别的分类总数</span>
+                        </div>
+                        <div class="ov-type-stat-card">
+                          <span class="ov-type-stat-label">其他合并</span>
+                          <strong class="ov-type-stat-value">${safeText(breakdownModel.otherCount, "0")}</strong>
+                          <span class="ov-type-stat-meta">低占比项已聚合</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="ov-type-legend">
+                      ${breakdownModel.items.map((item) => {
+                        const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
+                        return `
+                          <div class="ov-type-item">
+                            <div class="ov-type-item-head">
+                              <span class="ov-type-swatch" style="background:${item.color};box-shadow:0 0 0 4px ${item.tint};"></span>
+                              <div class="ov-type-item-namewrap">
+                                <span class="ov-type-item-name">${escapeHtml(item.label)}</span>
+                                ${item.keyLabel ? `<span class="ov-type-item-key">${escapeHtml(item.keyLabel)}</span>` : ""}
+                              </div>
+                            </div>
+                            <div class="ov-type-item-stats">
+                              <strong>${safeText(item.count, "0")}</strong>
+                              <span>${pct}%</span>
+                            </div>
+                            <div class="ov-type-item-track" aria-hidden="true">
+                              <i style="width:${pct}%;background:${item.color};"></i>
+                            </div>
+                          </div>
+                        `;
+                      }).join("")}
+                    </div>
+                    <div class="ov-type-chips">
+                      ${breakdownModel.items.slice(0, 4).map((item) => {
+                        const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
+                        return `
+                          <span class="ov-type-chip" style="--chip-color:${item.color};">
+                            <i></i>
+                            ${escapeHtml(item.label)} ${pct}%
+                          </span>
+                        `;
+                      }).join("")}
+                    </div>
+                  </div>
+                ` : `
                   <div class="ov-empty-inline">暂无分类数据</div>
                 `}
               </div>

@@ -1,5 +1,5 @@
 export function createSharesRenderer({
-  safeText, escapeHtml, renderEmptyStateCompact, formatTime, formatRelative,
+  safeText, escapeHtml, renderEmptyStateCompact, formatTime, formatRelative, formatBytes,
   filterShares, getFilterLabel, getShareStatusTags, isShareActive, components
 }) {
 
