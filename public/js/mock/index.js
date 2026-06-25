@@ -167,12 +167,17 @@ export const mockAdminShares = [
 ];
 
 export const mockAdminHealth = {
-  components: {
-    storage: { status: "ok", message: "存储服务运行正常" },
-    database: { status: "ok", message: "数据库连接正常" },
-    index: { status: "ok", message: "索引服务运行正常" },
-    cache: { status: "ok", message: "缓存服务运行正常" },
+  ok: true,
+  db: { bound: true, ok: true, tables: ["files", "shares", "logs"] },
+  r2: { bound: true, ok: true },
+  env: {
+    adminUsername: true,
+    adminPassword: true,
+    tokenSecret: { bound: true },
+    allowGuestConfigured: true,
+    guestEnabled: false,
   },
+  warnings: [],
 };
 
 export function mockAdminLogs(page = 1) {

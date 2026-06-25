@@ -18,7 +18,17 @@ export function createSystemRenderer({
     } = admin;
 
     const healthData = admin.health || {};
-    const sysComponents = healthData.components || {};
+    const sysComponents = {};
+    if (healthData.db) {
+      sysComponents["数据库"] = { status: healthData.db.ok ? "ok" : "error", message: healthData.db.message || "" };
+    }
+    if (healthData.r2) {
+      sysComponents["对象存储"] = { status: healthData.r2.ok ? "ok" : "error", message: healthData.r2.message || "" };
+    }
+    if (healthData.env) {
+      sysComponents["管理员账户"] = { status: healthData.env.adminUsername && healthData.env.adminPassword ? "ok" : "error", message: "" };
+      sysComponents["Token密钥"] = { status: healthData.env.tokenSecret?.bound ? "ok" : "error", message: "" };
+    }
     const adminNotifHistory = admin.adminNotifHistory || [];
     const webhooks = admin.webhooks || [];
 
