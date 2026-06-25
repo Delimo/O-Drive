@@ -166,12 +166,21 @@ export function createSharesRenderer({
     if (loading) {
       return `
         <div class="share-page">
-          <div class="empty-state-compact">
-            <div>
-              <div class="empty-orb"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-              <h3 class="empty-title">载入中</h3>
-              <p class="empty-copy">正在获取分享信息...</p>
+          <div class="share-shell">
+            <div class="share-top">
+              <div class="share-brand">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                <span>O-Drive</span>
+              </div>
+              <span class="share-status-tag share-status-loading">载入中</span>
             </div>
+            <div class="share-mid">
+              <div class="share-preview-placeholder">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+              <p class="share-loading-text">正在获取分享信息...</p>
+            </div>
+            <div class="share-bottom"></div>
           </div>
         </div>`;
     }
@@ -179,16 +188,33 @@ export function createSharesRenderer({
     if (requiresPassword) {
       return `
         <div class="share-page">
-          <div class="share-card">
-            <div class="share-card-icon">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div class="share-shell">
+            <div class="share-top">
+              <div class="share-brand">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                <span>O-Drive</span>
+              </div>
+              <span class="share-status-tag share-status-locked">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                需要密码
+              </span>
             </div>
-            <h2 class="share-card-title">此分享需要密码</h2>
-            <p class="share-card-desc">${escapeHtml(error || "请输入访问密码以查看分享内容。")}</p>
-            <form class="share-card-form" data-form="share-unlock">
-              <input class="inline-input" name="share-password" type="password" placeholder="输入访问密码" value="${escapeHtml(password || "")}" required style="max-width:280px;">
-              <button class="btn btn-primary" type="submit">解锁</button>
-            </form>
+            <div class="share-mid">
+              <div class="share-preview-placeholder share-preview-locked">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <h2 class="share-file-name">此分享需要密码</h2>
+              <p class="share-file-desc">${escapeHtml(error || "请输入访问密码以查看分享内容。")}</p>
+            </div>
+            <div class="share-bottom">
+              <form class="share-unlock-form" data-form="share-unlock">
+                <input class="share-unlock-input" name="share-password" type="password" placeholder="输入访问密码" value="${escapeHtml(password || "")}" required>
+                <button class="share-unlock-btn" type="submit">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                  解锁
+                </button>
+              </form>
+            </div>
           </div>
         </div>`;
     }
@@ -196,12 +222,22 @@ export function createSharesRenderer({
     if (error) {
       return `
         <div class="share-page">
-          <div class="share-card">
-            <div class="share-card-icon" style="color:var(--danger);">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <div class="share-shell">
+            <div class="share-top">
+              <div class="share-brand">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                <span>O-Drive</span>
+              </div>
+              <span class="share-status-tag share-status-error">无法访问</span>
             </div>
-            <h2 class="share-card-title">无法访问此分享</h2>
-            <p class="share-card-desc">${escapeHtml(error)}</p>
+            <div class="share-mid">
+              <div class="share-preview-placeholder share-preview-error">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              </div>
+              <h2 class="share-file-name">无法访问此分享</h2>
+              <p class="share-file-desc">${escapeHtml(error)}</p>
+            </div>
+            <div class="share-bottom"></div>
           </div>
         </div>`;
     }
@@ -209,38 +245,85 @@ export function createSharesRenderer({
     if (!item) {
       return `
         <div class="share-page">
-          <div class="empty-state-compact">
-            <div>
-              <div class="empty-orb"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
-              <h3 class="empty-title">暂无分享内容</h3>
-              <p class="empty-copy">分享信息不可用。</p>
+          <div class="share-shell">
+            <div class="share-top">
+              <div class="share-brand">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                <span>O-Drive</span>
+              </div>
             </div>
+            <div class="share-mid">
+              <div class="share-preview-placeholder">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </div>
+              <h2 class="share-file-name">暂无分享内容</h2>
+              <p class="share-file-desc">分享信息不可用。</p>
+            </div>
+            <div class="share-bottom"></div>
           </div>
         </div>`;
     }
 
-    const kind = item.contentType || "file";
-    const isPreviewable = item.allowPreview && ["image","video","audio","pdf","text/markdown","text/plain"].some(t => kind.includes(t));
+    const kind = item.contentType || "";
+    const isImage = kind.startsWith("image/");
+    const isVideo = kind.startsWith("video/");
+    const isAudio = kind.startsWith("audio/");
+    const isPdf = kind === "application/pdf";
+    const isText = kind.startsWith("text/");
+    const isPreviewable = item.allowPreview && (isImage || isVideo || isAudio || isPdf || isText);
     const isDownloadable = item.allowDownload;
     const sizeText = item.size ? formatBytes(item.size) : "";
-    const expiresText = item.expiresAt ? `有效期至 ${formatTime(Math.floor(item.expiresAt / 1000))}` : "永久有效";
-    const downloadsText = item.maxDownloads > 0 ? `下载 ${item.downloadCount}/${item.maxDownloads}` : "";
+    const expiresText = item.expiresAt ? formatTime(Math.floor(item.expiresAt / 1000)) : null;
+    const downloadsText = item.maxDownloads > 0 ? `${item.downloadCount} / ${item.maxDownloads}` : null;
+    const token = share.token;
+
+    let previewIcon = "file";
+    if (isImage) previewIcon = "image";
+    else if (isVideo) previewIcon = "video";
+    else if (isAudio) previewIcon = "audio";
+    else if (isPdf) previewIcon = "pdf";
+    else if (isText) previewIcon = "text";
+
+    const iconSvg = {
+      file: '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>',
+      image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+      video: '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>',
+      audio: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+      pdf: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>',
+      text: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+    };
 
     return `
       <div class="share-page">
-        <div class="share-card">
-          <div class="share-card-icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        <div class="share-shell">
+          <div class="share-top">
+            <div class="share-brand">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+              <span>O-Drive</span>
+            </div>
+            <span class="share-status-tag share-status-active">
+              <span class="share-status-dot"></span>
+              有效分享
+            </span>
           </div>
-          <h2 class="share-card-title">${safeText(item.name, "未命名文件")}</h2>
-          <div class="share-card-meta">
-            ${sizeText ? `<span>${escapeHtml(sizeText)}</span>` : ""}
-            <span>${escapeHtml(expiresText)}</span>
-            ${downloadsText ? `<span>${escapeHtml(downloadsText)}</span>` : ""}
+
+          <div class="share-mid">
+            <div class="share-preview-icon share-preview-${previewIcon}">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${iconSvg[previewIcon] || iconSvg.file}</svg>
+            </div>
+            <h1 class="share-file-name">${safeText(item.name, "未命名文件")}</h1>
+            <div class="share-file-meta">
+              ${sizeText ? `<span class="share-meta-chip">${escapeHtml(sizeText)}</span>` : ""}
+              ${expiresText ? `<span class="share-meta-chip">有效期至 ${escapeHtml(expiresText)}</span>` : ""}
+              ${downloadsText ? `<span class="share-meta-chip">下载 ${escapeHtml(downloadsText)}</span>` : ""}
+            </div>
           </div>
-          <div class="share-card-actions">
-            ${isDownloadable ? `<a class="btn btn-primary" href="/api/share/${encodeURIComponent(share.token)}/download" target="_blank">下载文件</a>` : ""}
-            ${isPreviewable ? `<a class="btn" href="/api/share/${encodeURIComponent(share.token)}/preview" target="_blank">在线预览</a>` : ""}
+
+          <div class="share-bottom">
+            <div class="share-actions">
+              ${isDownloadable ? `<a class="share-btn share-btn-primary" href="/api/share/${encodeURIComponent(token)}/download" target="_blank"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下载文件</a>` : ""}
+              ${isPreviewable ? `<a class="share-btn share-btn-ghost" href="/api/share/${encodeURIComponent(token)}/preview" target="_blank"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>在线预览</a>` : ""}
+            </div>
           </div>
         </div>
       </div>`;
