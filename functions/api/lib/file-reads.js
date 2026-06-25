@@ -274,11 +274,14 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
   const headers = new Headers();
   if (typeof obj.writeHttpMetadata === "function")
     obj.writeHttpMetadata(headers);
-  if (!headers.get("Content-Type"))
-    headers.set(
-      "Content-Type",
-      obj.httpMetadata?.contentType || "application/octet-stream",
-    );
+  if (!headers.get("Content-Type")) {
+    const ct = obj.httpMetadata?.contentType || "application/octet-stream";
+    if (ct.startsWith("text/") || ct === "application/json" || ct === "application/javascript" || ct === "application/xml") {
+      headers.set("Content-Type", ct.includes("charset") ? ct : `${ct}; charset=utf-8`);
+    } else {
+      headers.set("Content-Type", ct);
+    }
+  }
   headers.set("Accept-Ranges", "bytes");
   headers.set(
     "Content-Disposition",

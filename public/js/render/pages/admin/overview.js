@@ -358,7 +358,7 @@ export function createOverviewRenderer({
                       ${breakdownModel.items.slice(0, 4).map((item) => {
                         const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
                         return `
-                          <span class="ov-type-chip" style="--chip-color:${item.color};">
+                          <span class="ov-type-chip" style="--chip-color:${item.color};--chip-soft:${item.tint};">
                             <i></i>
                             ${escapeHtml(item.label)} ${pct}%
                           </span>
