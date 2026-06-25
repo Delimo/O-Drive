@@ -16,7 +16,18 @@ export function createSharesRenderer({
     }
 
     const now = Date.now();
-    const visibleShares = filterShares(shares, shareFilter);
+    const normalizedSearch = String(shareSearch || "").trim().toLowerCase();
+    const visibleShares = filterShares(shares, shareFilter).filter((item) => {
+      if (!normalizedSearch) return true;
+      const haystacks = [
+        item?.name,
+        item?.path,
+        item?.token,
+        item?.lastAccessIp,
+        item?.contentType
+      ];
+      return haystacks.some((value) => String(value || "").toLowerCase().includes(normalizedSearch));
+    });
     const totalShares = shares.length;
     const activeShares = shares.filter((item) => !item?.expired && !item?.exhausted && !(item?.expiresAt && item.expiresAt < now)).length;
     const inactiveShares = totalShares - activeShares;
@@ -117,9 +128,12 @@ export function createSharesRenderer({
               <option value="exhausted" ${shareFilter === "exhausted" ? "selected" : ""}>已用尽</option>
             </select>
             <div class="ov-share-filter-actions">
-              <button class="btn btn-sm" type="button" data-action="refresh-admin-shares">筛选</button>
-              <button class="btn btn-sm" type="button" data-action="set-shares-filter" data-filter="all">重置</button>
+              <button class="btn btn-sm" type="button" data-action="set-shares-filter" data-filter="all">全部状态</button>
             </div>
+          </div>
+          <div class="ov-share-filter-meta">
+            <span>当前状态：${escapeHtml(selectedLabel)}</span>
+            <span>显示 ${escapeHtml(String(visibleShares.length))} / ${escapeHtml(String(totalShares))} 条</span>
           </div>
         </div>
 
