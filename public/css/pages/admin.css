@@ -3086,14 +3086,6 @@
   color: var(--muted);
 }
 
-.ov-webhook-page-pills {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
 .ov-webhook-page-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3247,6 +3239,14 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
+}
+
+.ov-webhook-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
 }
 
 .ov-webhook-preview-value {
@@ -3718,7 +3718,6 @@
 }
 
 @media (max-width: 768px) {
-  .ov-webhook-page-pills,
   .ov-webhook-page-header {
     align-items: flex-start;
     justify-content: flex-start;

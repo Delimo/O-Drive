@@ -35,11 +35,6 @@ export function createWebhookRenderer({
             <h2 class="ov-webhook-page-title">Webhook 通知</h2>
             <p class="ov-webhook-page-desc">管理文件操作、异常行为和分享链接到期的外部通知通道</p>
           </div>
-          <div class="ov-webhook-page-pills">
-            <button class="ov-webhook-chip ov-webhook-chip-header" type="button">文件事件</button>
-            <button class="ov-webhook-chip" type="button">异常提醒</button>
-            <button class="ov-webhook-chip" type="button">分享到期</button>
-          </div>
         </div>
 
         <div class="ov-webhook-page-grid">
@@ -57,16 +52,31 @@ export function createWebhookRenderer({
                     <div class="ov-webhook-preview-block">
                       <span class="ov-webhook-preview-label">发送目标</span>
                       <div style="display:flex;flex-direction:column;gap:8px;">
-                        <input class="input" type="text" placeholder="名称（可选）">
-                        <input class="input" type="url" placeholder="URL *" required>
-                        <input class="input" type="text" value="json" placeholder="消息格式">
+                        <div>
+                          <label class="ov-webhook-field-label">名称</label>
+                          <input class="input" type="text" placeholder="可选，用于标识此 Webhook">
+                        </div>
+                        <div>
+                          <label class="ov-webhook-field-label">URL *</label>
+                          <input class="input" type="url" placeholder="https://example.com/webhook" required>
+                        </div>
+                        <div>
+                          <label class="ov-webhook-field-label">消息格式</label>
+                          <input class="input" type="text" value="json" placeholder="json / text / markdown">
+                        </div>
                       </div>
                     </div>
                     <div class="ov-webhook-preview-block">
-                      <span class="ov-webhook-preview-label">Method / Content-Type</span>
+                      <span class="ov-webhook-preview-label">请求配置</span>
                       <div style="display:flex;flex-direction:column;gap:8px;">
-                        <input class="input" type="text" value="POST">
-                        <input class="input" type="text" value="application/json">
+                        <div>
+                          <label class="ov-webhook-field-label">Method</label>
+                          <input class="input" type="text" value="POST" placeholder="POST / PUT / PATCH">
+                        </div>
+                        <div>
+                          <label class="ov-webhook-field-label">Content-Type</label>
+                          <input class="input" type="text" value="application/json" placeholder="application/json">
+                        </div>
                       </div>
                     </div>
                   </div>

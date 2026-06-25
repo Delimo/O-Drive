@@ -38,7 +38,6 @@ export function createOverviewRenderer({
             <p class="ov-overview-desc">存储状态与文件指标一览</p>
           </div>
           <button class="btn" type="button" data-action="refresh-admin">
-            <span class="icon">${''}</span>
             刷新
           </button>
         </div>
