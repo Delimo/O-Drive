@@ -1314,6 +1314,16 @@
     grid-column: 1 / -1;
     justify-content: flex-end;
   }
+  .ov-logs-filter-row,
+  .ov-logs-filter-row-bottom {
+    grid-template-columns: 1fr;
+  }
+  .ov-logs-filter-meta {
+    justify-content: flex-start;
+  }
+  .ov-logs-summary {
+    grid-template-columns: 1fr;
+  }
   .ov-storage-top,
   .ov-storage-bottom,
   .ov-shares-content,
@@ -1356,6 +1366,14 @@
     justify-content: flex-start;
     flex-wrap: wrap;
   }
+  .ov-logs-filter-shell {
+    padding: 12px;
+  }
+  .ov-logs-filter-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
   .ov-overview-grid {
     grid-template-columns: 1fr;
   }
@@ -1375,6 +1393,15 @@
   .ov-system-middle,
   .ov-system-bottom {
     grid-template-columns: 1fr;
+  }
+  .ov-logs-summary,
+  .ov-logs-pagination {
+    grid-template-columns: 1fr;
+  }
+  .ov-logs-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
   .ov-storage-bottom {
     grid-template-columns: 1fr;
@@ -1888,8 +1915,7 @@
 }
 
 .ov-share-filter-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px auto;
+  display: flex;
   gap: 12px;
   align-items: center;
 }
@@ -1904,6 +1930,8 @@
 }
 
 .ov-share-search {
+  flex: 1;
+  max-width: 320px;
   padding-left: 14px;
 }
 
@@ -2276,7 +2304,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%;
+  min-height: 100%;
+  flex: 1;
 }
 
 .ov-logs-header {
@@ -2307,15 +2336,40 @@
   color: var(--muted);
 }
 
-.ov-logs-filter {
+.ov-logs-filter-shell {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 10px;
   flex-shrink: 0;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
 }
 
-.ov-logs-filter .input {
-  flex: 1;
+.ov-logs-filter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 12px;
+  align-items: center;
+}
+
+.ov-logs-filter-row-bottom {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ov-logs-filter-row .input {
+  min-height: 46px;
+  border-radius: 10px;
+}
+
+.ov-logs-filter-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .ov-logs-date-range {
@@ -2339,8 +2393,41 @@
   overflow: hidden;
 }
 
+.ov-logs-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.ov-logs-summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.ov-logs-summary-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ov-logs-summary-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 .ov-logs-table-wrap {
-  overflow-x: auto;
+  overflow: auto;
   flex: 1;
   min-height: 0;
 }
@@ -2362,6 +2449,9 @@
   background: var(--panel-soft);
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .ov-logs-table td {
@@ -2394,15 +2484,30 @@
 }
 
 .ov-action-tag {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 84px;
+  padding: 6px 8px;
+  border-radius: 8px;
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   background: var(--panel-soft);
   color: var(--text);
+}
+
+.ov-action-main {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.ov-action-sub {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--muted);
+  text-transform: uppercase;
 }
 
 .ov-action-danger {

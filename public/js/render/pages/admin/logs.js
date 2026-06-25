@@ -1,6 +1,28 @@
 export function createLogsRenderer({
   safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
 }) {
+  const ACTION_LABELS = {
+    upload: "上传",
+    delete: "删除",
+    share: "分享",
+    login: "登录",
+    mkdir: "新建文件夹",
+    rename: "重命名",
+    trash: "移入回收站",
+    purge: "永久清理",
+    trash_clear: "清空回收站",
+    task_create: "创建任务",
+    copy: "复制",
+    move: "移动",
+    restore: "恢复",
+  };
+
+  function getActionLabel(action) {
+    const raw = String(action || "").trim();
+    if (!raw) return "未知操作";
+    const normalized = raw.toLowerCase().replace(/-/g, "_");
+    return ACTION_LABELS[normalized] || raw.toUpperCase();
+  }
 
   function renderAdminLogsSection(admin) {
     const { logs = [], logsLoading, logsError, logsPage = 1, logsTotalPages = 1, logsFilter = {} } = admin;
@@ -12,6 +34,9 @@ export function createLogsRenderer({
       return renderEmptyStateCompact("载入中", "读取日志流...", "");
     }
 
+    const filterActionLabel = logsFilter.action ? getActionLabel(logsFilter.action) : "全部事件";
+    const activeRange = [logsFilter.from, logsFilter.to].filter(Boolean).length;
+
     return `
       <div class="ov-logs">
         <div class="ov-logs-header">
@@ -21,27 +46,50 @@ export function createLogsRenderer({
           </div>
         </div>
 
-        <div class="ov-logs-filter">
-          <input class="input" type="text"
-                 data-action-input="set-logs-filter" data-key="q"
-                 value="${escapeHtml(logsFilter.q || "")}" placeholder="过滤关键词...">
-          <select class="input" data-action-change="set-logs-filter" data-key="action">
-            <option value="">全部事件</option>
-            <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传</option>
-            <option value="delete" ${logsFilter.action === "delete" ? "selected" : ""}>删除</option>
-            <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>共享</option>
-            <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>安全登录</option>
-          </select>
-          <div class="ov-logs-date-range">
-            <input class="input" type="date" data-action-change="set-logs-filter" data-key="from"
-                   value="${escapeHtml(logsFilter.from || "")}">
-            <span class="ov-logs-date-sep">–</span>
-            <input class="input" type="date" data-action-change="set-logs-filter" data-key="to"
-                   value="${escapeHtml(logsFilter.to || "")}">
+        <div class="ov-logs-filter-shell">
+          <div class="ov-logs-filter-row">
+            <input class="input" type="text"
+                   data-action-input="set-logs-filter" data-key="q"
+                   value="${escapeHtml(logsFilter.q || "")}" placeholder="过滤关键词...">
+            <select class="input" data-action-change="set-logs-filter" data-key="action">
+              <option value="">全部事件</option>
+              <option value="upload" ${logsFilter.action === "upload" ? "selected" : ""}>上传</option>
+              <option value="delete" ${logsFilter.action === "delete" ? "selected" : ""}>删除</option>
+              <option value="share" ${logsFilter.action === "share" ? "selected" : ""}>共享</option>
+              <option value="login" ${logsFilter.action === "login" ? "selected" : ""}>安全登录</option>
+            </select>
+          </div>
+          <div class="ov-logs-filter-row ov-logs-filter-row-bottom">
+            <div class="ov-logs-date-range">
+              <input class="input" type="date" data-action-change="set-logs-filter" data-key="from"
+                     value="${escapeHtml(logsFilter.from || "")}">
+              <span class="ov-logs-date-sep">–</span>
+              <input class="input" type="date" data-action-change="set-logs-filter" data-key="to"
+                     value="${escapeHtml(logsFilter.to || "")}">
+            </div>
+            <div class="ov-logs-filter-meta">
+              <span>事件：${escapeHtml(filterActionLabel)}</span>
+              <span>日期范围：${escapeHtml(activeRange ? `${activeRange} 项已设定` : "未设置")}</span>
+            </div>
           </div>
         </div>
 
         <div class="ov-logs-content">
+          <div class="ov-logs-summary">
+            <div class="ov-logs-summary-item">
+              <span class="ov-logs-summary-label">本页</span>
+              <span class="ov-logs-summary-value">${escapeHtml(String(logs.length))}</span>
+            </div>
+            <div class="ov-logs-summary-item">
+              <span class="ov-logs-summary-label">页码</span>
+              <span class="ov-logs-summary-value">${escapeHtml(String(logsPage))} / ${escapeHtml(String(logsTotalPages))}</span>
+            </div>
+            <div class="ov-logs-summary-item">
+              <span class="ov-logs-summary-label">筛选</span>
+              <span class="ov-logs-summary-value">${escapeHtml(filterActionLabel)}</span>
+            </div>
+          </div>
+
           ${logs.length === 0
             ? `<div class="ov-empty-inline">无匹配行为日志</div>`
             : `
@@ -57,13 +105,21 @@ export function createLogsRenderer({
                   </thead>
                   <tbody>
                     ${logs.map(log => {
-                      const actCls = log.action === "delete" ? 'ov-action-danger' : log.action === "login" ? 'ov-action-ok' : '';
+                      const rawAction = String(log.action || "-");
+                      const actKey = rawAction.toLowerCase().replace(/-/g, "_");
+                      const actCls = actKey === "delete" || actKey === "purge" || actKey === "trash_clear" ? "ov-action-danger" : actKey === "login" ? "ov-action-ok" : "";
+                      const actLabel = getActionLabel(rawAction);
                       return `
                         <tr>
                           <td class="ov-td-muted">${formatTime(log.createdAt)}</td>
-                          <td><span class="ov-action-tag ${actCls}">${escapeHtml(log.action)}</span></td>
-                          <td class="ov-td-mono">${safeText(log.path, "-")}</td>
-                          <td class="ov-td-mono ov-td-muted">${safeText(log.ip, "-")}</td>
+                          <td>
+                            <span class="ov-action-tag ${actCls}" title="${escapeHtml(rawAction)}">
+                              <span class="ov-action-main">${escapeHtml(actLabel)}</span>
+                              <span class="ov-action-sub">${escapeHtml(rawAction)}</span>
+                            </span>
+                          </td>
+                          <td class="ov-td-mono" title="${escapeHtml(String(log.path || "-"))}">${safeText(log.path, "-")}</td>
+                          <td class="ov-td-mono ov-td-muted" title="${escapeHtml(String(log.ip || "-"))}">${safeText(log.ip, "-")}</td>
                         </tr>
                       `;
                     }).join("")}
