@@ -3167,6 +3167,53 @@
   flex-wrap: wrap;
 }
 
+/* ─── Webhook Event Chips ─── */
+.ov-webhook-event-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ov-webhook-event-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ov-webhook-event-chip:hover {
+  border-color: var(--line-strong);
+}
+
+.ov-webhook-event-chip input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.ov-webhook-event-chip:has(input:checked) {
+  border-color: rgba(14, 116, 144, 0.3);
+  background: rgba(14, 116, 144, 0.05);
+}
+
+.ov-webhook-event-chip-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-event-chip-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* ─── Webhook Shared Chips ─── */
 .ov-webhook-chip {
   display: inline-flex;

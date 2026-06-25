@@ -86,12 +86,13 @@ export function createWebhookRenderer({
                     <div class="ov-webhook-subhead">
                       <span class="ov-webhook-subtitle">触发事件</span>
                     </div>
-                    <div class="ov-webhook-event-matrix">
+                    <div class="ov-webhook-event-chips">
                       ${EVENT_OPTIONS.map(({ key, label, desc }) => `
-                        <div class="ov-webhook-event-card is-active">
-                          <span class="ov-webhook-event-card-title">${escapeHtml(label)}</span>
-                          <span class="ov-webhook-event-card-desc">${escapeHtml(desc)}</span>
-                        </div>
+                        <label class="ov-webhook-event-chip">
+                          <input type="checkbox" name="events" value="${escapeHtml(key)}" checked>
+                          <span class="ov-webhook-event-chip-label">${escapeHtml(label)}</span>
+                          <span class="ov-webhook-event-chip-desc">${escapeHtml(desc)}</span>
+                        </label>
                       `).join("")}
                     </div>
                   </div>
