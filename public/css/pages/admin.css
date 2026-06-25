@@ -1345,6 +1345,12 @@
     border-right: none;
     border-bottom: 1px solid var(--line);
   }
+  .ov-webhook-page-grid {
+    grid-template-columns: 1fr;
+  }
+  .ov-webhook-events-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1427,6 +1433,13 @@
   .ov-rules-editor {
     border-right: none;
     border-bottom: 1px solid var(--line);
+  }
+  .ov-webhook-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ov-webhook-events-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2891,13 +2904,330 @@
   color: var(--muted);
 }
 
-.ov-webhook-page-content {
+.ov-webhook-page-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ov-webhook-page-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ov-webhook-page-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ov-webhook-page-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ─── Webhook Config Card ─── */
+.ov-webhook-config-card {
   display: flex;
   flex-direction: column;
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
   overflow: hidden;
+}
+
+.ov-webhook-config-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ov-webhook-config-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-config-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ov-webhook-config-body {
+  padding: 16px;
+}
+
+.ov-webhook-events-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ov-webhook-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-events-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.ov-webhook-event-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.ov-webhook-event-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-event-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ─── Webhook List Card ─── */
+.ov-webhook-list-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.ov-webhook-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ov-webhook-list-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ov-webhook-list-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-list-count {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.ov-webhook-list-body {
+  padding: 12px 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.ov-webhook-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ov-webhook-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.ov-webhook-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ov-webhook-card-tags {
+  display: flex;
+  gap: 4px;
+}
+
+.ov-webhook-tag {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ov-webhook-tag-method {
+  background: var(--primary-soft);
+  color: var(--accent);
+}
+
+.ov-webhook-tag-format {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.ov-webhook-tag-content {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.ov-webhook-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-card-url {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-webhook-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ov-webhook-card-events {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ov-webhook-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ─── Webhook Delivery Card ─── */
+.ov-webhook-delivery-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.ov-webhook-delivery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ov-webhook-delivery-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ov-webhook-delivery-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-delivery-count {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ov-webhook-delivery-body {
+  padding: 12px 16px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ov-webhook-delivery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ov-webhook-delivery-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.ov-webhook-delivery-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ov-webhook-delivery-event {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-delivery-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ov-webhook-status-ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.ov-webhook-status-err {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.ov-webhook-delivery-url {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-webhook-delivery-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--muted);
 }
 
 /* ─── Badge Info ─── */

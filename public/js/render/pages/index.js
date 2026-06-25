@@ -88,6 +88,7 @@ export function createPageRenderers(deps) {
     safeText: shareUtils.safeText,
     escapeHtml,
     renderEmptyStateCompact,
+    formatTime,
     components,
   });
 
