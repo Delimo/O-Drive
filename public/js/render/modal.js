@@ -329,7 +329,7 @@ export function createModalRenderers(deps) {
                        value="${quotaGB >= 1 ? quotaGB.toFixed(2) : quotaMB.toFixed(2)}"
                        style="flex:1;">
                 <div class="cselect" style="width:80px;flex-shrink:0;" data-cselect="quota-unit">
-                  <button class="cselect-trigger" type="button" tabindex="0" style="min-height:36px;padding:0 8px;">
+                  <button class="cselect-trigger" type="button" tabindex="0" style="min-height:44px;padding:0 8px;">
                     <span class="cselect-value">${quotaGB >= 1 ? "GB" : "MB"}</span>
                     <svg class="cselect-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </button>
