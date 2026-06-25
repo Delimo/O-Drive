@@ -87,7 +87,7 @@
 
 .toast-wrap {
   display: grid;
-  place-items: end center;
+  place-items: center;
   padding: 24px;
 }
 
