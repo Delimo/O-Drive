@@ -66,7 +66,7 @@ export async function handleAdminStats(env, context = {}) {
 
 async function adminDbStats(env) {
   await ensureCoreTables(env);
-  const [trashResult, logResult, taskResult] = await Promise.allSettled([
+  const [trashResult, logResult, taskResult, shareResult] = await Promise.allSettled([
     env.D1.prepare(
       "SELECT COUNT(*) as count, COALESCE(SUM(size), 0) as total FROM trash",
     ).first(),
@@ -75,6 +75,9 @@ async function adminDbStats(env) {
     ).first(),
     env.D1.prepare(
       "SELECT COUNT(*) as count FROM file_tasks WHERE status = 'completed'",
+    ).first(),
+    env.D1.prepare(
+      "SELECT COUNT(*) as count FROM share_links",
     ).first(),
   ]);
 
@@ -101,7 +104,13 @@ async function adminDbStats(env) {
   }
   const tasks = { completed: Number(taskRow?.count || 0) };
 
-  return { trash, logs, tasks };
+  const shareRow = shareResult.status === "fulfilled" ? shareResult.value : null;
+  if (shareResult.status === "rejected") {
+    await recordSystemWarning(env, "admin.stats", shareResult.reason?.message || "Share stats failed");
+  }
+  const shares = { total: Number(shareRow?.count || 0) };
+
+  return { trash, logs, tasks, shares };
 }
 
 async function overviewIndexStatus(env, listed = null) {
