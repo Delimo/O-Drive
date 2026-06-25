@@ -34,8 +34,6 @@ export function createLogsRenderer({
       return renderEmptyStateCompact("载入中", "读取日志流...", "");
     }
 
-    const filterActionLabel = logsFilter.action ? getActionLabel(logsFilter.action) : "全部事件";
-
     return `
       <div class="ov-logs">
         <div class="ov-logs-header">
@@ -83,10 +81,6 @@ export function createLogsRenderer({
             <div class="ov-logs-summary-item">
               <span class="ov-logs-summary-label">页码</span>
               <span class="ov-logs-summary-value">${escapeHtml(String(logsPage))} / ${escapeHtml(String(logsTotalPages))}</span>
-            </div>
-            <div class="ov-logs-summary-item">
-              <span class="ov-logs-summary-label">筛选</span>
-              <span class="ov-logs-summary-value">${escapeHtml(filterActionLabel)}</span>
             </div>
           </div>
 
