@@ -1,4 +1,4 @@
-export function registerAdminActions(documentRef, windowRef, store, actions, thunks, dispatchToast) {
+export function registerAdminActions(documentRef, windowRef, store, actions, thunks, dispatchToast, copyText) {
   return (event) => {
     const actionNode = event.target.closest("[data-action]");
     if (!actionNode) return;
@@ -277,6 +277,12 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
     if (action === "copy-share-link") {
       if (!key) return;
       copyText(`${windowRef.location.origin}/share.html?token=${encodeURIComponent(key)}`, "分享链接已复制");
+      return;
+    }
+
+    if (action === "copy-webdav-url") {
+      const url = actionNode.dataset.url;
+      if (url) copyText(url, "WebDAV 地址已复制");
       return;
     }
   };

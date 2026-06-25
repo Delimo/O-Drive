@@ -38,7 +38,7 @@ export function registerAppEvents(deps) {
   const commonDeps = { dispatchToast, navigateToExplorerPath, collectSelectedPaths, findEntryByKey, getEntryPath, inferKind, canPreview, requiresProtectedUnlock, openProtectedUnlockModal, createDeferredAction, openDownload, encodeRouteKey, copyText };
 
   const fileActions = registerFileActions(documentRef, windowRef, store, actions, thunks, commonDeps);
-  const adminActions = registerAdminActions(documentRef, windowRef, store, actions, thunks, dispatchToast);
+  const adminActions = registerAdminActions(documentRef, windowRef, store, actions, thunks, dispatchToast, copyText);
   const uploadActions = registerUploadActions(documentRef, store, actions, thunks, dispatchToast, clearUploadAutoTimers);
   const navigationActions = registerNavigationActions(documentRef, windowRef, store, actions, thunks, dispatchToast);
   const uiActions = registerUiActions(documentRef, windowRef, store, actions, thunks, { dispatchToast, getEntryPath });
