@@ -58,6 +58,7 @@ export async function handleAdminHealth(env) {
       "ALLOW_GUEST",
     ),
     guestEnabled: env.ALLOW_GUEST === "true",
+    davEnabled: Boolean(env.DAV_TOKEN),
   };
   const ok =
     db.ok && r2.ok && envStatus.adminUsername && envStatus.adminPassword;

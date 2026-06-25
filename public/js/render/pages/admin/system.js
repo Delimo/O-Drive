@@ -28,6 +28,7 @@ export function createSystemRenderer({
       sysComponents["管理员账户"] = { status: healthData.env.adminUsername && healthData.env.adminPassword ? "ok" : "error", message: "" };
       sysComponents["Token密钥"] = { status: healthData.env.tokenSecret?.bound ? "ok" : "error", message: "" };
       sysComponents["访客模式"] = { status: healthData.env.guestEnabled ? "ok" : "info", message: healthData.env.guestEnabled ? "已启用" : "已禁用" };
+      sysComponents["WebDAV"] = { status: healthData.env.davEnabled ? "ok" : "info", message: healthData.env.davEnabled ? "已启用" : "未配置" };
     }
 
     const dbTables = healthData.db?.tables || [];
@@ -103,7 +104,17 @@ export function createSystemRenderer({
                   <span class="ov-system-info-label">访客模式</span>
                   <span class="ov-system-info-value">${healthData.env?.guestEnabled ? "启用" : "禁用"}</span>
                 </div>
+                <div class="ov-system-info-item">
+                  <span class="ov-system-info-label">WebDAV</span>
+                  <span class="ov-system-info-value">${healthData.env?.davEnabled ? "已启用" : "未配置"}</span>
+                </div>
               </div>
+              ${healthData.env?.davEnabled ? `
+                <div class="ov-system-info-detail">
+                  <span class="ov-system-info-label">WebDAV 地址</span>
+                  <code class="ov-system-info-code">${escapeHtml(typeof location !== 'undefined' ? location.origin : '')}/dav/</code>
+                </div>
+              ` : ""}
               ${warnings.length > 0 ? `
                 <div class="ov-system-warnings">
                   <span class="ov-system-warnings-title">系统警告 (${warnings.length})</span>

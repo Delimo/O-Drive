@@ -2890,6 +2890,28 @@
   color: var(--text);
 }
 
+.ov-system-info-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  margin-top: 6px;
+}
+
+.ov-system-info-code {
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 4px 8px;
+  border-radius: 4px;
+  word-break: break-all;
+  user-select: all;
+}
+
 /* ─── System Warnings ─── */
 .ov-system-warnings {
   margin-top: 8px;

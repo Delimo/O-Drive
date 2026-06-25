@@ -3,7 +3,7 @@
  * Reuses existing storage, file-index, r2-tree, and trash modules.
  */
 import { isReservedKey } from "../../api/lib/common/index.js";
-import { upsertFileIndex, getFileIndexEntry } from "../../api/lib/file-index/index.js";
+import { upsertFileIndex } from "../../api/lib/file-index/index.js";
 import {
   resolveExistingObjectLocation,
   storageGet,
@@ -14,7 +14,7 @@ import {
 import { copyTree } from "../../api/lib/r2-tree.js";
 import { softDeleteTree } from "../../api/lib/trash.js";
 import { normalizeName } from "../../api/lib/common/name.js";
-import { keyExists, assertTargetAvailable } from "../../api/lib/file-mutations/helpers.js";
+import { keyExists } from "../../api/lib/file-mutations/helpers.js";
 
 /**
  * Handle GET or HEAD request — download a file.
@@ -108,6 +108,9 @@ export async function handlePut(env, request, r2Key) {
     return new Response("Invalid filename", { status: 400 });
   }
 
+  // Check if file exists before writing (for correct 201 vs 204 status)
+  const existed = await keyExists(env, r2Key);
+
   const body = request.body;
   const contentType = request.headers.get("Content-Type") || "application/octet-stream";
 
@@ -123,8 +126,6 @@ export async function handlePut(env, request, r2Key) {
     objectKey: r2Key,
   });
 
-  // Determine if this was a create or overwrite
-  const existed = await getFileIndexEntry(env, r2Key);
   return new Response(null, { status: existed ? 204 : 201 });
 }
 

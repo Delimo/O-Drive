@@ -5,7 +5,7 @@
 import { isReservedKey } from "../../api/lib/common/index.js";
 import { listIndexedDirectory, getFileIndexEntry } from "../../api/lib/file-index/index.js";
 import { storageList, storageHead, resolveExistingObjectLocation } from "../../api/lib/storage.js";
-import { parsePropfindBody, buildProps, buildMultistatus, ALL_PROPS, escapeXml } from "./xml.js";
+import { parsePropfindBody, buildProps, buildMultistatus, ALL_PROPS } from "./xml.js";
 
 /**
  * Handle a PROPFIND request.
