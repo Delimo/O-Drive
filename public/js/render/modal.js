@@ -442,7 +442,6 @@ export function createModalRenderers(deps) {
             ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在清理过期分享，请稍候...</div>' : ""}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-cleanup-expired-shares" ${modal.loading ? "disabled" : ""}>
-                ${icons.trash}
                 <span>${modal.loading ? "清理中..." : "确认清理"}</span>
               </button>
               <button class="btn" type="button" data-action="close-modal" ${modal.loading ? "disabled" : ""}>取消</button>
