@@ -22,7 +22,7 @@ export function createOverviewRenderer({
 
   function renderAdminStatsGrid(stats) {
     if (!stats) return ``;
-    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {}, attention = [], logs = {}, tasks = {} } = stats;
+    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {}, attention = [], logs = {}, tasks = {}, thumbnailsPresent = false } = stats;
     const warnings = attention.filter(i => i.level === "warning");
     const anomalies = { total: warnings.length, items: warnings };
     const recentFiles = latest.slice(0, 6);
@@ -137,9 +137,11 @@ export function createOverviewRenderer({
                   <div class="ov-maint-item">
                     <div class="ov-maint-info">
                       <span class="ov-maint-label">缩略图缓存</span>
-                      <span class="ov-maint-value">.thumbs/</span>
+                      <span class="ov-maint-value">${thumbnailsPresent ? "有缓存" : "无缓存"}</span>
                     </div>
-                    <span class="ov-maint-tag">系统前缀</span>
+                    ${thumbnailsPresent 
+                      ? `<span class="ov-maint-tag" style="background:rgba(14,116,144,0.1);color:var(--accent);">已生成</span>`
+                      : `<span class="ov-maint-tag">未生成</span>`}
                   </div>
                   <div class="ov-maint-item">
                     <div class="ov-maint-info">

@@ -89,12 +89,6 @@ export function createLogsRenderer({
         </div>
 
         <div class="ov-logs-content">
-          <div class="ov-logs-summary">
-            <div class="ov-logs-summary-item">
-              <span class="ov-logs-summary-label">本页</span>
-              <span class="ov-logs-summary-value">${escapeHtml(String(logs.length))}</span>
-            </div>
-          </div>
 
           ${logs.length === 0
             ? `<div class="ov-empty-inline">无匹配行为日志</div>`
