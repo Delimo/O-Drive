@@ -2957,7 +2957,7 @@
 
 .ov-webhook-page-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   min-height: 0;
   flex: 1;
@@ -2979,6 +2979,7 @@
 .ov-webhook-config-card {
   display: flex;
   flex-direction: column;
+  flex: 1;
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -3010,12 +3011,16 @@
 
 .ov-webhook-config-body {
   padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .ov-webhook-preview-shell {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
 }
 
 .ov-webhook-preview-empty {
@@ -3051,8 +3056,8 @@
 
 .ov-webhook-preview-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .ov-webhook-preview-block {
@@ -3097,7 +3102,7 @@
 
 .ov-webhook-preview-panes {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
@@ -3269,6 +3274,7 @@
 .ov-webhook-list-card {
   display: flex;
   flex-direction: column;
+  flex: 1;
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -3401,6 +3407,7 @@
 .ov-webhook-delivery-card {
   display: flex;
   flex-direction: column;
+  flex: 1;
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
