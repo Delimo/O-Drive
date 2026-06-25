@@ -160,8 +160,15 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
       if (form === "edit-storage-quota") {
         const config = store.getState().admin.storageConfig;
         if (!config) return;
-        const r2QuotaBytes = parseInt(String(data.get("r2QuotaBytes") || "0"), 10);
-        store.dispatch(thunks.saveAdminStorageConfig({ ...config, r2QuotaBytes: isNaN(r2QuotaBytes) ? 0 : r2QuotaBytes }));
+        const quotaValue = parseFloat(String(data.get("r2QuotaValue") || "0"));
+        const quotaUnit = String(data.get("r2QuotaUnit") || "GB");
+        let r2QuotaBytes = 0;
+        if (!isNaN(quotaValue) && quotaValue > 0) {
+          r2QuotaBytes = quotaUnit === "MB"
+            ? Math.round(quotaValue * 1024 * 1024)
+            : Math.round(quotaValue * 1024 * 1024 * 1024);
+        }
+        store.dispatch(thunks.saveAdminStorageConfig({ ...config, r2QuotaBytes }));
         return;
       }
 

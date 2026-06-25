@@ -313,13 +313,26 @@ export function createModalRenderers(deps) {
     }
 
     if (modal.type === "edit-storage-quota") {
+      const quotaBytes = modal.r2QuotaBytes || 0;
+      const quotaGB = quotaBytes / (1024 * 1024 * 1024);
+      const quotaMB = quotaBytes / (1024 * 1024);
+      const formattedQuota = formatBytes(quotaBytes);
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">
-          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-quota-title" data-stop-close="true">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-quota-title" data-stop-close="true" style="width:480px;">
             <h3 id="edit-quota-title" class="modal-title">编辑 R2 存储配额</h3>
-            <p class="modal-copy">设置 Cloudflare R2 的总存储容量上限。</p>
+            <p class="modal-copy">设置 Cloudflare R2 的总存储容量上限。当前配额：<strong>${formattedQuota}</strong></p>
             <form class="modal-form" data-form="edit-storage-quota">
-              <input class="inline-input" name="r2QuotaBytes" type="number" min="0" placeholder="配额（字节）" value="${escapeHtml(String(modal.r2QuotaBytes || ""))}">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input class="inline-input" name="r2QuotaValue" type="number" min="0" step="any"
+                       placeholder="输入数值"
+                       value="${quotaGB >= 1 ? quotaGB.toFixed(2) : quotaMB.toFixed(2)}"
+                       style="flex:1;">
+                <select class="inline-input" name="r2QuotaUnit" style="width:80px;flex-shrink:0;">
+                  <option value="GB" ${quotaGB >= 1 ? "selected" : ""}>GB</option>
+                  <option value="MB" ${quotaGB < 1 ? "selected" : ""}>MB</option>
+                </select>
+              </div>
               ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">设置为 0 表示不限制。保存后对所有上传生效。</div>'}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "保存中..." : "保存"}</button>
