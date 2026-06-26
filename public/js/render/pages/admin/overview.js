@@ -299,72 +299,29 @@ export function createOverviewRenderer({
             <div class="ov-section">
               <div class="ov-section-head">
                 <span class="ov-section-title">类型分布</span>
-                <button class="btn btn-sm" type="button" data-action="refresh-admin">刷新</button>
+                <span class="ov-section-meta">${safeText(breakdownModel.total, "0")} 项 / ${safeText(breakdownModel.categories, "0")} 类</span>
               </div>
               <div class="ov-section-body ov-type-body">
                 ${breakdownModel.items.length > 0 ? `
-                  <div class="ov-type-panel">
-                    <div class="ov-type-hero">
-                      <div class="ov-type-donut" role="img" aria-label="文件类型分布">
-                        <div class="ov-type-donut-ring" style="background:${breakdownModel.gradient ? `conic-gradient(${breakdownModel.gradient})` : 'conic-gradient(#334155 0deg 360deg)'}"></div>
-                        <div class="ov-type-donut-core">
-                          <span class="ov-type-donut-kicker">文件类型</span>
-                          <strong class="ov-type-donut-total">${safeText(breakdownModel.total, "0")}</strong>
-                          <span class="ov-type-donut-sub">${safeText(breakdownModel.categories, "0")} 类</span>
+                  <div class="ov-type-stacked-bar" role="img" aria-label="文件类型分布">
+                    ${breakdownModel.items.map((item) => {
+                      const pct = breakdownModel.total ? (item.count / breakdownModel.total * 100) : 0;
+                      return `<div class="ov-type-bar-segment" style="width:${pct}%;background:${item.color};" title="${escapeHtml(item.label)}: ${pct.toFixed(1)}%"></div>`;
+                    }).join("")}
+                  </div>
+                  <div class="ov-type-legend">
+                    ${breakdownModel.items.map((item) => {
+                      const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
+                      return `
+                        <div class="ov-type-row">
+                          <span class="ov-type-dot" style="background:${item.color};"></span>
+                          <span class="ov-type-name">${escapeHtml(item.label)}</span>
+                          <span class="ov-type-count">${safeText(item.count, "0")}</span>
+                          <span class="ov-type-pct">${pct}%</span>
+                          <div class="ov-type-track"><i style="width:${pct}%;background:${item.color};"></i></div>
                         </div>
-                      </div>
-                      <div class="ov-type-stats">
-                        <div class="ov-type-stat-card">
-                          <span class="ov-type-stat-label">主类型</span>
-                          <strong class="ov-type-stat-value">${escapeHtml(breakdownModel.dominant?.label || "暂无")}</strong>
-                          <span class="ov-type-stat-meta">${breakdownModel.dominant ? `${safeText(breakdownModel.dominant.count, "0")} 项 · ${dominantPct}%` : "暂无数据"}</span>
-                        </div>
-                        <div class="ov-type-stat-card">
-                          <span class="ov-type-stat-label">类型数</span>
-                          <strong class="ov-type-stat-value">${safeText(breakdownModel.categories, "0")}</strong>
-                          <span class="ov-type-stat-meta">已识别的分类总数</span>
-                        </div>
-                        <div class="ov-type-stat-card">
-                          <span class="ov-type-stat-label">其他合并</span>
-                          <strong class="ov-type-stat-value">${safeText(breakdownModel.otherCount, "0")}</strong>
-                          <span class="ov-type-stat-meta">低占比项已聚合</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="ov-type-legend">
-                      ${breakdownModel.items.map((item) => {
-                        const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
-                        return `
-                          <div class="ov-type-item">
-                            <div class="ov-type-item-head">
-                              <span class="ov-type-swatch" style="background:${item.color};box-shadow:0 0 0 4px ${item.tint};"></span>
-                              <div class="ov-type-item-namewrap">
-                                <span class="ov-type-item-name">${escapeHtml(item.label)}</span>
-                                ${item.keyLabel ? `<span class="ov-type-item-key">${escapeHtml(item.keyLabel)}</span>` : ""}
-                              </div>
-                            </div>
-                            <div class="ov-type-item-stats">
-                              <strong>${safeText(item.count, "0")}</strong>
-                              <span>${pct}%</span>
-                            </div>
-                            <div class="ov-type-item-track" aria-hidden="true">
-                              <i style="width:${pct}%;background:${item.color};"></i>
-                            </div>
-                          </div>
-                        `;
-                      }).join("")}
-                    </div>
-                    <div class="ov-type-chips">
-                      ${breakdownModel.items.slice(0, 4).map((item) => {
-                        const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
-                        return `
-                          <span class="ov-type-chip" style="--chip-color:${item.color};--chip-soft:${item.tint};">
-                            <i></i>
-                            ${escapeHtml(item.label)} ${pct}%
-                          </span>
-                        `;
-                      }).join("")}
-                    </div>
+                      `;
+                    }).join("")}
                   </div>
                 ` : `
                   <div class="ov-empty-inline">暂无分类数据</div>
