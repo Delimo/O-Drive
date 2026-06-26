@@ -3959,14 +3959,14 @@
 .ov-webdav-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 
 .ov-webdav-title-group {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 10px;
 }
 
 .ov-webdav-title {
@@ -3975,301 +3975,153 @@
   color: var(--text);
 }
 
-.ov-webdav-desc {
-  font-size: 13px;
-  color: var(--muted);
+/* Two-column grid */
+.ov-webdav-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-.ov-webdav-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Status card */
-.ov-webdav-status-card {
+.ov-webdav-conn,
+.ov-webdav-clients {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
-  overflow: hidden;
-}
-
-.ov-webdav-status-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel-soft);
-}
-
-.ov-webdav-status-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.ov-webdav-status-body {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.ov-webdav-url-row {
+.ov-webdav-conn-title,
+.ov-webdav-clients-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ov-webdav-conn-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
 }
 
-.ov-webdav-url-label {
+.ov-webdav-conn-label {
   font-size: 13px;
-  font-weight: 500;
   color: var(--muted);
-  min-width: 80px;
+  min-width: 56px;
 }
 
-.ov-webdav-url {
+.ov-webdav-conn-value {
   font-size: 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: var(--accent);
   background: var(--accent-soft);
-  padding: 6px 10px;
+  padding: 4px 8px;
   border-radius: 6px;
   user-select: all;
   word-break: break-all;
   flex: 1;
 }
 
-.ov-webdav-creds {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.ov-webdav-client-item {
+  display: flex;
+  align-items: baseline;
   gap: 10px;
-}
-
-.ov-webdav-cred-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.ov-webdav-cred-label {
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.ov-webdav-cred-value {
   font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.ov-webdav-hint {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.ov-webdav-hint code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: var(--accent);
-  background: var(--accent-soft);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.ov-webdav-hint-gen {
-  margin-top: 4px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.ov-webdav-cmd {
-  display: block;
-  font-size: 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: var(--text);
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  padding: 10px 12px;
-  border-radius: 8px;
-  overflow-x: auto;
-  user-select: all;
-}
-
-/* Clients card */
-.ov-webdav-clients-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.ov-webdav-clients-header {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel-soft);
-}
-
-.ov-webdav-clients-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.ov-webdav-clients-body {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.ov-webdav-client {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .ov-webdav-client-name {
-  font-size: 14px;
   font-weight: 600;
   color: var(--text);
+  min-width: 64px;
 }
 
 .ov-webdav-client-steps {
-  font-size: 13px;
   color: var(--muted);
-  line-height: 1.6;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
-.ov-webdav-client-steps code {
+.ov-webdav-cmd {
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--text);
+  background: var(--panel-soft);
+  padding: 4px 8px;
+  border-radius: 4px;
+  user-select: all;
+  word-break: break-all;
+}
+
+/* Operations bar */
+.ov-webdav-ops {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ov-webdav-ops-label {
+  font-weight: 500;
+}
+
+.ov-webdav-op {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.ov-webdav-ops-sep {
+  color: var(--line);
+}
+
+.ov-webdav-ops-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Empty state */
+.ov-webdav-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.ov-webdav-empty-icon {
+  font-size: 32px;
+}
+
+.ov-webdav-empty-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.ov-webdav-empty-text code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: var(--accent);
   background: var(--accent-soft);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
-}
-
-/* Operations card */
-.ov-webdav-ops-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.ov-webdav-ops-header {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel-soft);
-}
-
-.ov-webdav-ops-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.ov-webdav-ops-body {
-  padding: 16px;
-}
-
-.ov-webdav-ops-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-}
-
-.ov-webdav-op {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.ov-webdav-op-icon {
-  font-size: 16px;
-}
-
-.ov-webdav-op-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-/* Limits card */
-.ov-webdav-limits-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.ov-webdav-limits-header {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel-soft);
-}
-
-.ov-webdav-limits-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.ov-webdav-limits-body {
-  padding: 16px;
-}
-
-.ov-webdav-limits-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.ov-webdav-limits-list li::before {
-  content: "•";
-  color: var(--warning);
-  margin-right: 8px;
-  font-weight: 700;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .ov-webdav-creds {
+  .ov-webdav-grid {
     grid-template-columns: 1fr;
-  }
-
-  .ov-webdav-ops-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .ov-webdav-url-row {
-    flex-direction: column;
-    align-items: stretch;
   }
 }
 

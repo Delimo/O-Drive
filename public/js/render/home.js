@@ -356,7 +356,7 @@ export function createHomeRenderers(deps) {
       ? item.sizeFormatted || "—"
       : item.sizeFormatted || formatBytes(item.rawSize || 0);
 
-    const timeText = item.time ? formatListTime(item.time) : "—";
+    const timeText = item.time ? formatTime(item.time) : "—";
 
     const fileName = item.name || "未命名";
     const displayName =
@@ -400,17 +400,6 @@ export function createHomeRenderers(deps) {
         </td>
       </tr>
     `;
-  }
-
-  function formatListTime(timestamp) {
-    if (!timestamp) return "—";
-    const date = new Date(timestamp * 1000);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
 
   return {

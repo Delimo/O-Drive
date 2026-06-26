@@ -1,26 +1,8 @@
 /**
  * WebDAV Basic Auth verification.
- * Uses DAV_TOKEN environment variable for token-based authentication.
+ * Uses admin credentials (ADMIN_USERNAME + ADMIN_PASSWORD) for authentication.
  */
-
-async function timingSafeEqual(a, b) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.generateKey(
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sigA = new Uint8Array(
-    await crypto.subtle.sign("HMAC", key, encoder.encode(a)),
-  );
-  const sigB = new Uint8Array(
-    await crypto.subtle.sign("HMAC", key, encoder.encode(b)),
-  );
-  if (sigA.length !== sigB.length) return false;
-  let diff = 0;
-  for (let i = 0; i < sigA.length; i++) diff |= sigA[i] ^ sigB[i];
-  return diff === 0;
-}
+import { timingSafeEqual } from "../../api/lib/common/crypto.js";
 
 /**
  * Verify HTTP Basic Auth credentials.
@@ -41,16 +23,14 @@ export async function verifyBasicAuth(request, env) {
   if (colonIndex < 0) return null;
 
   const username = decoded.slice(0, colonIndex);
-  const token = decoded.slice(colonIndex + 1);
+  const password = decoded.slice(colonIndex + 1);
 
-  if (!username || !token) return null;
+  if (!username || !password) return null;
 
-  // Verify username
+  // Verify admin credentials
+  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD) return null;
   if (!(await timingSafeEqual(username, env.ADMIN_USERNAME))) return null;
-
-  // Verify DAV token
-  if (!env.DAV_TOKEN) return null;
-  if (!(await timingSafeEqual(token, env.DAV_TOKEN))) return null;
+  if (!(await timingSafeEqual(password, env.ADMIN_PASSWORD))) return null;
 
   return { role: "admin" };
 }

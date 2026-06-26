@@ -15,8 +15,11 @@ import {
   handleMove,
   handleCopy,
 } from "./lib/methods.js";
+import { checkRateLimit, getClientIp } from "../api/lib/rate-limiter.js";
 
 const ALLOW_METHODS = "OPTIONS, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, PROPFIND";
+const DAV_RATE_LIMIT = 30;
+const DAV_RATE_WINDOW = 60000;
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -24,8 +27,8 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  // WebDAV not configured
-  if (!env.DAV_TOKEN) {
+  // WebDAV requires admin credentials
+  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD) {
     return new Response("WebDAV not configured", { status: 404 });
   }
 
@@ -38,6 +41,19 @@ export async function onRequest(context) {
         DAV: "1",
         "MS-Author-Via": "DAV",
         "Content-Length": "0",
+      },
+    });
+  }
+
+  // Rate limit per IP before authentication
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`dav:${ip}`, DAV_RATE_LIMIT, DAV_RATE_WINDOW);
+  if (!rl.allowed) {
+    return new Response("Too Many Requests", {
+      status: 429,
+      headers: {
+        "Retry-After": String(rl.retryAfter),
+        "Content-Type": "text/plain",
       },
     });
   }

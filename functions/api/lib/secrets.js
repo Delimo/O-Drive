@@ -17,14 +17,22 @@ export function tokenSecretStatus(env) {
   };
 }
 
+let _ephemeralSecret = null;
+
 export function getTokenSecret(env) {
   const secret = env?.TOKEN_SECRET || env?.ADMIN_PASSWORD;
   if (!secret) {
-    console.warn(
-      "[WARN] Neither TOKEN_SECRET nor ADMIN_PASSWORD is set. Falling back to insecure default key \"o-drive\".",
-    );
+    if (!_ephemeralSecret) {
+      const bytes = new Uint8Array(32);
+      crypto.getRandomValues(bytes);
+      _ephemeralSecret = String.fromCharCode(...bytes);
+      console.warn(
+        "[WARN] Neither TOKEN_SECRET nor ADMIN_PASSWORD is set. Using ephemeral random key (sessions will not survive restarts).",
+      );
+    }
+    return _ephemeralSecret;
   }
-  return String(secret || "o-drive");
+  return String(secret);
 }
 
 async function hmacKey(env, usage) {

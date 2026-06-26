@@ -114,6 +114,9 @@ export const CORE_MIGRATION_SQL = [
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event_created_at ON webhook_deliveries(event, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_file_tasks_status_created_at ON file_tasks(status, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_system_warnings_created_at ON system_warnings(created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp)`,
+  `CREATE INDEX IF NOT EXISTS idx_path_access_attempts_last_attempt ON path_access_attempts(last_attempt)`,
+  `CREATE INDEX IF NOT EXISTS idx_file_tasks_finished_at ON file_tasks(finished_at)`,
 ];
 
 export const SHARE_TABLE_SQL = `

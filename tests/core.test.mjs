@@ -282,11 +282,11 @@ test('admin login issues csrf token and write requests must echo it', async () =
   }), env);
   assert.equal(auth.role, 'admin');
   assert.equal(auth.csrf, loginData.csrf);
-  assert.equal(verifyCsrf(new Request('https://example.com/api/batch-delete', {
+  assert.equal(await verifyCsrf(new Request('https://example.com/api/batch-delete', {
     method: 'POST',
     headers: { Cookie: cookie, 'X-CSRF-Token': loginData.csrf },
   }), auth), true);
-  assert.equal(verifyCsrf(new Request('https://example.com/api/batch-delete', {
+  assert.equal(await verifyCsrf(new Request('https://example.com/api/batch-delete', {
     method: 'POST',
     headers: { Cookie: cookie, 'X-CSRF-Token': 'bad' },
   }), auth), false);
@@ -1325,7 +1325,7 @@ test('admin stats can summarize from file index', async () => {
   assert.equal(data.breakdown.image.count, 1);
   assert.equal(data.breakdown.text.count, 1);
   assert.deepEqual(data.latest.map(item => item.key), ['photos/a.jpg', 'docs/readme.md']);
-  assert.ok(data.attention.some(item => item.title === '系统提醒待查看'));
+  assert.ok(data.attention.some(item => item.title === '其他异常'));
 });
 
 test('admin attention warns when bucket quota usage reaches 90 percent', async () => {

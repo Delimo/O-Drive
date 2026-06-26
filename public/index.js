@@ -456,8 +456,11 @@ function navigateToExplorerPath(path = '') {
 }
 
 let notifPollTimer = null;
+let notifAbortController = null;
 function startNotificationPolling(store, thunks) {
   if (notifPollTimer) clearInterval(notifPollTimer);
+  if (notifAbortController) notifAbortController.abort();
+  notifAbortController = new AbortController();
   function poll() {
     store.dispatch(thunks.loadNotifications());
   }
@@ -468,7 +471,7 @@ function startNotificationPolling(store, thunks) {
     } else {
       if (!notifPollTimer) notifPollTimer = setInterval(poll, 30000);
     }
-  });
+  }, { signal: notifAbortController.signal });
 }
 
 function subscribeSlice(selector, fn) {

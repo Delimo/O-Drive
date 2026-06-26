@@ -102,10 +102,10 @@ export function createLogsRenderer({
                 <table class="ov-logs-table">
                   <thead>
                     <tr>
-                      <th>操作时间</th>
-                      <th>动作行为</th>
-                      <th>目标资源路径</th>
-                      <th>IP</th>
+                      <th scope="col">操作时间</th>
+                      <th scope="col">动作行为</th>
+                      <th scope="col">目标资源路径</th>
+                      <th scope="col">IP</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -136,9 +136,11 @@ export function createLogsRenderer({
                 <div class="ov-logs-page-btns">
                   <button class="btn btn-sm" type="button"
                           data-action="set-logs-page" data-page="${logsPage - 1}"
+                          aria-label="上一页"
                           ${logsPage <= 1 ? "disabled" : ""}>上页</button>
                   <button class="btn btn-sm" type="button"
                           data-action="set-logs-page" data-page="${logsPage + 1}"
+                          aria-label="下一页"
                           ${logsPage >= logsTotalPages ? "disabled" : ""}>下页</button>
                 </div>
               </div>

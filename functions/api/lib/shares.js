@@ -4,8 +4,12 @@ import {
   formatBytes,
   isReservedKey,
   jsonResponse,
+  apiError,
   normalizeName,
   parseCookie,
+  bytesToHex,
+  randomHex,
+  pbkdf2Hex,
 } from "./common/index.js";
 import { handleDownloadOrPreview } from "./file-reads.js";
 import { signHmac } from "./secrets.js";
@@ -16,41 +20,6 @@ import { loadWebhookEndpoints, notifyWebhookWithLog } from "./webhooks.js";
 const EXPIRED_SHARE_AUTO_DELETE_MS = 7 * 24 * 60 * 60 * 1000;
 const SHARE_ACCESS_TTL_SECONDS = 12 * 60 * 60;
 const SHARE_PASSWORD_ITERATIONS = 210000;
-
-function bytesToHex(bytes) {
-  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function randomHex(length = 16) {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return bytesToHex(bytes);
-}
-
-async function pbkdf2Hex(
-  password,
-  salt,
-  iterations = SHARE_PASSWORD_ITERATIONS,
-) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt: new TextEncoder().encode(salt),
-      iterations,
-    },
-    key,
-    256,
-  );
-  return bytesToHex(new Uint8Array(bits));
-}
 
 async function hashSharePassword(password, salt) {
   const hash = await pbkdf2Hex(password, salt);
@@ -384,7 +353,7 @@ export async function handleAdminShares(env, request, method, url) {
     return jsonResponse({ success: true });
   }
 
-  return jsonResponse({ message: "Method Not Allowed" }, 405);
+  return apiError("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
 }
 
 export async function handlePublicShare(env, request, path) {

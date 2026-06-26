@@ -1,5 +1,5 @@
 export function createStorageRenderer({
-  safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
+  safeText, escapeHtml, renderEmptyStateCompact, components
 }) {
 
   function renderStorageSection(admin) {
@@ -34,7 +34,7 @@ export function createStorageRenderer({
           <div class="ov-storage-quota">
             <div class="ov-quota-header">
               <span class="ov-quota-title">存储配额</span>
-              <button class="btn btn-sm" type="button" data-action="show-edit-storage-quota">调整限额</button>
+              <button class="btn btn-sm" type="button" data-action="show-edit-storage-quota" aria-label="调整存储限额">调整限额</button>
             </div>
             <div class="ov-quota-body">
               <div class="ov-quota-info">
@@ -140,10 +140,10 @@ export function createStorageRenderer({
                     <table class="ov-rules-table">
                       <thead>
                         <tr>
-                          <th>路径</th>
-                          <th>类型</th>
-                          <th>备注</th>
-                          <th></th>
+                          <th scope="col">路径</th>
+                          <th scope="col">类型</th>
+                          <th scope="col">备注</th>
+                          <th scope="col"></th>
                         </tr>
                       </thead>
                       <tbody>

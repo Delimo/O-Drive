@@ -143,13 +143,16 @@ export function createWebhookRenderer({
                               </div>
                               <div class="ov-webhook-rule-actions">
                                 <button class="btn btn-sm" type="button"
-                                        data-action="edit-webhook" data-id="${escapeHtml(hook.id)}">编辑</button>
+                                        data-action="edit-webhook" data-id="${escapeHtml(hook.id)}"
+                                        aria-label="编辑 webhook">编辑</button>
                                 <button class="btn btn-sm" type="button"
-                                        data-action="test-webhook" data-id="${escapeHtml(hook.id)}">测试发送</button>
+                                        data-action="test-webhook" data-id="${escapeHtml(hook.id)}"
+                                        aria-label="测试 webhook">测试发送</button>
                                 <button class="btn btn-danger btn-sm" type="button"
                                         data-action="confirm-delete-webhook"
                                         data-id="${escapeHtml(hook.id)}"
-                                        data-name="${escapeHtml(hook.name)}">删除</button>
+                                        data-name="${escapeHtml(hook.name)}"
+                                        aria-label="删除 webhook">删除</button>
                               </div>
                             </div>
                             <div class="ov-webhook-rule-url">${escapeHtml(hook.url || "")}</div>

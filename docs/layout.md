@@ -84,11 +84,11 @@ body (display:flex; flex-direction:column)
 | `public/index.html` | 15-16 | `body` 和 `#app` 的基础结构 |
 | `public/admin.html` | 15-16 | 管理页的 `body` 和 `#app` |
 | `public/share.html` | 15-16 | 分享页的 `body` 和 `#app` |
-| `public/index.js` | 282-305 | `render()` — DOM 骨架，定义所有 `data-region` |
-| `public/index.js` | 373-433 | `renderHeader()` — 顶栏 HTML |
-| `public/index.js` | 337-341 | `renderExplorerRegion()` — 把 home 内容填入 explorer 区域 |
-| `public/js/render/home.js` | 25-75 | `renderHomePage()` — 云盘页的 toolbar + explorer-card |
-| `public/js/render/pages/index.js` | 128-168 | `renderAdminPage()` — 管理页的 toolbar + explorer-card |
+| `public/index.js` | 282-310 | `render()` — DOM 骨架，定义所有 `data-region` |
+| `public/index.js` | 381-439 | `renderHeader()` — 顶栏 HTML |
+| `public/index.js` | 342-360 | `renderExplorerRegion()` — 把 home 内容填入 explorer 区域 |
+| `public/js/render/home.js` | 25-76 | `renderHomePage()` — 云盘页的 toolbar + explorer-card |
+| `public/js/render/pages/index.js` | 136-181 | `renderAdminPage()` — 管理页的 toolbar + explorer-card |
 | `public/main.css` | — | **生产 CSS**（HTML 实际引用的文件） |
 | `public/css/pages/explorer.css` | — | 源文件（仅供参考，不直接引用） |
 

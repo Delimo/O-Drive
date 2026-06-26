@@ -1,3 +1,9 @@
+export const MAINTENANCE_ACTIONS = [
+  { action: "rebuild-index", label: "同步元数据库索引", desc: "对齐元数据库数据状态。", danger: false },
+  { action: "clear-cache", label: "清理缓存数据库", desc: "强制刷洗 Redis 本地暂存层。", danger: false },
+  { action: "purge-trash", label: "同步清除废弃文件", desc: "物理清除已过期回收站数据。", danger: true }
+];
+
 export function createShareUtils({ escapeHtml }) {
   function safeText(value, fallback = "-") {
     const text = String(value ?? "").trim();

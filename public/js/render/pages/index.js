@@ -159,11 +159,13 @@ export function createPageRenderers(deps) {
 
     return `
       <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
-        <div class="admin-tab-bar">
+        <div class="admin-tab-bar" role="tablist">
           ${ADMIN_TABS.map(
             (tab) => `
             <button class="admin-tab-btn${activeTab === tab.id ? " admin-tab-active" : ""}"
                     type="button"
+                    role="tab"
+                    aria-selected="${activeTab === tab.id}"
                     data-action="set-admin-tab"
                     data-tab="${tab.id}">
               ${tab.label}

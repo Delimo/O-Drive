@@ -11,7 +11,22 @@ import { fileIndexStatus, rebuildFileIndex } from "./file-index/index.js";
 import { mapWithConcurrency } from "./r2-tree.js";
 import { cleanupFileTasks } from "./tasks.js";
 
+const ALLOWED_COUNT_TABLES = new Set([
+  "path_access_attempts",
+  "trash",
+  "logs",
+  "file_tasks",
+  "login_attempts",
+  "login_alerts",
+  "download_bursts",
+  "webhook_deliveries",
+  "system_warnings",
+  "share_links",
+  "notifications",
+]);
+
 async function countRows(env, table) {
+  if (!ALLOWED_COUNT_TABLES.has(table)) return 0;
   try {
     const row = await env.D1.prepare(
       `SELECT COUNT(*) as count FROM ${table}`,

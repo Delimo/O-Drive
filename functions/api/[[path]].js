@@ -93,7 +93,7 @@ export async function onRequest(context) {
     const r2Key = getR2KeyFromPath(path);
 
     if (!canReadKey(auth, r2Key, hiddenPaths)) return jsonResponse({ success: false, message: 'Forbidden' }, 403);
-    if (isAdmin(auth) && needsCsrf(path, method) && !verifyCsrf(request, auth)) {
+    if (isAdmin(auth) && needsCsrf(path, method) && !(await verifyCsrf(request, auth))) {
       return jsonResponse({ success: false, message: 'Invalid CSRF token' }, 403);
     }
     if (isAdmin(auth) && r2Key && needsCsrf(path, method) && !canWriteUserKey(r2Key)) {

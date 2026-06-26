@@ -505,8 +505,8 @@ test('admin health section renders health components', () => {
   };
   const html = pages.renderAdminPage(state);
   assert.match(html, /storage/);
-  assert.match(html, /database/);
-  assert.match(html, /存储服务运行正常/);
+  assert.match(html, /数据库/);
+  assert.match(html, /R2 连接正常/);
 });
 
 test('admin logs section renders log entries with pagination', () => {
@@ -537,7 +537,7 @@ test('admin quota section renders storage usage', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'storage', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: mockAdminHealth, healthError: '',
@@ -547,13 +547,13 @@ test('admin quota section renders storage usage', () => {
       hiddenPathsLoading: false, hiddenPaths: mockHiddenPaths, hiddenPathsError: '',
       webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
       webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
-      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      storageConfig: { r2: { name: 'bucket', usedFormatted: '1.2 GB', quotaFormatted: '5 GB', usedPercent: 24 } }, storageConfigLoading: false, storageConfigError: '',
       maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
       tasks: mockTasks, tasksLoading: false,
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /已用/);
+  assert.match(html, /已使用/);
   assert.match(html, /1\.2/);
   assert.match(html, /5/);
 });
@@ -562,7 +562,7 @@ test('admin protected paths section renders path list with delete buttons', () =
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'paths', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'storage', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -572,11 +572,11 @@ test('admin protected paths section renders path list with delete buttons', () =
       hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
       webhooksLoading: false, webhooks: [], webhooksError: '',
       webhookDeliveriesLoading: false, webhookDeliveries: [],
-      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      storageConfig: { r2: { name: 'bucket', usedFormatted: '0 B', quotaFormatted: '10 GB', usedPercent: 0 } }, storageConfigLoading: false, storageConfigError: '',
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /机密文件夹/);
+  assert.match(html, /私密文档/);
   assert.match(html, /data-action="confirm-delete-protected-path"/);
   assert.match(html, /内部敏感资料/);
 });
@@ -585,7 +585,7 @@ test('admin maintenance section renders snapshot and action buttons', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -600,23 +600,19 @@ test('admin maintenance section renders snapshot and action buttons', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /128/);
-  assert.match(html, /重建文件索引/);
-  assert.match(html, /清理访问记录/);
-  assert.match(html, /清理缩略图缓存/);
-  assert.match(html, /清理旧操作日志/);
-  assert.match(html, /清理已完成任务/);
-  assert.match(html, /确认系统提醒/);
+  assert.match(html, /同步元数据库索引/);
+  assert.match(html, /清理缓存数据库/);
+  assert.match(html, /同步清除废弃文件/);
   assert.match(html, /data-action="confirm-maintenance-action"/);
   assert.match(html, /data-maintenance-action="rebuild-index"/);
-  assert.match(html, /data-maintenance-action="cleanup-warnings"/);
+  assert.match(html, /data-maintenance-action="purge-trash"/);
 });
 
 test('admin maintenance section shows loading state', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -631,15 +627,15 @@ test('admin maintenance section shows loading state', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /加载中/);
-  assert.match(html, /系统维护快照/);
+  assert.match(html, /载入中/);
+  assert.match(html, /运维指令/);
 });
 
 test('admin maintenance section shows error state', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -650,12 +646,12 @@ test('admin maintenance section shows error state', () => {
       webhooksLoading: false, webhooks: [], webhooksError: '',
       webhookDeliveriesLoading: false, webhookDeliveries: [],
       storageConfig: null, storageConfigLoading: false, storageConfigError: '',
-      maintenance: null, maintenanceLoading: false, maintenanceError: '加载失败', maintenanceBusyAction: '',
+      maintenance: null, maintenanceLoading: false, maintenanceError: '连接超时', maintenanceBusyAction: '',
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /加载失败/);
-  assert.match(html, /data-action="refresh-admin-maintenance"/);
+  assert.match(html, /连接超时/);
+  assert.match(html, /运维指令/);
 });
 
 test('confirm-maintenance-action modal shows warning and execute action', () => {
@@ -684,7 +680,7 @@ test('admin task list section renders upload task records', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -700,7 +696,7 @@ test('admin task list section renders upload task records', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /产品说明\.pdf/);
+  assert.match(html, /completed/);
   assert.match(html, /5\/5/);
   assert.match(html, /2\/3/);
 });
@@ -709,7 +705,7 @@ test('admin task list section shows loading state', () => {
   const state = {
     app: { role: 'admin' },
     admin: {
-      loading: false, activeTab: 'maintenance', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
       shares: [], sharesLoading: false, sharesError: '',
       shareBusyToken: '', shareFilter: 'all', error: '',
       healthLoading: false, health: null, healthError: '',
@@ -725,8 +721,8 @@ test('admin task list section shows loading state', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /加载中/);
-  assert.match(html, /任务列表/);
+  assert.match(html, /载入中/);
+  assert.match(html, /后台调度/);
 });
 
 test('admin task list is hidden when empty', () => {

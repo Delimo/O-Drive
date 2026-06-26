@@ -1,4 +1,4 @@
-import { jsonResponse } from "./common/index.js";
+import { jsonResponse, apiError } from "./common/index.js";
 
 const NOTIFY_TABLE =
   "CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL, message TEXT NOT NULL, path TEXT DEFAULT '', read INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)";
@@ -80,7 +80,7 @@ export async function handleAdminNotifications(env, request) {
       const unread = await getUnreadCount(env);
       return jsonResponse({ success: true, unread });
     }
-    return jsonResponse({ error: "unknown action" }, 400);
+    return apiError("UNKNOWN_ACTION", "unknown action", 400);
   }
-  return jsonResponse({ error: "method not allowed" }, 405);
+  return apiError("METHOD_NOT_ALLOWED", "method not allowed", 405);
 }

@@ -3,7 +3,7 @@ import { copyTree } from "../r2-tree.js";
 import { assertUserKey, normalizeUserKey, keyExists, assertTargetAvailable } from "./helpers.js";
 
 export async function handleRename(env, request, r2Key, body) {
-  const { newName } = body || await request.json();
+  const { newName } = body || await request.json().catch(() => ({}));
   const cleanName = normalizeName(newName);
   r2Key = normalizeUserKey(r2Key);
   const parentDir = r2Key.includes("/")

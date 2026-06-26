@@ -5,6 +5,7 @@ import {
   ensureCoreTables,
   waitForWebhook,
   parseCookie,
+  timingSafeEqual,
 } from "./common/index.js";
 import { signHmac, verifyHmac } from "./secrets.js";
 import { loadWebhookEndpoints, notifyLoginBurst } from "./webhooks.js";
@@ -16,25 +17,6 @@ function createCsrfToken() {
 }
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
-
-async function timingSafeEqual(a, b) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.generateKey(
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sigA = new Uint8Array(
-    await crypto.subtle.sign("HMAC", key, encoder.encode(a)),
-  );
-  const sigB = new Uint8Array(
-    await crypto.subtle.sign("HMAC", key, encoder.encode(b)),
-  );
-  if (sigA.length !== sigB.length) return false;
-  let diff = 0;
-  for (let i = 0; i < sigA.length; i++) diff |= sigA[i] ^ sigB[i];
-  return diff === 0;
-}
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
 const LOGIN_ALERT_COOLDOWN_MS = 30 * 60 * 1000;
@@ -52,10 +34,11 @@ function cookieAttributes(request, maxAge = SESSION_TTL_SECONDS) {
   return `Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
 }
 
-export function verifyCsrf(request, auth) {
+export async function verifyCsrf(request, auth) {
   if (auth?.role !== "admin") return false;
   const token = request.headers.get("X-CSRF-Token") || "";
-  return Boolean(auth.csrf && token && token === auth.csrf);
+  if (!auth.csrf || !token) return false;
+  return timingSafeEqual(token, auth.csrf);
 }
 
 export async function verifyAuth(request, env) {
@@ -103,7 +86,9 @@ async function checkLoginLocked(env, ip) {
         .bind(ip)
         .run();
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn("[auth] checkLoginLocked error:", e.message);
+  }
   return { locked: false };
 }
 
@@ -115,7 +100,9 @@ async function recordLoginFailure(env, ip) {
       .bind(ip, Date.now())
       .first();
     return Number(row?.attempts || 0);
-  } catch (e) {}
+  } catch (e) {
+    console.warn("[auth] recordLoginFailure error:", e.message);
+  }
   return 0;
 }
 
@@ -176,7 +163,7 @@ async function notifyLoginFailureBurst(
 
 export async function handleLogin(request, env, context = {}) {
   await ensureCoreTables(env);
-  const { username, password } = await request.json();
+  const { username, password } = await request.json().catch(() => ({}));
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
 
   const attemptResult = await checkLoginLocked(env, ip);
@@ -189,7 +176,9 @@ export async function handleLogin(request, env, context = {}) {
       await env.D1.prepare("DELETE FROM login_attempts WHERE ip = ?")
         .bind(ip)
         .run();
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[auth] clear login attempts error:", e.message);
+    }
     const csrf = createCsrfToken();
     const now = Math.floor(Date.now() / 1000);
     const header = encodeBase64Url(

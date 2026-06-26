@@ -5,6 +5,9 @@ import {
   encodeBase64Url,
   decodeBase64UrlJson,
   parseCookie,
+  bytesToHex,
+  randomHex,
+  pbkdf2Hex,
 } from "./common/index.js";
 import { signHmac, verifyHmac } from "./secrets.js";
 import { ensureProtectedTables } from "./schema.js";
@@ -15,43 +18,12 @@ const PASSWORD_ITERATIONS = 210000;
 const UNLOCK_MAX_ATTEMPTS = 5;
 const UNLOCK_LOCK_MS = 15 * 60 * 1000;
 
-function bytesToHex(bytes) {
-  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function randomHex(length = 16) {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return bytesToHex(bytes);
-}
-
 async function sha256Hex(value) {
   const bytes = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(value),
   );
   return bytesToHex(new Uint8Array(bytes));
-}
-
-async function pbkdf2Hex(password, salt, iterations = PASSWORD_ITERATIONS) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt: new TextEncoder().encode(salt),
-      iterations,
-    },
-    key,
-    256,
-  );
-  return bytesToHex(new Uint8Array(bits));
 }
 
 async function hashPassword(password, salt) {
@@ -153,7 +125,8 @@ async function checkUnlockAttempts(env, request, path) {
       };
     }
   } catch (_) {
-    console.warn("[protected-paths] checkUnlockAttempts query failed, allowing access");
+    console.error("[protected-paths] checkUnlockAttempts query failed, denying access");
+    return { ok: false, retryAfter: 60 };
   }
   return { ok: true, ip };
 }

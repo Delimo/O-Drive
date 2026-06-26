@@ -1,5 +1,11 @@
 /**
  * @fileoverview Rate limiting utilities using in-memory Map + TTL.
+ *
+ * NOTE: This is a best-effort rate limiter. In Cloudflare Workers,
+ * each isolate has its own memory space, so the Map is not shared
+ * across isolates. This means rate limits can be bypassed by
+ * distributed requests hitting different isolates. For stricter
+ * enforcement, consider using D1 or KV-backed rate limiting.
  */
 
 const ipRequests = new Map();

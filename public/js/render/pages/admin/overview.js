@@ -1,5 +1,5 @@
 export function createOverviewRenderer({
-  safeText, escapeHtml, formatTime, formatRelative
+  safeText, escapeHtml, formatRelative
 }) {
 
   function getExtColor(ext) {

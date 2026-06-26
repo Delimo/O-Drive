@@ -1,4 +1,4 @@
-import { addLog, assertCompleteListing, jsonResponse } from "./common/index.js";
+import { addLog, assertCompleteListing, jsonResponse, apiError } from "./common/index.js";
 import {
   getFileIndexEntry,
   listFileIndexPrefix,
@@ -302,7 +302,7 @@ async function purgeTrashRecord(env, row, request) {
 }
 
 export async function handleTrashRestore(env, request) {
-  const { id } = await request.json();
+  const { id } = await request.json().catch(() => ({}));
   if (!id)
     return jsonResponse(
       { success: false, message: "Invalid trash record" },
@@ -322,7 +322,7 @@ export async function handleTrashRestore(env, request) {
 }
 
 export async function handleTrashDelete(env, request) {
-  const { id } = await request.json();
+  const { id } = await request.json().catch(() => ({}));
   if (!id)
     return jsonResponse(
       { success: false, message: "Invalid trash record" },
@@ -435,5 +435,5 @@ export async function handleTrashRetention(env, request, method) {
     await addLog(env, request, "TRASH_RETENTION", `${days} days`);
     return jsonResponse({ success: true, days });
   }
-  return jsonResponse({ message: "Method Not Allowed" }, 405);
+  return apiError("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
 }
