@@ -727,6 +727,10 @@ export function createAdminThunks(deps, context) {
           if (admin.webhookDeliveries.length === 0 && !admin.webhookDeliveriesLoading)
             dispatch(t.loadAdminWebhookDeliveries());
           break;
+        case "webdav":
+          if (!admin.health && !admin.healthLoading)
+            dispatch(t.loadAdminHealth());
+          break;
       }
     },
   };
