@@ -303,7 +303,7 @@ export function createOverviewRenderer({
               </div>
               <div class="ov-section-body ov-type-body">
                 ${breakdownModel.items.length > 0 ? (() => {
-                  const r = 48;
+                  const r = 52;
                   const C = 2 * Math.PI * r;
                   let offset = 0;
                   const circles = breakdownModel.items.map((item) => {
