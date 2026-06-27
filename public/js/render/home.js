@@ -26,8 +26,10 @@ export function createHomeRenderers(deps) {
     const explorer = state.explorer;
     const entries = currentEntries(state);
     const selectedEntries = selectedEntriesFromState(state);
+    const isAdmin = state.app.role === "admin";
 
     return `
+      ${isAdmin ? `
       <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
         <div class="tools-left">
           <nav aria-label="面包屑导航">
@@ -37,14 +39,8 @@ export function createHomeRenderers(deps) {
           </nav>
         </div>
         <div class="tools-right flex items-center gap-2">
-          ${
-            state.app.role === "admin"
-              ? `
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="upload">上传</button>
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="open-folder-modal">新建</button>
-          `
-              : ""
-          }
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="cycle-sort">${humanSort(explorer.sort)}</button>
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="toggle-view">${humanView(explorer.view)}</button>
           <div class="relative inline-block">
@@ -55,18 +51,13 @@ export function createHomeRenderers(deps) {
               ${renderKindOptions(explorer.filter, explorer.trashMode, true)}
             </div>
           </div>
-          ${
-            state.app.role === "admin"
-              ? `
-                <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors ${explorer.trashMode ? "bg-slate-100 border-slate-300" : ""}" data-action="toggle-trash">${explorer.trashMode ? "退出回收站" : "回收站"}</button>
-                ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" data-action="confirm-clear-trash">清空回收站</button>' : ""}
-              `
-              : ""
-          }
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors ${explorer.trashMode ? "bg-slate-100 border-slate-300" : ""}" data-action="toggle-trash">${explorer.trashMode ? "退出回收站" : "回收站"}</button>
+          ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" data-action="confirm-clear-trash">清空回收站</button>' : ""}
         </div>
         <input class="sr-only" id="upload-input" type="file" multiple aria-label="选择文件上传">
         <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory aria-label="选择文件夹上传">
       </div>
+      ` : ''}
 
       <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col" id="explorerCard">
         ${renderExplorerContent(state, entries, selectedEntries)}
