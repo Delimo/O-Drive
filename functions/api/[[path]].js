@@ -87,7 +87,7 @@ export async function onRequest(context) {
 
     const auth = await verifyAuth(request, env);
     if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
-    if (path === '/api/auth/role') return jsonResponse({ role: auth.role, csrf: auth.role === 'admin' ? auth.csrf : undefined });
+    if (path === '/api/auth/role') return jsonResponse({ role: auth.role, csrf: auth.role === 'admin' ? auth.csrf : undefined, guestMode: env.ALLOW_GUEST === "true" });
 
     const [hiddenPaths, protectedPaths] = await Promise.all([loadHiddenPaths(env), loadProtectedPaths(env)]);
     const r2Key = getR2KeyFromPath(path);

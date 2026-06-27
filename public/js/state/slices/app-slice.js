@@ -4,6 +4,7 @@ export const appInitialState = {
   page: "home",
   role: "guest",
   csrf: "",
+  guestMode: false,
   booting: true,
   toast: null,
   modal: null,
@@ -24,6 +25,7 @@ export function createAppSlice(initialState) {
           ...state,
           role: action.payload.role,
           csrf: action.payload.csrf || "",
+          guestMode: action.payload.guestMode ?? false,
         };
       },
       setToast(state, action) {

@@ -379,7 +379,7 @@ function renderDropOverlay() {
 }
 
 function renderHeader(state) {
-  const { role } = state.app;
+  const { role, guestMode } = state.app;
   const searchValue = page === 'home' ? state.explorer.queryDraft : '';
 
   return `
@@ -391,7 +391,7 @@ function renderHeader(state) {
         <span class="text-xl font-bold text-slate-800">O-Drive</span>
       </a>
       <div class="flex items-center gap-3">
-        ${page === 'home' && role !== 'guest' ? `
+        ${page === 'home' && (role === 'admin' || guestMode) ? `
           <div class="search-bar relative">
             <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
             <input type="search" value="${escapeHtml(searchValue)}" placeholder="搜索文件..." data-role="search-input" aria-label="搜索文件" class="w-44 pl-9 pr-3 py-1.5 text-sm bg-[#fafbfc] border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all">
@@ -488,6 +488,7 @@ function subscribeSlice(selector, fn) {
 const unsubscribers = [
   ...(page === 'home' ? [
     subscribeSlice(s => s.app.role, renderHeaderRegion),
+    subscribeSlice(s => s.app.guestMode, renderHeaderRegion),
     subscribeSlice(s => s.admin.notifOpen, renderHeaderRegion),
     subscribeSlice(s => s.admin.notificationsUnread, renderHeaderRegion),
     subscribeSlice(s => s.admin.notifications, renderHeaderRegion),
