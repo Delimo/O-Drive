@@ -30,7 +30,7 @@ export function createHomeRenderers(deps) {
     const canBrowse = isAdmin || state.app.guestMode;
 
     return `
-      <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm" style="${canBrowse ? '' : 'height:67.2px'}">
+      <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
         <div class="tools-left">
           ${canBrowse ? `
           <nav aria-label="面包屑导航">
@@ -38,7 +38,13 @@ export function createHomeRenderers(deps) {
               ${breadcrumbsMarkup(explorer.path, explorer.expandedCrumbs)}
             </div>
           </nav>
-          ` : ''}
+          ` : `
+          <nav aria-label="面包屑导航" style="visibility:hidden">
+            <div class="crumbs">
+              ${breadcrumbsMarkup(explorer.path, explorer.expandedCrumbs)}
+            </div>
+          </nav>
+          `}
         </div>
         ${canBrowse ? `
         <div class="tools-right flex items-center gap-2">
@@ -61,7 +67,17 @@ export function createHomeRenderers(deps) {
           ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" data-action="confirm-clear-trash">清空回收站</button>' : ""}
           ` : ''}
         </div>
-        ` : ''}
+        ` : `
+        <div class="tools-right flex items-center gap-2" style="visibility:hidden">
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">${humanSort(explorer.sort)}</button>
+          <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">${humanView(explorer.view)}</button>
+          <div class="relative inline-block">
+            <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors filter-popup-trigger">
+              ${renderKindOptions(explorer.filter, explorer.trashMode)}
+            </button>
+          </div>
+        </div>
+        `}
         <input class="sr-only" id="upload-input" type="file" multiple aria-label="选择文件上传">
         <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory aria-label="选择文件夹上传">
       </div>
