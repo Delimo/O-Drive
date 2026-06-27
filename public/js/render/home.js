@@ -30,7 +30,6 @@ export function createHomeRenderers(deps) {
     const canBrowse = isAdmin || state.app.guestMode;
 
     return `
-      ${canBrowse ? `
       <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
         <div class="tools-left">
           <nav aria-label="面包屑导航">
@@ -39,6 +38,7 @@ export function createHomeRenderers(deps) {
             </div>
           </nav>
         </div>
+        ${canBrowse ? `
         <div class="tools-right flex items-center gap-2">
           ${isAdmin ? `
           <button class="px-4 py-1.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" data-action="upload">上传</button>
@@ -59,10 +59,10 @@ export function createHomeRenderers(deps) {
           ${explorer.trashMode ? '<button class="px-4 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" data-action="confirm-clear-trash">清空回收站</button>' : ""}
           ` : ''}
         </div>
+        ` : ''}
         <input class="sr-only" id="upload-input" type="file" multiple aria-label="选择文件上传">
         <input class="sr-only" id="folder-upload-input" type="file" multiple webkitdirectory directory aria-label="选择文件夹上传">
       </div>
-      ` : ''}
 
       <div class="explorer-card flex-1 min-h-0 bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm overflow-y-auto flex flex-col" id="explorerCard">
         ${renderExplorerContent(state, entries, selectedEntries)}
