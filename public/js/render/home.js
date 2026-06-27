@@ -30,7 +30,7 @@ export function createHomeRenderers(deps) {
     const canBrowse = isAdmin || state.app.guestMode;
 
     return `
-      <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm" style="${canBrowse ? '' : 'min-height:52px'}">
+      <div class="toolbar-card mb-4 flex-shrink-0 flex items-center justify-between bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm" style="${canBrowse ? '' : 'height:67.2px'}">
         <div class="tools-left">
           ${canBrowse ? `
           <nav aria-label="面包屑导航">
