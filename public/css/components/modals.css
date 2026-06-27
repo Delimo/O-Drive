@@ -86,8 +86,9 @@
 }
 
 .toast-wrap {
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
   padding: 24px;
 }
 
@@ -101,6 +102,7 @@
   background: var(--toast-bg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   animation: fadeSlideDown 220ms ease;
+  text-align: center;
 }
 
 .toast[data-type="success"] {
