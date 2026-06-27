@@ -923,7 +923,6 @@
   gap: 16px;
   flex: 1;
   min-height: 0;
-  align-items: start;
 }
 
 .ov-overview-left,
