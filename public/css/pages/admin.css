@@ -1264,10 +1264,10 @@
 
 .ov-type-donut circle {
   fill: none;
-  stroke-width: 20;
-  cx: 65;
-  cy: 65;
-  r: 52;
+  stroke-width: 16;
+  cx: 60;
+  cy: 60;
+  r: 44;
 }
 
 .ov-type-donut-center {
@@ -1325,9 +1325,10 @@
 .ov-type-bars {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
   flex: 1;
   min-height: 0;
+  justify-content: space-evenly;
 }
 
 .ov-type-bar-row {
@@ -1335,13 +1336,10 @@
   grid-template-columns: 1fr 36px;
   gap: 10px;
   align-items: center;
-  flex: 1;
-  min-height: 0;
 }
 
 .ov-type-bar-track {
-  height: 100%;
-  min-height: 18px;
+  height: 20px;
   border-radius: 6px;
   background: var(--track-bg);
   overflow: hidden;
