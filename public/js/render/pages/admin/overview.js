@@ -302,28 +302,44 @@ export function createOverviewRenderer({
                 <span class="ov-section-meta">${safeText(breakdownModel.total, "0")} 项 / ${safeText(breakdownModel.categories, "0")} 类</span>
               </div>
               <div class="ov-section-body ov-type-body">
-                ${breakdownModel.items.length > 0 ? `
-                  <div class="ov-type-stacked-bar" role="img" aria-label="文件类型分布">
-                    ${breakdownModel.items.map((item) => {
-                      const pct = breakdownModel.total ? (item.count / breakdownModel.total * 100) : 0;
-                      return `<div class="ov-type-bar-segment" style="width:${pct}%;background:${item.color};" title="${escapeHtml(item.label)}: ${pct.toFixed(1)}%"></div>`;
-                    }).join("")}
-                  </div>
-                  <div class="ov-type-legend">
-                    ${breakdownModel.items.map((item) => {
-                      const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
-                      return `
-                        <div class="ov-type-row">
-                          <span class="ov-type-dot" style="background:${item.color};"></span>
-                          <span class="ov-type-name">${escapeHtml(item.label)}</span>
-                          <span class="ov-type-count">${safeText(item.count, "0")}</span>
-                          <span class="ov-type-pct">${pct}%</span>
-                          <div class="ov-type-track"><i style="width:${pct}%;background:${item.color};"></i></div>
+                ${breakdownModel.items.length > 0 ? (() => {
+                  const r = 48;
+                  const C = 2 * Math.PI * r;
+                  let offset = 0;
+                  const circles = breakdownModel.items.map((item) => {
+                    const pct = breakdownModel.total ? (item.count / breakdownModel.total) : 0;
+                    const dash = pct * C;
+                    const gap = C - dash;
+                    const el = `<circle stroke="${item.color}" stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}"/>`;
+                    offset += dash;
+                    return el;
+                  }).join("");
+                  return `
+                    <div class="ov-type-top">
+                      <div class="ov-type-donut">
+                        <svg viewBox="0 0 120 120">
+                          ${circles}
+                        </svg>
+                        <div class="ov-type-donut-center">
+                          <span class="ov-type-donut-num">${safeText(breakdownModel.total, "0")}</span>
+                          <span class="ov-type-donut-lbl">总文件</span>
                         </div>
-                      `;
-                    }).join("")}
-                  </div>
-                ` : `
+                      </div>
+                      <div class="ov-type-legend">
+                        ${breakdownModel.items.map((item) => {
+                          const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
+                          return `<div class="ov-type-legend-item"><span class="ov-type-legend-dot" style="background:${item.color};"></span><span class="ov-type-legend-text">${escapeHtml(item.label)} <b>${safeText(item.count, "0")}</b></span></div>`;
+                        }).join("")}
+                      </div>
+                    </div>
+                    <div class="ov-type-bars">
+                      ${breakdownModel.items.map((item) => {
+                        const pct = breakdownModel.total ? (item.count / breakdownModel.total * 100) : 0;
+                        return `<div class="ov-type-bar-row"><div class="ov-type-bar-track"><div class="ov-type-bar-fill" style="width:${pct.toFixed(1)}%;background:${item.color};"></div></div><span class="ov-type-bar-val">${safeText(item.count, "0")}</span></div>`;
+                      }).join("")}
+                    </div>
+                  `;
+                })() : `
                   <div class="ov-empty-inline">暂无分类数据</div>
                 `}
               </div>
