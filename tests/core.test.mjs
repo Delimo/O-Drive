@@ -26,6 +26,7 @@ import {
 import { handleAdminHealth, handleAdminLogs, handleAdminQuota, handleAdminStats } from '../functions/api/lib/admin.js';
 import { handleAdminStorage } from '../functions/api/lib/storage.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
+import { resolveZipArchive } from '../functions/api/lib/zip-download.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
 import { clearStorageUsedCache, getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index/index.js';
@@ -561,7 +562,9 @@ test('route smoke: folder upload can target nested paths', async () => {
   });
 
   assert.equal(upload.status, 200);
-  assert.ok(await env.R2.get('projects/folder-a/inside.txt'));
+  const indexed = await getFileIndexEntry(env, 'projects/folder-a/inside.txt');
+  assert.ok(indexed);
+  assert.ok(await env.R2.get(indexed.object_key));
 });
 
 test('admin file task runs paste work in the background task table', async () => {
@@ -1513,6 +1516,135 @@ test('legacy global quota no longer blocks uploads', async () => {
 
   assert.equal(upload.status, 200);
   assert.equal(data.success, true);
+});
+
+test('single-file uploads deduplicate identical content across logical names', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const firstForm = new FormData();
+  firstForm.append('file', new File(['same body'], 'a.txt', { type: 'text/plain' }));
+  const first = await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: firstForm }), 'docs');
+  const firstData = await first.json();
+  assert.equal(first.status, 200);
+  assert.equal(firstData.skippedUpload, false);
+
+  const secondForm = new FormData();
+  secondForm.append('file', new File(['same body'], 'b.txt', { type: 'text/plain' }));
+  const second = await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: secondForm }), 'docs');
+  const secondData = await second.json();
+  assert.equal(second.status, 200);
+  assert.equal(secondData.skippedUpload, true);
+
+  const firstEntry = await getFileIndexEntry(env, 'docs/a.txt');
+  const secondEntry = await getFileIndexEntry(env, 'docs/b.txt');
+  assert.equal(firstEntry.object_key, secondEntry.object_key);
+  assert.match(firstEntry.object_key, /^objects\/sha256\/[0-9a-f]{2}\/[0-9a-f]{2}\//);
+  assert.equal(await env.R2.head('docs/a.txt'), null);
+  assert.ok(await env.R2.head(firstEntry.object_key));
+  assert.equal(await getIndexedStorageUsed(env, 'r2'), 9);
+
+  const storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 1);
+  assert.equal(storageObjects.results[0].ref_count, 2);
+
+  const archive = await resolveZipArchive(env, ['docs'], [], { role: 'admin' }, []);
+  assert.equal(archive.entries.length, 2);
+  assert.deepEqual(archive.entries.map((entry) => entry.name), ['docs/a.txt', 'docs/b.txt']);
+});
+
+test('deduplicated uploads do not consume additional storage quota', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+  await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
+    method: 'PUT',
+    body: JSON.stringify({ r2QuotaBytes: 5 }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'PUT');
+
+  const firstForm = new FormData();
+  firstForm.append('file', new File(['hello'], 'a.txt', { type: 'text/plain' }));
+  const first = await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: firstForm }), '');
+  assert.equal(first.status, 200);
+
+  const duplicateForm = new FormData();
+  duplicateForm.append('file', new File(['hello'], 'b.txt', { type: 'text/plain' }));
+  const duplicate = await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: duplicateForm }), '');
+  const duplicateData = await duplicate.json();
+  assert.equal(duplicate.status, 200);
+  assert.equal(duplicateData.skippedUpload, true);
+  assert.equal(await getIndexedStorageUsed(env, 'r2'), 5);
+
+  const differentForm = new FormData();
+  differentForm.append('file', new File(['x'], 'c.txt', { type: 'text/plain' }));
+  const different = await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: differentForm }), '');
+  assert.equal(different.status, 507);
+});
+
+test('deleting deduplicated uploads updates storage object references', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const firstForm = new FormData();
+  firstForm.append('file', new File(['same'], 'a.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: firstForm }), 'docs');
+
+  const secondForm = new FormData();
+  secondForm.append('file', new File(['same'], 'b.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: secondForm }), 'docs');
+
+  const firstEntry = await getFileIndexEntry(env, 'docs/a.txt');
+  const objectKey = firstEntry.object_key;
+  let storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results[0].ref_count, 2);
+
+  const deleteOne = await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/a.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(deleteOne.status, 200);
+  assert.ok(await env.R2.head(objectKey));
+  storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 1);
+  assert.equal(storageObjects.results[0].ref_count, 1);
+
+  const deleteLast = await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/b.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(deleteLast.status, 200);
+  assert.equal(await env.R2.head(objectKey), null);
+  storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 0);
+});
+
+test('overwrite upload replaces an unreferenced deduplicated object', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const firstForm = new FormData();
+  firstForm.append('file', new File(['first'], 'same.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: firstForm }), '');
+  const before = await getFileIndexEntry(env, 'same.txt');
+  assert.ok(await env.R2.head(before.object_key));
+
+  const secondForm = new FormData();
+  secondForm.append('file', new File(['second'], 'same.txt', { type: 'text/plain' }));
+  const second = await handleUpload(env, new Request('https://example.com/api/files?conflict=overwrite', { method: 'POST', body: secondForm }), '');
+  assert.equal(second.status, 200);
+
+  const after = await getFileIndexEntry(env, 'same.txt');
+  assert.notEqual(after.object_key, before.object_key);
+  assert.equal(await env.R2.head(before.object_key), null);
+  assert.ok(await env.R2.head(after.object_key));
+
+  const storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 1);
+  assert.equal(storageObjects.results[0].object_key, after.object_key);
+  assert.equal(storageObjects.results[0].ref_count, 1);
+  assert.equal(await getIndexedStorageUsed(env, 'r2'), 6);
 });
 
 test('uploads enforce the selected storage bucket quota', async () => {

@@ -1,4 +1,7 @@
 import { ensureFileIndexTable, ensureStorageUsageTable } from "./ensure.js";
+import { listFileIndexPrefix } from "./query.js";
+import { clearStorageUsedCache } from "./stats.js";
+import { adjustStorageObjectRef } from "../storage-objects.js";
 
 async function removeStorageUsage(env, storageId, objectKey) {
   await ensureStorageUsageTable(env);
@@ -14,6 +17,7 @@ async function removeStorageUsage(env, storageId, objectKey) {
       )
         .bind(storageId, objectKey)
         .run();
+      clearStorageUsedCache();
     }
   } catch (_) {}
 }
@@ -29,29 +33,52 @@ export async function deleteFileIndexKey(env, key) {
     await env.D1.prepare("DELETE FROM file_index WHERE path = ?")
       .bind(key)
       .run();
-    if (row)
+    if (row) {
+      await adjustStorageObjectRef(
+        env,
+        row.storage_id || "r2",
+        row.object_key || key,
+        -1,
+      );
       await removeStorageUsage(
         env,
         row.storage_id || "r2",
         row.object_key || key,
       );
+    }
   } catch (_) {}
 }
 
 export async function deleteFileIndexPrefix(env, prefix) {
   if (!(await ensureFileIndexTable(env))) return;
   const clean = String(prefix || "").replace(/^\/+|\/+$/g, "");
+  if (!clean) return;
   try {
-    const rows = await env.D1.prepare(
-      "SELECT DISTINCT storage_id, COALESCE(NULLIF(object_key, ''), path) AS object_key FROM file_index WHERE path = ? OR path LIKE ?",
-    )
-      .bind(clean, `${clean}/%`)
-      .all();
+    const rows = await listFileIndexPrefix(env, clean);
+    const refCounts = new Map();
+    for (const row of rows || []) {
+      const storageId = row.storage_id || "r2";
+      const objectKey = row.object_key || row.path;
+      const refKey = `${storageId}\0${objectKey}`;
+      const current = refCounts.get(refKey) || {
+        storageId,
+        objectKey,
+        count: 0,
+      };
+      current.count++;
+      refCounts.set(refKey, current);
+    }
     await env.D1.prepare("DELETE FROM file_index WHERE path = ? OR path LIKE ?")
       .bind(clean, `${clean}/%`)
       .run();
-    for (const row of rows.results || []) {
-      await removeStorageUsage(env, row.storage_id || "r2", row.object_key);
+    for (const row of refCounts.values()) {
+      await adjustStorageObjectRef(
+        env,
+        row.storageId,
+        row.objectKey,
+        -row.count,
+      );
+      await removeStorageUsage(env, row.storageId, row.objectKey);
     }
   } catch (_) {}
 }

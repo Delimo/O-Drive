@@ -5,6 +5,7 @@ import {
   updateFileIndexObjectKey,
   upsertFileIndex,
 } from "./file-index/index.js";
+import { deleteStorageObjectRecord } from "./storage-objects.js";
 import {
   resolveExistingObjectLocation,
   storageCopy,
@@ -50,6 +51,7 @@ export async function deletePathEntry(env, path, storageId, objectKey) {
   const refs = await countFileIndexObjectRefs(env, storageId, realObjectKey);
   if (refs <= 0) {
     await storageDelete(env, storageId, realObjectKey);
+    await deleteStorageObjectRecord(env, storageId, realObjectKey);
     return;
   }
   if (realObjectKey !== path) return;

@@ -12,7 +12,7 @@ import {
   assertCompleteListing,
 } from "./common/index.js";
 import { handleDownloadOrPreview } from "./file-reads.js";
-import { listIndexedDirectory } from "./file-index/index.js";
+import { listFileIndexPrefix, listIndexedDirectory } from "./file-index/index.js";
 import { signHmac } from "./secrets.js";
 import { ensureShareTable } from "./schema.js";
 import {
@@ -302,11 +302,44 @@ async function folderZipResponse(env, rootPath, subPath = "", filename = "folder
   assertCompleteListing(listed, `Share folder ZIP: ${dir}`);
   const baseName = filename || dir.split("/").pop() || "folder";
   const entries = [];
+  const entryNames = new Set();
+  const indexedRows = await listFileIndexPrefix(env, dir);
+  for (const row of indexedRows || []) {
+    if (!row?.path || row.path === dir) continue;
+    if (dir && !row.path.startsWith(prefix)) continue;
+    const relPath = dir ? row.path.slice(prefix.length) : row.path;
+    if (
+      !relPath ||
+      relPath === ".folder" ||
+      relPath.endsWith("/.folder") ||
+      isReservedKey(row.path)
+    )
+      continue;
+    const name = `${baseName}/${relPath}`;
+    entryNames.add(name);
+    entries.push({
+      name,
+      size: row.size,
+      getStream: () =>
+        storageGet(env, row.storage_id || "r2", row.object_key || row.path).then((res) =>
+          bodyStream(res?.body),
+        ),
+    });
+  }
   for (const obj of listed.objects || []) {
     const relPath = obj.key.startsWith(prefix) ? obj.key.slice(prefix.length) : obj.key;
-    if (!relPath || relPath === ".folder" || isReservedKey(relPath)) continue;
+    const fullKey = dir ? `${dir}/${relPath}` : relPath;
+    if (
+      !relPath ||
+      relPath === ".folder" ||
+      relPath.endsWith("/.folder") ||
+      isReservedKey(fullKey)
+    )
+      continue;
+    const name = `${baseName}/${relPath}`;
+    if (entryNames.has(name)) continue;
     entries.push({
-      name: `${baseName}/${relPath}`,
+      name,
       size: obj.size,
       getStream: () => storageGet(env, "r2", obj.key).then((res) => bodyStream(res?.body)),
     });

@@ -31,6 +31,12 @@ export async function listFileIndexPrefix(env, prefix) {
   if (!(await ensureFileIndexTable(env))) return [];
   const clean = String(prefix || "").replace(/^\/+|\/+$/g, "");
   try {
+    if (!clean) {
+      const rows = await env.D1.prepare(
+        "SELECT * FROM file_index ORDER BY path ASC",
+      ).all();
+      return (rows.results || []).map(normalizeIndexRow).filter(Boolean);
+    }
     const rows = await env.D1.prepare(
       "SELECT * FROM file_index WHERE path = ? OR path LIKE ? ORDER BY path ASC",
     )

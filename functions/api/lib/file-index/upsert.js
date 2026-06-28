@@ -1,7 +1,9 @@
 import { isReservedKey } from "../common/index.js";
+import { recordStorageObjectReferenceChange } from "../storage-objects.js";
 import { ensureFileIndexTable, UPSERT_SQL } from "./ensure.js";
 import { indexedFileKind, nameOf, parentOf, uploadedMs, indexableKey } from "./helpers.js";
 import { ensureStorageUsageTable } from "./ensure.js";
+import { clearStorageUsedCache } from "./stats.js";
 
 export function buildUpsertParams(key, meta = {}) {
   const size = Number(meta.size || 0);
@@ -29,22 +31,74 @@ async function addStorageUsage(env, storageId, objectKey, size) {
     )
       .bind(storageId, objectKey, Number(size || 0))
       .run();
+    clearStorageUsedCache();
   } catch (_) {}
 }
 
-export async function upsertFileIndex(env, key, meta = {}) {
-  if (!indexableKey(key) || !(await ensureFileIndexTable(env))) return;
+async function removeStorageUsageIfUnreferenced(env, storageId, objectKey) {
+  if (!objectKey) return;
+  await ensureStorageUsageTable(env);
   try {
+    const row = await env.D1.prepare(
+      "SELECT COUNT(*) as count FROM file_index WHERE storage_id = ? AND COALESCE(NULLIF(object_key, ''), path) = ?",
+    )
+      .bind(storageId || "r2", objectKey)
+      .first();
+    if (!Number(row?.count || 0)) {
+      await env.D1.prepare(
+        "DELETE FROM storage_usage WHERE storage_id = ? AND object_key = ?",
+      )
+        .bind(storageId || "r2", objectKey)
+        .run();
+      clearStorageUsedCache();
+    }
+  } catch (_) {}
+}
+
+async function getPreviousIndexRow(env, key) {
+  try {
+    return await env.D1.prepare("SELECT * FROM file_index WHERE path = ?")
+      .bind(key)
+      .first();
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function upsertFileIndex(env, key, meta = {}) {
+  if (!indexableKey(key) || !(await ensureFileIndexTable(env))) return false;
+  try {
+    const previous = await getPreviousIndexRow(env, key);
+    const nextStorageId = meta.storageId || meta.storage_id || "r2";
+    const nextObjectKey = meta.objectKey || meta.object_key || key;
     await env.D1.prepare(UPSERT_SQL)
       .bind(...buildUpsertParams(key, meta))
       .run();
     await addStorageUsage(
       env,
-      meta.storageId || meta.storage_id || "r2",
-      meta.objectKey || meta.object_key || key,
+      nextStorageId,
+      nextObjectKey,
       Number(meta.size || 0),
     );
-  } catch (_) {}
+    if (
+      previous &&
+      ((previous.storage_id || "r2") !== nextStorageId ||
+        (previous.object_key || previous.path || key) !== nextObjectKey)
+    ) {
+      await removeStorageUsageIfUnreferenced(
+        env,
+        previous.storage_id || "r2",
+        previous.object_key || previous.path || key,
+      );
+    }
+    await recordStorageObjectReferenceChange(env, previous, {
+      storageId: nextStorageId,
+      objectKey: nextObjectKey,
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 export async function batchUpsertFileIndex(env, entries) {

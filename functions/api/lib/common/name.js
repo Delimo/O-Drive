@@ -32,7 +32,13 @@ export function isHiddenKey(key, hiddenPaths) {
   return hiddenPaths.some((hp) => key === hp || key.startsWith(hp + "/"));
 }
 
-export const RESERVED_PREFIXES = [".trash", ".thumbs", ".meta", ".system"];
+export const RESERVED_PREFIXES = [
+  ".trash",
+  ".thumbs",
+  ".meta",
+  ".system",
+  "objects",
+];
 
 export function isReservedKey(key) {
   const clean = String(key || "").replace(/^\/+|\/+$/g, "");

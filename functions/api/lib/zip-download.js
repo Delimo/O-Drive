@@ -6,6 +6,7 @@ import {
   formatBytes,
 } from "./common/index.js";
 import { checkProtectedAccess } from "./protected-paths.js";
+import { listFileIndexPrefix } from "./file-index/index.js";
 import { createZipStream } from "./zip-stream.js";
 import {
   resolveExistingObjectLocation,
@@ -73,10 +74,17 @@ async function resolveZipEntries(env, path, hiddenPaths, auth, protectedPaths) {
 
   const storageId = location.storageId;
   const objectKey = location.objectKey;
+  const indexedRows = await listFileIndexPrefix(env, clean);
+  const indexedChildren = indexedRows.filter((row) => {
+    if (!row?.path || row.path === clean) return false;
+    if (!clean) return true;
+    return row.path.startsWith(clean + "/");
+  });
 
-  const prefix = objectKey ? objectKey + "/" : "";
+  const prefix = clean ? clean + "/" : "";
   const listed = await storageList(env, storageId, { prefix, delimiter: "/" });
   const isFolder =
+    indexedChildren.length > 0 ||
     listed.objects?.length > 0 || listed.delimitedPrefixes?.length > 0;
 
   const entries = [];
@@ -85,13 +93,41 @@ async function resolveZipEntries(env, path, hiddenPaths, auth, protectedPaths) {
     const listed = await storageList(env, storageId, { prefix });
     assertCompleteListing(listed, `ZIP folder listing: ${path}`);
     const folderName = clean.split("/").filter(Boolean).pop() || "folder";
+    const entryNames = new Set();
+    for (const row of indexedChildren) {
+      const relPath = clean ? row.path.slice(clean.length + 1) : row.path;
+      if (!relPath || relPath === ".folder" || relPath.endsWith("/.folder"))
+        continue;
+      if (isHiddenKey(row.path, hiddenPaths) || isReservedKey(row.path)) continue;
+      if (auth.role !== "admin") {
+        const access = await checkProtectedAccess(
+          null,
+          env,
+          auth,
+          protectedPaths,
+          row.path,
+        );
+        if (!access.ok) continue;
+      }
+      const name = folderName + "/" + relPath;
+      entryNames.add(name);
+      entries.push({
+        name,
+        size: row.size,
+        getStream: () =>
+          storageGet(env, row.storage_id || "r2", row.object_key || row.path).then(
+            (r) => bodyStream(r?.body),
+          ),
+      });
+    }
     for (const obj of listed.objects || []) {
       const relPath = obj.key.startsWith(prefix)
         ? obj.key.slice(prefix.length)
         : obj.key;
-      if (!relPath || relPath === ".folder") continue;
-      const fullKey = clean + "/" + relPath;
-      if (isHiddenKey(fullKey, hiddenPaths) || isReservedKey(relPath)) continue;
+      if (!relPath || relPath === ".folder" || relPath.endsWith("/.folder"))
+        continue;
+      const fullKey = clean ? clean + "/" + relPath : relPath;
+      if (isHiddenKey(fullKey, hiddenPaths) || isReservedKey(fullKey)) continue;
       if (auth.role !== "admin") {
         const access = await checkProtectedAccess(
           null,
@@ -102,13 +138,13 @@ async function resolveZipEntries(env, path, hiddenPaths, auth, protectedPaths) {
         );
         if (!access.ok) continue;
       }
+      const name = folderName + "/" + relPath;
+      if (entryNames.has(name)) continue;
       entries.push({
-        name: folderName + "/" + relPath,
+        name,
         size: obj.size,
         getStream: () =>
-          storageGet(env, storageId, obj.key).then(
-            (r) => bodyStream(r?.body),
-          ),
+          storageGet(env, storageId, obj.key).then((r) => bodyStream(r?.body)),
       });
     }
   } else {
