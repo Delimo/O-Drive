@@ -1368,6 +1368,16 @@ test('deleting original and alias paths only removes the backing object after th
   }));
   assert.equal((await deleteAlias.json()).success, true);
   assert.equal(await getFileIndexEntry(env, 'copies/source.txt'), null);
+  assert.ok(await env.R2.get(copiedIndex.object_key));
+
+  const aliasTrash = await (await handleTrashList(env, new URL('https://example.com/api/trash?q=copies/source.txt&page=1&size=20'))).json();
+  assert.equal(aliasTrash.items.length, 1);
+  const purgeAlias = await handleTrashDelete(env, new Request('https://example.com/api/trash/delete', {
+    method: 'DELETE',
+    body: JSON.stringify({ id: aliasTrash.items[0].id }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(purgeAlias.status, 200);
   assert.equal(await env.R2.get(copiedIndex.object_key), null);
 });
 
@@ -1607,7 +1617,7 @@ test('deleting deduplicated uploads updates storage object references', async ()
   assert.ok(await env.R2.head(objectKey));
   storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
   assert.equal(storageObjects.results.length, 1);
-  assert.equal(storageObjects.results[0].ref_count, 1);
+  assert.equal(storageObjects.results[0].ref_count, 2);
 
   const deleteLast = await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
     method: 'POST',
@@ -1615,6 +1625,180 @@ test('deleting deduplicated uploads updates storage object references', async ()
     headers: { 'Content-Type': 'application/json' },
   }));
   assert.equal(deleteLast.status, 200);
+  assert.ok(await env.R2.head(objectKey));
+  storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 1);
+  assert.equal(storageObjects.results[0].ref_count, 2);
+
+  const trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  assert.equal(trashData.items.length, 2);
+  for (const item of trashData.items) {
+    const purge = await handleTrashDelete(env, new Request('https://example.com/api/trash/delete', {
+      method: 'DELETE',
+      body: JSON.stringify({ id: item.id }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    assert.equal(purge.status, 200);
+  }
+  assert.equal(await env.R2.head(objectKey), null);
+  storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 0);
+});
+
+test('trash keeps deduplicated uploads as logical references', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const form = new FormData();
+  form.append('file', new File(['trash-ref'], 'logical.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: form }), 'docs');
+  const before = await getFileIndexEntry(env, 'docs/logical.txt');
+  assert.ok(before.object_key.startsWith('objects/sha256/'));
+
+  const deleted = await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/logical.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(deleted.status, 200);
+  assert.equal(await getFileIndexEntry(env, 'docs/logical.txt'), null);
+  assert.ok(await env.R2.head(before.object_key));
+  assert.equal((await env.R2.list({ prefix: '.trash/' })).objects.length, 0);
+
+  const trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  const trashId = trashData.items[0].id;
+  const trashEntries = await env.D1.prepare('SELECT * FROM trash_entries WHERE trash_id = ? ORDER BY path ASC')
+    .bind(trashId)
+    .all();
+  assert.equal(trashEntries.results.length, 1);
+  assert.equal(trashEntries.results[0].object_key, before.object_key);
+  let storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results[0].ref_count, 1);
+
+  const restored = await handleTrashRestore(env, new Request('https://example.com/api/trash/restore', {
+    method: 'POST',
+    body: JSON.stringify({ id: trashId }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(restored.status, 200);
+  const restoredEntry = await getFileIndexEntry(env, 'docs/logical.txt');
+  assert.equal(restoredEntry.object_key, before.object_key);
+  storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results[0].ref_count, 1);
+});
+
+test('trash restore handles folders with logical and copied entries', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/legacy.txt', body: 'legacy', size: 6, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const form = new FormData();
+  form.append('file', new File(['dedup'], 'dedup.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: form }), 'docs');
+  const dedupObjectKey = (await getFileIndexEntry(env, 'docs/dedup.txt')).object_key;
+
+  await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(await env.R2.head('docs/legacy.txt'), null);
+  assert.ok(await env.R2.head(dedupObjectKey));
+
+  const trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  assert.equal(trashData.items.length, 1);
+  const restored = await handleTrashRestore(env, new Request('https://example.com/api/trash/restore', {
+    method: 'POST',
+    body: JSON.stringify({ id: trashData.items[0].id }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(restored.status, 200);
+
+  const legacy = await env.R2.get('docs/legacy.txt');
+  assert.equal(legacy.body, 'legacy');
+  const restoredEntry = await getFileIndexEntry(env, 'docs/dedup.txt');
+  assert.equal(restoredEntry.object_key, dedupObjectKey);
+  const restoredDedup = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/docs/dedup.txt'), '/api/preview/docs/dedup.txt', 'docs/dedup.txt');
+  assert.equal(await restoredDedup.text(), 'dedup');
+  assert.equal((await env.R2.list({ prefix: '.trash/' })).objects.length, 0);
+});
+
+test('purging mixed trash removes logical refs and copied trash objects', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/legacy.txt', body: 'legacy', size: 6, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const form = new FormData();
+  form.append('file', new File(['dedup'], 'dedup.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: form }), 'docs');
+  const dedupObjectKey = (await getFileIndexEntry(env, 'docs/dedup.txt')).object_key;
+
+  await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  assert.equal(trashData.items.length, 1);
+  const purge = await handleTrashDelete(env, new Request('https://example.com/api/trash/delete', {
+    method: 'DELETE',
+    body: JSON.stringify({ id: trashData.items[0].id }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(purge.status, 200);
+
+  assert.equal(await env.R2.head(dedupObjectKey), null);
+  assert.equal((await env.R2.list({ prefix: '.trash/' })).objects.length, 0);
+  const storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 0);
+});
+
+test('purging deduplicated trash releases only the trashed logical reference', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const firstForm = new FormData();
+  firstForm.append('file', new File(['same-trash'], 'a.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: firstForm }), 'docs');
+  const secondForm = new FormData();
+  secondForm.append('file', new File(['same-trash'], 'b.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: secondForm }), 'docs');
+  const objectKey = (await getFileIndexEntry(env, 'docs/a.txt')).object_key;
+
+  await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/a.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  let trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  let purge = await handleTrashDelete(env, new Request('https://example.com/api/trash/delete', {
+    method: 'DELETE',
+    body: JSON.stringify({ id: trashData.items[0].id }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(purge.status, 200);
+  assert.ok(await env.R2.head(objectKey));
+  let storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results[0].ref_count, 1);
+
+  await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/b.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  purge = await handleTrashDelete(env, new Request('https://example.com/api/trash/delete', {
+    method: 'DELETE',
+    body: JSON.stringify({ id: trashData.items[0].id }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(purge.status, 200);
   assert.equal(await env.R2.head(objectKey), null);
   storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
   assert.equal(storageObjects.results.length, 0);

@@ -6,12 +6,7 @@ import { adjustStorageObjectRef } from "../storage-objects.js";
 async function removeStorageUsage(env, storageId, objectKey) {
   await ensureStorageUsageTable(env);
   try {
-    const row = await env.D1.prepare(
-      "SELECT COUNT(*) as cnt FROM file_index WHERE storage_id = ? AND COALESCE(NULLIF(object_key, ''), path) = ?",
-    )
-      .bind(storageId, objectKey)
-      .first();
-    if (!Number(row?.cnt || 0)) {
+    if (!(await countObjectRefs(env, storageId, objectKey))) {
       await env.D1.prepare(
         "DELETE FROM storage_usage WHERE storage_id = ? AND object_key = ?",
       )
@@ -101,6 +96,35 @@ export async function countFileIndexObjectRefs(
   }
 }
 
+async function countTrashEntryObjectRefs(
+  env,
+  storageId = "r2",
+  objectKey = "",
+) {
+  if (!objectKey || !env?.D1) return 0;
+  try {
+    const row = await env.D1.prepare(
+      "SELECT COUNT(*) as count FROM trash_entries WHERE storage_id = ? AND object_key = ?",
+    )
+      .bind(storageId || "r2", objectKey)
+      .first();
+    return Number(row?.count || 0);
+  } catch (_) {
+    return 0;
+  }
+}
+
+export async function countObjectRefs(
+  env,
+  storageId = "r2",
+  objectKey = "",
+) {
+  return (
+    (await countFileIndexObjectRefs(env, storageId, objectKey)) +
+    (await countTrashEntryObjectRefs(env, storageId, objectKey))
+  );
+}
+
 export async function updateFileIndexObjectKey(
   env,
   storageId = "r2",
@@ -115,5 +139,32 @@ export async function updateFileIndexObjectKey(
     )
       .bind(newObjectKey, Date.now(), storageId || "r2", oldObjectKey)
       .run();
+  } catch (_) {}
+}
+
+export async function updateObjectReferenceKey(
+  env,
+  storageId = "r2",
+  oldObjectKey = "",
+  newObjectKey = "",
+) {
+  if (!oldObjectKey || !newObjectKey || !(await ensureFileIndexTable(env)))
+    return;
+  await updateFileIndexObjectKey(env, storageId, oldObjectKey, newObjectKey);
+  try {
+    await env.D1.prepare(
+      "UPDATE trash_entries SET object_key = ? WHERE storage_id = ? AND object_key = ?",
+    )
+      .bind(newObjectKey, storageId || "r2", oldObjectKey)
+      .run();
+  } catch (_) {}
+  try {
+    await ensureStorageUsageTable(env);
+    await env.D1.prepare(
+      "UPDATE storage_usage SET object_key = ? WHERE storage_id = ? AND object_key = ?",
+    )
+      .bind(newObjectKey, storageId || "r2", oldObjectKey)
+      .run();
+    clearStorageUsedCache();
   } catch (_) {}
 }

@@ -1,8 +1,8 @@
 import {
-  countFileIndexObjectRefs,
+  countObjectRefs,
   deleteFileIndexKey,
   listFileIndexPrefix,
-  updateFileIndexObjectKey,
+  updateObjectReferenceKey,
   upsertFileIndex,
 } from "./file-index/index.js";
 import { deleteStorageObjectRecord } from "./storage-objects.js";
@@ -48,7 +48,7 @@ export async function copyR2Object(env, sourceKey, targetKey) {
 export async function deletePathEntry(env, path, storageId, objectKey) {
   const realObjectKey = objectKey || path;
   await deleteFileIndexKey(env, path);
-  const refs = await countFileIndexObjectRefs(env, storageId, realObjectKey);
+  const refs = await countObjectRefs(env, storageId, realObjectKey);
   if (refs <= 0) {
     await storageDelete(env, storageId, realObjectKey);
     await deleteStorageObjectRecord(env, storageId, realObjectKey);
@@ -61,7 +61,7 @@ export async function deletePathEntry(env, path, storageId, objectKey) {
   await storagePut(env, storageId, hiddenKey, obj.body, {
     httpMetadata: obj.httpMetadata,
   });
-  await updateFileIndexObjectKey(env, storageId, realObjectKey, hiddenKey);
+  await updateObjectReferenceKey(env, storageId, realObjectKey, hiddenKey);
   await storageDelete(env, storageId, realObjectKey);
 }
 

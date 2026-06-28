@@ -251,7 +251,7 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
         dispatchToast("info", "当前没有可导出的日志记录");
         return;
       }
-      
+
       const headers = ["ID", "操作", "路径", "用户", "IP", "时间", "详情"];
       const rows = logs.map(item => [
         item.id || "",
@@ -262,10 +262,10 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
         item.createdAt ? new Date(item.createdAt).toLocaleString("zh-CN") : "",
         item.detail || ""
       ]);
-      
-      const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+
+      const csvContent = "data:text/csv;charset=utf-8,\uFEFF"
         + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
-      
+
       const encodedUri = encodeURI(csvContent);
       const link = documentRef.createElement("a");
       link.setAttribute("href", encodedUri);

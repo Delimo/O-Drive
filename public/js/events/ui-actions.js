@@ -11,7 +11,7 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         store.dispatch(actions.admin.setLogsFilter({ [key]: event.target.value }));
         return;
       }
-      
+
       if (actionInput === "set-shares-search") {
         store.dispatch(actions.admin.setShareSearch(event.target.value));
         return;
@@ -107,7 +107,7 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         store.dispatch(thunks.loadAdminLogs(1));
         return;
       }
-      
+
       if (actionChange === "set-shares-filter") {
         store.dispatch(actions.admin.setShareFilter(event.target.value));
         return;

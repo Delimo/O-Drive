@@ -6,10 +6,17 @@ import {
   normalizeName,
 } from "./common/index.js";
 import {
+  clearStorageUsedCache,
+  countObjectRefs,
+  deleteFileIndexKey,
   getFileIndexEntry,
   listFileIndexPrefix,
   upsertFileIndex,
 } from "./file-index/index.js";
+import {
+  adjustStorageObjectRef,
+  deleteStorageObjectRecord,
+} from "./storage-objects.js";
 import {
   copyR2Object,
   deletePathEntry,
@@ -39,6 +46,19 @@ const TRASH_TABLE_SQL = `
   )
 `;
 
+const TRASH_ENTRIES_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS trash_entries (
+    id TEXT PRIMARY KEY,
+    trash_id TEXT NOT NULL,
+    path TEXT NOT NULL,
+    storage_id TEXT NOT NULL DEFAULT 'r2',
+    object_key TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    content_type TEXT DEFAULT '',
+    created_at INTEGER NOT NULL
+  )
+`;
+
 const SETTINGS_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
@@ -62,6 +82,17 @@ async function ensureTrashTable(env) {
       "ALTER TABLE trash ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'",
     ).run();
   } catch (_) {}
+  await env.D1.prepare(TRASH_ENTRIES_TABLE_SQL).run();
+  try {
+    await env.D1.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_trash_entries_trash_id ON trash_entries(trash_id)",
+    ).run();
+  } catch (_) {}
+  try {
+    await env.D1.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_trash_entries_object ON trash_entries(storage_id, object_key)",
+    ).run();
+  } catch (_) {}
   _trashTableReady = true;
 }
 
@@ -80,10 +111,74 @@ function createTrashId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function createTrashEntryId(trashId) {
+  return `${trashId}:${crypto.randomUUID()}`;
+}
+
 function normalizeRestoreConflictMode(mode = "error") {
   return ["error", "skip", "overwrite", "rename"].includes(mode)
     ? mode
     : "error";
+}
+
+async function insertTrashEntry(env, trashId, entry) {
+  const storageId = entry.storageId || entry.storage_id || "r2";
+  const objectKey = entry.objectKey || entry.object_key || entry.key;
+  if (!objectKey) return false;
+  await env.D1.prepare(
+    `INSERT INTO trash_entries
+     (id, trash_id, path, storage_id, object_key, size, content_type, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      createTrashEntryId(trashId),
+      trashId,
+      entry.path || entry.key,
+      storageId,
+      objectKey,
+      Number(entry.size || 0),
+      entry.contentType || entry.content_type || "",
+      Date.now(),
+    )
+    .run();
+  await adjustStorageObjectRef(env, storageId, objectKey, 1);
+  return true;
+}
+
+async function listTrashEntries(env, trashId) {
+  await ensureTrashTable(env);
+  const rows = await env.D1.prepare(
+    "SELECT * FROM trash_entries WHERE trash_id = ? ORDER BY path ASC",
+  )
+    .bind(trashId)
+    .all();
+  return rows.results || [];
+}
+
+async function removeStorageUsageIfUnreferenced(env, storageId, objectKey) {
+  if (!objectKey || (await countObjectRefs(env, storageId, objectKey)) > 0)
+    return;
+  try {
+    await env.D1.prepare(
+      "DELETE FROM storage_usage WHERE storage_id = ? AND object_key = ?",
+    )
+      .bind(storageId || "r2", objectKey)
+      .run();
+    clearStorageUsedCache();
+  } catch (_) {}
+}
+
+async function releaseTrashEntry(env, entry) {
+  const storageId = entry.storage_id || "r2";
+  const objectKey = entry.object_key || "";
+  await env.D1.prepare("DELETE FROM trash_entries WHERE id = ?")
+    .bind(entry.id)
+    .run();
+  await adjustStorageObjectRef(env, storageId, objectKey, -1);
+  if ((await countObjectRefs(env, storageId, objectKey)) > 0) return;
+  await storageDelete(env, storageId, objectKey);
+  await deleteStorageObjectRecord(env, storageId, objectKey);
+  await removeStorageUsageIfUnreferenced(env, storageId, objectKey);
 }
 
 async function keyExists(env, key) {
@@ -187,13 +282,19 @@ export async function softDeleteTree(env, sourceKey, request) {
     entries.set(sourceKey, {
       key: sourceKey,
       size: exact.size || 0,
+      contentType: exact.httpMetadata?.contentType || "",
       indexed: Boolean(sourceLocation.indexed),
+      storageId: sourceLocation.storageId,
+      objectKey: sourceLocation.objectKey,
     });
   for (const row of await listFileIndexPrefix(env, sourceKey)) {
     entries.set(row.path, {
       key: row.path,
       size: Number(row.size || 0),
+      contentType: row.content_type || "",
       indexed: true,
+      storageId: row.storage_id || storageId,
+      objectKey: row.object_key || row.path,
     });
   }
   const newKeys = (listed.objects || [])
@@ -213,7 +314,10 @@ export async function softDeleteTree(env, sourceKey, request) {
       entries.set(key, {
         key,
         size: item.size || 0,
+        contentType: item.httpMetadata?.contentType || "",
         indexed: indexedPaths.has(key),
+        storageId,
+        objectKey: key,
       });
     }
   }
@@ -227,6 +331,18 @@ export async function softDeleteTree(env, sourceKey, request) {
 
   await mapWithConcurrency(entryList, 6, async (entry) => {
     const source = entry.key;
+    const objectKey = entry.objectKey || source;
+    if (entry.indexed && objectKey !== source) {
+      const inserted = await insertTrashEntry(env, trashId, {
+        path: source,
+        storageId: entry.storageId || storageId,
+        objectKey,
+        size: entry.size,
+        contentType: entry.contentType,
+      });
+      if (inserted) await deleteFileIndexKey(env, source);
+      return;
+    }
     const target = `.trash/${trashId}/${entry.key}`;
     const copied = await copyR2Object(env, source, target);
     if (!copied) return;
@@ -395,6 +511,32 @@ async function restoreTrashRecord(env, row, request, options = {}) {
   if (resolved.overwrite) {
     await deleteExistingPathTree(env, row.original_key);
   }
+  const logicalEntries = await listTrashEntries(env, row.id);
+  if (logicalEntries.length) {
+    for (const entry of logicalEntries) {
+      const suffix =
+        entry.path === row.original_key
+          ? ""
+          : String(entry.path || "").startsWith(row.original_key + "/")
+            ? entry.path.slice(row.original_key.length)
+            : "";
+      const target = resolved.key + suffix;
+      const storageId = entry.storage_id || "r2";
+      const objectKey = entry.object_key || "";
+      const meta = await storageHead(env, storageId, objectKey);
+      if (!meta) throw new Error("Trash object missing");
+      const indexed = await upsertFileIndex(env, target, {
+        size: Number(meta.size ?? entry.size ?? 0),
+        contentType:
+          meta.httpMetadata?.contentType || entry.content_type || "",
+        storageId,
+        objectKey,
+        uploaded: Date.now(),
+      });
+      if (!indexed) throw new Error("Failed to restore trash item");
+      await releaseTrashEntry(env, entry);
+    }
+  }
   const storageId =
     row.storage_id || (await resolveExistingStorageId(env, row.trash_key));
   const listed = await storageList(env, storageId, { prefix: row.trash_key });
@@ -427,6 +569,12 @@ async function restoreTrashRecord(env, row, request, options = {}) {
 }
 
 async function purgeTrashRecord(env, row, request) {
+  const logicalEntries = await listTrashEntries(env, row.id);
+  if (logicalEntries.length) {
+    await mapWithConcurrency(logicalEntries, 8, (entry) =>
+      releaseTrashEntry(env, entry),
+    );
+  }
   const storageId =
     row.storage_id || (await resolveExistingStorageId(env, row.trash_key));
   const listed = await storageList(env, storageId, { prefix: row.trash_key });

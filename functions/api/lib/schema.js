@@ -78,6 +78,16 @@ export const CORE_TABLE_SQL = [
     storage_id TEXT NOT NULL DEFAULT 'r2',
     trashed_at INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS trash_entries (
+    id TEXT PRIMARY KEY,
+    trash_id TEXT NOT NULL,
+    path TEXT NOT NULL,
+    storage_id TEXT NOT NULL DEFAULT 'r2',
+    object_key TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    content_type TEXT DEFAULT '',
+    created_at INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS file_tasks (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
@@ -129,6 +139,8 @@ export const CORE_MIGRATION_SQL = [
   `ALTER TABLE webhook_deliveries ADD COLUMN retry_of INTEGER NOT NULL DEFAULT 0`,
   `CREATE INDEX IF NOT EXISTS idx_trash_trashed_at ON trash(trashed_at)`,
   `CREATE INDEX IF NOT EXISTS idx_trash_original_key ON trash(original_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_trash_entries_trash_id ON trash_entries(trash_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_trash_entries_object ON trash_entries(storage_id, object_key)`,
   `CREATE INDEX IF NOT EXISTS idx_logs_action_ip_timestamp ON logs(action, ip, timestamp)`,
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event_created_at ON webhook_deliveries(event, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_file_tasks_status_created_at ON file_tasks(status, created_at)`,

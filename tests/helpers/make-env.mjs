@@ -19,6 +19,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const storageUsageRows = [];
   const storageObjectRows = [];
   const shareRows = [];
+  const trashEntryRows = [];
   const logs = [];
   let logNextId = 1;
   const sizeOf = body => typeof body === 'string' ? body.length : body?.byteLength || 0;
@@ -242,7 +243,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 timestamp: statement.bound?.length >= 10 ? statement.bound?.[9] : Date.now(),
               });
             }
-            if (/INSERT INTO trash/i.test(sql)) {
+            if (/INSERT INTO trash\s/i.test(sql)) {
               trashRows.push({
                 id: statement.bound?.[0],
                 original_key: statement.bound?.[1],
@@ -252,6 +253,18 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 size: statement.bound?.[5],
                 storage_id: statement.bound?.length >= 8 ? statement.bound?.[6] : 'r2',
                 trashed_at: statement.bound?.length >= 8 ? statement.bound?.[7] : statement.bound?.[6],
+              });
+            }
+            if (/INSERT INTO trash_entries/i.test(sql)) {
+              trashEntryRows.push({
+                id: statement.bound?.[0],
+                trash_id: statement.bound?.[1],
+                path: statement.bound?.[2],
+                storage_id: statement.bound?.[3] || 'r2',
+                object_key: statement.bound?.[4],
+                size: Number(statement.bound?.[5] || 0),
+                content_type: statement.bound?.[6] || '',
+                created_at: Number(statement.bound?.[7] || 0),
               });
             }
             if (/INSERT INTO path_passwords/i.test(sql)) {
@@ -486,6 +499,22 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 row.updated_at = Number(updatedAt || row.updated_at || 0);
               }
             }
+            if (/UPDATE trash_entries SET object_key = \? WHERE storage_id = \? AND object_key = \?/i.test(sql)) {
+              const [nextObjectKey, storageId, oldObjectKey] = statement.bound || [];
+              for (const row of trashEntryRows) {
+                if (row.storage_id === storageId && row.object_key === oldObjectKey) {
+                  row.object_key = nextObjectKey;
+                }
+              }
+            }
+            if (/UPDATE storage_usage SET object_key = \? WHERE storage_id = \? AND object_key = \?/i.test(sql)) {
+              const [nextObjectKey, storageId, oldObjectKey] = statement.bound || [];
+              for (const row of storageUsageRows) {
+                if (row.storage_id === storageId && row.object_key === oldObjectKey) {
+                  row.object_key = nextObjectKey;
+                }
+              }
+            }
             if (/UPDATE notifications SET read = 1 WHERE id = \?/i.test(sql)) {
               const row = notificationRows.find(item => item.id === statement.bound?.[0]);
               if (row) row.read = 1;
@@ -509,6 +538,11 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const id = statement.bound?.[0];
               const idx = trashRows.findIndex(row => row.id === id);
               if (idx >= 0) trashRows.splice(idx, 1);
+            }
+            if (/DELETE FROM trash_entries WHERE id = \?/i.test(sql)) {
+              const id = statement.bound?.[0];
+              const idx = trashEntryRows.findIndex(row => row.id === id);
+              if (idx >= 0) trashEntryRows.splice(idx, 1);
             }
             if (/DELETE FROM path_passwords WHERE path = \?/i.test(sql)) {
               const path = statement.bound?.[0];
@@ -741,6 +775,15 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 ).length,
               };
             }
+            if (/SELECT COUNT\(\*\) as count FROM trash_entries WHERE storage_id = \? AND object_key = \?/i.test(sql)) {
+              const [storageId, objectKey] = statement.bound || [];
+              return {
+                count: trashEntryRows.filter(row =>
+                  (row.storage_id || 'r2') === storageId
+                  && row.object_key === objectKey
+                ).length,
+              };
+            }
             if (/SELECT COALESCE\(SUM\(size\), 0\) AS total FROM \(SELECT storage_id, COALESCE\(NULLIF\(object_key, ''\), path\) AS object_key/i.test(sql)) {
               const storageId = /WHERE storage_id = \?/i.test(sql) ? statement.bound?.[0] : '';
               const rows = storageId ? fileIndexRows.filter(row => (row.storage_id || 'r2') === storageId) : fileIndexRows;
@@ -881,6 +924,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
           async all() {
             if (/SELECT \* FROM storage_objects ORDER BY/i.test(sql)) {
               return { results: [...storageObjectRows] };
+            }
+            if (/SELECT \* FROM trash_entries WHERE trash_id = \? ORDER BY path ASC/i.test(sql)) {
+              const trashId = statement.bound?.[0];
+              return {
+                results: trashEntryRows
+                  .filter(row => row.trash_id === trashId)
+                  .sort((a, b) => String(a.path).localeCompare(String(b.path))),
+              };
             }
             if (/SELECT \* FROM file_index WHERE \(lower\(name\) LIKE \? OR lower\(path\) LIKE \?\)/i.test(sql)) {
               const like = String(statement.bound?.[0] || '').replace(/%/g, '');

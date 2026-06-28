@@ -21,13 +21,13 @@ export function createOverviewRenderer({
   }
 
   const BREAKDOWN_PRESETS = [
-    { keys: ['image', 'img', 'photo', 'pictures'], label: '图片', color: '#14b8a6', tint: 'rgba(20,184,166,0.16)' },
-    { keys: ['video', 'movie'], label: '视频', color: '#8b5cf6', tint: 'rgba(139,92,246,0.16)' },
-    { keys: ['audio', 'music'], label: '音频', color: '#ec4899', tint: 'rgba(236,72,153,0.16)' },
-    { keys: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md'], label: '文档', color: '#0ea5e9', tint: 'rgba(14,165,233,0.16)' },
-    { keys: ['zip', 'rar', '7z', 'tar', 'gz', 'archive'], label: '压缩包', color: '#f59e0b', tint: 'rgba(245,158,11,0.16)' },
-    { keys: ['exe', 'apk', 'dll', 'deb', 'rpm'], label: '程序', color: '#ef4444', tint: 'rgba(239,68,68,0.16)' },
-    { keys: ['folder'], label: '文件夹', color: '#22c55e', tint: 'rgba(34,197,94,0.16)' },
+    { keys: ['image', 'img', 'photo', 'pictures', '图片'], label: '图片', color: '#14b8a6', tint: 'rgba(20,184,166,0.16)' },
+    { keys: ['video', 'movie', '视频'], label: '视频', color: '#8b5cf6', tint: 'rgba(139,92,246,0.16)' },
+    { keys: ['audio', 'music', '音频'], label: '音频', color: '#ec4899', tint: 'rgba(236,72,153,0.16)' },
+    { keys: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'text', 'md', 'document', 'documents', '文档', '文本'], label: '文档', color: '#0ea5e9', tint: 'rgba(14,165,233,0.16)' },
+    { keys: ['zip', 'rar', '7z', 'tar', 'gz', 'archive', 'archives', '压缩包'], label: '压缩包', color: '#f59e0b', tint: 'rgba(245,158,11,0.16)' },
+    { keys: ['exe', 'apk', 'dll', 'deb', 'rpm', 'app', 'program', 'application', '程序'], label: '程序', color: '#ef4444', tint: 'rgba(239,68,68,0.16)' },
+    { keys: ['folder', 'folders', '文件夹'], label: '文件夹', color: '#22c55e', tint: 'rgba(34,197,94,0.16)' },
   ];
 
   function getBreakdownMeta(category, index = 0) {
@@ -120,6 +120,8 @@ export function createOverviewRenderer({
       });
     }
 
+    visibleItems.sort((a, b) => b.count - a.count);
+
     const total = visibleItems.reduce((sum, item) => sum + item.count, 0);
     let cursor = 0;
     const gradient = total > 0
@@ -151,10 +153,6 @@ export function createOverviewRenderer({
 
     const breakdownItems = Object.entries(breakdown || {});
     const breakdownModel = buildBreakdownModel(breakdownItems);
-    const dominantPct = breakdownModel.dominant && breakdownModel.total
-      ? Math.round((breakdownModel.dominant.count / breakdownModel.total) * 100)
-      : 0;
-
     return `
       <div class="ov-overview">
         <div class="ov-overview-header">
@@ -263,7 +261,7 @@ export function createOverviewRenderer({
                       <span class="ov-maint-label">缩略图缓存</span>
                       <span class="ov-maint-value">${thumbnailsPresent ? "有缓存" : "无缓存"}</span>
                     </div>
-                    ${thumbnailsPresent 
+                    ${thumbnailsPresent
                       ? `<span class="ov-maint-tag" style="background:rgba(14,116,144,0.1);color:var(--accent);">已生成</span>`
                       : `<span class="ov-maint-tag">未生成</span>`}
                   </div>
@@ -272,7 +270,7 @@ export function createOverviewRenderer({
                       <span class="ov-maint-label">异常</span>
                       <span class="ov-maint-value">${safeText(anomalies.total, "0")}</span>
                     </div>
-                    ${anomalies.total > 0 
+                    ${anomalies.total > 0
                       ? `<span class="ov-maint-tag" style="background:rgba(239,68,68,0.1);color:#ef4444;">需处理</span>`
                       : `<span class="ov-maint-tag" style="background:rgba(16,185,129,0.1);color:#10b981;">正常</span>`}
                   </div>
@@ -303,39 +301,43 @@ export function createOverviewRenderer({
               </div>
               <div class="ov-section-body ov-type-body">
                 ${breakdownModel.items.length > 0 ? (() => {
-                  const r = 44;
-                  const C = 2 * Math.PI * r;
-                  let offset = 0;
-                  const circles = breakdownModel.items.map((item) => {
-                    const pct = breakdownModel.total ? (item.count / breakdownModel.total) : 0;
-                    const dash = pct * C;
-                    const gap = C - dash;
-                    const el = `<circle stroke="${item.color}" stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}"/>`;
-                    offset += dash;
-                    return el;
-                  }).join("");
+                  const dominant = breakdownModel.dominant;
+                  const dominantPct = dominant && breakdownModel.total
+                    ? Math.round((dominant.count / breakdownModel.total) * 100)
+                    : 0;
                   return `
-                    <div class="ov-type-top">
-                      <div class="ov-type-donut">
-                        <svg viewBox="0 0 120 120">
-                          ${circles}
-                        </svg>
-                        <div class="ov-type-donut-center">
-                          <span class="ov-type-donut-num">${safeText(breakdownModel.total, "0")}</span>
-                          <span class="ov-type-donut-lbl">总文件</span>
+                    <div class="ov-type-summary" style="--type-color:${dominant?.color || '#94a3b8'};--type-tint:${dominant?.tint || 'rgba(148,163,184,0.16)'};">
+                      <div class="ov-type-summary-main">
+                        <span class="ov-type-summary-dot"></span>
+                        <div>
+                          <span class="ov-type-summary-label">最大类型</span>
+                          <strong>${escapeHtml(dominant?.label || "暂无")}</strong>
                         </div>
                       </div>
-                      <div class="ov-type-legend">
-                        ${breakdownModel.items.map((item) => {
-                          const pct = breakdownModel.total ? Math.round((item.count / breakdownModel.total) * 100) : 0;
-                          return `<div class="ov-type-legend-item"><span class="ov-type-legend-dot" style="background:${item.color};"></span><span class="ov-type-legend-text">${escapeHtml(item.label)} <b>${safeText(item.count, "0")}</b></span></div>`;
-                        }).join("")}
-                      </div>
+                      <span class="ov-type-summary-value">${safeText(dominant?.count, "0")} 项 · ${dominantPct}%</span>
                     </div>
-                    <div class="ov-type-bars">
+                    <div class="ov-type-list">
                       ${breakdownModel.items.map((item) => {
                         const pct = breakdownModel.total ? (item.count / breakdownModel.total * 100) : 0;
-                        return `<div class="ov-type-bar-row"><div class="ov-type-bar-track"><div class="ov-type-bar-fill" style="width:${pct.toFixed(1)}%;background:${item.color};"></div></div><span class="ov-type-bar-val">${safeText(item.count, "0")}</span></div>`;
+                        const keyLabel = item.keyLabel && item.keyLabel !== item.label ? item.keyLabel : "";
+                        return `
+                          <div class="ov-type-row" style="--type-color:${item.color};--type-tint:${item.tint};--type-width:${pct.toFixed(1)}%;">
+                            <div class="ov-type-row-head">
+                              <div class="ov-type-name">
+                                <span class="ov-type-swatch"></span>
+                                <span class="ov-type-label">${escapeHtml(item.label)}</span>
+                                ${keyLabel ? `<span class="ov-type-key">${escapeHtml(keyLabel)}</span>` : ""}
+                              </div>
+                              <div class="ov-type-values">
+                                <strong>${safeText(item.count, "0")} 项</strong>
+                                <span>${pct.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                            <div class="ov-type-meter">
+                              <span class="ov-type-meter-fill"></span>
+                            </div>
+                          </div>
+                        `;
                       }).join("")}
                     </div>
                   `;
