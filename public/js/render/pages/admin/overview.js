@@ -340,6 +340,19 @@ export function createOverviewRenderer({
                         `;
                       }).join("")}
                     </div>
+                    <div class="ov-type-footer">
+                      <div class="ov-type-strip" aria-hidden="true">
+                        ${breakdownModel.items.map((item) => {
+                          const pct = breakdownModel.total ? (item.count / breakdownModel.total * 100) : 0;
+                          return `<span style="--type-color:${item.color};--type-width:${pct.toFixed(1)}%;"></span>`;
+                        }).join("")}
+                      </div>
+                      <div class="ov-type-footer-grid">
+                        <span><b>${safeText(breakdownModel.categories, "0")}</b><small>类型</small></span>
+                        <span><b>${dominantPct}%</b><small>最大占比</small></span>
+                        <span><b>${safeText(breakdownModel.total, "0")}</b><small>总文件</small></span>
+                      </div>
+                    </div>
                   `;
                 })() : `
                   <div class="ov-empty-inline">暂无分类数据</div>

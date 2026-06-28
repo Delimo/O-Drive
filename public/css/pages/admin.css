@@ -1308,13 +1308,11 @@
 .ov-type-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(82px, 1fr);
   gap: 10px;
-  flex: 1;
 }
 
 .ov-type-row {
-  min-height: 82px;
+  min-height: 78px;
   padding: 11px 12px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--panel-soft) 86%, var(--type-tint));
@@ -1397,7 +1395,7 @@
 
 .ov-type-meter {
   height: 6px;
-  margin-top: 16px;
+  margin-top: 12px;
   border-radius: 999px;
   background: var(--track-bg);
   overflow: hidden;
@@ -1412,6 +1410,65 @@
   background: linear-gradient(90deg, var(--type-color), color-mix(in srgb, var(--type-color) 72%, white));
   font-variant-numeric: tabular-nums;
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ov-type-footer {
+  flex: 1;
+  min-height: 86px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, var(--panel-soft), color-mix(in srgb, var(--panel-soft) 78%, var(--bg)));
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.ov-type-strip {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--track-bg);
+}
+
+.ov-type-strip span {
+  flex: 0 0 max(var(--type-width), 8px);
+  min-width: 8px;
+  max-width: 100%;
+  background: var(--type-color);
+}
+
+.ov-type-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ov-type-footer-grid span {
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--subtle-bg);
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.ov-type-footer-grid b {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-type-footer-grid small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 /* ─── Responsive ─── */
