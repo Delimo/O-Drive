@@ -1308,7 +1308,9 @@
 .ov-type-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(82px, 1fr);
   gap: 10px;
+  flex: 1;
 }
 
 .ov-type-row {
@@ -1317,6 +1319,9 @@
   border-radius: 12px;
   background: color-mix(in srgb, var(--panel-soft) 86%, var(--type-tint));
   border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   transition: border-color 0.18s ease, background 0.18s ease;
 }
 
