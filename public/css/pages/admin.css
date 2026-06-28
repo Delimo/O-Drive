@@ -1306,13 +1306,14 @@
 }
 
 .ov-type-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .ov-type-row {
-  padding: 10px 12px;
+  min-height: 82px;
+  padding: 11px 12px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--panel-soft) 86%, var(--type-tint));
   border: 1px solid var(--line);
@@ -1326,16 +1327,17 @@
 
 .ov-type-row-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
 }
 
 .ov-type-name {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .ov-type-swatch {
@@ -1357,7 +1359,7 @@
 }
 
 .ov-type-key {
-  max-width: 92px;
+  max-width: 76px;
   padding: 2px 7px;
   border-radius: 999px;
   color: var(--muted);
@@ -1370,11 +1372,12 @@
 }
 
 .ov-type-values {
-  display: inline-flex;
-  align-items: baseline;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   justify-content: flex-end;
-  gap: 8px;
-  min-width: 108px;
+  gap: 1px;
+  min-width: 54px;
   color: var(--muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -1384,11 +1387,12 @@
 .ov-type-values strong {
   color: var(--text);
   font-size: 13px;
+  line-height: 1.2;
 }
 
 .ov-type-meter {
-  height: 7px;
-  margin-top: 9px;
+  height: 6px;
+  margin-top: 16px;
   border-radius: 999px;
   background: var(--track-bg);
   overflow: hidden;
@@ -1461,6 +1465,9 @@
 
 @media (max-width: 768px) {
   .ov-overview-stats {
+    grid-template-columns: 1fr;
+  }
+  .ov-type-list {
     grid-template-columns: 1fr;
   }
   .ov-type-summary,
