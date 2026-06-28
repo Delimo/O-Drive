@@ -23,3 +23,8 @@ export function getShareToken() {
   const url = new URL(window.location.href);
   return url.searchParams.get("token") || url.searchParams.get("share") || "";
 }
+
+export function getSharePath() {
+  const url = new URL(window.location.href);
+  return normalizeKey(url.searchParams.get("path") || "");
+}

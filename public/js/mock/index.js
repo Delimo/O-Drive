@@ -355,6 +355,10 @@ export const mockWebhookDeliveries = [
 ];
 
 export const mockStorageConfig = {
+  r2QuotaBytes: 10737418240,
+  r2AlertEnabled: true,
+  r2AlertWarningPercent: 90,
+  r2AlertErrorPercent: 95,
   r2: {
     id: "r2",
     name: "Cloudflare R2",
@@ -364,6 +368,9 @@ export const mockStorageConfig = {
     usedBytes: 3221225472,
     usedFormatted: "3.0 GB",
     usedPercent: 30,
+    alertEnabled: true,
+    alertWarningPercent: 90,
+    alertErrorPercent: 95,
   },
 };
 
@@ -452,6 +459,13 @@ export const mockTasks = [
     finishedAt: now - 90 * 60 * 1000,
   },
 ];
+
+export const mockTaskAlertConfig = {
+  enabled: true,
+  windowHours: 24,
+  warningCount: 3,
+  errorCount: 10,
+};
 
 const notifNow = Date.now();
 export const mockNotifications = [

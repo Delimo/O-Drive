@@ -7,15 +7,22 @@ import {
   apiError,
   normalizeName,
   parseCookie,
-  bytesToHex,
   randomHex,
   pbkdf2Hex,
+  assertCompleteListing,
 } from "./common/index.js";
 import { handleDownloadOrPreview } from "./file-reads.js";
+import { listIndexedDirectory } from "./file-index/index.js";
 import { signHmac } from "./secrets.js";
 import { ensureShareTable } from "./schema.js";
-import { resolveExistingObjectLocation, storageHead } from "./storage.js";
+import {
+  resolveExistingObjectLocation,
+  storageGet,
+  storageHead,
+  storageList,
+} from "./storage.js";
 import { loadWebhookEndpoints, notifyWebhookWithLog } from "./webhooks.js";
+import { createZipStream } from "./zip-stream.js";
 
 const EXPIRED_SHARE_AUTO_DELETE_MS = 7 * 24 * 60 * 60 * 1000;
 const SHARE_ACCESS_TTL_SECONDS = 12 * 60 * 60;
@@ -104,6 +111,26 @@ function normalizeSharePath(path) {
   return normalized;
 }
 
+function cleanShareSubPath(path = "") {
+  const clean = String(path || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "");
+  if (!clean) return "";
+  const normalized = clean.split("/").map(normalizeName).join("/");
+  if (isReservedKey(normalized)) {
+    const err = new Error("Reserved system path");
+    err.status = 403;
+    throw err;
+  }
+  return normalized;
+}
+
+function childPath(root, subPath = "") {
+  const cleanRoot = normalizeSharePath(root);
+  const cleanSub = cleanShareSubPath(subPath);
+  return cleanSub ? `${cleanRoot}/${cleanSub}` : cleanRoot;
+}
+
 function ttlToExpiresAt(body) {
   const explicit = Number(body.expiresAt || 0);
   if (Number.isFinite(explicit) && explicit > 0) return explicit;
@@ -122,6 +149,7 @@ function mapShare(row) {
     token: row.token,
     path: row.path,
     name: row.name,
+    targetType: row.target_type || "file",
     size: Number(row.size || 0),
     sizeFormatted: formatBytes(Number(row.size || 0)),
     contentType: row.content_type || "",
@@ -139,6 +167,159 @@ function mapShare(row) {
     lastAccessedAt: Number(row.last_accessed_at || 0),
     lastAccessIp: row.last_access_ip || "",
   };
+}
+
+function mapFolderEntry(entry = {}, type = "file") {
+  const fullKey = String(entry.fullKey || entry.key || "").replace(/^\/+/, "");
+  const name = entry.name || fullKey.split("/").pop() || "";
+  return {
+    name,
+    path: "/" + fullKey,
+    fullKey,
+    targetType: type,
+    kind: type,
+    size: Number(entry.rawSize ?? entry.size ?? 0),
+    sizeFormatted:
+      type === "folder" ? "" : formatBytes(Number(entry.rawSize ?? entry.size ?? 0)),
+    contentType: entry.contentType || entry.content_type || "",
+    uploadedAt: Number(entry.time || entry.uploaded_at || entry.uploadedAt || 0),
+  };
+}
+
+async function folderExists(env, path) {
+  const clean = normalizeSharePath(path);
+  const prefix = clean + "/";
+  const listed = await storageList(env, "r2", { prefix, delimiter: "/" });
+  if ((listed.objects || []).length || (listed.delimitedPrefixes || []).length)
+    return true;
+  const indexed = await listIndexedDirectory(env, clean);
+  return Boolean((indexed.files || []).length || (indexed.folders || []).length);
+}
+
+async function detectShareTarget(env, path) {
+  const location = await resolveExistingObjectLocation(env, path);
+  const meta = await storageHead(env, location.storageId, location.objectKey);
+  if (meta) {
+    return {
+      targetType: "file",
+      storageId: location.storageId,
+      objectKey: location.objectKey,
+      size: Number(meta.size || 0),
+      contentType: meta.httpMetadata?.contentType || meta.contentType || "",
+    };
+  }
+  if (await folderExists(env, path)) {
+    return {
+      targetType: "folder",
+      storageId: "r2",
+      objectKey: path,
+      size: 0,
+      contentType: "inode/directory",
+    };
+  }
+  return null;
+}
+
+async function listShareDirectory(env, rootPath, subPath = "") {
+  const dir = childPath(rootPath, subPath);
+  const prefix = dir ? `${dir}/` : "";
+  const listed = await storageList(env, "r2", { prefix, delimiter: "/" });
+  const indexed = await listIndexedDirectory(env, dir);
+
+  const folderMap = new Map();
+  for (const folder of indexed.folders || []) {
+    if (folder.fullKey && !isReservedKey(folder.fullKey))
+      folderMap.set(folder.fullKey, mapFolderEntry(folder, "folder"));
+  }
+  for (const p of listed.delimitedPrefixes || []) {
+    const fullKey = p.replace(/\/$/, "");
+    if (!fullKey || isReservedKey(fullKey)) continue;
+    folderMap.set(
+      fullKey,
+      mapFolderEntry(
+        { fullKey, name: fullKey.split("/").pop() || fullKey },
+        "folder",
+      ),
+    );
+  }
+
+  const fileMap = new Map();
+  for (const file of indexed.files || []) {
+    if (file.fullKey && file.name !== ".folder" && !isReservedKey(file.fullKey))
+      fileMap.set(file.fullKey, mapFolderEntry(file, "file"));
+  }
+  for (const obj of listed.objects || []) {
+    const name = obj.key.slice(prefix.length);
+    if (!name || name === ".folder" || name.includes("/") || isReservedKey(obj.key))
+      continue;
+    fileMap.set(
+      obj.key,
+      mapFolderEntry(
+        {
+          fullKey: obj.key,
+          name,
+          size: obj.size,
+          uploadedAt: Math.floor((obj.uploaded || new Date()).getTime() / 1000),
+        },
+        "file",
+      ),
+    );
+  }
+
+  return {
+    path: subPath,
+    fullPath: dir,
+    folders: [...folderMap.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    files: [...fileMap.values()].sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+function emptyStream() {
+  return new ReadableStream({
+    start(controller) {
+      controller.close();
+    },
+  });
+}
+
+function bodyStream(body) {
+  if (!body) return emptyStream();
+  if (typeof body?.getReader === "function") return body;
+  const bytes =
+    typeof body === "string" ? new TextEncoder().encode(body) : body;
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
+
+async function folderZipResponse(env, rootPath, subPath = "", filename = "folder") {
+  const dir = childPath(rootPath, subPath);
+  const prefix = dir ? `${dir}/` : "";
+  const listed = await storageList(env, "r2", { prefix });
+  assertCompleteListing(listed, `Share folder ZIP: ${dir}`);
+  const baseName = filename || dir.split("/").pop() || "folder";
+  const entries = [];
+  for (const obj of listed.objects || []) {
+    const relPath = obj.key.startsWith(prefix) ? obj.key.slice(prefix.length) : obj.key;
+    if (!relPath || relPath === ".folder" || isReservedKey(relPath)) continue;
+    entries.push({
+      name: `${baseName}/${relPath}`,
+      size: obj.size,
+      getStream: () => storageGet(env, "r2", obj.key).then((res) => bodyStream(res?.body)),
+    });
+  }
+  if (!entries.length)
+    return jsonResponse({ success: false, message: "No files to download" }, 404);
+  return new Response(createZipStream(entries), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(baseName + ".zip")}`,
+    },
+  });
 }
 
 function canAutoDeleteExpiredShare(row, now = Date.now()) {
@@ -276,10 +457,9 @@ export async function handleAdminShares(env, request, method, url) {
     }
 
     const path = normalizeSharePath(body.path);
-    const location = await resolveExistingObjectLocation(env, path);
-    const meta = await storageHead(env, location.storageId, location.objectKey);
-    if (!meta)
-      return jsonResponse({ success: false, message: "File not found" }, 404);
+    const target = await detectShareTarget(env, path);
+    if (!target)
+      return jsonResponse({ success: false, message: "File or folder not found" }, 404);
 
     const token = shareToken();
     const expiresAt = ttlToExpiresAt(body);
@@ -300,19 +480,19 @@ export async function handleAdminShares(env, request, method, url) {
       ? await hashSharePassword(password, passwordSalt)
       : "";
     const name = path.split("/").pop() || path;
-    const contentType =
-      meta.httpMetadata?.contentType || meta.contentType || "";
+    const contentType = target.contentType || "";
     await env.D1.prepare(
       `INSERT INTO share_links
-       (token, path, name, size, content_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, expired_notified_at, created_at, last_accessed_at, last_access_ip)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, 0, '')`,
+       (token, path, name, size, content_type, target_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, expired_notified_at, created_at, last_accessed_at, last_access_ip)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, 0, '')`,
     )
       .bind(
         token,
         path,
         name,
-        Number(meta.size || 0),
+        Number(target.size || 0),
         contentType,
+        target.targetType,
         allowPreview,
         allowDownload,
         expiresAt,
@@ -329,8 +509,9 @@ export async function handleAdminShares(env, request, method, url) {
         token,
         path,
         name,
-        size: Number(meta.size || 0),
+        size: Number(target.size || 0),
         content_type: contentType,
+        target_type: target.targetType,
         allow_preview: allowPreview,
         allow_download: allowDownload,
         expires_at: expiresAt,
@@ -404,20 +585,38 @@ export async function handlePublicShare(env, request, path) {
   )
     .bind(Date.now(), accessIp, token)
     .run();
-  if (action === "info") return jsonResponse({ success: true, item });
+  const url = new URL(request.url);
+  const subPath = cleanShareSubPath(url.searchParams.get("path") || "");
+  const isFolderShare = item.targetType === "folder";
+  if (!isFolderShare && subPath)
+    return jsonResponse({ success: false, message: "Invalid share path" }, 404);
+
+  if (action === "info") {
+    if (!isFolderShare) return jsonResponse({ success: true, item });
+    const directory = await listShareDirectory(env, item.path, subPath);
+    return jsonResponse({ success: true, item, directory });
+  }
   if (action === "preview" && !item.allowPreview)
     return jsonResponse({ success: false, message: "Preview disabled" }, 403);
   if (action === "download" && !item.allowDownload)
     return jsonResponse({ success: false, message: "Download disabled" }, 403);
-
-  const res = await handleDownloadOrPreview(
-    env,
-    request,
-    action === "download"
-      ? `/api/download/${item.path}`
-      : `/api/preview/${item.path}`,
-    item.path,
-  );
+  const targetPath = isFolderShare ? childPath(item.path, subPath) : item.path;
+  const target = isFolderShare ? await detectShareTarget(env, targetPath) : null;
+  if (isFolderShare && subPath && !target)
+    return jsonResponse({ success: false, message: "Share path not found" }, 404);
+  if (isFolderShare && action === "preview" && target?.targetType !== "file")
+    return jsonResponse({ success: false, message: "Folder preview disabled" }, 403);
+  const res =
+    isFolderShare && (!target || target.targetType === "folder")
+      ? await folderZipResponse(env, item.path, subPath, targetPath.split("/").pop() || item.name)
+      : await handleDownloadOrPreview(
+          env,
+          request,
+          action === "download"
+            ? `/api/download/${targetPath}`
+            : `/api/preview/${targetPath}`,
+          targetPath,
+        );
   if (res.ok && action === "download") {
     await env.D1.prepare(
       "UPDATE share_links SET download_count = download_count + 1, last_accessed_at = ?, last_access_ip = ? WHERE token = ?",

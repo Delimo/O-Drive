@@ -259,6 +259,15 @@ export function createExplorerThunks(deps, context) {
           body: JSON.stringify({ paths }),
           credentials: "same-origin",
         });
+        if (response.status === 202) {
+          const data = await response.json().catch(() => ({}));
+          dispatchToast("success", "目录较大，已转入后台打包任务");
+          if (data?.item?.id) {
+            dispatch(getThunks().loadTasks());
+            dispatch(getThunks().loadNotifications());
+          }
+          return;
+        }
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
           throw new Error(data?.message || "下载失败");

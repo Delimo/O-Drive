@@ -11,6 +11,8 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const systemWarningRows = [];
   let systemWarningNextId = 1;
   const taskRows = [];
+  const notificationRows = [];
+  let notificationNextId = 1;
   const settingsRows = new Map();
   const kvRows = new Map();
   const fileIndexRows = [];
@@ -282,21 +284,23 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               else fileIndexRows.push(row);
             }
             if (/INSERT INTO share_links/i.test(sql)) {
+              const hasTargetType = /target_type/i.test(sql);
               const row = {
                 token: statement.bound?.[0],
                 path: statement.bound?.[1],
                 name: statement.bound?.[2],
                 size: statement.bound?.[3],
                 content_type: statement.bound?.[4],
-                allow_preview: statement.bound?.[5],
-                allow_download: statement.bound?.[6],
-                expires_at: statement.bound?.[7],
-                max_downloads: statement.bound?.[8],
+                target_type: hasTargetType ? statement.bound?.[5] || 'file' : 'file',
+                allow_preview: hasTargetType ? statement.bound?.[6] : statement.bound?.[5],
+                allow_download: hasTargetType ? statement.bound?.[7] : statement.bound?.[6],
+                expires_at: hasTargetType ? statement.bound?.[8] : statement.bound?.[7],
+                max_downloads: hasTargetType ? statement.bound?.[9] : statement.bound?.[8],
                 download_count: 0,
-                password_salt: statement.bound?.[9] || '',
-                password_hash: statement.bound?.[10] || '',
+                password_salt: statement.bound?.[hasTargetType ? 10 : 9] || '',
+                password_hash: statement.bound?.[hasTargetType ? 11 : 10] || '',
                 expired_notified_at: 0,
-                created_at: statement.bound?.[12] ?? statement.bound?.[11] ?? statement.bound?.[9],
+                created_at: statement.bound?.[hasTargetType ? 12 : 11] ?? statement.bound?.[hasTargetType ? 11 : 10] ?? statement.bound?.[hasTargetType ? 9 : 8],
                 last_accessed_at: 0,
                 last_access_ip: '',
               };
@@ -305,6 +309,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               else shareRows.push(row);
             }
             if (/INSERT INTO webhook_deliveries/i.test(sql)) {
+              const hasRetryContext = statement.bound?.length >= 11;
               webhookDeliveryRows.push({
                 id: webhookDeliveryNextId++,
                 event: statement.bound?.[0],
@@ -314,7 +319,10 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 status: statement.bound?.[4],
                 error: statement.bound?.[5],
                 duration_ms: statement.bound?.[6],
-                created_at: statement.bound?.[7],
+                payload: hasRetryContext ? statement.bound?.[7] : '{}',
+                endpoint_config: hasRetryContext ? statement.bound?.[8] : '{}',
+                retry_of: hasRetryContext ? statement.bound?.[9] : 0,
+                created_at: hasRetryContext ? statement.bound?.[10] : statement.bound?.[7],
               });
             }
             if (/INSERT INTO system_warnings/i.test(sql)) {
@@ -336,11 +344,21 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 completed: 0,
                 failed: 0,
                 payload: statement.bound?.[4],
-                result: '{}',
+                result: statement.bound?.[5] || '{}',
                 error: '',
-                created_at: statement.bound?.[5],
-                updated_at: statement.bound?.[6],
+                created_at: statement.bound?.[6],
+                updated_at: statement.bound?.[7],
                 finished_at: 0,
+              });
+            }
+            if (/INSERT INTO notifications/i.test(sql)) {
+              notificationRows.push({
+                id: notificationNextId++,
+                event: statement.bound?.[0],
+                message: statement.bound?.[1],
+                path: statement.bound?.[2] || '',
+                read: 0,
+                created_at: statement.bound?.[3],
               });
             }
             if (/INSERT INTO path_access_attempts/i.test(sql)) {
@@ -412,6 +430,13 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                   row.updated_at = updatedAt;
                 }
               }
+            }
+            if (/UPDATE notifications SET read = 1 WHERE id = \?/i.test(sql)) {
+              const row = notificationRows.find(item => item.id === statement.bound?.[0]);
+              if (row) row.read = 1;
+            }
+            if (/UPDATE notifications SET read = 1 WHERE read = 0/i.test(sql)) {
+              for (const row of notificationRows) row.read = 1;
             }
             if (/INSERT OR REPLACE INTO settings/i.test(sql)) {
               settingsRows.set('trash_retention_days', statement.bound?.[0]);
@@ -669,8 +694,21 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT \* FROM share_links WHERE token = \?/i.test(sql)) return shareRows.find(row => row.token === statement.bound?.[0]) || null;
             if (/SELECT \* FROM file_tasks WHERE id = \?/i.test(sql)) return taskRows.find(row => row.id === statement.bound?.[0]) || null;
+            if (/SELECT \* FROM webhook_deliveries WHERE id = \?/i.test(sql)) {
+              return webhookDeliveryRows.find(row => row.id === Number(statement.bound?.[0])) || null;
+            }
             if (/SELECT COUNT\(\*\) as count FROM file_tasks WHERE status NOT IN \('queued', 'running'\)/i.test(sql)) {
               return { count: taskRows.filter(row => !['queued', 'running'].includes(row.status)).length };
+            }
+            if (/SELECT COUNT\(\*\) as count FROM file_tasks\s+WHERE \(status = 'failed' OR failed > 0\)/i.test(sql)) {
+              const [finishedSince = 0, updatedSince = finishedSince] = statement.bound || [];
+              return {
+                count: taskRows.filter(row =>
+                  (row.status === 'failed' || Number(row.failed || 0) > 0)
+                  && (Number(row.finished_at || 0) >= Number(finishedSince || 0)
+                    || (Number(row.finished_at || 0) === 0 && Number(row.updated_at || 0) >= Number(updatedSince || 0)))
+                ).length,
+              };
             }
             if (/SELECT COUNT\(\*\) as count FROM file_tasks/i.test(sql)) return { count: taskRows.length };
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: filteredLogs(sql, statement.bound || []).length };
@@ -679,6 +717,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/SELECT COUNT\(\*\) as count FROM system_warnings WHERE acknowledged_at = 0/i.test(sql)) {
               return { count: systemWarningRows.filter(row => !Number(row.acknowledged_at || 0)).length };
+            }
+            if (/SELECT COUNT\(\*\) as count FROM notifications WHERE read = 0/i.test(sql)) {
+              return { count: notificationRows.filter(row => !Number(row.read || 0)).length };
             }
             if (/SELECT COUNT\(\*\) as count FROM system_warnings/i.test(sql)) return { count: systemWarningRows.length };
             if (/SELECT value FROM settings WHERE key = 'trash_retention_days'/i.test(sql)) {
@@ -736,10 +777,13 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             return null;
           },
           async all() {
-            if (/SELECT \* FROM file_index WHERE lower\(name\) LIKE \?/i.test(sql)) {
+            if (/SELECT \* FROM file_index WHERE \(lower\(name\) LIKE \? OR lower\(path\) LIKE \?\)/i.test(sql)) {
               const like = String(statement.bound?.[0] || '').replace(/%/g, '');
-              let rows = fileIndexRows.filter(row => row.name.toLowerCase().includes(like));
-              let pi = 1;
+              let rows = fileIndexRows.filter(row =>
+                row.name.toLowerCase().includes(like)
+                || row.path.toLowerCase().includes(like)
+              );
+              let pi = 2;
               if (/path = \? OR path LIKE \?/i.test(sql)) {
                 const scope = statement.bound?.[pi++];
                 const prefix = String(statement.bound?.[pi++] || '').replace(/%$/, '');
@@ -839,6 +883,10 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const limit = Number(statement.bound?.[0] || 20);
               return { results: [...taskRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, limit) };
             }
+            if (/SELECT \* FROM notifications ORDER BY created_at DESC LIMIT \?/i.test(sql)) {
+              const limit = Number(statement.bound?.[0] || 20);
+              return { results: [...notificationRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, limit) };
+            }
             if (/SELECT \* FROM system_warnings WHERE acknowledged_at = 0 ORDER BY created_at DESC/i.test(sql)) {
               return {
                 results: [...systemWarningRows]
@@ -884,6 +932,10 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM trash WHERE trashed_at < \? ORDER BY trashed_at DESC/i.test(sql)) {
               const cutoff = statement.bound?.[0] ?? 0;
               return { results: trashRows.filter(row => row.trashed_at < cutoff).sort((a, b) => b.trashed_at - a.trashed_at) };
+            }
+            if (/SELECT \* FROM trash WHERE id IN/i.test(sql)) {
+              const ids = new Set(statement.bound || []);
+              return { results: trashRows.filter(row => ids.has(row.id)) };
             }
             if (/SELECT \* FROM trash WHERE/i.test(sql)) {
               const bound = statement.bound || [];

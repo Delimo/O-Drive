@@ -21,6 +21,7 @@ const csrfProtectedRoutes = [
   ['/api/admin/settings/trash-retention', ['PUT']],
   ['/api/admin/settings/quota', ['PUT']],
   ['/api/admin/settings/webhooks', ['PUT', 'POST']],
+  ['/api/admin/settings/task-alerts', ['PUT']],
   ['/api/admin/shares', ['POST', 'DELETE']],
   ['/api/tasks', ['POST', 'PATCH']],
   ['/api/mkdir', ['POST']],

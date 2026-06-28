@@ -55,6 +55,9 @@ export const CORE_TABLE_SQL = [
     status INTEGER NOT NULL DEFAULT 0,
     error TEXT DEFAULT '',
     duration_ms INTEGER NOT NULL DEFAULT 0,
+    payload TEXT NOT NULL DEFAULT '{}',
+    endpoint_config TEXT NOT NULL DEFAULT '{}',
+    retry_of INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS system_warnings (
@@ -108,6 +111,9 @@ export const CORE_MIGRATION_SQL = [
   `ALTER TABLE trash ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'`,
   `ALTER TABLE system_warnings ADD COLUMN level TEXT NOT NULL DEFAULT 'warning'`,
   `ALTER TABLE system_warnings ADD COLUMN acknowledged_at INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE webhook_deliveries ADD COLUMN payload TEXT NOT NULL DEFAULT '{}'`,
+  `ALTER TABLE webhook_deliveries ADD COLUMN endpoint_config TEXT NOT NULL DEFAULT '{}'`,
+  `ALTER TABLE webhook_deliveries ADD COLUMN retry_of INTEGER NOT NULL DEFAULT 0`,
   `CREATE INDEX IF NOT EXISTS idx_trash_trashed_at ON trash(trashed_at)`,
   `CREATE INDEX IF NOT EXISTS idx_trash_original_key ON trash(original_key)`,
   `CREATE INDEX IF NOT EXISTS idx_logs_action_ip_timestamp ON logs(action, ip, timestamp)`,
@@ -126,6 +132,7 @@ export const SHARE_TABLE_SQL = `
     name TEXT NOT NULL,
     size INTEGER NOT NULL DEFAULT 0,
     content_type TEXT DEFAULT '',
+    target_type TEXT NOT NULL DEFAULT 'file',
     allow_preview INTEGER NOT NULL DEFAULT 1,
     allow_download INTEGER NOT NULL DEFAULT 1,
     expires_at INTEGER NOT NULL DEFAULT 0,
@@ -145,6 +152,7 @@ export const SHARE_MIGRATION_SQL = [
   `ALTER TABLE share_links ADD COLUMN password_hash TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN expired_notified_at INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE share_links ADD COLUMN last_access_ip TEXT DEFAULT ''`,
+  `ALTER TABLE share_links ADD COLUMN target_type TEXT NOT NULL DEFAULT 'file'`,
   `CREATE INDEX IF NOT EXISTS idx_share_links_path ON share_links(path)`,
 ];
 

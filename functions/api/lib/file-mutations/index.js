@@ -9,6 +9,8 @@ export { handleSaveText } from "./save-text.js";
 export {
   handleTrashList,
   handleTrashRestore,
+  handleTrashRestorePreview,
+  handleTrashBatchRestore,
   handleTrashDelete,
   handleTrashClear,
   handleTrashCleanup,

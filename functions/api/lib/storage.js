@@ -13,6 +13,8 @@ import { parseCapacityBytes } from "./capacity.js";
 
 const STORAGE_CONFIG_KEY = "storage_config_v1";
 const DEFAULT_R2_QUOTA_BYTES = 10 * 1024 * 1024 * 1024;
+const DEFAULT_R2_ALERT_WARNING_PERCENT = 90;
+const DEFAULT_R2_ALERT_ERROR_PERCENT = 95;
 
 let _kvConfigReady;
 
@@ -27,7 +29,38 @@ async function ensureKvConfig(env) {
 }
 
 function defaultConfig() {
-  return { r2QuotaBytes: DEFAULT_R2_QUOTA_BYTES };
+  return {
+    r2QuotaBytes: DEFAULT_R2_QUOTA_BYTES,
+    r2AlertEnabled: true,
+    r2AlertWarningPercent: DEFAULT_R2_ALERT_WARNING_PERCENT,
+    r2AlertErrorPercent: DEFAULT_R2_ALERT_ERROR_PERCENT,
+  };
+}
+
+function parseAlertPercent(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(100, Math.max(1, Math.round(parsed)));
+}
+
+function normalizeStorageConfig(config = {}, fallback = defaultConfig()) {
+  const warningPercent = parseAlertPercent(
+    config.r2AlertWarningPercent,
+    fallback.r2AlertWarningPercent,
+  );
+  const errorPercent = parseAlertPercent(
+    config.r2AlertErrorPercent,
+    fallback.r2AlertErrorPercent,
+  );
+  return {
+    r2QuotaBytes: parseCapacityBytes(
+      config.r2QuotaBytes,
+      fallback.r2QuotaBytes,
+    ),
+    r2AlertEnabled: config.r2AlertEnabled !== false,
+    r2AlertWarningPercent: warningPercent,
+    r2AlertErrorPercent: Math.max(warningPercent, errorPercent),
+  };
 }
 
 const _configCacheSymbol = Symbol("storageConfig");
@@ -44,9 +77,7 @@ export async function loadStorageConfig(env) {
       .bind(STORAGE_CONFIG_KEY)
       .first();
     const raw = row?.value ? JSON.parse(row.value) : {};
-    const config = {
-      r2QuotaBytes: parseCapacityBytes(raw.r2QuotaBytes, fallback.r2QuotaBytes),
-    };
+    const config = normalizeStorageConfig(raw, fallback);
     env[_configCacheSymbol] = config;
     return config;
   } catch (_) {
@@ -56,12 +87,7 @@ export async function loadStorageConfig(env) {
 
 export async function saveStorageConfig(env, config) {
   await ensureKvConfig(env);
-  const normalized = {
-    r2QuotaBytes: parseCapacityBytes(
-      config.r2QuotaBytes,
-      DEFAULT_R2_QUOTA_BYTES,
-    ),
-  };
+  const normalized = normalizeStorageConfig(config);
   await env.D1.prepare(
     "INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)",
   )
@@ -74,7 +100,23 @@ export async function saveStorageConfig(env, config) {
 export function publicStorageConfig(config, usage = {}) {
   const r2QuotaBytes = Number(config.r2QuotaBytes || 0);
   const r2UsedBytes = Number(usage.r2UsedBytes || 0);
+  const r2AlertEnabled = config.r2AlertEnabled !== false;
+  const r2AlertWarningPercent = parseAlertPercent(
+    config.r2AlertWarningPercent,
+    DEFAULT_R2_ALERT_WARNING_PERCENT,
+  );
+  const r2AlertErrorPercent = Math.max(
+    r2AlertWarningPercent,
+    parseAlertPercent(
+      config.r2AlertErrorPercent,
+      DEFAULT_R2_ALERT_ERROR_PERCENT,
+    ),
+  );
   return {
+    r2QuotaBytes,
+    r2AlertEnabled,
+    r2AlertWarningPercent,
+    r2AlertErrorPercent,
     r2: {
       id: "r2",
       name: "Cloudflare R2",
@@ -86,6 +128,9 @@ export function publicStorageConfig(config, usage = {}) {
       usedPercent: r2QuotaBytes
         ? Math.round((r2UsedBytes / r2QuotaBytes) * 100)
         : 0,
+      alertEnabled: r2AlertEnabled,
+      alertWarningPercent: r2AlertWarningPercent,
+      alertErrorPercent: r2AlertErrorPercent,
     },
   };
 }
@@ -100,6 +145,15 @@ export function storageQuotaForConfig(config, storageId = "r2") {
     id: "r2",
     name: "Cloudflare R2",
     quotaBytes: Number(config.r2QuotaBytes || 0),
+    alertEnabled: config.r2AlertEnabled !== false,
+    alertWarningPercent: parseAlertPercent(
+      config.r2AlertWarningPercent,
+      DEFAULT_R2_ALERT_WARNING_PERCENT,
+    ),
+    alertErrorPercent: parseAlertPercent(
+      config.r2AlertErrorPercent,
+      DEFAULT_R2_ALERT_ERROR_PERCENT,
+    ),
   };
 }
 

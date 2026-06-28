@@ -307,13 +307,30 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
   };
 }
 
-async function recordDelivery(env, endpoint, event, result) {
+function safeJsonParse(value, fallback = null) {
+  if (!value) return fallback;
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+async function recordDelivery(
+  env,
+  endpoint,
+  event,
+  result,
+  payload = null,
+  retryOf = 0,
+) {
   if (!env?.D1) return;
   try {
     await ensureCoreTables(env);
     const createdAt = Date.now();
     await env.D1.prepare(
-      "INSERT INTO webhook_deliveries (event, endpoint, url, ok, status, error, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO webhook_deliveries (event, endpoint, url, ok, status, error, duration_ms, payload, endpoint_config, retry_of, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
       .bind(
         event,
@@ -323,6 +340,9 @@ async function recordDelivery(env, endpoint, event, result) {
         Number(result.status || 0),
         result.error || "",
         Number(result.durationMs || 0),
+        JSON.stringify(payload || {}),
+        JSON.stringify(endpoint || {}),
+        Number(retryOf || 0),
         createdAt,
       )
       .run();
@@ -396,7 +416,7 @@ export async function notifyWebhookWithLog(env, envUrls, event, data = {}) {
     endpoints.map((endpoint) =>
       sendOne(endpoint, payload)
         .then(async (result) => {
-          await recordDelivery(env, endpoint, event, result);
+          await recordDelivery(env, endpoint, event, result, payload);
           return result;
         })
         .catch(async (err) => {
@@ -406,7 +426,7 @@ export async function notifyWebhookWithLog(env, envUrls, event, data = {}) {
             error: err?.message || "Webhook failed",
             durationMs: 0,
           };
-          await recordDelivery(env, endpoint, event, result);
+          await recordDelivery(env, endpoint, event, result, payload);
           return result;
         }),
     ),
@@ -426,7 +446,7 @@ export async function testWebhookEndpoint(endpoint, env = null) {
     },
   };
   const result = await sendOne(normalized, payload, 0);
-  await recordDelivery(env, normalized, "webhook.test", result);
+  await recordDelivery(env, normalized, "webhook.test", result, payload);
   return {
     success: result.ok,
     status: result.status,
@@ -434,6 +454,62 @@ export async function testWebhookEndpoint(endpoint, env = null) {
     msgtype: normalized.msgtype,
     name: endpointLabel(normalized),
     message: result.ok ? "测试发送成功" : "测试发送失败",
+  };
+}
+
+export async function retryWebhookDelivery(env, deliveryId) {
+  const id = Number(deliveryId || 0);
+  if (!Number.isFinite(id) || id <= 0) {
+    return { success: false, message: "Invalid delivery id", status: 400 };
+  }
+  await ensureCoreTables(env);
+  const row = await env.D1.prepare(
+    "SELECT * FROM webhook_deliveries WHERE id = ?",
+  )
+    .bind(id)
+    .first();
+  if (!row) {
+    return { success: false, message: "Delivery not found", status: 404 };
+  }
+  if (Number(row.ok || 0)) {
+    return { success: false, message: "Only failed deliveries can be retried", status: 409 };
+  }
+
+  const storedEndpoint = safeJsonParse(row.endpoint_config, null);
+  const configured = await loadWebhookEndpoints(env);
+  const fallbackEndpoint =
+    configured.find(
+      (endpoint) =>
+        endpoint.url === row.url &&
+        (endpoint.name || endpointLabel(endpoint)) === row.endpoint,
+    ) ||
+    configured.find((endpoint) => endpoint.url === row.url) ||
+    { name: row.endpoint || "", url: row.url || "" };
+  const normalized = normalizeWebhookEndpoints([
+    storedEndpoint || fallbackEndpoint,
+  ])[0];
+  if (!normalized) {
+    return { success: false, message: "Original webhook endpoint is invalid", status: 400 };
+  }
+  const payload =
+    safeJsonParse(row.payload, null) || {
+      event: row.event,
+      timestamp: new Date().toISOString(),
+      data: {
+        message: `手动重试 Webhook 投递 #${id}`,
+        originalDeliveryId: id,
+      },
+    };
+  const result = await sendOne(normalized, payload, 0);
+  await recordDelivery(env, normalized, payload.event || row.event, result, payload, id);
+  return {
+    success: result.ok,
+    status: result.status,
+    durationMs: result.durationMs,
+    error: result.error || "",
+    retryOf: id,
+    endpoint: endpointLabel(normalized),
+    message: result.ok ? "重试投递成功" : "重试投递失败",
   };
 }
 

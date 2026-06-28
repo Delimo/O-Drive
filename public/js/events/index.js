@@ -73,6 +73,7 @@ export function registerAppEvents(deps) {
         if (action2) {
           const actionMap = {
             "refresh-admin-health": () => store.dispatch(thunks.loadAdminHealth()),
+            "refresh-admin-quota": () => store.dispatch(thunks.loadAdminQuota()),
             "refresh-admin-maintenance": () => store.dispatch(thunks.loadMaintenanceSnapshot()),
           };
           const fn = actionMap[action2];

@@ -14,6 +14,8 @@ import {
   handleOperationEstimate,
   handleTrashList,
   handleTrashRestore,
+  handleTrashRestorePreview,
+  handleTrashBatchRestore,
   handleTrashDelete,
   handleTrashClear,
   handleTrashCleanup,
@@ -27,7 +29,7 @@ import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
 import { clearStorageUsedCache, getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index/index.js';
-import { createFileTask, updateFileTask } from '../functions/api/lib/tasks.js';
+import { createFileTask, handleTaskAlertSettings, updateFileTask } from '../functions/api/lib/tasks.js';
 import {
   handleProtectedSettings,
   handleProtectedUnlock,
@@ -146,6 +148,27 @@ test('search uses D1 file index when available', async () => {
 
   assert.deepEqual(data.files.map(file => file.fullKey), ['docs/indexed-alpha.txt']);
   assert.equal(data.scanLimitReached, false);
+});
+
+test('search returns hit reasons for name and path matches', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/nested/readme.txt', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const r2Res = await handleSearch(env, new Request('https://example.com/api/search?q=nested&scope=/docs'), new URL('https://example.com/api/search?q=nested&scope=/docs'), [], { role: 'guest' }, []);
+  const r2Data = await r2Res.json();
+  assert.deepEqual(r2Data.files.map(file => file.fullKey), ['docs/nested/readme.txt']);
+  assert.equal(r2Data.files[0].searchHit.label, '路径');
+  assert.equal(r2Data.files[0].searchHit.value, 'docs/nested/readme.txt');
+
+  const indexedEnv = makeEnv();
+  await upsertFileIndex(indexedEnv, 'docs/report-alpha.txt', { size: 12, contentType: 'text/plain', uploaded: new Date('2026-01-04') });
+  const indexedRes = await handleSearch(indexedEnv, new Request('https://example.com/api/search?q=alpha&scope=/docs&kind=text'), new URL('https://example.com/api/search?q=alpha&scope=/docs&kind=text'), [], { role: 'guest' }, []);
+  const indexedData = await indexedRes.json();
+  assert.equal(indexedData.files[0].searchHit.label, '文件名');
+  assert.deepEqual(indexedData.files[0].searchHit.filters, ['类型']);
 });
 
 test('search filters indexed results by kind size and modified dates', async () => {
@@ -599,6 +622,82 @@ test('admin file task runs paste work in the background task table', async () =>
   assert.equal(listData.items[0].id, createdData.item.id);
 });
 
+test('large zip download is moved to a background task with a downloadable result', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'bundle/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'bundle/b.txt', body: 'b', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  env.ZIP_INLINE_MAX_FILES = '1';
+  const waitUntilPromises = [];
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const created = await onRequest({
+    env,
+    request: new Request('https://example.com/api/zip-download', {
+      method: 'POST',
+      body: JSON.stringify({ paths: ['bundle'] }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+    waitUntil(promise) {
+      waitUntilPromises.push(promise);
+    },
+  });
+  assert.equal(created.status, 202);
+  const createdData = await created.json();
+  assert.equal(createdData.item.type, 'zip_download');
+  assert.equal(createdData.item.total, 2);
+  await Promise.all(waitUntilPromises);
+
+  const status = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/tasks?id=${createdData.item.id}`, {
+      headers: { Cookie: cookie },
+    }),
+  });
+  assert.equal(status.status, 200);
+  const statusData = await status.json();
+  assert.equal(statusData.item.status, 'completed');
+  assert.equal(statusData.item.completed, 2);
+  assert.ok(statusData.item.result.outputKey.startsWith('.system/zip-tasks/'));
+  assert.ok(statusData.item.result.downloadUrl.startsWith('/api/download/.system/zip-tasks/'));
+  assert.ok(await env.R2.get(statusData.item.result.outputKey));
+
+  const notifications = await onRequest({
+    env,
+    request: new Request('https://example.com/api/notifications', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  assert.equal(notifications.status, 200);
+  const notificationData = await notifications.json();
+  assert.equal(notificationData.unread, 1);
+  assert.equal(notificationData.items[0].event, 'zip.ready');
+  assert.equal(notificationData.items[0].path, statusData.item.result.outputKey);
+
+  const download = await onRequest({
+    env,
+    request: new Request(`https://example.com${statusData.item.result.downloadUrl}`, {
+      headers: { Cookie: cookie },
+    }),
+  });
+  assert.equal(download.status, 200);
+  assert.equal(download.headers.get('Content-Type'), 'application/zip');
+});
+
 test('upload tasks can be created and updated by client uploader', async () => {
   const env = makeEnv();
   const create = await createFileTask(env, new Request('https://example.com/api/tasks', {
@@ -635,6 +734,77 @@ test('upload tasks can be created and updated by client uploader', async () => {
   assert.equal(updated.item.status, 'running');
   assert.equal(updated.item.completed, 1);
   assert.equal(updated.item.result.progressPct, 60);
+});
+
+test('task failure alerts use configured thresholds and notification cooldown', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'docs/task-alert.txt', { size: 1, storageId: 'r2', uploaded: new Date('2026-01-03') });
+  const saved = await handleTaskAlertSettings(env, new Request('https://example.com/api/admin/settings/task-alerts', {
+    method: 'PUT',
+    body: JSON.stringify({
+      enabled: true,
+      windowHours: 24,
+      warningCount: 2,
+      errorCount: 4,
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'PUT');
+  assert.equal(saved.status, 200);
+  const savedData = await saved.json();
+  assert.equal(savedData.config.warningCount, 2);
+  assert.equal(savedData.config.errorCount, 4);
+
+  const createFailedTask = async (idx, status = 'failed') => {
+    const created = await createFileTask(env, new Request('https://example.com/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'upload',
+        payload: { files: [{ name: `bad-${idx}.bin`, size: 10 }] },
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const createdData = await created.json();
+    await updateFileTask(env, new Request(`https://example.com/api/tasks?id=${createdData.item.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status,
+        completed: status === 'partial' ? 1 : 0,
+        failed: 1,
+        finishedAt: Date.now(),
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    }), new URL(`https://example.com/api/tasks?id=${createdData.item.id}`));
+  };
+
+  await createFailedTask(1);
+  await createFailedTask(2, 'partial');
+
+  const firstStats = await handleAdminStats(env);
+  const firstData = await firstStats.json();
+  const warning = firstData.attention.find(entry => entry.title === '后台任务失败偏多');
+  assert.ok(warning);
+  assert.equal(warning.level, 'warning');
+  assert.match(warning.body, /2 条/);
+
+  const firstNotifications = await env.D1.prepare("SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?").bind(20).all();
+  assert.equal(firstNotifications.results.length, 1);
+  assert.equal(firstNotifications.results[0].event, 'task.failure.warning');
+
+  await handleAdminStats(env);
+  const cooledNotifications = await env.D1.prepare("SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?").bind(20).all();
+  assert.equal(cooledNotifications.results.length, 1);
+
+  await createFailedTask(3);
+  await createFailedTask(4);
+  const secondStats = await handleAdminStats(env);
+  const secondData = await secondStats.json();
+  const error = secondData.attention.find(entry => entry.title === '后台任务失败偏多');
+  assert.ok(error);
+  assert.equal(error.level, 'error');
+
+  const secondNotifications = await env.D1.prepare("SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?").bind(20).all();
+  assert.equal(secondNotifications.results.length, 2);
+  assert.equal(secondNotifications.results[0].event, 'task.failure.error');
 });
 
 test('protected paths require password and unlock with signed cookie', async () => {
@@ -924,6 +1094,83 @@ test('batch delete moves files into trash and restore returns them', async () =>
     headers: { 'Content-Type': 'application/json' },
   }));
   assert.equal(trashDelete.status, 404);
+});
+
+test('trash restore previews conflicts and can skip or auto rename', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/readme.txt', body: 'old', size: 3, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  await handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/readme.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  await env.R2.put('docs/readme.txt', 'new');
+  await upsertFileIndex(env, 'docs/readme.txt', { size: 3, storageId: 'r2' });
+
+  const trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  const id = trashData.items[0].id;
+  const preview = await handleTrashRestorePreview(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ ids: [id] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const previewData = await preview.json();
+  assert.equal(previewData.hasConflicts, true);
+  assert.equal(previewData.conflictCount, 1);
+
+  const skipped = await handleTrashRestore(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ id, conflict: 'skip' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal((await skipped.json()).skipped, true);
+  assert.equal((await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json()).items.length, 1);
+
+  const renamed = await handleTrashRestore(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ id, conflict: 'rename' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const renamedData = await renamed.json();
+  assert.equal(renamedData.renamed, true);
+  assert.equal(renamedData.restoredKey, 'docs/readme (1).txt');
+  assert.ok(await env.R2.get('docs/readme.txt'));
+  assert.ok(await env.R2.get('docs/readme (1).txt'));
+});
+
+test('trash batch restore overwrites existing target tree', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/project/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'docs/project/b.txt', body: 'b', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  await handleBatchDelete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/project'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  await env.R2.put('docs/project/extra.txt', 'extra');
+  await upsertFileIndex(env, 'docs/project/extra.txt', { size: 5, storageId: 'r2' });
+
+  const trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  const id = trashData.items[0].id;
+  const restored = await handleTrashBatchRestore(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ ids: [id], conflict: 'overwrite' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const restoredData = await restored.json();
+  assert.equal(restoredData.success, true);
+  assert.equal(restoredData.completed, 1);
+  assert.ok(await env.R2.get('docs/project/a.txt'));
+  assert.ok(await env.R2.get('docs/project/b.txt'));
+  assert.equal(await env.R2.get('docs/project/extra.txt'), null);
 });
 
 test('batch delete reports partial failures', async () => {
@@ -1353,6 +1600,45 @@ test('admin attention warns when bucket quota usage reaches 90 percent', async (
   assert.equal(item.level, 'warning');
   assert.equal(item.tab, 'quota');
   assert.match(item.body, /90%/);
+});
+
+test('admin storage quota alerts use configured thresholds and notify once per cooldown', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+  await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage', {
+    method: 'PUT',
+    body: JSON.stringify({
+      r2QuotaBytes: '100B',
+      r2AlertEnabled: true,
+      r2AlertWarningPercent: 75,
+      r2AlertErrorPercent: 90,
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'PUT');
+  const configRes = await handleAdminStorage(env, new Request('https://example.com/api/admin/settings/storage'), 'GET');
+  const config = await configRes.json();
+  assert.equal(config.r2.alertWarningPercent, 75);
+  assert.equal(config.r2.alertErrorPercent, 90);
+  assert.equal(config.r2AlertWarningPercent, 75);
+
+  await upsertFileIndex(env, 'docs/custom-alert.zip', { size: 80, storageId: 'r2', contentType: 'application/zip', uploaded: new Date('2026-01-03') });
+  clearStorageUsedCache();
+
+  const first = await handleAdminStats(env);
+  const firstData = await first.json();
+  const item = firstData.attention.find(entry => entry.title === 'Cloudflare R2 空间即将用满');
+  assert.ok(item);
+  assert.equal(item.level, 'warning');
+  assert.match(item.body, /75%/);
+
+  const notified = await env.D1.prepare("SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?").bind(20).all();
+  assert.equal(notified.results.length, 1);
+  assert.equal(notified.results[0].event, 'storage.quota.warning');
+  assert.match(notified.results[0].message, /80%/);
+
+  await handleAdminStats(env);
+  const notifiedAgain = await env.D1.prepare("SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?").bind(20).all();
+  assert.equal(notifiedAgain.results.length, 1);
 });
 
 test('admin maintenance reports counts and runs cleanup actions', async () => {
@@ -2037,6 +2323,81 @@ test('admin can send generic webhook test messages', async () => {
   }
 });
 
+test('admin can retry failed webhook deliveries', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response(calls.length === 1 ? 'bad gateway' : 'ok', {
+      status: calls.length === 1 ? 502 : 200,
+    });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const failed = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/settings/webhooks', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint: { name: 'retry-me', url: 'https://example.com/webhook' } }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(failed.status, 502);
+
+    const listed = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/webhook-deliveries', {
+        headers: { Cookie: cookie },
+      }),
+    });
+    const deliveryData = await listed.json();
+    assert.equal(deliveryData.items.length, 1);
+    assert.equal(deliveryData.items[0].ok, 0);
+    assert.match(deliveryData.items[0].payload, /webhook\.test/);
+
+    const retry = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/webhook-deliveries/retry', {
+        method: 'POST',
+        body: JSON.stringify({ id: deliveryData.items[0].id }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(retry.status, 200);
+    const retryData = await retry.json();
+    assert.equal(retryData.success, true);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].body.event, 'webhook.test');
+
+    const relisted = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/webhook-deliveries', {
+        headers: { Cookie: cookie },
+      }),
+    });
+    const relistedData = await relisted.json();
+    assert.equal(relistedData.items.length, 2);
+    assert.equal(relistedData.items[0].retry_of, deliveryData.items[0].id);
+    assert.equal(relistedData.items[0].ok, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('webhook delivery records are capped while showing the latest page', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -2294,6 +2655,96 @@ test('admin can create public share links and expired shares are deleted', async
     request: new Request(`https://example.com/api/share/${token}/info`),
   });
   assert.equal(missing.status, 404);
+});
+
+test('admin can create folder share links and browse shared folders', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+      { key: 'docs/nested/deep.txt', body: 'deep', size: 4, uploaded: new Date('2026-01-02') },
+    ],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const create = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ path: '/docs', expiresInDays: 7, maxDownloads: 5 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(create.status, 200);
+  const created = await create.json();
+  assert.equal(created.item.targetType, 'folder');
+  const token = created.item?.token;
+  assert.ok(token);
+
+  const rootInfo = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info`),
+  });
+  assert.equal(rootInfo.status, 200);
+  const rootData = await rootInfo.json();
+  assert.equal(rootData.item.targetType, 'folder');
+  assert.deepEqual(rootData.directory.folders.map((item) => item.name), ['nested']);
+  assert.deepEqual(rootData.directory.files.map((item) => item.name), ['readme.txt']);
+
+  const nestedInfo = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info?path=nested`),
+  });
+  assert.equal(nestedInfo.status, 200);
+  const nestedData = await nestedInfo.json();
+  assert.deepEqual(nestedData.directory.files.map((item) => item.name), ['deep.txt']);
+
+  const fileDownload = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/download?path=nested/deep.txt`),
+  });
+  assert.equal(fileDownload.status, 200);
+  assert.equal(await fileDownload.text(), 'deep');
+
+  const filePreview = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/preview?path=nested/deep.txt`),
+  });
+  assert.equal(filePreview.status, 200);
+  assert.equal(await filePreview.text(), 'deep');
+
+  const folderPreview = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/preview?path=nested`),
+  });
+  assert.equal(folderPreview.status, 403);
+
+  const zipDownload = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/download`),
+  });
+  assert.equal(zipDownload.status, 200);
+  assert.equal(zipDownload.headers.get('Content-Type'), 'application/zip');
+
+  const shares = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const shareRows = await shares.json();
+  assert.equal(shareRows.items[0].downloadCount, 2);
 });
 
 test('password protected share links require unlock before access', async () => {

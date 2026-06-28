@@ -1689,6 +1689,71 @@
   transition: width 0.4s ease;
 }
 
+.ov-quota-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.ov-quota-alerts-head,
+.ov-quota-alerts-form,
+.ov-quota-alerts-toggle,
+.ov-quota-alert-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ov-quota-alerts-head {
+  justify-content: space-between;
+}
+
+.ov-quota-alerts-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-quota-alerts-toggle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ov-quota-alerts-toggle input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.ov-quota-alerts-form {
+  flex-wrap: wrap;
+}
+
+.ov-quota-alert-field {
+  min-width: 132px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.ov-quota-alert-field span,
+.ov-quota-alert-field em {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.ov-quota-alert-field .input {
+  width: 48px;
+  min-height: 28px;
+  padding: 0 6px;
+  text-align: right;
+}
+
 /* ─── Trash Card ─── */
 .ov-trash-desc {
   margin: 0;
@@ -1793,6 +1858,73 @@
 /* ═══════════════════════════════════════════════════
    Shares Tab
    ═══════════════════════════════════════════════════ */
+
+.ov-task-alert-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.ov-task-alert-head,
+.ov-task-alert-form,
+.ov-task-alert-toggle,
+.ov-task-alert-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ov-task-alert-head {
+  justify-content: space-between;
+}
+
+.ov-task-alert-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-task-alert-toggle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ov-task-alert-toggle input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.ov-task-alert-form {
+  flex-wrap: wrap;
+}
+
+.ov-task-alert-field {
+  min-width: 116px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.ov-task-alert-field span,
+.ov-task-alert-field em {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.ov-task-alert-field .input {
+  width: 48px;
+  min-height: 28px;
+  padding: 0 6px;
+  text-align: right;
+}
 
 .ov-shares {
   display: flex;
@@ -3749,6 +3881,20 @@
   font-weight: 700;
   padding: 5px 10px;
   border-radius: 999px;
+}
+
+.ov-webhook-delivery-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ov-webhook-delivery-actions .btn {
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
 .ov-webhook-status-ok {

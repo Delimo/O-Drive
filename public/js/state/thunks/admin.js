@@ -511,6 +511,31 @@ export function createAdminThunks(deps, context) {
       }
     },
 
+    retryAdminWebhookDelivery: (id) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      const deliveryId = Number(id || 0);
+      if (!deliveryId) return;
+      dispatch(actions.admin.setWebhookRetryingId(deliveryId));
+      try {
+        const { response, data } = await adminApi.retryWebhookDelivery(deliveryId);
+        if (!response.ok) throw new Error(data?.message || "重试投递失败");
+        dispatchToast(
+          data.success ? "success" : "error",
+          data.success
+            ? `${data.endpoint || "Webhook"} 重试成功（${data.durationMs || 0}ms）`
+            : `重试失败：${data.error || data.message || "未知错误"}`,
+        );
+        await dispatch(getThunks().loadAdminWebhookDeliveries());
+      } catch (error) {
+        dispatchToast("error", error.message || "重试投递失败");
+      } finally {
+        dispatch(actions.admin.setWebhookRetryingId(0));
+      }
+    },
+
     unlockProtectedPath: (password) => async (dispatch, getState) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");
@@ -578,15 +603,39 @@ export function createAdminThunks(deps, context) {
       if (mock) {
         const m = await context.getMockModule();
         dispatch(actions.admin.setTasks(m.mockTasks));
+        dispatch(actions.admin.setTaskAlertConfig(m.mockTaskAlertConfig));
         return;
       }
       try {
         const { response, data } = await taskApi.list(20);
         if (!response.ok) throw new Error(data?.message || "任务列表加载失败");
         dispatch(actions.admin.setTasks(data.items || []));
+        dispatch(actions.admin.setTaskAlertConfig(data.alertConfig || null));
       } catch (err) {
         console.error("loadTasks 错误:", err);
         dispatch(actions.admin.setTasksLoading(false));
+      }
+    },
+
+    saveTaskAlertConfig: (config) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      dispatch(actions.admin.setTaskAlertConfigSaving(true));
+      try {
+        const { response, data } = await adminApi.saveTaskAlertConfig(config);
+        if (!response.ok)
+          throw new Error(data?.message || "保存任务告警规则失败");
+        dispatch(actions.admin.setTaskAlertConfig(data.config || null));
+        dispatchToast("success", "任务告警规则已更新");
+        await Promise.all([
+          dispatch(getThunks().loadTasks()),
+          dispatch(getThunks().loadAdminStats()),
+        ]);
+      } catch (error) {
+        dispatch(actions.admin.setTaskAlertConfigSaving(false));
+        dispatchToast("error", error.message || "保存任务告警规则失败");
       }
     },
 

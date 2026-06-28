@@ -233,10 +233,24 @@ export function createApiLayer(deps) {
         `/api/trash?page=1&size=100&q=${encodeURIComponent(query)}`,
       );
     },
-    restore(id) {
+    restore(id, conflict = "error") {
       return request("/api/trash/restore", {
         method: "POST",
-        json: { id },
+        json: { id, conflict },
+        csrf: true,
+      });
+    },
+    restorePreview(ids) {
+      return request("/api/trash/restore-preview", {
+        method: "POST",
+        json: { ids },
+        csrf: true,
+      });
+    },
+    restoreBatch(ids, conflict = "error") {
+      return request("/api/trash/restore-batch", {
+        method: "POST",
+        json: { ids, conflict },
         csrf: true,
       });
     },
@@ -274,8 +288,11 @@ export function createApiLayer(deps) {
   };
 
   const shareApi = {
-    info(token) {
-      return request(`/api/share/${encodeURIComponent(token)}/info`);
+    info(token, path = "") {
+      const params = new URLSearchParams();
+      if (path) params.set("path", path);
+      const query = params.toString();
+      return request(`/api/share/${encodeURIComponent(token)}/info${query ? `?${query}` : ""}`);
     },
     list() {
       return request("/api/admin/shares");
@@ -402,6 +419,23 @@ export function createApiLayer(deps) {
     },
     webhookDeliveries() {
       return request("/api/admin/webhook-deliveries");
+    },
+    retryWebhookDelivery(id) {
+      return request("/api/admin/webhook-deliveries/retry", {
+        method: "POST",
+        json: { id },
+        csrf: true,
+      });
+    },
+    taskAlertConfig() {
+      return request("/api/admin/settings/task-alerts");
+    },
+    saveTaskAlertConfig(config) {
+      return request("/api/admin/settings/task-alerts", {
+        method: "PUT",
+        json: config,
+        csrf: true,
+      });
     },
   };
 

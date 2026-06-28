@@ -21,7 +21,8 @@ export function createWebhookRenderer({
   function renderWebhookSection(admin) {
     const {
       webhooksLoading, webhooks = [],
-      webhookDeliveriesLoading, webhookDeliveries = []
+      webhookDeliveriesLoading, webhookDeliveries = [],
+      webhookRetryingId = 0
     } = admin;
 
     if (webhooksLoading) {
@@ -187,21 +188,28 @@ export function createWebhookRenderer({
                   : webhookDeliveries.length === 0
                     ? `<div class="ov-empty-inline">暂无投递记录</div>`
                     : `<div class="ov-webhook-delivery-list">
-                        ${webhookDeliveries.slice(0, 20).map(del => `
+                        ${webhookDeliveries.slice(0, 20).map(del => {
+                          const retrying = Number(webhookRetryingId || 0) === Number(del.id || 0);
+                          return `
                           <div class="ov-webhook-delivery-card-item">
                             <div class="ov-webhook-delivery-top">
                               <div class="ov-webhook-delivery-title-wrap">
                                 <span class="ov-webhook-delivery-event">${escapeHtml(del.event || "")}</span>
                                 <span class="ov-webhook-delivery-endpoint">${escapeHtml(del.endpoint || "")}</span>
                               </div>
-                              <span class="ov-webhook-delivery-status ${del.ok ? "ov-webhook-status-ok" : "ov-webhook-status-err"}">${del.status || "-"}</span>
+                              <div class="ov-webhook-delivery-actions">
+                                <span class="ov-webhook-delivery-status ${del.ok ? "ov-webhook-status-ok" : "ov-webhook-status-err"}">${del.status || "-"}</span>
+                                ${!del.ok ? `<button class="btn btn-small" type="button" data-action="retry-webhook-delivery" data-id="${escapeHtml(del.id || "")}" ${retrying ? "disabled" : ""}>${retrying ? "重试中..." : "重试"}</button>` : ""}
+                              </div>
                             </div>
                             <div class="ov-webhook-delivery-meta">
                               <span>${del.created_at ? formatTime(del.created_at) : "-"}</span>
                               <span>${del.duration_ms ? del.duration_ms + "ms" : "-"}</span>
+                              ${del.retry_of ? `<span>重试自 #${escapeHtml(del.retry_of)}</span>` : ""}
                             </div>
                           </div>
-                        `).join("")}
+                        `;
+                        }).join("")}
                       </div>`
                 }
               </div>

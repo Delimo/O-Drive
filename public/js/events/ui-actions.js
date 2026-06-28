@@ -63,6 +63,14 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         return;
       }
 
+      if (action === "set-trash-restore-conflict-mode") {
+        const modal = store.getState().app.modal;
+        if (modal && modal.type === "trash-restore-confirm") {
+          store.dispatch(actions.app.setModal({ ...modal, conflictMode: event.target.value }));
+        }
+        return;
+      }
+
       if (role === "filter-kind") {
         store.dispatch(actions.explorer.setFilterKind(event.target.value));
         if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
@@ -143,8 +151,8 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         return;
       }
 
-      if (form === "share-password") {
-        store.dispatch(thunks.unlockShare(String(data.get("password") || "")));
+      if (form === "share-password" || form === "share-unlock") {
+        store.dispatch(thunks.unlockShare(String(data.get("password") || data.get("share-password") || "")));
         return;
       }
 

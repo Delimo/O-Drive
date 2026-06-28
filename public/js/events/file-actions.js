@@ -207,6 +207,14 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       return;
     }
 
+    if (action === "execute-trash-restore") {
+      const modal = state.app.modal;
+      if (!modal || modal.type !== "trash-restore-confirm" || !modal.ids?.length) return;
+      store.dispatch(actions.app.setModal({ ...modal, loading: true, error: "" }));
+      store.dispatch(thunks.executeTrashRestore(modal.ids, modal.conflictMode || "error"));
+      return;
+    }
+
     if (action === "delete-selected-trash") {
       if (!state.explorer.trashMode) return;
       const ids = state.explorer.trashSelectedKeys;

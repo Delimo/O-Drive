@@ -9,6 +9,7 @@ export function createSystemRenderer({
       healthLoading, healthError,
       maintenanceLoading, maintenanceError,
       tasks = [], tasksLoading,
+      taskAlertConfig = null, taskAlertConfigSaving = false,
       quota = null
     } = admin;
 
@@ -29,6 +30,11 @@ export function createSystemRenderer({
 
     const dbTables = healthData.db?.tables || [];
     const warnings = healthData.warnings || [];
+    const taskAlert = taskAlertConfig || {};
+    const taskAlertEnabled = taskAlert.enabled !== false;
+    const taskAlertWindowHours = taskAlert.windowHours || 24;
+    const taskAlertWarningCount = taskAlert.warningCount || 3;
+    const taskAlertErrorCount = taskAlert.errorCount || 10;
 
     if (healthError) {
       return components.renderErrorCard({ icon: "", error: healthError, onRetry: "refresh-admin-health" });
@@ -154,6 +160,33 @@ export function createSystemRenderer({
               <button class="btn btn-sm" type="button" data-action="refresh-tasks">刷新</button>
             </div>
             <div class="ov-tasks-body">
+              <div class="ov-task-alert-rule">
+                <div class="ov-task-alert-head">
+                  <span class="ov-task-alert-title">失败任务告警</span>
+                  <label class="ov-task-alert-toggle">
+                    <input type="checkbox" data-binding="task-alert-enabled" ${taskAlertEnabled ? "checked" : ""}>
+                    <span>启用</span>
+                  </label>
+                </div>
+                <div class="ov-task-alert-form">
+                  <label class="ov-task-alert-field">
+                    <span>窗口</span>
+                    <input class="input" type="number" min="1" max="168" step="1" data-binding="task-alert-window-hours" value="${taskAlertWindowHours}">
+                    <em>小时</em>
+                  </label>
+                  <label class="ov-task-alert-field">
+                    <span>Warning</span>
+                    <input class="input" type="number" min="1" max="1000" step="1" data-binding="task-alert-warning" value="${taskAlertWarningCount}">
+                    <em>条</em>
+                  </label>
+                  <label class="ov-task-alert-field">
+                    <span>Error</span>
+                    <input class="input" type="number" min="1" max="1000" step="1" data-binding="task-alert-error" value="${taskAlertErrorCount}">
+                    <em>条</em>
+                  </label>
+                  <button class="btn btn-sm" type="button" data-action="save-task-alert-thresholds" ${taskAlertConfigSaving ? "disabled" : ""}>${taskAlertConfigSaving ? "保存中..." : "保存规则"}</button>
+                </div>
+              </div>
               ${tasksLoading
                 ? `<div class="ov-empty-inline">载入中...</div>`
                 : tasks.length === 0
@@ -164,6 +197,7 @@ export function createSystemRenderer({
                   : `<div class="ov-tasks-list">
                       ${tasks.map(tsk => {
                         const progress = tsk.total > 0 ? Math.round((tsk.completed || 0) / tsk.total * 100) : 0;
+                        const downloadUrl = tsk.type === "zip_download" && tsk.result?.downloadUrl ? tsk.result.downloadUrl : "";
                         return `
                           <div class="ov-task-item">
                             <div class="ov-task-info">
@@ -176,6 +210,7 @@ export function createSystemRenderer({
                               </div>
                               <span class="ov-task-progress-text">${tsk.completed || 0}/${tsk.total || 0}</span>
                             </div>
+                            ${downloadUrl ? `<a class="btn btn-sm" href="${escapeHtml(downloadUrl)}" target="_blank">下载结果</a>` : ""}
                           </div>
                         `;
                       }).join("")}

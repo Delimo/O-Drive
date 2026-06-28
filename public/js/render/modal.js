@@ -221,6 +221,75 @@ export function createModalRenderers(deps) {
       `;
     }
 
+    if (modal.type === "trash-restore-confirm") {
+      const preview = modal.preview || {};
+      const items = preview.items || [];
+      const conflicts = items.filter((item) => item.conflict);
+      const conflictMode = modal.conflictMode || "rename";
+      const itemRows = items.slice(0, 24).map((item) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px;">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.originalKey || item.name || "")}</span>
+          <span class="badge">${item.kind === "folder" ? "文件夹" : "文件"}</span>
+          ${item.conflict ? '<span class="badge badge-warning">冲突</span>' : '<span class="badge badge-success">可恢复</span>'}
+        </div>
+      `).join("");
+      const hasMore = items.length > 24;
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="trash-restore-title" data-stop-close="true" style="max-width:560px;">
+            <h3 id="trash-restore-title" class="modal-title">恢复回收站项目</h3>
+            <p class="modal-copy">恢复前已检测目标路径，选择遇到同名项目时的处理方式。</p>
+
+            <div class="hero-strip-compact" style="margin:12px 0;">
+              <div class="mini-stat-compact">
+                <div class="mini-stat-label">待恢复</div>
+                <div class="mini-stat-value">${preview.total ?? items.length}</div>
+                <div class="mini-stat-meta">回收站记录</div>
+              </div>
+              <div class="mini-stat-compact">
+                <div class="mini-stat-label">冲突</div>
+                <div class="mini-stat-value">${preview.conflictCount ?? conflicts.length}</div>
+                <div class="mini-stat-meta">目标路径已存在</div>
+              </div>
+            </div>
+
+            ${conflicts.length ? `
+              <div class="attention-item" data-level="warning" style="margin:12px 0;">
+                <h3 class="attention-title">存在恢复冲突</h3>
+                <div class="attention-copy">跳过会保留回收站记录，覆盖会先清理目标路径，自动重命名会恢复到新的可用名称。</div>
+              </div>
+            ` : ""}
+
+            <div style="display:flex;align-items:center;gap:10px;margin:12px 0;">
+              <label style="flex-shrink:0;font-size:13px;color:var(--muted);">冲突策略</label>
+              <select class="inline-input conflict-select" data-action="set-trash-restore-conflict-mode" style="flex:0 0 auto;width:auto;min-height:38px;font-size:13px;">
+                <option value="rename" ${conflictMode === "rename" ? "selected" : ""}>自动重命名</option>
+                <option value="skip" ${conflictMode === "skip" ? "selected" : ""}>跳过冲突</option>
+                <option value="overwrite" ${conflictMode === "overwrite" ? "selected" : ""}>覆盖已有</option>
+              </select>
+            </div>
+
+            ${items.length ? `
+              <div style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:6px 12px;margin:8px 0;">
+                ${itemRows}
+                ${hasMore ? `<div style="text-align:center;padding:8px;font-size:12px;color:var(--muted);">... 还有 ${items.length - 24} 项</div>` : ""}
+              </div>
+            ` : ""}
+
+            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
+            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在恢复，请勿刷新页面...</div>' : ""}
+
+            <div class="btn-row" style="margin-top:12px;justify-content:flex-end;">
+              <button class="btn btn-primary" type="button" data-action="execute-trash-restore" ${modal.loading ? "disabled" : ""}>
+                ${modal.loading ? "恢复中..." : "确认恢复"}
+              </button>
+              <button class="btn" type="button" data-action="close-modal" ${modal.loading ? "disabled" : ""}>取消</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     if (modal.type === "add-protected-path") {
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">

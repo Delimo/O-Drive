@@ -27,7 +27,7 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  // WebDAV requires admin credentials
+  // WebDAV is enabled when admin credentials are configured.
   if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD) {
     return new Response("WebDAV not configured", { status: 404 });
   }

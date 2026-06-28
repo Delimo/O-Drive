@@ -14,6 +14,11 @@ import {
   syncFileIndexFromR2,
 } from "./file-index/index.js";
 import { checkStorageQuota, listConfiguredStorages } from "./storage.js";
+import { createNotification } from "./notifications.js";
+import { getTaskFailureAlertState } from "./tasks.js";
+
+const STORAGE_ALERT_STATE_PREFIX = "storage_quota_alert:";
+const STORAGE_ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function fileKind(key) {
   return indexedFileKind(key);
@@ -169,13 +174,15 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
       const quota = await checkStorageQuota(env, target.id, 0);
       if (!quota.quota) continue;
       const usedPercent = Math.round((quota.used / quota.quota) * 100);
-      if (usedPercent >= 90) {
+      const alert = storageQuotaAlertForTarget(target, usedPercent);
+      if (alert) {
         items.push({
-          level: "warning",
+          level: alert.level,
           title: `${target.name} 空间即将用满`,
-          body: `已使用 ${formatBytes(quota.used)} / ${formatBytes(quota.quota)}（${usedPercent}%），建议清理文件或调整该存储桶配额。`,
+          body: `已使用 ${formatBytes(quota.used)} / ${formatBytes(quota.quota)}（${usedPercent}%），已达到 ${alert.threshold}% 告警阈值，建议清理文件或调整该存储桶配额。`,
           tab: "quota",
         });
+        await notifyStorageQuotaAlert(env, target, quota, usedPercent, alert);
       }
     }
   } catch (_) {}
@@ -236,6 +243,22 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
       title: "Webhook 最近有失败投递",
       body: `最近保留的投递记录中有 ${webhookFailCount} 条失败，建议检查目标地址或认证信息。`,
       tab: "webhooks",
+    });
+  }
+
+  const taskAlert = await getTaskFailureAlertState(env).catch((err) => {
+    recordSystemWarning(env, "admin.attention", err?.message || "Task alert count failed").catch(() => {});
+    return null;
+  });
+  if (taskAlert?.alert) {
+    const config = taskAlert.config || {};
+    items.push({
+      level: taskAlert.alert.level,
+      title: "后台任务失败偏多",
+      body: `最近 ${config.windowHours || 24} 小时有 ${taskAlert.failedCount} 条后台任务失败或部分失败，已达到 ${taskAlert.alert.threshold} 条告警阈值。`,
+      tab: "system",
+      action: "maintenance-action",
+      actionArgs: ["cleanup-tasks"],
     });
   }
 
@@ -307,4 +330,59 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
     });
   }
   return items.slice(0, 6);
+}
+
+function storageQuotaAlertForTarget(target, usedPercent) {
+  if (target?.alertEnabled === false) return null;
+  const warningThreshold = Number(target?.alertWarningPercent || 90);
+  const errorThreshold = Number(target?.alertErrorPercent || 95);
+  if (usedPercent >= errorThreshold) {
+    return { level: "error", threshold: errorThreshold };
+  }
+  if (usedPercent >= warningThreshold) {
+    return { level: "warning", threshold: warningThreshold };
+  }
+  return null;
+}
+
+async function notifyStorageQuotaAlert(env, target, quota, usedPercent, alert) {
+  if (!env?.D1) return;
+  const storageId = target?.id || "r2";
+  const stateKey = `${STORAGE_ALERT_STATE_PREFIX}${storageId}`;
+  const now = Date.now();
+  let state = {};
+  try {
+    const row = await env.D1.prepare(
+      "SELECT value FROM kv_config WHERE key = ?",
+    )
+      .bind(stateKey)
+      .first();
+    state = row?.value ? JSON.parse(row.value) : {};
+  } catch (_) {}
+
+  const stillCoolingDown =
+    state.level === alert.level &&
+    now - Number(state.notifiedAt || 0) < STORAGE_ALERT_COOLDOWN_MS;
+  if (stillCoolingDown) return;
+
+  const message = `${target.name} 存储使用率已达到 ${usedPercent}%（阈值 ${alert.threshold}%），当前 ${formatBytes(quota.used)} / ${formatBytes(quota.quota)}。`;
+  await createNotification(env, {
+    event: `storage.quota.${alert.level}`,
+    message,
+    path: "admin/storage",
+  });
+  await env.D1.prepare(
+    "INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)",
+  )
+    .bind(
+      stateKey,
+      JSON.stringify({
+        level: alert.level,
+        usedPercent,
+        threshold: alert.threshold,
+        notifiedAt: now,
+      }),
+    )
+    .run()
+    .catch(() => {});
 }

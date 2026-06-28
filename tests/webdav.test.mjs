@@ -16,7 +16,6 @@ test('webdav auth rejects requests without Authorization header', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
   env.ADMIN_PASSWORD = 'pass';
-  env.DAV_TOKEN = 'dav-token';
 
   const result = await verifyBasicAuth(new Request('https://example.com/dav/'), env);
   assert.equal(result, null);
@@ -26,7 +25,6 @@ test('webdav auth rejects invalid credentials', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
   env.ADMIN_PASSWORD = 'pass';
-  env.DAV_TOKEN = 'dav-token';
 
   const result = await verifyBasicAuth(new Request('https://example.com/dav/', {
     headers: { Authorization: makeBasicAuth('admin', 'wrong') },
@@ -38,17 +36,17 @@ test('webdav auth accepts valid credentials', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
   env.ADMIN_PASSWORD = 'pass';
-  env.DAV_TOKEN = 'dav-token';
 
   const result = await verifyBasicAuth(new Request('https://example.com/dav/', {
-    headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+    headers: { Authorization: makeBasicAuth('admin', 'pass') },
   }), env);
   assert.deepEqual(result, { role: 'admin' });
 });
 
 test('webdav OPTIONS returns allowed methods', async () => {
   const env = makeEnv();
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/', { method: 'OPTIONS' }),
@@ -59,7 +57,7 @@ test('webdav OPTIONS returns allowed methods', async () => {
   assert.ok(response.headers.get('DAV'), '1');
 });
 
-test('webdav rejects requests when DAV_TOKEN not configured', async () => {
+test('webdav rejects requests when admin password not configured', async () => {
   const env = makeEnv();
 
   const response = await onRequest({
@@ -71,7 +69,8 @@ test('webdav rejects requests when DAV_TOKEN not configured', async () => {
 
 test('webdav rejects unauthenticated requests', async () => {
   const env = makeEnv();
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/test.txt'),
@@ -86,11 +85,11 @@ test('webdav GET returns file content', async () => {
     prefixes: ['/'],
   });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/test.txt', {
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });
@@ -102,11 +101,11 @@ test('webdav GET returns file content', async () => {
 test('webdav GET returns 404 for missing file', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/missing.txt', {
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });
@@ -119,12 +118,12 @@ test('webdav HEAD returns headers without body', async () => {
     prefixes: ['/'],
   });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/test.txt', {
       method: 'HEAD',
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });
@@ -135,14 +134,14 @@ test('webdav HEAD returns headers without body', async () => {
 test('webdav PUT creates new file', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/newfile.txt', {
       method: 'PUT',
       body: 'new content',
       headers: {
-        Authorization: makeBasicAuth('admin', 'dav-token'),
+        Authorization: makeBasicAuth('admin', 'pass'),
         'Content-Type': 'text/plain',
       },
     }),
@@ -157,14 +156,14 @@ test('webdav PUT updates existing file', async () => {
     prefixes: ['/'],
   });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/existing.txt', {
       method: 'PUT',
       body: 'updated content',
       headers: {
-        Authorization: makeBasicAuth('admin', 'dav-token'),
+        Authorization: makeBasicAuth('admin', 'pass'),
         'Content-Type': 'text/plain',
       },
     }),
@@ -176,14 +175,14 @@ test('webdav PUT updates existing file', async () => {
 test('webdav PUT rejects reserved paths', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/.thumbs/secret.jpg', {
       method: 'PUT',
       body: 'content',
       headers: {
-        Authorization: makeBasicAuth('admin', 'dav-token'),
+        Authorization: makeBasicAuth('admin', 'pass'),
         'Content-Type': 'image/jpeg',
       },
     }),
@@ -199,12 +198,12 @@ test('webdav DELETE moves file to trash', { skip: true }, async () => {
     prefixes: ['/'],
   });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/delete-me.txt', {
       method: 'DELETE',
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });
@@ -214,12 +213,12 @@ test('webdav DELETE moves file to trash', { skip: true }, async () => {
 test('webdav DELETE returns 404 for missing file', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/missing.txt', {
       method: 'DELETE',
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });
@@ -229,12 +228,12 @@ test('webdav DELETE returns 404 for missing file', async () => {
 test('webdav MKCOL creates directory', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/new-folder/', {
       method: 'MKCOL',
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });
@@ -244,12 +243,12 @@ test('webdav MKCOL creates directory', async () => {
 test('webdav MKCOL rejects root path', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/', {
       method: 'MKCOL',
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });
@@ -262,13 +261,13 @@ test('webdav MOVE renames file', async () => {
     prefixes: ['/'],
   });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/source.txt', {
       method: 'MOVE',
       headers: {
-        Authorization: makeBasicAuth('admin', 'dav-token'),
+        Authorization: makeBasicAuth('admin', 'pass'),
         Destination: '/dav/dest.txt',
       },
     }),
@@ -280,13 +279,13 @@ test('webdav MOVE renames file', async () => {
 test('webdav MOVE rejects missing source', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/missing.txt', {
       method: 'MOVE',
       headers: {
-        Authorization: makeBasicAuth('admin', 'dav-token'),
+        Authorization: makeBasicAuth('admin', 'pass'),
         Destination: '/dav/dest.txt',
       },
     }),
@@ -304,13 +303,13 @@ test('webdav MOVE rejects overwrite without Overwrite header', async () => {
     prefixes: ['/'],
   });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/source.txt', {
       method: 'MOVE',
       headers: {
-        Authorization: makeBasicAuth('admin', 'dav-token'),
+        Authorization: makeBasicAuth('admin', 'pass'),
         Destination: '/dav/target.txt',
       },
     }),
@@ -325,13 +324,13 @@ test('webdav COPY creates copy of file', async () => {
     prefixes: ['/'],
   });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/original.txt', {
       method: 'COPY',
       headers: {
-        Authorization: makeBasicAuth('admin', 'dav-token'),
+        Authorization: makeBasicAuth('admin', 'pass'),
         Destination: '/dav/copy.txt',
       },
     }),
@@ -343,12 +342,12 @@ test('webdav COPY creates copy of file', async () => {
 test('webdav returns 405 for unsupported methods', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/test.txt', {
       method: 'PATCH',
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });
@@ -358,13 +357,13 @@ test('webdav returns 405 for unsupported methods', async () => {
 test('webdav rate limiting blocks excessive requests', async () => {
   const env = makeEnv({ prefixes: ['/'] });
   env.ADMIN_USERNAME = 'admin';
-  env.DAV_TOKEN = 'dav-token';
+  env.ADMIN_PASSWORD = 'pass';
 
   // Send 31 requests (limit is 30)
   for (let i = 0; i < 30; i++) {
     await onRequest({
       request: new Request('https://example.com/dav/test.txt', {
-        headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+        headers: { Authorization: makeBasicAuth('admin', 'pass') },
       }),
       env,
     });
@@ -372,7 +371,7 @@ test('webdav rate limiting blocks excessive requests', async () => {
 
   const response = await onRequest({
     request: new Request('https://example.com/dav/test.txt', {
-      headers: { Authorization: makeBasicAuth('admin', 'dav-token') },
+      headers: { Authorization: makeBasicAuth('admin', 'pass') },
     }),
     env,
   });

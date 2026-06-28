@@ -47,6 +47,31 @@ function rowMatchesSearchFilters(row, filters = {}) {
   return true;
 }
 
+function searchHitForRow(row, q, filters = {}) {
+  const needle = String(q || "").toLowerCase();
+  const name = String(row.name || "");
+  const path = String(row.path || "");
+  const lowerName = name.toLowerCase();
+  const lowerPath = path.toLowerCase();
+  const filterLabels = [];
+  if (filters.kind && filters.kind !== "all") filterLabels.push("类型");
+  if (Number.isFinite(filters.minSize) || Number.isFinite(filters.maxSize))
+    filterLabels.push("大小");
+  if (Number.isFinite(filters.fromTime) || Number.isFinite(filters.toTime))
+    filterLabels.push("时间");
+
+  const base = lowerName.includes(needle)
+    ? { type: "name", label: "文件名", value: name }
+    : lowerPath.includes(needle)
+      ? { type: "path", label: "路径", value: path }
+      : { type: "filter", label: "筛选", value: path || name };
+  return {
+    ...base,
+    query: q,
+    filters: filterLabels,
+  };
+}
+
 const searchCache = new Map();
 const SEARCH_CACHE_TTL = 10000;
 const SEARCH_CACHE_MAX_SIZE = 500;
@@ -90,11 +115,11 @@ export async function searchFileIndex(
   const extraClauses = filterSql.clauses.length
     ? ` AND ${filterSql.clauses.join(" AND ")}`
     : "";
-  const sql = `SELECT * FROM file_index WHERE lower(name) LIKE ?${scopeClause}${keysetClause}${hiddenClause}${extraClauses} ORDER BY path ASC LIMIT ?`;
+  const sql = `SELECT * FROM file_index WHERE (lower(name) LIKE ? OR lower(path) LIKE ?)${scopeClause}${keysetClause}${hiddenClause}${extraClauses} ORDER BY path ASC LIMIT ?`;
 
   try {
     const params = [];
-    params.push(like);
+    params.push(like, like);
     if (cleanScope) {
       params.push(cleanScope, `${cleanScope}/%`);
     }
@@ -112,7 +137,10 @@ export async function searchFileIndex(
       .bind(...params)
       .all();
     const batch = rows.results || [];
-    const page = batch.slice(0, limit).map((row) => mapIndexRow(row));
+    const page = batch.slice(0, limit).map((row) => ({
+      ...mapIndexRow(row),
+      searchHit: searchHitForRow(row, q, filters),
+    }));
     const hasMore = batch.length > limit;
     const data = {
       files: page,

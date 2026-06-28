@@ -71,7 +71,7 @@ export function createSharedRenderers(deps) {
                 ${isFolder ? `<button class="btn" data-action="open-entry" data-key="${escapeHtml(entryKey(selected))}">打开文件夹</button>` : ""}
                 ${previewable ? `<button class="btn" data-action="preview-entry" data-key="${escapeHtml(entryKey(selected))}">预览</button>` : ""}
                 ${canDownload ? `<button class="btn" data-action="download-entry" data-key="${escapeHtml(entryKey(selected))}">下载</button>` : ""}
-                ${!isFolder && state.app.role === "admin" ? `<button class="btn" data-action="open-share-modal" data-key="${escapeHtml(entryKey(selected))}">分享</button>` : ""}
+                ${state.app.role === "admin" ? `<button class="btn" data-action="open-share-modal" data-key="${escapeHtml(entryKey(selected))}">分享</button>` : ""}
                 ${state.app.role === "admin" ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(entryKey(selected))}">重命名</button>` : ""}
               `
           }
@@ -211,6 +211,13 @@ export function createSharedRenderers(deps) {
       ? "文件夹"
       : item.sizeFormatted || formatBytes(item.rawSize || 0);
     const timeText = formatTime(item.time);
+    const searchHit = item.searchHit;
+    const searchHitText = searchHit
+      ? `${searchHit.label || "命中"}：${searchHit.value || item.fullKey || item.name || ""}`
+      : "";
+    const searchFilterText = searchHit?.filters?.length
+      ? `筛选：${searchHit.filters.join("、")}`
+      : "";
 
     const iconContent =
       isImage && thumbnailUrl
@@ -231,6 +238,8 @@ export function createSharedRenderers(deps) {
             !isList
               ? `<div class="item-meta">
             ${meta.map((text) => `<span class="item-chip">${escapeHtml(text)}</span>`).join("")}
+            ${searchHitText ? `<span class="item-hit" title="${escapeHtml(searchHitText)}">${escapeHtml(searchHitText)}</span>` : ""}
+            ${searchFilterText ? `<span class="item-hit item-hit-muted" title="${escapeHtml(searchFilterText)}">${escapeHtml(searchFilterText)}</span>` : ""}
           </div>`
               : ""
           }
@@ -240,6 +249,7 @@ export function createSharedRenderers(deps) {
             ? `
         <span class="item-list-size">${escapeHtml(sizeText)}</span>
         <span class="item-list-time">${escapeHtml(timeText)}</span>
+        ${searchHitText ? `<span class="item-list-hit" title="${escapeHtml(searchHitText)}">${escapeHtml(searchHitText)}</span>` : ""}
         `
             : ""
         }

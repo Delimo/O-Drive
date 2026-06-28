@@ -33,6 +33,28 @@ function cleanPath(path = "") {
   return String(path || "").replace(/^\/+|\/+$/g, "");
 }
 
+function searchHitForFile(file, q, filters = {}) {
+  const needle = String(q || "").toLowerCase();
+  const name = String(file.name || "");
+  const fullKey = String(file.fullKey || "");
+  const filterLabels = [];
+  if (filters.kind && filters.kind !== "all") filterLabels.push("类型");
+  if (Number.isFinite(filters.minSize) || Number.isFinite(filters.maxSize))
+    filterLabels.push("大小");
+  if (Number.isFinite(filters.fromTime) || Number.isFinite(filters.toTime))
+    filterLabels.push("时间");
+  const base = name.toLowerCase().includes(needle)
+    ? { type: "name", label: "文件名", value: name }
+    : fullKey.toLowerCase().includes(needle)
+      ? { type: "path", label: "路径", value: fullKey }
+      : { type: "filter", label: "筛选", value: fullKey || name };
+  return {
+    ...base,
+    query: q,
+    filters: filterLabels,
+  };
+}
+
 export async function handleSearch(
   env,
   request,
@@ -90,12 +112,17 @@ export async function handleSearch(
       .map((obj) => mapEntry({ ...obj, storageId: "r2" }))
       .filter(
         (f) =>
-          f.name.toLowerCase().includes(q) &&
+          (f.name.toLowerCase().includes(q) ||
+            f.fullKey.toLowerCase().includes(q)) &&
           f.name !== ".folder" &&
           !isReservedKey(f.fullKey) &&
           matchesSearchFilters(f, filters) &&
           (auth.role === "admin" || !isHiddenKey(f.fullKey, hiddenPaths)),
-      );
+      )
+      .map((file) => ({
+        ...file,
+        searchHit: searchHitForFile(file, q, filters),
+      }));
     matches.push(...pageMatches);
     cursor = listed.truncated ? listed.cursor : undefined;
     nextCursor = cursor || "";

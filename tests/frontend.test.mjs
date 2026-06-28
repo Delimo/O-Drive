@@ -11,7 +11,7 @@ import { createSharedRenderers } from '../public/js/render/shared.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
-import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockNotifications } from '../public/js/mock/index.js';
+import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
 import { createPageRenderers } from '../public/js/render/pages/index.js';
 
@@ -277,6 +277,18 @@ test('trash batch bar disables actions while busy', () => {
   assert.match(busy, /disabled/);
 });
 
+test('entry card renders search hit reason', () => {
+  const html = shared.renderEntryCard({
+    name: 'readme.txt',
+    fullKey: 'docs/nested/readme.txt',
+    rawSize: 5,
+    time: 1710000000,
+    searchHit: { label: '路径', value: 'docs/nested/readme.txt', filters: ['类型'] },
+  }, makeState({ explorer: { query: 'nested' } }), new Set());
+  assert.match(html, /路径：docs\/nested\/readme\.txt/);
+  assert.match(html, /筛选：类型/);
+});
+
 // ===== 新增选择器：findEntryByKey / collectSelectedPaths =====
 
 test('findEntryByKey returns matching entry by key', () => {
@@ -443,6 +455,45 @@ test('confirm-clear-trash modal shows loading state', () => {
   assert.match(html, /disabled/);
 });
 
+test('trash restore confirm modal shows conflict summary and strategy', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'trash-restore-confirm',
+        loading: false,
+        error: '',
+        conflictMode: 'rename',
+        ids: ['t1', 't2'],
+        preview: {
+          total: 2,
+          conflictCount: 1,
+          hasConflicts: true,
+          items: [
+            { id: 't1', originalKey: 'docs/a.txt', kind: 'file', conflict: true },
+            { id: 't2', originalKey: 'docs/b', kind: 'folder', conflict: false },
+          ],
+        },
+      },
+    },
+  });
+  assert.match(html, /恢复回收站项目/);
+  assert.match(html, /冲突策略/);
+  assert.match(html, /自动重命名/);
+  assert.match(html, /跳过冲突/);
+  assert.match(html, /覆盖已有/);
+  assert.match(html, /data-action="execute-trash-restore"/);
+  assert.match(html, /docs\/a\.txt/);
+});
+
 test('add-protected-path modal renders form fields', () => {
   const { renderModal } = createModalRenderers({
     icons,
@@ -547,7 +598,7 @@ test('admin quota section renders storage usage', () => {
       hiddenPathsLoading: false, hiddenPaths: mockHiddenPaths, hiddenPathsError: '',
       webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
       webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
-      storageConfig: { r2: { name: 'bucket', usedFormatted: '1.2 GB', quotaFormatted: '5 GB', usedPercent: 24 } }, storageConfigLoading: false, storageConfigError: '',
+      storageConfig: { r2: { name: 'bucket', usedFormatted: '1.2 GB', quotaFormatted: '5 GB', usedPercent: 24, alertEnabled: true, alertWarningPercent: 76, alertErrorPercent: 91 } }, storageConfigLoading: false, storageConfigError: '',
       maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
       tasks: mockTasks, tasksLoading: false,
     },
@@ -556,6 +607,9 @@ test('admin quota section renders storage usage', () => {
   assert.match(html, /已使用/);
   assert.match(html, /1\.2/);
   assert.match(html, /5/);
+  assert.match(html, /data-action="save-storage-alert-thresholds"/);
+  assert.match(html, /value="76"/);
+  assert.match(html, /value="91"/);
 });
 
 test('admin protected paths section renders path list with delete buttons', () => {
@@ -692,13 +746,80 @@ test('admin task list section renders upload task records', () => {
       webhookDeliveriesLoading: false, webhookDeliveries: [],
       storageConfig: null, storageConfigLoading: false, storageConfigError: '',
       maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
-      tasks: mockTasks, tasksLoading: false,
+      tasks: mockTasks, tasksLoading: false, taskAlertConfig: mockTaskAlertConfig, taskAlertConfigSaving: false,
     },
   };
   const html = pages.renderAdminPage(state);
   assert.match(html, /completed/);
   assert.match(html, /5\/5/);
   assert.match(html, /2\/3/);
+  assert.match(html, /data-action="save-task-alert-thresholds"/);
+  assert.match(html, /data-binding="task-alert-window-hours" value="24"/);
+  assert.match(html, /data-binding="task-alert-warning" value="3"/);
+  assert.match(html, /data-binding="task-alert-error" value="10"/);
+});
+
+test('admin task list renders zip task download result link', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      tasks: [{
+        id: 'zip-1',
+        type: 'zip_download',
+        status: 'completed',
+        total: 2,
+        completed: 2,
+        result: { downloadUrl: '/api/download/.system/zip-tasks/zip-1/archive.zip' },
+        createdAt: 1710000000000,
+      }],
+      tasksLoading: false,
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /下载结果/);
+  assert.match(html, /\/api\/download\/\.system\/zip-tasks\/zip-1\/archive\.zip/);
+});
+
+test('webhook delivery list shows retry action for failed rows', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, activeTab: 'webhook', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
+      webhookDeliveriesLoading: false,
+      webhookRetryingId: 42,
+      webhookDeliveries: [
+        { id: 42, event: 'file.uploaded', endpoint: 'receiver', ok: 0, status: 502, created_at: 1710000000000, duration_ms: 12 },
+        { id: 43, event: 'file.uploaded', endpoint: 'receiver', ok: 1, status: 200, retry_of: 42, created_at: 1710000000100, duration_ms: 8 },
+      ],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      tasks: [], tasksLoading: false,
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /data-action="retry-webhook-delivery"/);
+  assert.match(html, /重试中/);
+  assert.match(html, /重试自 #42/);
 });
 
 test('admin task list section shows loading state', () => {
@@ -746,6 +867,49 @@ test('admin task list is hidden when empty', () => {
   };
   const html = pages.renderAdminPage(state);
   assert.doesNotMatch(html, /文件数/);
+});
+
+test('share page renders folder directory entries and action urls', () => {
+  const html = pages.renderSharePage({
+    share: {
+      loading: false,
+      error: '',
+      requiresPassword: false,
+      password: '',
+      token: 'share-token',
+      path: 'nested',
+      item: {
+        token: 'share-token',
+        path: 'docs',
+        name: 'docs',
+        targetType: 'folder',
+        allowPreview: true,
+        allowDownload: true,
+        expiresAt: 0,
+        maxDownloads: 0,
+        downloadCount: 0,
+      },
+      directory: {
+        path: 'nested',
+        folders: [{ name: 'child', fullKey: 'docs/nested/child' }],
+        files: [{
+          name: 'deep.txt',
+          fullKey: 'docs/nested/deep.txt',
+          size: 4,
+          sizeFormatted: '4 B',
+          contentType: 'text/plain',
+        }],
+      },
+    },
+  });
+
+  assert.match(html, /share-shell-folder/);
+  assert.match(html, /child/);
+  assert.match(html, /deep\.txt/);
+  assert.match(html, /share\.html\?token=share-token&amp;path=nested%2Fchild/);
+  assert.match(html, /\/api\/share\/share-token\/preview\?path=nested%2Fdeep\.txt/);
+  assert.match(html, /\/api\/share\/share-token\/download\?path=nested%2Fdeep\.txt/);
+  assert.match(html, /\/api\/share\/share-token\/download\?path=nested/);
 });
 
 test('mock notifications have correct structure', () => {

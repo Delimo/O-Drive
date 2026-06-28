@@ -80,6 +80,7 @@ export function createStateSelectors(deps) {
       kind: inferKind(item),
       rawSize: Number(item.rawSize || item.size || 0),
       time: Number(item.time || item.uploaded || 0),
+      searchHit: item.searchHit || null,
     }));
     const filteredFolders =
       explorer.filter === "all" || explorer.filter === "folder" ? folders : [];

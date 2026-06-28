@@ -81,6 +81,24 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
+    if (action === "save-storage-alert-thresholds") {
+      const config = store.getState().admin.storageConfig;
+      if (!config) return;
+      const enabled = documentRef.querySelector('[data-binding="storage-alert-enabled"]')?.checked !== false;
+      const warningInput = documentRef.querySelector('[data-binding="storage-alert-warning"]');
+      const errorInput = documentRef.querySelector('[data-binding="storage-alert-error"]');
+      const warning = Math.min(100, Math.max(1, parseInt(warningInput?.value || "90", 10) || 90));
+      const error = Math.min(100, Math.max(warning, parseInt(errorInput?.value || "95", 10) || 95));
+      store.dispatch(thunks.saveAdminStorageConfig({
+        ...config,
+        r2QuotaBytes: config?.r2?.quotaBytes || config?.r2QuotaBytes || 0,
+        r2AlertEnabled: enabled,
+        r2AlertWarningPercent: warning,
+        r2AlertErrorPercent: error,
+      }));
+      return;
+    }
+
     if (action === "refresh-admin-webhooks") {
       store.dispatch(thunks.loadAdminWebhooks());
       return;
@@ -91,6 +109,12 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
+    if (action === "retry-webhook-delivery") {
+      const id = Number(actionNode.dataset.id || key || 0);
+      if (id) store.dispatch(thunks.retryAdminWebhookDelivery(id));
+      return;
+    }
+
     if (action === "refresh-admin-maintenance") {
       store.dispatch(thunks.loadMaintenanceSnapshot());
       return;
@@ -98,6 +122,23 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
 
     if (action === "refresh-tasks") {
       store.dispatch(thunks.loadTasks());
+      return;
+    }
+
+    if (action === "save-task-alert-thresholds") {
+      const enabled = documentRef.querySelector('[data-binding="task-alert-enabled"]')?.checked !== false;
+      const windowHoursInput = documentRef.querySelector('[data-binding="task-alert-window-hours"]');
+      const warningInput = documentRef.querySelector('[data-binding="task-alert-warning"]');
+      const errorInput = documentRef.querySelector('[data-binding="task-alert-error"]');
+      const windowHours = Math.min(168, Math.max(1, parseInt(windowHoursInput?.value || "24", 10) || 24));
+      const warningCount = Math.min(1000, Math.max(1, parseInt(warningInput?.value || "3", 10) || 3));
+      const errorCount = Math.min(1000, Math.max(warningCount, parseInt(errorInput?.value || "10", 10) || 10));
+      store.dispatch(thunks.saveTaskAlertConfig({
+        enabled,
+        windowHours,
+        warningCount,
+        errorCount,
+      }));
       return;
     }
 

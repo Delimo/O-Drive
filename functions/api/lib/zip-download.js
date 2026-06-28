@@ -3,6 +3,7 @@ import {
   isHiddenKey,
   isReservedKey,
   assertCompleteListing,
+  formatBytes,
 } from "./common/index.js";
 import { checkProtectedAccess } from "./protected-paths.js";
 import { createZipStream } from "./zip-stream.js";
@@ -11,7 +12,13 @@ import {
   storageList,
   storageGet,
   storageHead,
+  storagePut,
 } from "./storage.js";
+import { createFileTaskDirect } from "./tasks.js";
+
+const DEFAULT_INLINE_MAX_FILES = 200;
+const DEFAULT_INLINE_MAX_BYTES = 100 * 1024 * 1024;
+const ZIP_TASK_PREFIX = ".system/zip-tasks";
 
 function systemCleanPath(path = "") {
   return String(path || "").replace(/^\/+|\/+$/g, "");
@@ -23,6 +30,40 @@ function emptyStream() {
       c.close();
     },
   });
+}
+
+function bodyStream(body) {
+  if (!body) return emptyStream();
+  if (typeof body?.getReader === "function") return body;
+  const bytes =
+    typeof body === "string" ? new TextEncoder().encode(body) : body;
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
+
+function zipFilenameForPaths(paths = []) {
+  if (paths.length === 1) {
+    const parts = systemCleanPath(paths[0]).split("/").filter(Boolean);
+    const base = parts.pop() || "archive";
+    return base + ".zip";
+  }
+  return "archive.zip";
+}
+
+function zipThreshold(env, name, fallback) {
+  const value = Number(env?.[name] || 0);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function shouldRunInline(env, summary) {
+  return (
+    summary.fileCount <= zipThreshold(env, "ZIP_INLINE_MAX_FILES", DEFAULT_INLINE_MAX_FILES) &&
+    summary.totalBytes <= zipThreshold(env, "ZIP_INLINE_MAX_BYTES", DEFAULT_INLINE_MAX_BYTES)
+  );
 }
 
 async function resolveZipEntries(env, path, hiddenPaths, auth, protectedPaths) {
@@ -66,7 +107,7 @@ async function resolveZipEntries(env, path, hiddenPaths, auth, protectedPaths) {
         size: obj.size,
         getStream: () =>
           storageGet(env, storageId, obj.key).then(
-            (r) => r?.body || emptyStream(),
+            (r) => bodyStream(r?.body),
           ),
       });
     }
@@ -90,12 +131,83 @@ async function resolveZipEntries(env, path, hiddenPaths, auth, protectedPaths) {
       size: meta.size,
       getStream: () =>
         storageGet(env, storageId, objectKey).then(
-          (r) => r?.body || emptyStream(),
+          (r) => bodyStream(r?.body),
         ),
     });
   }
 
   return entries;
+}
+
+export async function resolveZipArchive(
+  env,
+  paths,
+  hiddenPaths,
+  auth,
+  protectedPaths,
+) {
+  const allEntries = [];
+  const results = await Promise.all(
+    paths.map((rawPath) =>
+      resolveZipEntries(env, rawPath, hiddenPaths, auth, protectedPaths),
+    ),
+  );
+  for (const entries of results) {
+    if (entries) allEntries.push(...entries);
+  }
+  const totalBytes = allEntries.reduce((sum, entry) => sum + Number(entry.size || 0), 0);
+  return {
+    entries: allEntries,
+    summary: {
+      fileCount: allEntries.length,
+      totalBytes,
+      totalBytesFormatted: formatBytes(totalBytes),
+    },
+  };
+}
+
+export function zipDownloadUrl(outputKey) {
+  return outputKey ? `/api/download/${outputKey.split("/").map(encodeURIComponent).join("/")}` : "";
+}
+
+export async function buildZipArchiveForTask(
+  env,
+  taskId,
+  payload,
+  request,
+) {
+  const paths = Array.isArray(payload.paths) ? payload.paths : [];
+  const hiddenPaths = Array.isArray(payload.hiddenPaths) ? payload.hiddenPaths : [];
+  const protectedPaths = Array.isArray(payload.protectedPaths) ? payload.protectedPaths : [];
+  const auth = payload.auth && typeof payload.auth === "object" ? payload.auth : { role: "admin" };
+  const filename = payload.filename || zipFilenameForPaths(paths);
+  const { entries, summary } = await resolveZipArchive(
+    env,
+    paths,
+    hiddenPaths,
+    auth,
+    protectedPaths,
+  );
+  if (!entries.length) throw new Error("No files to download");
+
+  const response = new Response(createZipStream(entries));
+  const arrayBuffer = await response.arrayBuffer();
+  const outputKey = `${ZIP_TASK_PREFIX}/${taskId}/${filename}`;
+  await storagePut(env, "r2", outputKey, arrayBuffer, {
+    httpMetadata: { contentType: "application/zip" },
+  });
+  return {
+    success: true,
+    completed: entries.length,
+    failed: 0,
+    filename,
+    outputKey,
+    downloadUrl: zipDownloadUrl(outputKey),
+    fileCount: summary.fileCount,
+    totalBytes: summary.totalBytes,
+    totalBytesFormatted: summary.totalBytesFormatted,
+    message: `ZIP archive ready: ${filename}`,
+  };
 }
 
 export async function handleZipDownload(
@@ -104,6 +216,7 @@ export async function handleZipDownload(
   hiddenPaths,
   auth,
   protectedPaths,
+  context = {},
 ) {
   let body;
   try {
@@ -118,28 +231,46 @@ export async function handleZipDownload(
       400,
     );
 
-  let zipFilename = "archive.zip";
-  if (rawPaths.length === 1) {
-    const parts = systemCleanPath(rawPaths[0]).split("/").filter(Boolean);
-    const base = parts.pop() || "archive";
-    zipFilename = base + ".zip";
-  }
+  const zipFilename = zipFilenameForPaths(rawPaths);
 
-  const allEntries = [];
-  const results = await Promise.all(
-    rawPaths.map((rawPath) =>
-      resolveZipEntries(env, rawPath, hiddenPaths, auth, protectedPaths),
-    ),
+  const { entries: allEntries, summary } = await resolveZipArchive(
+    env,
+    rawPaths,
+    hiddenPaths,
+    auth,
+    protectedPaths,
   );
-  for (const entries of results) {
-    if (entries) allEntries.push(...entries);
-  }
 
   if (allEntries.length === 0)
     return jsonResponse(
       { success: false, message: "No files to download" },
       404,
     );
+  if (!shouldRunInline(env, summary)) {
+    if (auth.role !== "admin") {
+      return jsonResponse(
+        {
+          success: false,
+          code: "ZIP_TOO_LARGE",
+          message: "Archive is too large for direct download",
+          summary,
+        },
+        413,
+      );
+    }
+    return await createFileTaskDirect(env, request, context, {
+      type: "zip_download",
+      payload: {
+        paths: rawPaths.map(systemCleanPath),
+        hiddenPaths,
+        protectedPaths,
+        auth: { role: auth.role },
+        filename: zipFilename,
+      },
+      total: summary.fileCount,
+      result: { summary, filename: zipFilename },
+    });
+  }
 
   const stream = createZipStream(allEntries);
   return new Response(stream, {

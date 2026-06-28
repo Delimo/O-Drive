@@ -1,10 +1,12 @@
 import { createSlice } from "../create-slice.js";
-import { getShareToken } from "../../utils/path.js";
+import { getSharePath, getShareToken } from "../../utils/path.js";
 
 export const shareInitialState = {
   token: getShareToken(),
+  path: getSharePath(),
   loading: false,
   item: null,
+  directory: null,
   error: "",
   requiresPassword: false,
   password: "",
@@ -21,14 +23,21 @@ export function createShareSlice(initialState) {
       setToken(state, action) {
         return { ...state, token: action.payload };
       },
+      setPath(state, action) {
+        return { ...state, path: action.payload || "" };
+      },
       setPassword(state, action) {
         return { ...state, password: action.payload };
       },
       setData(state, action) {
+        const payload = action.payload || {};
+        const item =
+          payload.item || (payload.token || payload.path ? payload : null);
         return {
           ...state,
           loading: false,
-          item: action.payload,
+          item,
+          directory: payload.directory || null,
           error: "",
           requiresPassword: false,
         };
@@ -39,10 +48,16 @@ export function createShareSlice(initialState) {
           loading: false,
           requiresPassword: true,
           error: action.payload || "",
+          directory: null,
         };
       },
       setError(state, action) {
-        return { ...state, loading: false, error: action.payload };
+        return {
+          ...state,
+          loading: false,
+          error: action.payload,
+          directory: null,
+        };
       },
     },
   });

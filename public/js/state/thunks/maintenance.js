@@ -94,20 +94,83 @@ export function createMaintenanceThunks(deps, context) {
       }
     },
 
-    restoreTrash: (trashId) => async (dispatch) => {
+    confirmTrashRestore: (trashIds, options = {}) => async (dispatch) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");
         return;
       }
+      const ids = [...new Set((trashIds || []).filter(Boolean))];
+      if (!ids.length) return;
       try {
-        const { response, data } = await trashApi.restore(trashId);
+        const { response, data } = await trashApi.restorePreview(ids);
         if (!response.ok || data?.success === false)
+          throw new Error(humanError(response, data, "恢复预检失败"));
+        if (options.single && !data?.hasConflicts) {
+          await dispatch(getThunks().executeTrashRestore(ids, "error"));
+          return;
+        }
+        dispatch(actions.app.setModal({
+          type: "trash-restore-confirm",
+          loading: false,
+          error: "",
+          ids,
+          preview: data,
+          conflictMode: data?.hasConflicts ? "rename" : "skip",
+        }));
+      } catch (error) {
+        dispatchToast("error", error.message || "恢复预检失败");
+      }
+    },
+
+    executeTrashRestore: (trashIds, conflictMode = "error") => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      const ids = [...new Set((trashIds || []).filter(Boolean))];
+      if (!ids.length) return;
+
+      dispatch(actions.explorer.setTrashBatchBusy(true));
+      const modal = getState().app.modal;
+      try {
+        const apiCall = ids.length === 1
+          ? trashApi.restore(ids[0], conflictMode)
+          : trashApi.restoreBatch(ids, conflictMode);
+        const { response, data } = await apiCall;
+        if (!response.ok)
           throw new Error(humanError(response, data, "恢复失败"));
-        dispatchToast("success", "已从回收站恢复");
+        dispatch(actions.app.setModal(null));
+        dispatch(actions.explorer.setTrashSelectedKeys([]));
+        const completed = data.completed ?? (data.skipped ? 0 : 1);
+        const skipped = data.skipped ?? 0;
+        const failed = data.failed?.length || 0;
+        if (failed) {
+          dispatchToast("error", `已恢复 ${completed} 条，跳过 ${skipped} 条，失败 ${failed} 条`);
+        } else if (skipped && !completed) {
+          dispatchToast("success", `已跳过 ${skipped} 条冲突记录`);
+        } else if (skipped) {
+          dispatchToast("success", `已恢复 ${completed} 条，跳过 ${skipped} 条`);
+        } else {
+          dispatchToast("success", `已恢复 ${completed} 条记录`);
+        }
         await dispatch(getThunks().loadExplorer());
       } catch (error) {
-        dispatchToast("error", error.message || "恢复失败");
+        if (modal && modal.type === "trash-restore-confirm") {
+          dispatch(actions.app.setModal({
+            ...modal,
+            loading: false,
+            error: error.message || "恢复失败",
+          }));
+        } else {
+          dispatchToast("error", error.message || "恢复失败");
+        }
+      } finally {
+        dispatch(actions.explorer.setTrashBatchBusy(false));
       }
+    },
+
+    restoreTrash: (trashId) => async (dispatch) => {
+      await dispatch(getThunks().confirmTrashRestore([trashId], { single: true }));
     },
 
     deleteTrash: (trashId) => async (dispatch) => {
@@ -172,34 +235,7 @@ export function createMaintenanceThunks(deps, context) {
         dispatchToast("error", "设计预览模式下不可操作");
         return;
       }
-      if (!trashIds?.length) return;
-
-      dispatch(actions.explorer.setTrashBatchBusy(true));
-      let successCount = 0;
-      let failCount = 0;
-      const errors = [];
-      for (const id of trashIds) {
-        try {
-          const { response, data } = await trashApi.restore(id);
-          if (!response.ok || data?.success === false) {
-            throw new Error(humanError(response, data, "恢复失败"));
-          }
-          successCount++;
-        } catch (error) {
-          failCount++;
-          errors.push(error.message || "恢复失败");
-        }
-      }
-      dispatch(actions.explorer.setTrashSelectedKeys([]));
-      if (failCount === 0) {
-        dispatchToast("success", `已恢复 ${successCount} 条记录`);
-      } else if (successCount === 0) {
-        dispatchToast("error", `恢复失败 ${failCount} 条: ${errors[0]}`);
-      } else {
-        dispatchToast("error", `成功 ${successCount} 条，失败 ${failCount} 条`);
-      }
-      dispatch(actions.explorer.setTrashBatchBusy(false));
-      await dispatch(getThunks().loadExplorer());
+      await dispatch(getThunks().confirmTrashRestore(trashIds));
     },
 
     batchDeleteTrash: (trashIds) => async (dispatch) => {

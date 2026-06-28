@@ -1,0 +1,18 @@
+# O-Drive 文档索引
+
+## 当前文档
+
+| 文档 | 用途 |
+| --- | --- |
+| `maintenance-handoff.md` | 后续维护者的接手入口，本地命令、核心模块、近期变更和下一步建议。 |
+| `architecture.md` | 前端分层、样式约定和后端 API 路由约定。 |
+| `layout.md` | 页面布局、region、flex 链路和常见布局排查。 |
+| `admin-page.md` | 后台管理页 Tab、渲染器和事件约定。 |
+| `feature-expansion-roadmap.md` | 后续功能扩展路线图和当前完成状态。 |
+| `r2-content-deduplication.md` | R2 文件内容去重、真实对象复用和后续实施方案。 |
+
+## 维护约定
+
+- 新增文档后同步更新本索引。
+- 过程记录、临时交接稿、一次性 mockup 处理完成后直接清理。
+- 当前实现说明不要依赖易失效的代码行号，优先引用文件路径和模块职责。

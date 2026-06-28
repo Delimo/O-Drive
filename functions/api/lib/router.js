@@ -18,6 +18,8 @@ import {
 import {
   handleTrashList,
   handleTrashRestore,
+  handleTrashRestorePreview,
+  handleTrashBatchRestore,
   handleTrashDelete,
   handleTrashClear,
   handleTrashCleanup,
@@ -39,6 +41,7 @@ import {
   handleAdminQuota,
   handleAdminWebhooks,
   handleAdminWebhookDeliveries,
+  handleAdminWebhookDeliveryRetry,
   handleAdminNotifications,
   loadWebhookEndpoints,
 } from "./admin.js";
@@ -52,7 +55,12 @@ import {
   handleProtectedUnlock,
 } from "./protected-paths.js";
 import { handleAdminShares } from "./shares.js";
-import { createFileTask, getFileTask, updateFileTask } from "./tasks.js";
+import {
+  createFileTask,
+  getFileTask,
+  handleTaskAlertSettings,
+  updateFileTask,
+} from "./tasks.js";
 import { notifyDownloadBurst, notifyWebhookWithLog } from "./webhooks.js";
 import {
   assertBodySize,
@@ -141,8 +149,12 @@ export async function resolveAdminRoute(
     return await handleAdminStorage(env, request, method);
   if (path === "/api/admin/settings/webhooks")
     return await handleAdminWebhooks(env, request, method);
+  if (path === "/api/admin/settings/task-alerts")
+    return await handleTaskAlertSettings(env, request, method);
   if (path === "/api/admin/webhook-deliveries")
     return await handleAdminWebhookDeliveries(env);
+  if (path === "/api/admin/webhook-deliveries/retry" && method === "POST")
+    return await handleAdminWebhookDeliveryRetry(env, request);
   if (path === "/api/admin/shares")
     return await handleAdminShares(env, request, method, url);
   if (path === "/api/notifications")
@@ -199,6 +211,10 @@ export async function resolveAdminRoute(
     return await handleOperationEstimate(env, request);
   if (path === "/api/trash" && method === "GET")
     return await handleTrashList(env, url);
+  if (path === "/api/trash/restore-preview" && method === "POST")
+    return await handleTrashRestorePreview(env, request);
+  if (path === "/api/trash/restore-batch" && method === "POST")
+    return await handleTrashBatchRestore(env, request);
   if (path === "/api/trash/restore" && method === "POST")
     return await handleTrashRestore(env, request);
   if (path === "/api/trash/clear" && method === "DELETE")
@@ -310,6 +326,7 @@ export async function resolvePublicRoute(
       hiddenPaths,
       auth,
       protectedPaths,
+      context,
     );
   if (path === "/api/access/unlock" && method === "POST")
     return await handleProtectedUnlock(env, request, auth, protectedPaths);

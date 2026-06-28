@@ -1,7 +1,8 @@
-import { addLog, jsonResponse } from "./common/index.js";
+import { addLog, jsonResponse, recordSystemWarning } from "./common/index.js";
 import {
   loadWebhookEndpoints,
   normalizeWebhookEndpoints,
+  retryWebhookDelivery,
   testWebhookEndpoint,
 } from "./webhooks.js";
 
@@ -76,4 +77,16 @@ export async function handleAdminWebhookDeliveries(env) {
   } catch (_) {
     return jsonResponse({ items: [] });
   }
+}
+
+export async function handleAdminWebhookDeliveryRetry(env, request) {
+  const body = await request.json().catch(() => ({}));
+  const result = await retryWebhookDelivery(env, body.id);
+  await addLog(
+    env,
+    request,
+    "WEBHOOK_RETRY",
+    `${result.success ? "重试成功" : "重试失败"}：${body.id || ""}`,
+  );
+  return jsonResponse(result, result.success ? 200 : result.status || 502);
 }

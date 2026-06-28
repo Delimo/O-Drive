@@ -14,7 +14,9 @@ export function createShareThunks(deps, context) {
 
   return {
     loadShare: () => async (dispatch, getState) => {
-      const token = getState().share.token.trim();
+      const shareState = getState().share;
+      const token = shareState.token.trim();
+      const path = String(shareState.path || "").trim();
       if (!token && !mock) {
         dispatch(actions.share.setError("请提供分享 token。"));
         return;
@@ -28,7 +30,7 @@ export function createShareThunks(deps, context) {
         return;
       }
       try {
-        const { response, data } = await shareApi.info(token);
+        const { response, data } = await shareApi.info(token, path);
         if (
           response.status === 403 &&
           data?.code === "SHARE_PASSWORD_REQUIRED"
@@ -37,7 +39,7 @@ export function createShareThunks(deps, context) {
           return;
         }
         if (!response.ok) throw new Error(data?.message || "分享信息加载失败");
-        dispatch(actions.share.setData(data.item));
+        dispatch(actions.share.setData({ item: data.item, directory: data.directory }));
       } catch (error) {
         dispatch(actions.share.setError(error.message || "分享信息加载失败"));
       }

@@ -3,9 +3,9 @@ import { jsonResponse, apiError } from "./common/index.js";
 const NOTIFY_TABLE =
   "CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL, message TEXT NOT NULL, path TEXT DEFAULT '', read INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)";
 
-let _notifyTableEnsured = false;
+const notifyTableEnsured = new WeakSet();
 async function ensureNotificationTable(env) {
-  if (_notifyTableEnsured) return;
+  if (notifyTableEnsured.has(env)) return;
   await env.D1.prepare(NOTIFY_TABLE).run();
   try {
     await env.D1.prepare("CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)").run();
@@ -13,7 +13,7 @@ async function ensureNotificationTable(env) {
   try {
     await env.D1.prepare("CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)").run();
   } catch (_) {}
-  _notifyTableEnsured = true;
+  notifyTableEnsured.add(env);
 }
 
 export async function createNotification(env, { event, message, path = "" }) {

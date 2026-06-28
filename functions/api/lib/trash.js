@@ -1,4 +1,10 @@
-import { addLog, assertCompleteListing, jsonResponse, apiError } from "./common/index.js";
+import {
+  addLog,
+  assertCompleteListing,
+  jsonResponse,
+  apiError,
+  normalizeName,
+} from "./common/index.js";
 import {
   getFileIndexEntry,
   listFileIndexPrefix,
@@ -74,6 +80,12 @@ function createTrashId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function normalizeRestoreConflictMode(mode = "error") {
+  return ["error", "skip", "overwrite", "rename"].includes(mode)
+    ? mode
+    : "error";
+}
+
 async function keyExists(env, key) {
   if (await getFileIndexEntry(env, key)) return true;
   const storageId = await resolveExistingStorageId(env, key);
@@ -84,6 +96,78 @@ async function keyExists(env, key) {
   });
   return Boolean(
     (listed.objects || []).length || (listed.delimitedPrefixes || []).length,
+  );
+}
+
+async function restoreTargetForMode(env, originalKey, kind, mode) {
+  const conflictMode = normalizeRestoreConflictMode(mode);
+  if (!(await keyExists(env, originalKey))) {
+    return { key: originalKey, conflict: false, skipped: false };
+  }
+  if (conflictMode === "skip") {
+    return { key: originalKey, conflict: true, skipped: true };
+  }
+  if (conflictMode === "overwrite") {
+    return { key: originalKey, conflict: true, overwrite: true };
+  }
+  if (conflictMode !== "rename") {
+    const err = new Error("Target already exists");
+    err.status = 409;
+    throw err;
+  }
+
+  const slash = originalKey.lastIndexOf("/");
+  const dir = slash >= 0 ? originalKey.slice(0, slash + 1) : "";
+  const name = slash >= 0 ? originalKey.slice(slash + 1) : originalKey;
+  const dot = kind === "file" ? name.lastIndexOf(".") : -1;
+  const base = normalizeName(dot > 0 ? name.slice(0, dot) : name);
+  const ext = dot > 0 ? name.slice(dot) : "";
+  for (let i = 1; i <= 100; i++) {
+    const candidate = `${dir}${base} (${i})${ext}`;
+    if (!(await keyExists(env, candidate))) {
+      return { key: candidate, conflict: true, renamed: true };
+    }
+  }
+  throw new Error("Unable to generate unique restore path");
+}
+
+async function deleteExistingPathTree(env, key) {
+  const storageId = await resolveExistingStorageId(env, key);
+  const listed = await storageList(env, storageId, { prefix: key + "/" });
+  assertCompleteListing(listed, `Target ${key}`);
+  const entries = new Map();
+  const exactLocation = await resolveExistingObjectLocation(env, key);
+  const exact = await storageGet(
+    env,
+    exactLocation.storageId,
+    exactLocation.objectKey,
+  );
+  if (exact || exactLocation.indexed) {
+    entries.set(key, {
+      path: key,
+      storageId: exactLocation.storageId,
+      objectKey: exactLocation.objectKey,
+    });
+  }
+  for (const row of await listFileIndexPrefix(env, key)) {
+    entries.set(row.path, {
+      path: row.path,
+      storageId: row.storage_id || storageId,
+      objectKey: row.object_key || row.path,
+    });
+  }
+  for (const item of listed.objects || []) {
+    if (!entries.has(item.key)) {
+      const location = await resolveExistingObjectLocation(env, item.key);
+      entries.set(item.key, {
+        path: item.key,
+        storageId: location.storageId,
+        objectKey: location.objectKey,
+      });
+    }
+  }
+  await mapWithConcurrency([...entries.values()], 6, (entry) =>
+    deletePathEntry(env, entry.path, entry.storageId, entry.objectKey),
   );
 }
 
@@ -261,19 +345,63 @@ async function mapTrashRows(rows, worker, concurrency = 4) {
   return results;
 }
 
-async function restoreTrashRecord(env, row, request) {
+async function trashRestorePreview(env, rows) {
+  const seenTargets = new Map();
+  const items = [];
+  for (const row of rows) {
+    const originalKey = row.original_key;
+    const exists = await keyExists(env, originalKey);
+    const duplicateIndex = seenTargets.get(originalKey);
+    const duplicateInBatch = duplicateIndex != null;
+    const conflict = exists || duplicateInBatch;
+    seenTargets.set(originalKey, row.id);
+    items.push({
+      id: row.id,
+      originalKey,
+      name: row.name || originalKey.split("/").pop() || originalKey,
+      kind: row.kind || "file",
+      conflict,
+      exists,
+      duplicateInBatch,
+    });
+  }
+  const conflicts = items.filter((item) => item.conflict);
+  return {
+    total: items.length,
+    conflictCount: conflicts.length,
+    hasConflicts: conflicts.length > 0,
+    items,
+  };
+}
+
+async function restoreTrashRecord(env, row, request, options = {}) {
+  const conflictMode = normalizeRestoreConflictMode(options.conflict || "error");
+  const resolved = await restoreTargetForMode(
+    env,
+    row.original_key,
+    row.kind,
+    conflictMode,
+  );
+  if (resolved.skipped) {
+    await addLog(env, request, "RESTORE_SKIP", row.original_key);
+    return {
+      success: true,
+      skipped: true,
+      originalKey: row.original_key,
+      restoredKey: row.original_key,
+      conflict: true,
+    };
+  }
+  if (resolved.overwrite) {
+    await deleteExistingPathTree(env, row.original_key);
+  }
   const storageId =
     row.storage_id || (await resolveExistingStorageId(env, row.trash_key));
   const listed = await storageList(env, storageId, { prefix: row.trash_key });
   assertCompleteListing(listed, `Trash item ${row.id}`);
-  if (await keyExists(env, row.original_key)) {
-    const err = new Error("Target already exists");
-    err.status = 409;
-    throw err;
-  }
   await mapWithConcurrency(listed.objects || [], 6, async (item) => {
     const suffix = item.key.slice(row.trash_key.length);
-    const target = row.original_key + suffix;
+    const target = resolved.key + suffix;
     await storageCopy(env, storageId, item.key, storageId, target);
     const meta = await storageHead(env, storageId, target);
     await upsertFileIndex(env, target, {
@@ -286,7 +414,16 @@ async function restoreTrashRecord(env, row, request) {
   });
 
   await env.D1.prepare("DELETE FROM trash WHERE id = ?").bind(row.id).run();
-  await addLog(env, request, "RESTORE", row.original_key);
+  await addLog(env, request, "RESTORE", resolved.key);
+  return {
+    success: true,
+    skipped: false,
+    originalKey: row.original_key,
+    restoredKey: resolved.key,
+    conflict: resolved.conflict,
+    renamed: Boolean(resolved.renamed),
+    overwritten: Boolean(resolved.overwrite),
+  };
 }
 
 async function purgeTrashRecord(env, row, request) {
@@ -302,7 +439,7 @@ async function purgeTrashRecord(env, row, request) {
 }
 
 export async function handleTrashRestore(env, request) {
-  const { id } = await request.json().catch(() => ({}));
+  const { id, conflict } = await request.json().catch(() => ({}));
   if (!id)
     return jsonResponse(
       { success: false, message: "Invalid trash record" },
@@ -317,8 +454,92 @@ export async function handleTrashRestore(env, request) {
       { success: false, message: "Trash item not found" },
       404,
     );
-  await restoreTrashRecord(env, row, request);
-  return jsonResponse({ success: true });
+  const result = await restoreTrashRecord(env, row, request, { conflict });
+  return jsonResponse(result);
+}
+
+export async function handleTrashRestorePreview(env, request) {
+  const { ids } = await request.json().catch(() => ({}));
+  const uniqueIds = [...new Set(Array.isArray(ids) ? ids.filter(Boolean) : [])];
+  if (!uniqueIds.length || uniqueIds.length > 100)
+    return jsonResponse(
+      { success: false, message: "Invalid trash records" },
+      400,
+    );
+  await ensureTrashTable(env);
+  const placeholders = uniqueIds.map(() => "?").join(",");
+  const rows = await env.D1.prepare(
+    `SELECT * FROM trash WHERE id IN (${placeholders})`,
+  )
+    .bind(...uniqueIds)
+    .all();
+  const byId = new Map((rows.results || []).map((row) => [row.id, row]));
+  const orderedRows = uniqueIds.map((id) => byId.get(id)).filter(Boolean);
+  if (orderedRows.length !== uniqueIds.length) {
+    return jsonResponse(
+      { success: false, message: "Some trash items were not found" },
+      404,
+    );
+  }
+  return jsonResponse({
+    success: true,
+    ...(await trashRestorePreview(env, orderedRows)),
+  });
+}
+
+export async function handleTrashBatchRestore(env, request) {
+  const { ids, conflict } = await request.json().catch(() => ({}));
+  const uniqueIds = [...new Set(Array.isArray(ids) ? ids.filter(Boolean) : [])];
+  if (!uniqueIds.length || uniqueIds.length > 100)
+    return jsonResponse(
+      { success: false, message: "Invalid trash records" },
+      400,
+    );
+  await ensureTrashTable(env);
+  const placeholders = uniqueIds.map(() => "?").join(",");
+  const rows = await env.D1.prepare(
+    `SELECT * FROM trash WHERE id IN (${placeholders})`,
+  )
+    .bind(...uniqueIds)
+    .all();
+  const byId = new Map((rows.results || []).map((row) => [row.id, row]));
+  const orderedRows = uniqueIds.map((id) => byId.get(id)).filter(Boolean);
+  if (orderedRows.length !== uniqueIds.length) {
+    return jsonResponse(
+      { success: false, message: "Some trash items were not found" },
+      404,
+    );
+  }
+
+  let completed = 0;
+  let skipped = 0;
+  const restored = [];
+  const failed = [];
+  for (const row of orderedRows) {
+    try {
+      const result = await restoreTrashRecord(env, row, request, { conflict });
+      if (result.skipped) skipped++;
+      else completed++;
+      restored.push(result);
+    } catch (e) {
+      failed.push({
+        id: row.id,
+        originalKey: row.original_key,
+        message: e.message || "Failed",
+      });
+    }
+  }
+  return jsonResponse(
+    {
+      success: failed.length === 0,
+      completed,
+      skipped,
+      total: orderedRows.length,
+      restored,
+      failed: failed.length ? failed : undefined,
+    },
+    failed.length && !completed && !skipped ? 409 : 200,
+  );
 }
 
 export async function handleTrashDelete(env, request) {

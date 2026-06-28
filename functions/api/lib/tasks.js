@@ -1,10 +1,14 @@
 import { addLog, apiError, jsonResponse } from "./common/index.js";
 import { handleBatchDelete, handlePaste } from "./file-mutations/index.js";
+import { createNotification } from "./notifications.js";
 
-const TASK_TYPES = ["paste", "delete", "upload"];
+const TASK_TYPES = ["paste", "delete", "upload", "zip_download"];
 const TASK_STATUSES = ["queued", "running", "completed", "partial", "failed"];
 const TASK_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const TASK_RETENTION_ROWS = 100;
+const TASK_ALERT_CONFIG_KEY = "task_failure_alert_config_v1";
+const TASK_ALERT_STATE_KEY = "task_failure_alert_state";
+const TASK_ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function taskId() {
   const bytes = new Uint8Array(12);
@@ -12,10 +16,10 @@ function taskId() {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-let _taskTableReady;
+const taskTablesReady = new WeakSet();
 
 async function ensureTaskTable(env) {
-  if (_taskTableReady) return;
+  if (taskTablesReady.has(env)) return;
   await env.D1.prepare(
     `CREATE TABLE IF NOT EXISTS file_tasks (
       id TEXT PRIMARY KEY,
@@ -32,7 +36,164 @@ async function ensureTaskTable(env) {
       finished_at INTEGER NOT NULL DEFAULT 0
     )`,
   ).run();
-  _taskTableReady = true;
+  taskTablesReady.add(env);
+}
+
+async function ensureKvConfig(env) {
+  await env.D1.prepare(
+    "CREATE TABLE IF NOT EXISTS kv_config (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+  )
+    .run()
+    .catch(() => {});
+}
+
+function clampInt(value, fallback, min, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+}
+
+function defaultTaskAlertConfig() {
+  return {
+    enabled: true,
+    windowHours: 24,
+    warningCount: 3,
+    errorCount: 10,
+  };
+}
+
+function normalizeTaskAlertConfig(config = {}) {
+  const fallback = defaultTaskAlertConfig();
+  const warningCount = clampInt(
+    config.warningCount,
+    fallback.warningCount,
+    1,
+    1000,
+  );
+  const errorCount = clampInt(
+    config.errorCount,
+    fallback.errorCount,
+    1,
+    1000,
+  );
+  return {
+    enabled: config.enabled !== false,
+    windowHours: clampInt(config.windowHours, fallback.windowHours, 1, 168),
+    warningCount,
+    errorCount: Math.max(warningCount, errorCount),
+  };
+}
+
+export async function getTaskAlertConfig(env) {
+  await ensureKvConfig(env);
+  try {
+    const row = await env.D1.prepare(
+      "SELECT value FROM kv_config WHERE key = ?",
+    )
+      .bind(TASK_ALERT_CONFIG_KEY)
+      .first();
+    return normalizeTaskAlertConfig(row?.value ? JSON.parse(row.value) : {});
+  } catch (_) {
+    return defaultTaskAlertConfig();
+  }
+}
+
+async function saveTaskAlertConfig(env, config) {
+  await ensureKvConfig(env);
+  const normalized = normalizeTaskAlertConfig(config);
+  await env.D1.prepare(
+    "INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)",
+  )
+    .bind(TASK_ALERT_CONFIG_KEY, JSON.stringify(normalized))
+    .run();
+  return normalized;
+}
+
+export async function handleTaskAlertSettings(env, request, method) {
+  if (method === "GET") {
+    return jsonResponse({ success: true, config: await getTaskAlertConfig(env) });
+  }
+  if (method === "PUT") {
+    const body = await request.json().catch(() => ({}));
+    const config = await saveTaskAlertConfig(env, body);
+    await addLog(env, request, "TASK_ALERT_SETTINGS", {
+      details: `保存失败任务告警规则：${config.windowHours}h / ${config.warningCount}/${config.errorCount}`,
+      status: "ok",
+      metadata: config,
+    });
+    return jsonResponse({ success: true, config });
+  }
+  return apiError("METHOD_NOT_ALLOWED", "Method not allowed", 405);
+}
+
+async function countRecentFailedTasks(env, since) {
+  await ensureTaskTable(env);
+  const row = await env.D1.prepare(
+    `SELECT COUNT(*) as count FROM file_tasks
+     WHERE (status = 'failed' OR failed > 0)
+       AND (finished_at >= ? OR (finished_at = 0 AND updated_at >= ?))`,
+  )
+    .bind(since, since)
+    .first();
+  return Number(row?.count || 0);
+}
+
+function taskFailureAlertForCount(config, failedCount) {
+  if (!config.enabled) return null;
+  if (failedCount >= config.errorCount) {
+    return { level: "error", threshold: config.errorCount };
+  }
+  if (failedCount >= config.warningCount) {
+    return { level: "warning", threshold: config.warningCount };
+  }
+  return null;
+}
+
+async function notifyTaskFailureAlert(env, config, failedCount, alert) {
+  await ensureKvConfig(env);
+  const now = Date.now();
+  let state = {};
+  try {
+    const row = await env.D1.prepare(
+      "SELECT value FROM kv_config WHERE key = ?",
+    )
+      .bind(TASK_ALERT_STATE_KEY)
+      .first();
+    state = row?.value ? JSON.parse(row.value) : {};
+  } catch (_) {}
+  const coolingDown =
+    state.level === alert.level &&
+    now - Number(state.notifiedAt || 0) < TASK_ALERT_COOLDOWN_MS;
+  if (coolingDown) return;
+
+  await createNotification(env, {
+    event: `task.failure.${alert.level}`,
+    message: `最近 ${config.windowHours} 小时有 ${failedCount} 条后台任务失败或部分失败，已达到 ${alert.threshold} 条告警阈值。`,
+    path: "admin/system",
+  });
+  await env.D1.prepare(
+    "INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)",
+  )
+    .bind(
+      TASK_ALERT_STATE_KEY,
+      JSON.stringify({
+        level: alert.level,
+        failedCount,
+        threshold: alert.threshold,
+        notifiedAt: now,
+      }),
+    )
+    .run()
+    .catch(() => {});
+}
+
+export async function getTaskFailureAlertState(env) {
+  const config = await getTaskAlertConfig(env);
+  const since = Date.now() - config.windowHours * 60 * 60 * 1000;
+  const failedCount = await countRecentFailedTasks(env, since).catch(() => 0);
+  const alert = taskFailureAlertForCount(config, failedCount);
+  if (alert) await notifyTaskFailureAlert(env, config, failedCount, alert);
+  return { config, failedCount, alert };
 }
 
 let _lastTaskCleanup = 0;
@@ -173,6 +334,31 @@ async function executeTask(env, request, task) {
     if (task.type === "paste") res = await handlePaste(env, taskRequest);
     else if (task.type === "delete")
       res = await handleBatchDelete(env, taskRequest);
+    else if (task.type === "zip_download") {
+      const { buildZipArchiveForTask } = await import("./zip-download.js");
+      const result = await buildZipArchiveForTask(env, task.id, payload, request);
+      await updateTask(env, task.id, {
+        status: "completed",
+        total: result.fileCount || task.total,
+        completed: result.completed || result.fileCount || task.total,
+        failed: result.failed || 0,
+        result,
+        error: "",
+        finished_at: Date.now(),
+      });
+      await createNotification(env, {
+        event: "zip.ready",
+        message: result.message || "ZIP archive is ready",
+        path: result.outputKey || "",
+      });
+      await addLog(env, request, "TASK_FINISH", {
+        details: `${task.type} task ${task.id}`,
+        status: "ok",
+        durationMs: Date.now() - started,
+        metadata: { taskId: task.id, type: task.type, completed: result.completed || 0 },
+      });
+      return;
+    }
     else throw new Error("Unsupported task type");
 
     const data = await res.json().catch(() => ({}));
@@ -237,17 +423,35 @@ export async function createFileTask(env, request, context = {}) {
   if (type === "upload" && !uploadFiles.length)
     return apiError("INVALID_TASK_PAYLOAD", "Upload files are required", 400);
 
+  return createFileTaskDirect(env, request, context, {
+    type,
+    payload,
+    total: type === "upload" ? uploadFiles.length : paths.length,
+  });
+}
+
+export async function createFileTaskDirect(
+  env,
+  request,
+  context = {},
+  { type, payload = {}, total = 0, result = {} },
+) {
+  await ensureTaskTable(env);
+  await throttledCleanup(env);
+  if (!TASK_TYPES.includes(type))
+    return apiError("INVALID_TASK_TYPE", "Invalid task type", 400);
+
   const id = taskId();
   const now = Date.now();
   const task = {
     id,
     type,
     status: "queued",
-    total: type === "upload" ? uploadFiles.length : paths.length,
+    total: Number(total || 0),
     completed: 0,
     failed: 0,
     payload,
-    result: {},
+    result,
     error: "",
     created_at: now,
     updated_at: now,
@@ -255,9 +459,9 @@ export async function createFileTask(env, request, context = {}) {
   };
   await env.D1.prepare(
     `INSERT INTO file_tasks (id, type, status, total, completed, failed, payload, result, error, created_at, updated_at, finished_at)
-     VALUES (?, ?, ?, ?, 0, 0, ?, '{}', '', ?, ?, 0)`,
+     VALUES (?, ?, ?, ?, 0, 0, ?, ?, '', ?, ?, 0)`,
   )
-    .bind(id, type, "queued", task.total, JSON.stringify(payload), now, now)
+    .bind(id, type, "queued", task.total, JSON.stringify(payload), JSON.stringify(result || {}), now, now)
     .run();
   await addLog(env, request, "TASK_CREATE", {
     details: `${type} task ${id}`,
@@ -342,6 +546,7 @@ export async function getFileTask(env, url) {
     return jsonResponse({
       success: true,
       items: (rows.results || []).map(mapTask),
+      alertConfig: await getTaskAlertConfig(env),
     });
   }
   const row = await env.D1.prepare("SELECT * FROM file_tasks WHERE id = ?")

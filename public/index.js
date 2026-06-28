@@ -17,6 +17,7 @@ import { icons, fileTypeIcons } from './js/ui/icons.js';
 import { createRootStore } from './js/state/index.js';
 import { createDeferredAction, syncHomeUrl as syncHomeUrlHelper, openDownload as openDownloadHelper, readDroppedEntries } from './js/utils/helpers.js';
 import { cleanupAudioContext } from './js/state/thunks/index.js';
+import { UI_TEXT } from './js/constants.js';
 import morphdom from './js/vendor/morphdom.js';
 
 const root = document.getElementById('app');
@@ -64,13 +65,13 @@ function iconForKind(kind, name) {
   return iconForKindBase(kind, icons);
 }
 
-async function copyText(value, successText = '已复制') {
+async function copyText(value, successText = UI_TEXT.clipboard.copied) {
   try {
     await navigator.clipboard.writeText(value);
     dispatchToast('success', successText);
     return true;
   } catch (_) {
-    dispatchToast('error', '复制失败');
+    dispatchToast('error', UI_TEXT.clipboard.copyFailed);
     return false;
   }
 }

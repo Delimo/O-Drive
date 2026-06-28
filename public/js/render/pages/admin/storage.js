@@ -19,6 +19,9 @@ export function createStorageRenderer({
 
     const r2 = storageConfig.r2 || {};
     const usedPercent = r2.usedPercent || 0;
+    const alertEnabled = r2.alertEnabled !== false;
+    const alertWarningPercent = r2.alertWarningPercent || storageConfig.r2AlertWarningPercent || 90;
+    const alertErrorPercent = r2.alertErrorPercent || storageConfig.r2AlertErrorPercent || 95;
     const fillColor = usedPercent > 80 ? 'var(--danger)' : usedPercent > 60 ? 'var(--warning)' : 'var(--accent)';
 
     return `
@@ -57,6 +60,28 @@ export function createStorageRenderer({
               </div>
               <div class="ov-quota-track">
                 <div class="ov-quota-fill" style="width:${usedPercent}%;background:${fillColor};"></div>
+              </div>
+              <div class="ov-quota-alerts">
+                <div class="ov-quota-alerts-head">
+                  <span class="ov-quota-alerts-title">容量告警规则</span>
+                  <label class="ov-quota-alerts-toggle">
+                    <input type="checkbox" data-binding="storage-alert-enabled" ${alertEnabled ? "checked" : ""}>
+                    <span>启用</span>
+                  </label>
+                </div>
+                <div class="ov-quota-alerts-form">
+                  <label class="ov-quota-alert-field">
+                    <span>Warning</span>
+                    <input class="input" type="number" min="1" max="100" step="1" data-binding="storage-alert-warning" value="${alertWarningPercent}">
+                    <em>%</em>
+                  </label>
+                  <label class="ov-quota-alert-field">
+                    <span>Error</span>
+                    <input class="input" type="number" min="1" max="100" step="1" data-binding="storage-alert-error" value="${alertErrorPercent}">
+                    <em>%</em>
+                  </label>
+                  <button class="btn btn-sm" type="button" data-action="save-storage-alert-thresholds">保存规则</button>
+                </div>
               </div>
             </div>
           </div>

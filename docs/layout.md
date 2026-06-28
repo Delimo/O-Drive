@@ -1,184 +1,149 @@
-# 三段式布局说明
+# 页面布局说明
 
-## 结构
+> 本文档记录当前页面布局契约，不绑定具体行号。代码重排后只要结构不变，本文档仍可作为排查基准。
 
-所有页面共享三段式布局，由 `public/index.js` 的 `render()`（第 282 行）定义 DOM 骨架：
+## 入口结构
 
-```
-body (h-screen overflow-hidden p-4 md:p-6 flex flex-col)
-  └─ #app (container mx-auto max-w-[1440px] w-full flex-1 flex flex-col min-h-0)
-       ├─ [data-region="header"]            → 顶栏
-       │    └─ header.header-card           → 品牌 Logo、搜索、主题切换、通知、登录/管理
-       │
-       ├─ [data-region="explorer"]           → 中间主区（云盘页独有）
-       │    ├─ div.toolbar-card             → 面包屑导航、上传/新建/排序/视图/筛选按钮
-       │    └─ div.explorer-card (flex-1)   → 文件网格或列表
-       │
-       ├─ (其他区域)
-       │    [data-region="detail-drawer"]   → 右侧详情抽屉
-       │    [data-region="uploads"]         → 上传面板（fixed 定位）
-       │    [data-region="modal"]           → 模态框（fixed 定位）
-       │    [data-region="toast"]           → 提示消息（fixed 定位）
-       │    [data-region="drop-overlay"]    → 拖拽上传遮罩（fixed 定位）
-       │
-       └─（管理页/分享页走另一分支）
-            renderMain() → adminRenderer / shareRenderer 直接放在 #app 下
-```
+HTML 入口文件：
 
-### 页面分支逻辑
+| 页面 | 文件 | `body[data-page]` |
+| --- | --- | --- |
+| 云盘首页 | `public/index.html` | `home` |
+| 管理后台 | `public/admin.html` | `admin` |
+| 分享页 | `public/share.html` | `share` |
 
-在 `render()` 中：
+三个页面都挂载到 `#app`，运行时入口是 `public/index.js`。
 
-```
-page === 'home' → 渲染 [data-region="header"] + [data-region="explorer"] + ...
-page === 'admin' → 渲染 [data-region="header"] + renderMain(state)
-```
+`public/index.js` 负责创建全局区域：
 
-这就是 `data-region="explorer"` 这个额外 wrapper 的来历，也是问题的根源。
+| 区域 | 说明 |
+| --- | --- |
+| `[data-region="header"]` | 顶栏，所有页面共享。 |
+| `[data-region="explorer"]` | 仅首页使用，承载云盘工具栏和文件区。 |
+| `[data-region="detail-drawer"]` | 仅首页使用，承载右侧详情抽屉。 |
+| `[data-region="modal"]` | 全局弹窗。 |
+| `[data-region="toast"]` | 全局提示。 |
+| `[data-region="drop-overlay"]` | 拖拽上传遮罩。 |
+| `[data-region="uploads"]` | 仅首页使用，承载上传面板。 |
 
----
+管理后台和分享页不走 `[data-region="explorer"]`，它们通过 `renderMain(state)` 直接渲染主内容。
 
-## 间距规则
+## 首页布局
 
-| 位置 | 值 | 来源 | 说明 |
-|------|-----|------|------|
-| 顶部外边距 | 24px | `body` 的 `p-4 md:p-6`（`padding: 1.5rem`） | body 的内边距提供所有侧边的外层间距 |
-| header ↔ toolbar | 16px | `header-card` 和 `toolbar-card` 的 `mb-4`（`margin-bottom: 1rem`） | header 与 toolbar 之间 |
-| toolbar ↔ content | 16px | `toolbar-card` 的 `mb-4` | toolbar 与 explorer-card 之间 |
-| 内容区底部内边距 | 24px | `.explorer-card` 的 `p-6`（`padding: 1.5rem`） | 由 Tailwind 类提供 |
-| 底部外边距 | 24px | `body` 的 `p-4 md:p-6` | 与顶部对称 |
+首页内容由 `public/js/render/home.js` 渲染，核心结构是：
 
-**注意**：列表视图（`.list-table-wrap`）的 `max-height: calc(100vh - 200px)` 会影响表格可滚动高度。
-
----
-
-## 关键约束：flex 链
-
-要让 `.explorer-card` 的 `flex-1` 生效并撑满剩余高度，每一级父容器都必须形成 **flex 链**：
-
-```
-body (display:flex; flex-direction:column)
-  └─ #app (display:flex; flex-direction:column; flex:1; min-height:0)
-       └─ [data-region="explorer"] (display:flex; flex-direction:column; flex:1; min-height:0)
-            └─ .explorer-card (flex:1; min-height:0)  ← 生效
+```text
+#app
+  header region
+  explorer region
+    .toolbar-card
+    .explorer-card
+  detail drawer region
+  modal region
+  toast region
+  drop overlay region
+  uploads region
 ```
 
-**如果中间任何一环缺少 `display:flex` 或 `flex:1; min-height:0`，则 flex 链断裂**，`.explorer-card` 只会根据内容自然高度渲染，无法撑满视口。
+首页的关键 flex 链路：
 
-### 云盘页 vs 管理页的差异
+```text
+body
+  #app
+    [data-region="explorer"]
+      .explorer-card
+```
 
-| | 云盘页 | 管理页 |
-|--|--------|--------|
-| 渲染方式 | 内容放进 `[data-region="explorer"]` | 内容直接放进 `#app` |
-| flex 层级 | `body → #app → [data-region="explorer"] → .explorer-card` | `body → #app → .explorer-card` |
-| 隐患 | `[data-region="explorer"]` 必须是 flex 容器 | 无额外层级 |
+`[data-region="explorer"]` 必须保持：
 
-管理页正常但云盘页异常时，优先检查 `[data-region="explorer"]` 的样式。
+```css
+display: flex;
+flex-direction: column;
+flex: 1;
+min-height: 0;
+```
 
----
+`.explorer-card` 必须保持 `flex-1 min-h-0 overflow-y-auto flex flex-col`，否则文件区高度和滚动会异常。
 
-## 涉及文件
+## 管理后台布局
 
-| 文件 | 行号 | 作用 |
-|------|------|------|
-| `public/index.html` | 15-16 | `body` 和 `#app` 的基础结构 |
-| `public/admin.html` | 15-16 | 管理页的 `body` 和 `#app` |
-| `public/share.html` | 15-16 | 分享页的 `body` 和 `#app` |
-| `public/index.js` | 282-310 | `render()` — DOM 骨架，定义所有 `data-region` |
-| `public/index.js` | 381-439 | `renderHeader()` — 顶栏 HTML |
-| `public/index.js` | 342-360 | `renderExplorerRegion()` — 把 home 内容填入 explorer 区域 |
-| `public/js/render/home.js` | 25-76 | `renderHomePage()` — 云盘页的 toolbar + explorer-card |
-| `public/js/render/pages/index.js` | 136-181 | `renderAdminPage()` — 管理页的 toolbar + explorer-card |
-| `public/main.css` | — | **生产 CSS**（HTML 实际引用的文件） |
-| `public/css/pages/explorer.css` | — | 源文件（仅供参考，不直接引用） |
+后台页面由 `public/js/render/pages/index.js` 渲染，Tab 内容再分发到 `public/js/render/pages/admin/`。
 
----
+核心结构是：
+
+```text
+#app
+  header region
+  .toolbar-card
+    .admin-tab-bar
+  .explorer-card
+    active admin tab content
+  modal region
+  toast region
+  drop overlay region
+```
+
+后台没有 `[data-region="explorer"]` 这一层，`.explorer-card` 直接由 `renderAdminPage(state)` 创建。
+
+当前后台 Tab 和维护说明见 `docs/admin-page.md`。
+
+## 分享页布局
+
+分享页同样通过 `renderMain(state)` 渲染，内容来自 `renderSharePage(state)`。
+
+分享页不显示首页工具栏、上传面板、详情抽屉，也不需要首页的 explorer region。
+
+## CSS 来源
+
+样式源文件在 `public/css/`，构建后输出到 `public/main.css`。
+
+修改源 CSS 后，需要运行构建流程更新 `public/main.css`。不要只改构建产物，否则下一次构建会覆盖。
+
+主要布局相关文件：
+
+| 文件 | 说明 |
+| --- | --- |
+| `public/css/tokens.css` | 颜色、阴影、圆角等变量。 |
+| `public/css/components.css` | 按钮、卡片、弹窗等通用组件。 |
+| `public/css/pages/explorer.css` | 首页文件区相关样式。 |
+| `public/css/pages/admin.css` | 后台页面相关样式。 |
+| `public/css/pages/share.css` | 分享页相关样式。 |
+| `public/main.css` | 实际被 HTML 引用的构建产物。 |
 
 ## 常见问题排查
 
-### 问题 1：内容区底部间距消失
+### 文件区没有撑满高度
 
-**现象**：`.explorer-card` 底部没有 24px 空白，内容紧贴卡片底部。
+优先检查：
 
-**可能原因**：
+- `body` 是否仍是纵向 flex 布局。
+- `#app` 是否仍有 `flex: 1` 和 `min-height: 0`。
+- `[data-region="explorer"]` 是否仍有 `display:flex; flex-direction:column; flex:1; min-height:0`。
+- `.explorer-card` 是否仍有 `flex-1 min-h-0 overflow-y-auto`。
 
-1. 生产 CSS（`main.css`）中 `.explorer-card` 被设置了 `padding-bottom: 0 !important`，覆盖了 `p-6`
-2. 原生 `p-6` 类未生效（Tailwind 未正确编译）
+### 文件区底部间距异常
 
-**验证方法**（浏览器 DevTools）：
-- 选中 `.explorer-card`，在 Styles 面板查看 `padding-bottom` 的计算值
-- 如果为 0 且有删除线，说明被 `!important` 覆盖
-- 查看 `p-6` 类是否出现在 Styles 面板中
+优先检查：
 
-**修复**：
-```css
-/* 错误：覆盖了 p-6 的底部内边距 */
-.explorer-card {
-  padding-bottom: 0 !important;
-}
+- `.explorer-card` 的 padding 是否被覆盖。
+- 首页 `renderHomePage()` 末尾的底部占位是否仍存在。
+- `public/main.css` 是否已由最新源 CSS 构建生成。
 
-/* 正确：让 p-6 自然生效，或显式设置 */
-.explorer-card {
-  padding-bottom: 1.5rem; /* 24px */
-}
-```
+### 后台页正常但首页异常
 
-**注意**：`public/css/pages/explorer.css` 是源文件，但 HTML 实际引用的是 `public/main.css`。修改源文件后需同步更新 `main.css`，或重新编译（如果项目有构建流程）。
+优先检查 `[data-region="explorer"]`。后台页没有这一层，所以后台正常不能证明首页 flex 链路也是正常的。
 
----
+### 修改后浏览器看不到变化
 
-### 问题 2：内容区不撑满视口高度
+优先检查：
 
-**现象**：文件列表内容很少时，`.explorer-card` 高度只包裹内容，下方留有空白区域。
+- 是否改了源 CSS 但没有重新构建 `public/main.css`。
+- 是否浏览器缓存了旧资源。
+- 是否改了某个 Tab 渲染文件，但当前页面没有进入对应 Tab。
 
-**可能原因**：flex 链断裂——`[data-region="explorer"]` 缺少 `display:flex` 或 `flex:1; min-height:0`。
+## 修改约定
 
-**验证方法**（浏览器 DevTools）：
-- 在 Elements 面板中选中 `[data-region="explorer"]`
-- 检查 Computed 面板中 `display` 是否为 `flex`
-- 检查 `flex` 是否为 `1 1 0%`（flex:1 的计算值）
-- 检查 `min-height` 是否为 `0`
-- 选中 `.explorer-card` 查看其高度是否等于父容器剩余空间
-
-**修复**：
-```js
-// public/index.js render() 中
-// 错误：无 flex 属性
-'<div data-region="explorer"></div>'
-
-// 正确：加上 flex 属性
-'<div data-region="explorer" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>'
-```
-
----
-
-### 问题 3：列表视图高度溢出
-
-**现象**：列表模式（`.list-table-wrap`）高度不对，滚动条异常。
-
-**原因**：`.list-table-wrap` 的 `max-height: calc(100vh - 200px)` 是基于视口高度计算的硬编码值，当布局层级变化时可能需要调整。
-
----
-
-## 修改指南
-
-当需要修改布局 DOM 层级时，必须同步检查以下三点：
-
-1. **flex 链完整性**：从 `body` 到 `.explorer-card` 的每一层是否都是 flex 容器
-2. **`min-height: 0`**：`flex-1` 的子元素必须有 `min-height: 0`（或 `overflow` 非 `visible`），否则内容会撑爆容器
-3. **`flex-shrink: 0`**：非伸缩元素（如 `.toolbar-card`、`.header-card`）需要 `flex-shrink: 0`，防止被压缩
-
----
-
-## 快速验证清单
-
-如果布局异常，按顺序检查：
-
-- [ ] `body` → `display: flex; flex-direction: column;`
-- [ ] `body` → `p-4 md:p-6` 是否生效（顶部 24px）
-- [ ] `#app` → `flex: 1; min-height: 0;`
-- [ ] `#app` → `display: flex; flex-direction: column;`
-- [ ] `[data-region="explorer"]` → `display: flex; flex-direction: column; flex: 1; min-height: 0`
-- [ ] `.explorer-card` → `flex: 1; min-height: 0;`
-- [ ] `.explorer-card` → `padding-bottom` **不是** `0 !important`
-- [ ] `.explorer-card` → `p-6` 是否被加载（24px padding）
+- 不要在 Tab 子渲染器里重建 `.explorer-card` 外层布局。
+- 不要给首页移除 `[data-region="explorer"]` 的 flex 样式。
+- 不要把页面高度逻辑写成固定 `100vh - Npx`，除非确实是在处理局部滚动容器。
+- 新增全局浮层优先使用独立 region，避免塞进 `.explorer-card` 内部。

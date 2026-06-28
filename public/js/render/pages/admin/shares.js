@@ -57,6 +57,7 @@ export function createSharesRenderer({
       const isExpired = share?.expired || (share?.expiresAt && share.expiresAt < now);
       const isExhausted = share?.exhausted;
       const isActive = isShareActive(share);
+      const targetLabel = share?.targetType === "folder" ? "文件夹" : "文件";
       const statusText = isExpired ? "已失效" : isExhausted ? "已用尽" : "有效";
       const statusClass = isExpired ? "ov-badge-error" : isExhausted ? "ov-badge-warn" : "ov-badge-ok";
       const lastAccessText = share?.lastAccessedAt
@@ -70,6 +71,7 @@ export function createSharesRenderer({
               <div class="ov-share-item-title-row">
                 <span class="ov-share-dot${isActive ? " is-on" : ""}"></span>
                 <span class="ov-share-name">${safeText(share.name, "未命名资源")}</span>
+                <span class="ov-share-pill">${escapeHtml(targetLabel)}</span>
                 <span class="ov-badge ${statusClass}">${statusText}</span>
                 ${share?.hasPassword ? `<span class="ov-share-pill tag-password">有密码</span>` : ""}
               </div>
@@ -161,7 +163,7 @@ export function createSharesRenderer({
 
   function renderSharePage(state) {
     const { share } = state;
-    const { loading, error, item, requiresPassword, password } = share;
+    const { loading, error, item, directory, requiresPassword, password } = share;
 
     if (loading) {
       return `
@@ -264,6 +266,124 @@ export function createSharesRenderer({
         </div>`;
     }
 
+    const token = share.token;
+    const currentSharePath = String(share.path || directory?.path || "").replace(/^\/+|\/+$/g, "");
+    const sharePageUrl = (path = "") => {
+      const params = new URLSearchParams({ token });
+      if (path) params.set("path", path);
+      return `/share.html?${params.toString()}`;
+    };
+    const shareActionUrl = (action, path = "") => {
+      const params = new URLSearchParams();
+      if (path) params.set("path", path);
+      const query = params.toString();
+      return `/api/share/${encodeURIComponent(token)}/${action}${query ? `?${query}` : ""}`;
+    };
+    const relativeEntryPath = (entry) => {
+      const root = String(item.path || "").replace(/^\/+|\/+$/g, "");
+      const fullKey = String(entry?.fullKey || entry?.path || "").replace(/^\/+|\/+$/g, "");
+      if (!fullKey) return "";
+      if (root && fullKey === root) return "";
+      if (root && fullKey.startsWith(`${root}/`)) return fullKey.slice(root.length + 1);
+      return fullKey;
+    };
+
+    if (item.targetType === "folder") {
+      const folders = directory?.folders || [];
+      const files = directory?.files || [];
+      const entriesCount = folders.length + files.length;
+      const expiresText = item.expiresAt ? formatTime(Math.floor(item.expiresAt / 1000)) : null;
+      const downloadsText = item.maxDownloads > 0 ? `${item.downloadCount} / ${item.maxDownloads}` : null;
+      const parts = currentSharePath.split("/").filter(Boolean);
+      const crumbItems = [
+        { label: item.name || "根目录", path: "" },
+        ...parts.map((part, index) => ({
+          label: part,
+          path: parts.slice(0, index + 1).join("/"),
+        })),
+      ];
+      const canPreviewFile = (file) => {
+        const type = String(file?.contentType || "");
+        return item.allowPreview && (
+          type.startsWith("image/") ||
+          type.startsWith("video/") ||
+          type.startsWith("audio/") ||
+          type === "application/pdf" ||
+          type.startsWith("text/")
+        );
+      };
+      const renderFolderRow = (folder) => {
+        const path = relativeEntryPath(folder);
+        return `
+          <a class="share-dir-row" href="${escapeHtml(sharePageUrl(path))}">
+            <span class="share-dir-icon share-dir-icon-folder">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            </span>
+            <span class="share-dir-name">${safeText(folder.name, "未命名文件夹")}</span>
+            <span class="share-dir-meta">文件夹</span>
+          </a>
+        `;
+      };
+      const renderFileRow = (file) => {
+        const path = relativeEntryPath(file);
+        return `
+          <div class="share-dir-row">
+            <span class="share-dir-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </span>
+            <span class="share-dir-name">${safeText(file.name, "未命名文件")}</span>
+            <span class="share-dir-meta">${escapeHtml(file.sizeFormatted || formatBytes(file.size || 0))}</span>
+            <span class="share-dir-actions">
+              ${canPreviewFile(file) ? `<a class="share-dir-action" href="${escapeHtml(shareActionUrl("preview", path))}" target="_blank">预览</a>` : ""}
+              ${item.allowDownload ? `<a class="share-dir-action" href="${escapeHtml(shareActionUrl("download", path))}" target="_blank">下载</a>` : ""}
+            </span>
+          </div>
+        `;
+      };
+
+      return `
+        <div class="share-page">
+          <div class="share-shell share-shell-folder">
+            <div class="share-top">
+              <div class="share-brand">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                <span>O-Drive</span>
+              </div>
+              <span class="share-status-tag share-status-active">
+                <span class="share-status-dot"></span>
+                有效分享
+              </span>
+            </div>
+
+            <div class="share-mid share-mid-folder">
+              <div class="share-preview-icon share-preview-folder">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              </div>
+              <h1 class="share-file-name">${safeText(item.name, "未命名文件夹")}</h1>
+              <div class="share-file-meta">
+                <span class="share-meta-chip">${escapeHtml(String(entriesCount))} 项</span>
+                ${expiresText ? `<span class="share-meta-chip">有效期至 ${escapeHtml(expiresText)}</span>` : ""}
+                ${downloadsText ? `<span class="share-meta-chip">下载 ${escapeHtml(downloadsText)}</span>` : ""}
+              </div>
+              <div class="share-dir-panel">
+                <div class="share-dir-crumbs">
+                  ${crumbItems.map((crumb, index) => `${index > 0 ? `<span class="share-dir-sep">/</span>` : ""}<a class="share-dir-crumb${index === crumbItems.length - 1 ? " is-current" : ""}" href="${escapeHtml(sharePageUrl(crumb.path))}">${escapeHtml(crumb.label)}</a>`).join("")}
+                </div>
+                <div class="share-dir-list">
+                  ${entriesCount === 0 ? `<div class="share-dir-empty">当前目录为空</div>` : `${folders.map(renderFolderRow).join("")}${files.map(renderFileRow).join("")}`}
+                </div>
+              </div>
+            </div>
+
+            <div class="share-bottom">
+              <div class="share-actions">
+                ${item.allowDownload ? `<a class="share-btn share-btn-primary" href="${escapeHtml(shareActionUrl("download", currentSharePath))}" target="_blank"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下载当前目录</a>` : ""}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
     const kind = item.contentType || "";
     const isImage = kind.startsWith("image/");
     const isVideo = kind.startsWith("video/");
@@ -275,7 +395,6 @@ export function createSharesRenderer({
     const sizeText = item.size ? formatBytes(item.size) : "";
     const expiresText = item.expiresAt ? formatTime(Math.floor(item.expiresAt / 1000)) : null;
     const downloadsText = item.maxDownloads > 0 ? `${item.downloadCount} / ${item.maxDownloads}` : null;
-    const token = share.token;
 
     let previewIcon = "file";
     if (isImage) previewIcon = "image";

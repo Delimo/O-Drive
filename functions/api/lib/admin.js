@@ -6,6 +6,7 @@ export { loadWebhookEndpoints } from "./webhooks.js";
 export {
   handleAdminWebhooks,
   handleAdminWebhookDeliveries,
+  handleAdminWebhookDeliveryRetry,
 } from "./admin-webhook-settings.js";
 export { handleHiddenSettings } from "./admin-hidden-settings.js";
 export { handleAdminNotifications } from "./notifications.js";

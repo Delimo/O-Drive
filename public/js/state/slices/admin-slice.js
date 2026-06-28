@@ -40,12 +40,15 @@ export const adminInitialState = {
   webhooksError: "",
   webhookDeliveries: [],
   webhookDeliveriesLoading: false,
+  webhookRetryingId: 0,
   maintenance: null,
   maintenanceLoading: false,
   maintenanceError: "",
   maintenanceBusyAction: "",
   tasks: [],
   tasksLoading: false,
+  taskAlertConfig: null,
+  taskAlertConfigSaving: false,
   activeUploadTaskId: "",
   trashRetention: null,
   trashRetentionLoading: false,
@@ -268,6 +271,9 @@ export function createAdminSlice(initialState) {
           webhookDeliveries: action.payload || [],
         };
       },
+      setWebhookRetryingId(state, action) {
+        return { ...state, webhookRetryingId: Number(action.payload || 0) };
+      },
       setMaintenanceLoading(state, action) {
         return { ...state, maintenanceLoading: action.payload };
       },
@@ -295,6 +301,16 @@ export function createAdminSlice(initialState) {
       },
       setTasks(state, action) {
         return { ...state, tasksLoading: false, tasks: action.payload || [] };
+      },
+      setTaskAlertConfig(state, action) {
+        return {
+          ...state,
+          taskAlertConfig: action.payload || null,
+          taskAlertConfigSaving: false,
+        };
+      },
+      setTaskAlertConfigSaving(state, action) {
+        return { ...state, taskAlertConfigSaving: !!action.payload };
       },
       setActiveUploadTaskId(state, action) {
         return { ...state, activeUploadTaskId: action.payload || "" };
