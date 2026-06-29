@@ -23,7 +23,7 @@ export function createSystemRenderer({
     }
     if (healthData.env) {
       sysComponents["管理员账户"] = { status: healthData.env.adminUsername && healthData.env.adminPassword ? "ok" : "error", message: "" };
-      sysComponents["Token密钥"] = { status: healthData.env.tokenSecret?.bound ? "ok" : "error", message: "" };
+      sysComponents["Token密钥"] = { status: healthData.env.tokenSecret?.configured ? "ok" : "error", message: "" };
       sysComponents["访客模式"] = { status: healthData.env.guestEnabled ? "ok" : "info", message: healthData.env.guestEnabled ? "已启用" : "已禁用" };
       sysComponents["WebDAV"] = { status: healthData.env.davEnabled ? "ok" : "info", message: healthData.env.davEnabled ? "已启用" : "未配置" };
     }
@@ -84,51 +84,74 @@ export function createSystemRenderer({
             </div>
           </div>
 
-          <div class="ov-system-info-card">
-            <div class="ov-system-info-header">
-              <span class="ov-system-info-title">系统信息</span>
-            </div>
-            <div class="ov-system-info-body">
-              <div class="ov-system-info-grid">
-                <div class="ov-system-info-item">
-                  <span class="ov-system-info-label">版本</span>
-                  <span class="ov-system-info-value">v1.0.0</span>
+          ${(() => {
+            const davEnabled = healthData.env?.davEnabled || false;
+            const origin = typeof location !== 'undefined' ? location.origin : '';
+            const davUrl = origin ? `${origin}/dav/` : '/dav/';
+            return `
+              <div class="ov-system-info-card">
+                <div class="ov-system-info-header">
+                  <span class="ov-system-info-title">WebDAV</span>
+                  <span class="ov-badge ${davEnabled ? 'ov-badge-ok' : 'ov-badge-info'}">${davEnabled ? '已启用' : '未配置'}</span>
                 </div>
-                <div class="ov-system-info-item">
-                  <span class="ov-system-info-label">环境</span>
-                  <span class="ov-system-info-value">${healthData.env?.guestEnabled !== undefined ? "生产" : "开发"}</span>
-                </div>
-                <div class="ov-system-info-item">
-                  <span class="ov-system-info-label">数据库表</span>
-                  <span class="ov-system-info-value">${dbTables.length} 张</span>
-                </div>
-                <div class="ov-system-info-item">
-                  <span class="ov-system-info-label">访客模式</span>
-                  <span class="ov-system-info-value">${healthData.env?.guestEnabled ? "启用" : "禁用"}</span>
-                </div>
-                <div class="ov-system-info-item">
-                  <span class="ov-system-info-label">WebDAV</span>
-                  <span class="ov-system-info-value">${healthData.env?.davEnabled ? "已启用" : "未配置"}</span>
-                </div>
-              </div>
-              ${healthData.env?.davEnabled ? `
-                <div class="ov-system-info-detail">
-                  <span class="ov-system-info-label">WebDAV 地址</span>
-                  <code class="ov-system-info-code">${escapeHtml(typeof location !== 'undefined' ? location.origin : '')}/dav/</code>
-                </div>
-              ` : ""}
-              ${warnings.length > 0 ? `
-                <div class="ov-system-warnings">
-                  <span class="ov-system-warnings-title">系统警告 (${warnings.length})</span>
-                  ${warnings.map(w => `
-                    <div class="ov-system-warning-item">
-                      <span class="ov-system-warning-msg">${escapeHtml(w.message || w.title || "未知警告")}</span>
+                <div class="ov-system-info-body">
+                  ${davEnabled ? `
+                    <div class="ov-webdav-conn">
+                      <div class="ov-webdav-conn-row">
+                        <span class="ov-webdav-conn-label">地址</span>
+                        <code class="ov-webdav-conn-value" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">${escapeHtml(davUrl)}</code>
+                        <button class="btn btn-sm" type="button" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">复制</button>
+                      </div>
+                      <div class="ov-webdav-conn-row">
+                        <span class="ov-webdav-conn-label">用户名</span>
+                        <span class="ov-webdav-conn-value">管理员用户名</span>
+                      </div>
+                      <div class="ov-webdav-conn-row">
+                        <span class="ov-webdav-conn-label">密码</span>
+                        <span class="ov-webdav-conn-value">管理员密码</span>
+                      </div>
                     </div>
-                  `).join("")}
+                    <details class="ov-webdav-clients" style="margin-top:12px;">
+                      <summary style="cursor:pointer;font-size:12px;color:var(--muted);padding:4px 0;">客户端连接指南</summary>
+                      <div style="margin-top:8px;">
+                        <div class="ov-webdav-client-item">
+                          <span class="ov-webdav-client-name">Windows</span>
+                          <span class="ov-webdav-client-steps">此电脑 → 右键 → 添加网络位置</span>
+                        </div>
+                        <div class="ov-webdav-client-item">
+                          <span class="ov-webdav-client-name">macOS</span>
+                          <span class="ov-webdav-client-steps">前往 → 连接服务器</span>
+                        </div>
+                        <div class="ov-webdav-client-item">
+                          <span class="ov-webdav-client-name">rclone</span>
+                          <code class="ov-webdav-cmd">rclone config create odrive webdav url ${escapeHtml(davUrl)} user admin pass &lt;密码&gt;</code>
+                        </div>
+                      </div>
+                    </details>
+                    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;">
+                      <span>浏览</span><span>下载</span><span>上传</span><span>删除</span><span>新建</span><span>移动</span><span>复制</span>
+                      <span style="color:var(--line-strong);margin:0 2px;">|</span>
+                      <span>DAV Level 1，无 LOCK，单次 PUT ≤100MB</span>
+                    </div>
+                  ` : `
+                    <div style="padding:16px 0;text-align:center;font-size:13px;color:var(--muted);">
+                      配置 <code>ADMIN_USERNAME</code> 和 <code>ADMIN_PASSWORD</code> 环境变量即可启用
+                    </div>
+                  `}
                 </div>
-              ` : ""}
+              </div>`;
+          })()}
+
+          ${warnings.length > 0 ? `
+            <div class="ov-system-warnings">
+              <span class="ov-system-warnings-title">系统警告 (${warnings.length})</span>
+              ${warnings.map(w => `
+                <div class="ov-system-warning-item">
+                  <span class="ov-system-warning-msg">${escapeHtml(w.message || w.title || "未知警告")}</span>
+                </div>
+              `).join("")}
             </div>
-          </div>
+          ` : ""}
 
           <div class="ov-maintenance">
             <div class="ov-maintenance-header">

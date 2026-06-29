@@ -6,8 +6,6 @@ import { createStorageRenderer } from "./admin/storage.js";
 import { createSharesRenderer } from "./admin/shares.js";
 import { createSystemRenderer } from "./admin/system.js";
 import { createWebhookRenderer } from "./admin/webhook.js";
-import { createWebdavRenderer } from "./admin/webdav.js";
-
 const ADMIN_TABS = [
   { id: "overview", label: "概览" },
   { id: "storage", label: "存储" },
@@ -15,7 +13,6 @@ const ADMIN_TABS = [
   { id: "logs", label: "日志" },
   { id: "system", label: "系统" },
   { id: "webhook", label: "Webhooks" },
-  { id: "webdav", label: "WebDAV" },
 ];
 
 export function createPageRenderers(deps) {
@@ -94,13 +91,6 @@ export function createPageRenderers(deps) {
     components,
   });
 
-  const webdav = createWebdavRenderer({
-    safeText: shareUtils.safeText,
-    escapeHtml,
-    renderEmptyStateCompact,
-    components,
-  });
-
   function renderAdminActiveTab(admin, activeTab) {
     switch (activeTab) {
       case "overview":
@@ -126,8 +116,6 @@ export function createPageRenderers(deps) {
         return system.renderSystemSection(admin);
       case "webhook":
         return webhook.renderWebhookSection(admin);
-      case "webdav":
-        return webdav.renderWebdavSection(admin);
       default:
         return "";
     }
