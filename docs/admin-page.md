@@ -6,7 +6,7 @@
 
 后台管理页由 `public/js/render/pages/index.js` 统一组装，具体 Tab 内容拆到 `public/js/render/pages/admin/`。
 
-当前有 7 个 Tab：
+当前有 6 个 Tab：
 
 | Tab | 渲染文件 | 说明 |
 | --- | --- | --- |
@@ -14,9 +14,8 @@
 | `storage` | `admin/storage.js` | 存储配置、路径管理、回收站策略。 |
 | `shares` | `admin/shares.js` | 分享链接列表、筛选、删除、复制。 |
 | `logs` | `admin/logs.js` | 操作日志、筛选、日期过滤。 |
-| `system` | `admin/system.js` | 健康检查、通知、维护任务、后台任务。 |
+| `system` | `admin/system.js` | 健康检查、WebDAV 状态、维护任务、后台任务。 |
 | `webhook` | `admin/webhook.js` | Webhook 配置和投递记录。 |
-| `webdav` | `admin/webdav.js` | WebDAV 状态和连接说明。 |
 
 非独立 Tab 但仍在使用的渲染文件：
 
@@ -24,9 +23,10 @@
 | --- | --- |
 | `admin/paths.js` | 被 `storage.js` 引用。 |
 | `admin/maintenance.js` | 被 `system.js` 引用。 |
-| `admin/notifications.js` | 被 `system.js` 引用。 |
 | `admin/components.js` | 后台页共享 UI 组件工厂。 |
 | `admin/utils.js` | 分享状态、筛选、文本安全等工具。 |
+
+WebDAV 连接信息由 `admin/system.js` 渲染，后端入口是 `functions/dav/[[path]].js`。
 
 ## 渲染约定
 
@@ -55,6 +55,9 @@
 | `refresh-admin-webhook-deliveries` | 刷新 Webhook 投递记录。 |
 | `save-storage-alert-thresholds` | 保存容量阈值告警规则。 |
 | `save-task-alert-thresholds` | 保存失败任务数量告警规则。 |
+| `copy-webdav-url` | 复制 WebDAV 地址。 |
+| `confirm-maintenance-action` | 打开维护任务确认弹窗。 |
+| `execute-maintenance-action` | 执行维护任务。 |
 
 `data-action2` 用于同一个按钮触发第二个刷新动作。目前注册了：
 
@@ -69,6 +72,8 @@
 - `shares.js` 当前已经接收并使用 `isShareActive`。
 - 当前没有 `settings.js` facade，后台渲染器由 `public/js/render/pages/index.js` 直接组合。
 - 分享列表当前主要是筛选和搜索，没有独立分页 action；如果后续需要分页，再补 `set-shares-page` 事件和状态。
+- 通知中心当前在全局 header 中渲染，不是独立后台 Tab。
+- 存储对象引用计数维护入口位于系统 Tab，动作定义在 `admin/utils.js`，执行逻辑在 `functions/api/lib/admin-maintenance.js`。
 
 ## 维护建议
 

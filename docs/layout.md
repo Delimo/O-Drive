@@ -104,7 +104,11 @@ min-height: 0;
 | 文件 | 说明 |
 | --- | --- |
 | `public/css/tokens.css` | 颜色、阴影、圆角等变量。 |
-| `public/css/components.css` | 按钮、卡片、弹窗等通用组件。 |
+| `public/css/components/buttons.css` | 按钮和工具按钮。 |
+| `public/css/components/forms.css` | 表单、输入控件和自定义选择器。 |
+| `public/css/components/modals.css` | 弹窗、浮层和确认状态。 |
+| `public/css/components/cards.css` | 卡片和通用内容容器。 |
+| `public/css/components/layout.css` | 通用布局组件。 |
 | `public/css/pages/explorer.css` | 首页文件区相关样式。 |
 | `public/css/pages/admin.css` | 后台页面相关样式。 |
 | `public/css/pages/share.css` | 分享页相关样式。 |
