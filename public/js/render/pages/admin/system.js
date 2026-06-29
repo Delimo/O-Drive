@@ -111,23 +111,6 @@ export function createSystemRenderer({
                         <span class="ov-webdav-conn-value">管理员密码</span>
                       </div>
                     </div>
-                    <details class="ov-webdav-clients" style="margin-top:12px;">
-                      <summary style="cursor:pointer;font-size:12px;color:var(--muted);padding:4px 0;">客户端连接指南</summary>
-                      <div style="margin-top:8px;">
-                        <div class="ov-webdav-client-item">
-                          <span class="ov-webdav-client-name">Windows</span>
-                          <span class="ov-webdav-client-steps">此电脑 → 右键 → 添加网络位置</span>
-                        </div>
-                        <div class="ov-webdav-client-item">
-                          <span class="ov-webdav-client-name">macOS</span>
-                          <span class="ov-webdav-client-steps">前往 → 连接服务器</span>
-                        </div>
-                        <div class="ov-webdav-client-item">
-                          <span class="ov-webdav-client-name">rclone</span>
-                          <code class="ov-webdav-cmd">rclone config create odrive webdav url ${escapeHtml(davUrl)} user admin pass &lt;密码&gt;</code>
-                        </div>
-                      </div>
-                    </details>
                     <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;">
                       <span>浏览</span><span>下载</span><span>上传</span><span>删除</span><span>新建</span><span>移动</span><span>复制</span>
                       <span style="color:var(--line-strong);margin:0 2px;">|</span>
