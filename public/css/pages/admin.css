@@ -1675,7 +1675,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 .ov-storage-bottom {
@@ -3384,7 +3385,7 @@
 .ov-webhook-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   min-height: 100%;
 }
 
@@ -3456,8 +3457,8 @@
 
 .ov-webhook-page-grid {
   display: grid;
-  grid-template-columns: minmax(360px, 0.42fr) minmax(460px, 0.58fr);
-  gap: 16px;
+  grid-template-columns: minmax(390px, 0.41fr) minmax(500px, 0.59fr);
+  gap: 14px;
   min-height: 0;
   flex: 1;
 }
@@ -3465,13 +3466,13 @@
 .ov-webhook-page-left {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .ov-webhook-page-right {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* ─── Webhook Config Card ─── */
@@ -3479,9 +3480,10 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
-  border-radius: 12px;
-  background: var(--panel);
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-soft));
   border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
 
@@ -3490,8 +3492,9 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
+  background: var(--panel-soft);
 }
 
 .ov-webhook-config-title {
@@ -3509,7 +3512,7 @@
 }
 
 .ov-webhook-config-body {
-  padding: 16px;
+  padding: 14px 16px 16px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -3518,24 +3521,24 @@
 .ov-webhook-preview-shell {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   flex: 1;
 }
 
 .ov-webhook-compact-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  grid-template-columns: minmax(120px, 0.75fr) minmax(220px, 1.35fr) minmax(105px, 0.65fr);
   gap: 10px 12px;
 }
 
 .ov-webhook-compact-fields > div:nth-child(3) {
-  grid-column: span 2;
+  grid-column: auto;
 }
 
 .ov-webhook-advanced {
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: var(--panel-soft);
+  background: var(--panel);
   overflow: hidden;
 }
 
@@ -3549,6 +3552,12 @@
   font-weight: 600;
   cursor: pointer;
   user-select: none;
+  transition: background 0.12s, color 0.12s;
+}
+
+.ov-webhook-advanced summary:hover {
+  background: var(--panel-soft);
+  color: var(--accent);
 }
 
 .ov-webhook-advanced summary::marker {
@@ -3618,7 +3627,11 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+}
+
+.ov-webhook-config-card .input {
+  background: var(--panel);
 }
 
 .ov-webhook-preview-value {
@@ -3717,25 +3730,34 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+.ov-webhook-preview-actions .btn-primary {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
 }
 
 /* ─── Webhook Event Chips ─── */
 .ov-webhook-event-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 7px;
 }
 
 .ov-webhook-event-chip {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
-  border-radius: 7px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
   border: 1px solid var(--line);
-  background: var(--panel-soft);
+  background: var(--panel);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
 .ov-webhook-event-chip:hover {
@@ -3743,22 +3765,38 @@
 }
 
 .ov-webhook-event-chip input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
-  accent-color: var(--accent);
+  opacity: 0;
   cursor: pointer;
 }
 
 .ov-webhook-event-chip:has(input:checked) {
-  border-color: rgba(14, 116, 144, 0.3);
-  background: var(--primary-soft);
+  border-color: rgba(14, 116, 144, 0.24);
+  background: rgba(14, 116, 144, 0.08);
+  color: var(--accent);
+}
+
+.ov-webhook-event-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  flex-shrink: 0;
+}
+
+.ov-webhook-event-chip:has(input:checked)::before {
+  background: var(--accent);
 }
 
 .ov-webhook-event-chip-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text);
+  color: currentColor;
 }
 
 .ov-webhook-event-chip-desc {
@@ -3823,16 +3861,18 @@
 .ov-webhook-list-card {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  border-radius: 12px;
+  flex: 0 1 auto;
+  border-radius: 10px;
   background: var(--panel);
   border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.035);
   overflow: hidden;
 }
 
 .ov-webhook-list-body {
-  padding: 12px 16px;
-  max-height: 340px;
+  padding: 10px 14px;
+  min-height: 150px;
+  max-height: 300px;
   overflow: auto;
 }
 
@@ -3847,7 +3887,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -3877,7 +3917,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
+  padding: 11px 12px;
   border-radius: 8px;
   background: var(--panel-soft);
   border: 1px solid var(--line);
@@ -3956,9 +3996,10 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--panel);
   border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.035);
   overflow: hidden;
 }
 
@@ -3967,7 +4008,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -3989,8 +4030,9 @@
 }
 
 .ov-webhook-delivery-body {
-  padding: 12px 16px;
-  max-height: 230px;
+  padding: 10px 14px;
+  min-height: 110px;
+  max-height: 210px;
   overflow: auto;
 }
 
@@ -4004,8 +4046,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 10px 11px;
+  border-radius: 8px;
   background: var(--panel-soft);
   border: 1px solid var(--line);
 }
@@ -4093,19 +4135,20 @@
 .ov-webhook-notif-card {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 360px;
-  border-radius: 12px;
+  flex: 0 1 auto;
+  min-height: 0;
+  border-radius: 10px;
   background: var(--panel);
   border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.035);
   overflow: hidden;
 }
 
 .ov-webhook-notif-filters {
   display: grid;
   grid-template-columns: minmax(110px, 0.6fr) minmax(110px, 0.6fr) minmax(180px, 1fr);
-  gap: 10px;
-  padding: 12px 16px;
+  gap: 9px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line);
   background: var(--panel-soft);
 }
@@ -4128,9 +4171,10 @@
 }
 
 .ov-webhook-notif-body {
-  padding: 12px 16px;
+  padding: 10px 14px 14px;
   overflow: auto;
-  flex: 1;
+  min-height: 230px;
+  max-height: 420px;
 }
 
 .ov-webhook-notif-list {
@@ -4144,15 +4188,16 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 11px 12px;
+  border-radius: 8px;
   background: var(--panel-soft);
   border: 1px solid var(--line);
 }
 
 .ov-webhook-notif-item.is-unread {
-  border-color: rgba(14, 116, 144, 0.24);
-  background: var(--primary-soft);
+  border-color: rgba(14, 116, 144, 0.2);
+  border-left: 3px solid var(--accent);
+  background: rgba(14, 116, 144, 0.045);
 }
 
 .ov-webhook-notif-main {
