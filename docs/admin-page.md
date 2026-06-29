@@ -15,7 +15,7 @@
 | `shares` | `admin/shares.js` | 分享链接列表、筛选、删除、复制。 |
 | `logs` | `admin/logs.js` | 操作日志、筛选、日期过滤。 |
 | `system` | `admin/system.js` | 健康检查、WebDAV 状态、维护任务、后台任务。 |
-| `webhook` | `admin/webhook.js` | Webhook 配置和投递记录。 |
+| `webhook` | `admin/webhook.js` | 通知页，包含 Webhook 配置、投递记录和通知历史。 |
 
 非独立 Tab 但仍在使用的渲染文件：
 
@@ -50,14 +50,13 @@ WebDAV 连接信息由 `admin/system.js` 渲染，后端入口是 `functions/dav
 | `refresh-admin-health` | 刷新系统健康状态。 |
 | `refresh-admin-quota` | 刷新配额状态。 |
 | `refresh-admin-maintenance` | 刷新维护快照。 |
-| `refresh-admin-notifications` | 刷新通知。 |
+| `refresh-admin-notifications` | 刷新通知历史。 |
 | `refresh-admin-webhooks` | 刷新 Webhook 配置。 |
 | `refresh-admin-webhook-deliveries` | 刷新 Webhook 投递记录。 |
 | `save-storage-alert-thresholds` | 保存容量阈值告警规则。 |
 | `save-task-alert-thresholds` | 保存失败任务数量告警规则。 |
 | `copy-webdav-url` | 复制 WebDAV 地址。 |
 | `retry-task` | 重试失败或部分失败的后台任务。 |
-| `refresh-admin-notifications` | 刷新系统 Tab 中的通知历史。 |
 | `confirm-maintenance-action` | 打开维护任务确认弹窗。 |
 | `execute-maintenance-action` | 执行维护任务。 |
 
@@ -74,8 +73,8 @@ WebDAV 连接信息由 `admin/system.js` 渲染，后端入口是 `functions/dav
 - `shares.js` 当前已经接收并使用 `isShareActive`。
 - 当前没有 `settings.js` facade，后台渲染器由 `public/js/render/pages/index.js` 直接组合。
 - 分享列表当前主要是筛选和搜索，没有独立分页 action；如果后续需要分页，再补 `set-shares-page` 事件和状态。
-- 通知中心当前在全局 header 中渲染，不是独立后台 Tab。
-- 系统 Tab 也渲染通知历史，可按级别、已读状态和事件筛选。
+- 通知铃铛当前在全局 header 中渲染，下拉列表用于快速查看未读通知。
+- 后台通知 Tab 渲染 Webhook 配置、最近投递和通知历史；通知历史可按级别、已读状态和事件筛选。
 - 存储对象引用计数维护入口位于系统 Tab，动作定义在 `admin/utils.js`，执行逻辑在 `functions/api/lib/admin-maintenance.js`。
 
 ## 维护建议

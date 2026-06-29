@@ -792,18 +792,14 @@ export function createAdminThunks(deps, context) {
             dispatch(t.loadAdminHealth());
           if (!admin.quota && !admin.quotaLoading)
             dispatch(t.loadAdminQuota());
-          if (admin.adminNotifHistory.length === 0 && !admin.adminNotifHistoryLoading)
-            dispatch(t.loadAdminNotifications());
-          if (admin.webhooks.length === 0 && !admin.webhooksLoading)
-            dispatch(t.loadAdminWebhooks());
-          if (admin.webhookDeliveries.length === 0 && !admin.webhookDeliveriesLoading)
-            dispatch(t.loadAdminWebhookDeliveries());
           break;
         case "webhook":
           if (admin.webhooks.length === 0 && !admin.webhooksLoading)
             dispatch(t.loadAdminWebhooks());
           if (admin.webhookDeliveries.length === 0 && !admin.webhookDeliveriesLoading)
             dispatch(t.loadAdminWebhookDeliveries());
+          if (admin.adminNotifHistory.length === 0 && !admin.adminNotifHistoryLoading)
+            dispatch(t.loadAdminNotifications());
           break;
       }
     },

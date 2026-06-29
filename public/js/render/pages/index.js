@@ -12,7 +12,7 @@ const ADMIN_TABS = [
   { id: "shares", label: "分享" },
   { id: "logs", label: "日志" },
   { id: "system", label: "系统" },
-  { id: "webhook", label: "Webhooks" },
+  { id: "webhook", label: "通知" },
 ];
 
 export function createPageRenderers(deps) {
@@ -88,6 +88,7 @@ export function createPageRenderers(deps) {
     escapeHtml,
     renderEmptyStateCompact,
     formatTime,
+    formatRelative,
     components,
   });
 

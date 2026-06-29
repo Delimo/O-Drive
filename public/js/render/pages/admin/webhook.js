@@ -1,5 +1,5 @@
 export function createWebhookRenderer({
-  safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
+  safeText, escapeHtml, renderEmptyStateCompact, formatTime, formatRelative, components
 }) {
 
   const EVENT_OPTIONS = [
@@ -22,19 +22,127 @@ export function createWebhookRenderer({
     const {
       webhooksLoading, webhooks = [],
       webhookDeliveriesLoading, webhookDeliveries = [],
-      webhookRetryingId = 0
+      webhookRetryingId = 0,
+      adminNotifHistory = [], adminNotifHistoryLoading = false,
+      adminNotifFilter = { severity: "all", read: "all", event: "" },
     } = admin;
 
-    if (webhooksLoading) {
-      return renderEmptyStateCompact("载入中", "正在加载 Webhook 配置...", "");
+    function renderWebhookList() {
+      if (webhooksLoading) return `<div class="ov-empty-inline">正在加载 Webhook 配置...</div>`;
+      if (webhooks.length === 0) return `<div class="ov-empty-inline">无配置的 Webhook 回调点</div>`;
+      return `
+        <div class="ov-webhook-list">
+          ${webhooks.map(hook => {
+            const events = hook.events || [];
+            return `
+              <div class="ov-webhook-rule-card">
+                <div class="ov-webhook-rule-head">
+                  <div class="ov-webhook-rule-title-row">
+                    <div class="ov-webhook-rule-tags">
+                      <span class="ov-webhook-chip ov-webhook-chip-method">${escapeHtml(hook.method || "POST")}</span>
+                      <span class="ov-webhook-chip ov-webhook-chip-format">${escapeHtml(hook.msgtype || "json")}</span>
+                      <span class="ov-webhook-chip ${hook.enabled === false ? "ov-webhook-status-off" : "ov-webhook-status-on"}">${hook.enabled === false ? "停用" : "启用"}</span>
+                    </div>
+                    <span class="ov-webhook-rule-name">${escapeHtml(hook.name || "未命名")}</span>
+                  </div>
+                  <div class="ov-webhook-rule-actions">
+                    <button class="btn btn-sm" type="button"
+                            data-action="edit-webhook" data-id="${escapeHtml(hook.id)}"
+                            aria-label="编辑 webhook">编辑</button>
+                    <button class="btn btn-sm" type="button"
+                            data-action="test-webhook" data-id="${escapeHtml(hook.id)}"
+                            aria-label="测试 webhook">测试</button>
+                    <button class="btn btn-danger btn-sm" type="button"
+                            data-action="confirm-delete-webhook"
+                            data-id="${escapeHtml(hook.id)}"
+                            data-name="${escapeHtml(hook.name)}"
+                            aria-label="删除 webhook">删除</button>
+                  </div>
+                </div>
+                <div class="ov-webhook-rule-url">${escapeHtml(hook.url || "")}</div>
+                <div class="ov-webhook-rule-meta">
+                  <span class="ov-webhook-rule-content-type">${escapeHtml(hook.contentType || "application/json")}</span>
+                  <div class="ov-webhook-rule-event-row">
+                    ${events.length > 0
+                      ? events.slice(0, 3).map(e => `<span class="ov-webhook-chip">${escapeHtml(EVENT_LABELS[e] || e)}</span>`).join("")
+                      : `<span class="ov-webhook-chip">全部事件</span>`
+                    }
+                    ${events.length > 3 ? `<span class="ov-webhook-chip ov-webhook-chip-muted">+${events.length - 3}</span>` : ""}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function renderDeliveryList() {
+      if (webhookDeliveriesLoading) return `<div class="ov-empty-inline">加载中...</div>`;
+      if (webhookDeliveries.length === 0) return `<div class="ov-empty-inline">暂无投递记录</div>`;
+      return `
+        <div class="ov-webhook-delivery-list">
+          ${webhookDeliveries.slice(0, 8).map(del => {
+            const retrying = Number(webhookRetryingId || 0) === Number(del.id || 0);
+            return `
+              <div class="ov-webhook-delivery-card-item">
+                <div class="ov-webhook-delivery-top">
+                  <div class="ov-webhook-delivery-title-wrap">
+                    <span class="ov-webhook-delivery-event">${escapeHtml(del.event || "")}</span>
+                    <span class="ov-webhook-delivery-endpoint">${escapeHtml(del.endpoint || "")}</span>
+                  </div>
+                  <div class="ov-webhook-delivery-actions">
+                    <span class="ov-webhook-delivery-status ${del.ok ? "ov-webhook-status-ok" : "ov-webhook-status-err"}">${del.status || "-"}</span>
+                    ${!del.ok ? `<button class="btn btn-small" type="button" data-action="retry-webhook-delivery" data-id="${escapeHtml(del.id || "")}" ${retrying ? "disabled" : ""}>${retrying ? "重试中..." : "重试"}</button>` : ""}
+                  </div>
+                </div>
+                <div class="ov-webhook-delivery-meta">
+                  <span>${del.created_at ? formatTime(del.created_at) : "-"}</span>
+                  <span>${del.duration_ms ? del.duration_ms + "ms" : "-"}</span>
+                  ${del.retry_of ? `<span>重试自 #${escapeHtml(del.retry_of)}</span>` : ""}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function renderNotificationHistory() {
+      if (adminNotifHistoryLoading) return `<div class="ov-empty-inline">加载中...</div>`;
+      if (adminNotifHistory.length === 0) {
+        return `<div class="ov-webhook-notif-empty">当前筛选下没有通知</div>`;
+      }
+      return `
+        <div class="ov-webhook-notif-list">
+          ${adminNotifHistory.map((item) => {
+            const severity = item.severity || "info";
+            const badgeClass = severity === "error" ? "ov-badge-error" : severity === "warning" ? "ov-badge-warning" : "ov-badge-info";
+            return `
+              <div class="ov-webhook-notif-item ${item.read ? "" : "is-unread"}">
+                <div class="ov-webhook-notif-main">
+                  <div class="ov-webhook-notif-head">
+                    <span class="ov-badge ${badgeClass}">${escapeHtml(severity)}</span>
+                    <span class="ov-webhook-notif-event">${escapeHtml(item.event || "notification")}</span>
+                    <span class="ov-webhook-notif-time">${formatRelative(item.created_at || item.createdAt || 0)}</span>
+                  </div>
+                  <div class="ov-webhook-notif-message">${escapeHtml(item.message || "")}</div>
+                  ${item.path ? `<div class="ov-webhook-notif-path">${escapeHtml(item.path)}</div>` : ""}
+                </div>
+                ${!item.read ? `<button class="btn btn-sm" type="button" data-action="admin-mark-notif-read" data-notif-id="${escapeHtml(item.id)}">标为已读</button>` : `<span class="ov-webhook-notif-read">已读</span>`}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
     }
 
     return `
       <div class="ov-webhook-page">
         <div class="ov-webhook-page-header">
           <div class="ov-webhook-page-title-group">
-            <h2 class="ov-webhook-page-title">Webhook 通知</h2>
-            <p class="ov-webhook-page-desc">管理文件操作、异常行为和分享链接到期的外部通知通道</p>
+            <h2 class="ov-webhook-page-title">通知中心</h2>
+            <p class="ov-webhook-page-desc">管理 Webhook 通道、查看投递结果和系统通知历史</p>
           </div>
         </div>
 
@@ -49,49 +157,44 @@ export function createWebhookRenderer({
               </div>
               <div class="ov-webhook-config-body">
                 <div class="ov-webhook-preview-shell">
-                  <div class="ov-webhook-preview-grid">
-                    <div class="ov-webhook-preview-block">
-                      <span class="ov-webhook-preview-label">发送目标</span>
-                      <div style="display:flex;flex-direction:column;gap:8px;">
-                        <div>
-                          <label class="ov-webhook-field-label">名称</label>
-                          <input class="input" type="text" placeholder="可选，用于标识此 Webhook">
-                        </div>
-                        <div>
-                          <label class="ov-webhook-field-label">URL *</label>
-                          <input class="input" type="url" placeholder="https://example.com/webhook" required>
-                        </div>
-                        <div>
-                          <label class="ov-webhook-field-label">消息格式</label>
-                          <input class="input" type="text" value="json" placeholder="json / text / markdown">
-                        </div>
-                      </div>
+                  <div class="ov-webhook-compact-fields">
+                    <div>
+                      <label class="ov-webhook-field-label">名称</label>
+                      <input class="input" type="text" placeholder="可选，用于标识此 Webhook">
                     </div>
-                    <div class="ov-webhook-preview-block">
-                      <span class="ov-webhook-preview-label">请求配置</span>
-                      <div style="display:flex;flex-direction:column;gap:8px;">
-                        <div>
-                          <label class="ov-webhook-field-label">Method</label>
-                          <input class="input" type="text" value="POST" placeholder="POST / PUT / PATCH">
-                        </div>
-                        <div>
-                          <label class="ov-webhook-field-label">Content-Type</label>
-                          <input class="input" type="text" value="application/json" placeholder="application/json">
-                        </div>
-                      </div>
+                    <div>
+                      <label class="ov-webhook-field-label">URL *</label>
+                      <input class="input" type="url" placeholder="https://example.com/webhook" required>
+                    </div>
+                    <div>
+                      <label class="ov-webhook-field-label">消息格式</label>
+                      <input class="input" type="text" value="json" placeholder="json / text / markdown">
                     </div>
                   </div>
 
-                  <div class="ov-webhook-preview-panes">
-                    <div class="ov-webhook-preview-block">
-                      <span class="ov-webhook-preview-label">Headers</span>
-                      <textarea class="input" rows="3" placeholder='{"X-Token": "..."}' style="resize:vertical;"></textarea>
+                  <details class="ov-webhook-advanced">
+                    <summary>请求模板</summary>
+                    <div class="ov-webhook-preview-grid">
+                      <div>
+                        <label class="ov-webhook-field-label">Method</label>
+                        <input class="input" type="text" value="POST" placeholder="POST / PUT / PATCH">
+                      </div>
+                      <div>
+                        <label class="ov-webhook-field-label">Content-Type</label>
+                        <input class="input" type="text" value="application/json" placeholder="application/json">
+                      </div>
                     </div>
-                    <div class="ov-webhook-preview-block">
-                      <span class="ov-webhook-preview-label">Body</span>
-                      <textarea class="input" rows="3" placeholder='{"event":"{event}","path":"{{data.path}}"}' style="resize:vertical;"></textarea>
+                    <div class="ov-webhook-preview-panes">
+                      <div class="ov-webhook-preview-block">
+                        <span class="ov-webhook-preview-label">Headers</span>
+                        <textarea class="input" rows="3" placeholder='{"X-Token": "..."}' style="resize:vertical;"></textarea>
+                      </div>
+                      <div class="ov-webhook-preview-block">
+                        <span class="ov-webhook-preview-label">Body</span>
+                        <textarea class="input" rows="3" placeholder='{"event":"{event}","path":"{{data.path}}"}' style="resize:vertical;"></textarea>
+                      </div>
                     </div>
-                  </div>
+                  </details>
 
                   <div class="ov-webhook-preview-events">
                     <div class="ov-webhook-subhead">
@@ -109,14 +212,11 @@ export function createWebhookRenderer({
                   </div>
 
                   <div class="ov-webhook-preview-actions">
-                    <button class="btn btn-primary" type="button" data-action="show-add-webhook">保存</button>
+                    <button class="btn btn-primary" type="button" data-action="show-add-webhook">添加 Webhook</button>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div class="ov-webhook-page-right">
             <div class="ov-webhook-list-card">
               <div class="ov-webhook-list-header">
                 <div class="ov-webhook-list-title-group">
@@ -126,54 +226,12 @@ export function createWebhookRenderer({
                 <button class="btn btn-sm" type="button" data-action="refresh-admin-webhooks">刷新</button>
               </div>
               <div class="ov-webhook-list-body">
-                ${webhooks.length === 0
-                  ? `<div class="ov-empty-inline">无配置的 Webhook 回调点</div>`
-                  : `<div class="ov-webhook-list">
-                      ${webhooks.map(hook => {
-                        const events = hook.events || [];
-                        const eventLabels = events.map(e => EVENT_LABELS[e] || e).join("、");
-                        return `
-                          <div class="ov-webhook-rule-card">
-                            <div class="ov-webhook-rule-head">
-                              <div class="ov-webhook-rule-title-row">
-                                <div class="ov-webhook-rule-tags">
-                                  <span class="ov-webhook-chip ov-webhook-chip-method">${escapeHtml(hook.method || "POST")}</span>
-                                  <span class="ov-webhook-chip ov-webhook-chip-format">格式 ${escapeHtml(hook.msgtype || "json")}</span>
-                                </div>
-                                <span class="ov-webhook-rule-name">${escapeHtml(hook.name || "未命名")}</span>
-                              </div>
-                              <div class="ov-webhook-rule-actions">
-                                <button class="btn btn-sm" type="button"
-                                        data-action="edit-webhook" data-id="${escapeHtml(hook.id)}"
-                                        aria-label="编辑 webhook">编辑</button>
-                                <button class="btn btn-sm" type="button"
-                                        data-action="test-webhook" data-id="${escapeHtml(hook.id)}"
-                                        aria-label="测试 webhook">测试发送</button>
-                                <button class="btn btn-danger btn-sm" type="button"
-                                        data-action="confirm-delete-webhook"
-                                        data-id="${escapeHtml(hook.id)}"
-                                        data-name="${escapeHtml(hook.name)}"
-                                        aria-label="删除 webhook">删除</button>
-                              </div>
-                            </div>
-                            <div class="ov-webhook-rule-url">${escapeHtml(hook.url || "")}</div>
-                            <div class="ov-webhook-rule-meta">
-                              <span class="ov-webhook-rule-content-type">${escapeHtml(hook.contentType || "application/json")}</span>
-                              <div class="ov-webhook-rule-event-row">
-                                ${events.length > 0
-                                  ? events.slice(0, 3).map(e => `<span class="ov-webhook-chip">${escapeHtml(EVENT_LABELS[e] || e)}</span>`).join("")
-                                  : `<span class="ov-webhook-chip">全部事件</span>`
-                                }
-                              </div>
-                            </div>
-                          </div>
-                        `;
-                      }).join("")}
-                    </div>`
-                }
+                ${renderWebhookList()}
               </div>
             </div>
+          </div>
 
+          <div class="ov-webhook-page-right">
             <div class="ov-webhook-delivery-card">
               <div class="ov-webhook-delivery-header">
                 <div class="ov-webhook-delivery-title-group">
@@ -183,35 +241,47 @@ export function createWebhookRenderer({
                 <button class="btn btn-sm" type="button" data-action="refresh-admin-webhook-deliveries">刷新</button>
               </div>
               <div class="ov-webhook-delivery-body">
-                ${webhookDeliveriesLoading
-                  ? `<div class="ov-empty-inline">加载中...</div>`
-                  : webhookDeliveries.length === 0
-                    ? `<div class="ov-empty-inline">暂无投递记录</div>`
-                    : `<div class="ov-webhook-delivery-list">
-                        ${webhookDeliveries.slice(0, 20).map(del => {
-                          const retrying = Number(webhookRetryingId || 0) === Number(del.id || 0);
-                          return `
-                          <div class="ov-webhook-delivery-card-item">
-                            <div class="ov-webhook-delivery-top">
-                              <div class="ov-webhook-delivery-title-wrap">
-                                <span class="ov-webhook-delivery-event">${escapeHtml(del.event || "")}</span>
-                                <span class="ov-webhook-delivery-endpoint">${escapeHtml(del.endpoint || "")}</span>
-                              </div>
-                              <div class="ov-webhook-delivery-actions">
-                                <span class="ov-webhook-delivery-status ${del.ok ? "ov-webhook-status-ok" : "ov-webhook-status-err"}">${del.status || "-"}</span>
-                                ${!del.ok ? `<button class="btn btn-small" type="button" data-action="retry-webhook-delivery" data-id="${escapeHtml(del.id || "")}" ${retrying ? "disabled" : ""}>${retrying ? "重试中..." : "重试"}</button>` : ""}
-                              </div>
-                            </div>
-                            <div class="ov-webhook-delivery-meta">
-                              <span>${del.created_at ? formatTime(del.created_at) : "-"}</span>
-                              <span>${del.duration_ms ? del.duration_ms + "ms" : "-"}</span>
-                              ${del.retry_of ? `<span>重试自 #${escapeHtml(del.retry_of)}</span>` : ""}
-                            </div>
-                          </div>
-                        `;
-                        }).join("")}
-                      </div>`
-                }
+                ${renderDeliveryList()}
+              </div>
+            </div>
+
+            <div class="ov-webhook-notif-card">
+              <div class="ov-webhook-delivery-header">
+                <div class="ov-webhook-delivery-title-group">
+                  <span class="ov-webhook-delivery-title">通知历史</span>
+                  <span class="ov-webhook-delivery-count">显示 ${adminNotifHistory.length} 条</span>
+                </div>
+                <button class="btn btn-sm" type="button" data-action="refresh-admin-notifications">刷新</button>
+              </div>
+              <div class="ov-webhook-notif-filters">
+                <label class="ov-webhook-notif-filter">
+                  <span>级别</span>
+                  <select class="input" data-action-change="set-notification-filter" data-key="severity">
+                    ${[
+                      ["all", "全部"],
+                      ["info", "信息"],
+                      ["warning", "警告"],
+                      ["error", "错误"],
+                    ].map(([value, label]) => `<option value="${value}" ${adminNotifFilter.severity === value ? "selected" : ""}>${label}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="ov-webhook-notif-filter">
+                  <span>状态</span>
+                  <select class="input" data-action-change="set-notification-filter" data-key="read">
+                    ${[
+                      ["all", "全部"],
+                      ["unread", "未读"],
+                      ["read", "已读"],
+                    ].map(([value, label]) => `<option value="${value}" ${adminNotifFilter.read === value ? "selected" : ""}>${label}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="ov-webhook-notif-filter ov-webhook-notif-filter-event">
+                  <span>事件</span>
+                  <input class="input" data-action-change="set-notification-filter" data-key="event" value="${escapeHtml(adminNotifFilter.event || "")}" placeholder="如 zip.ready">
+                </label>
+              </div>
+              <div class="ov-webhook-notif-body">
+                ${renderNotificationHistory()}
               </div>
             </div>
           </div>

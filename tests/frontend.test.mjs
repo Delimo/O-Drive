@@ -822,6 +822,42 @@ test('webhook delivery list shows retry action for failed rows', () => {
   assert.match(html, /重试自 #42/);
 });
 
+test('notification tab renders notification history and system tab does not duplicate it', () => {
+  const baseAdmin = {
+    loading: false, stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+    shares: [], sharesLoading: false, sharesError: '',
+    shareBusyToken: '', shareFilter: 'all', error: '',
+    healthLoading: false, health: mockAdminHealth, healthError: '',
+    logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+    quotaLoading: false, quota: mockAdminQuota, quotaError: '',
+    protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+    hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+    webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
+    webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
+    storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+    maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+    tasks: mockTasks, tasksLoading: false, taskAlertConfig: mockTaskAlertConfig, taskAlertConfigSaving: false,
+    adminNotifHistory: mockNotifications, adminNotifHistoryLoading: false,
+    adminNotifFilter: { severity: 'all', read: 'all', event: '' },
+  };
+
+  const notificationHtml = pages.renderAdminPage({
+    app: { role: 'admin' },
+    admin: { ...baseAdmin, activeTab: 'webhook' },
+  });
+  assert.match(notificationHtml, /通知中心/);
+  assert.match(notificationHtml, /通知历史/);
+  assert.match(notificationHtml, /data-action-change="set-notification-filter"/);
+  assert.match(notificationHtml, /data-action="admin-mark-notif-read"/);
+
+  const systemHtml = pages.renderAdminPage({
+    app: { role: 'admin' },
+    admin: { ...baseAdmin, activeTab: 'system' },
+  });
+  assert.match(systemHtml, /系统管理/);
+  assert.doesNotMatch(systemHtml, /通知历史/);
+});
+
 test('admin task list section shows loading state', () => {
   const state = {
     app: { role: 'admin' },
