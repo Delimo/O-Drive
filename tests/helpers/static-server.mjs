@@ -39,3 +39,9 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
   console.log(`Static server ready on http://127.0.0.1:${port}`);
 });
+
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.once(signal, () => {
+    server.close(() => process.exit(0));
+  });
+}

@@ -6,6 +6,7 @@
 @import "./css/components/cards.css";
 @import "./css/components/layout.css";
 @import "./css/components/notifications.css";
+@import "./css/components/theme-utilities.css";
 @import "./css/responsive.css";
 
 @tailwind base;

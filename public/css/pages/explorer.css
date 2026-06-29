@@ -1255,31 +1255,7 @@
   font-size: 14px;
 }
 
-/* Dark Mode: Tailwind utility overrides */
-[data-theme="dark"] body,
-[data-theme="dark"] .text-slate-800 { color: var(--text); }
-[data-theme="dark"] .text-slate-900 { color: var(--text); }
-[data-theme="dark"] .text-slate-700 { color: #cbd5e1; }
-[data-theme="dark"] .text-slate-600 { color: #94a3b8; }
-[data-theme="dark"] .text-slate-500 { color: #64748b; }
-[data-theme="dark"] .text-slate-400 { color: #475569; }
-
-[data-theme="dark"] .bg-white { background-color: var(--panel); }
-[data-theme="dark"] .bg-\[\#fafbfc\] { background-color: var(--panel-soft); }
-[data-theme="dark"] .bg-slate-50 { background-color: var(--panel-soft); }
-[data-theme="dark"] .bg-slate-100 { background-color: var(--subtle-bg); }
-
-[data-theme="dark"] .border-slate-200 { border-color: var(--line); }
-[data-theme="dark"] .border-slate-200\/60 { border-color: var(--line); }
-[data-theme="dark"] .border-slate-300 { border-color: var(--line-strong); }
-[data-theme="dark"] .header-icon-btn { border-color: var(--line); }
-
-[data-theme="dark"] .hover\:bg-slate-50:hover { background-color: var(--hover-bg); }
-[data-theme="dark"] .hover\:bg-slate-100:hover { background-color: var(--hover-bg); }
-
-[data-theme="dark"] .focus\:bg-white:focus { background-color: var(--panel); }
-[data-theme="dark"] .focus\:border-slate-300:focus { border-color: var(--line-strong); }
-
+/* Dark Mode: explorer-specific overrides */
 [data-theme="dark"] .item-card.is-selected {
   background: rgba(56, 189, 248, 0.06);
 }
@@ -1302,14 +1278,3 @@
 [data-theme="dark"] .item-icon.video { color: #a78bfa; }
 [data-theme="dark"] .item-icon.audio { color: #f472b6; }
 [data-theme="dark"] .item-icon.archive { color: #a3e635; }
-
-[data-theme="dark"] .text-red-600 { color: #f87171; }
-[data-theme="dark"] .border-red-200 { border-color: rgba(248, 113, 113, 0.3); }
-[data-theme="dark"] .hover\:bg-red-50:hover { background-color: rgba(248, 113, 113, 0.1); }
-
-[data-theme="dark"] .bg-sky-100 { background-color: rgba(56, 189, 248, 0.15); }
-[data-theme="dark"] .text-sky-600 { color: #38bdf8; }
-[data-theme="dark"] .bg-sky-600 { background-color: #0284c7; }
-[data-theme="dark"] .hover\:bg-sky-700:hover { background-color: #0369a1; }
-[data-theme="dark"] .focus\:border-sky-500:focus { border-color: #0ea5e9; }
-

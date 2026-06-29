@@ -103,6 +103,7 @@
 - 已更新 `public/index.html`、`public/admin.html`、`public/share.html`，按页面加载对应 CSS
 - 构建后体积：`main.css` 约 26KB，`explorer.css` 约 23KB，`admin.css` 约 65KB，`share.css` 约 8KB
 - 已将全局 header 通知下拉样式从首页样式迁移到 `public/css/components/notifications.css`，避免后台页缺少 `.notif-*` 样式导致 header 被撑开
+- 已将全局暗色主题 Tailwind 工具类覆盖迁移到 `public/css/components/theme-utilities.css`，避免后台/分享页缺少暗色 header、边框和按钮状态覆盖
 
 ### P2：暂不启用 service worker，建议删除或标注为未启用
 
