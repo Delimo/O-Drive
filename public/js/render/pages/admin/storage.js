@@ -1,11 +1,12 @@
 export function createStorageRenderer({
-  safeText, escapeHtml, renderEmptyStateCompact, components
+  safeText, escapeHtml, renderEmptyStateCompact, formatBytes, formatTime, components
 }) {
 
   function renderStorageSection(admin) {
     const {
       storageConfig, storageConfigLoading, storageConfigError,
       trashRetention, trashRetentionLoading, trashCleanupBusy,
+      trashPreviewItems = [], trashPreviewLoading, trashPreviewError,
       protectedPaths = [], protectedPathsLoading, protectedPathsError,
       hiddenPaths = [], hiddenPathsLoading, hiddenPathsError
     } = admin;
@@ -89,24 +90,27 @@ export function createStorageRenderer({
           <div class="ov-storage-trash">
             <div class="ov-trash-header">
               <span class="ov-trash-title">回收站策略</span>
+              <a class="ov-trash-link" href="/" aria-label="返回云盘查看全部回收站文件">查看全部</a>
             </div>
             <div class="ov-trash-body">
-              <p class="ov-trash-desc">设置已删除文件在系统内被永久抹除前的暂存天数。</p>
-              <div class="ov-trash-input-row">
-                <input class="input" type="number" data-binding="trash-retention-days"
-                       value="${trashRetention ? trashRetention.days : 7}" style="width:60px;text-align:center;">
-                <span class="ov-trash-unit">天</span>
-                <button class="btn btn-primary btn-sm" style="margin-left:auto;" type="button"
-                        data-action="save-trash-retention">保存</button>
+              <div class="ov-trash-policy">
+                <p class="ov-trash-desc">设置已删除文件在系统内被永久抹除前的暂存天数。</p>
+                <div class="ov-trash-input-row">
+                  <input class="input" type="number" data-binding="trash-retention-days"
+                         value="${trashRetention ? trashRetention.days : 7}" style="width:60px;text-align:center;">
+                  <span class="ov-trash-unit">天</span>
+                  <button class="btn btn-primary btn-sm" type="button"
+                          data-action="save-trash-retention">保存</button>
+                </div>
               </div>
-              <div class="ov-trash-divider"></div>
               <div class="ov-trash-cleanup">
-                <span class="ov-trash-cleanup-label">强制清空回收站</span>
+                <span class="ov-trash-cleanup-label">强制清空过期回收站项目</span>
                 <button class="btn btn-danger btn-sm" type="button"
                         data-action="cleanup-trash-by-retention" ${trashCleanupBusy ? 'disabled' : ''}>
                   ${trashCleanupBusy ? '清理中...' : '立即清理'}
                 </button>
               </div>
+              ${renderTrashPreview(trashPreviewItems, trashPreviewLoading, trashPreviewError)}
             </div>
           </div>
         </div>
@@ -203,6 +207,55 @@ export function createStorageRenderer({
                 `}
             </div>
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function getTrashPreviewName(item) {
+    return item?.name || String(item?.original_key || item?.path || "").split("/").filter(Boolean).pop() || "未命名项目";
+  }
+
+  function getTrashPreviewPath(item) {
+    const path = item?.original_key || item?.path || item?.name || "";
+    return path ? `/${String(path).replace(/^\/+/, "")}` : "/";
+  }
+
+  function renderTrashPreview(items = [], loading = false, error = "") {
+    const previewItems = (items || []).slice(0, 5);
+    return `
+      <div class="ov-trash-preview">
+        <div class="ov-trash-preview-head">
+          <span class="ov-trash-preview-title">最近回收站文件</span>
+          <span class="ov-trash-preview-count">${loading ? "加载中" : `${(items || []).length} 项`}</span>
+        </div>
+        <div class="ov-trash-preview-list">
+          ${loading
+            ? `<div class="ov-trash-preview-empty">正在读取回收站...</div>`
+            : error
+              ? `<div class="ov-trash-preview-empty">${safeText(error)}</div>`
+              : previewItems.length === 0
+                ? `<div class="ov-trash-preview-empty">回收站为空</div>`
+                : previewItems.map((item) => {
+                    const name = getTrashPreviewName(item);
+                    const path = getTrashPreviewPath(item);
+                    const kind = item?.kind === "folder" ? "文件夹" : "文件";
+                    const size = item?.kind === "folder" ? "目录" : formatBytes(Number(item?.size || item?.rawSize || 0));
+                    const trashedAt = Number(item?.trashed_at || item?.trashedAt || item?.time || 0);
+                    return `
+                      <div class="ov-trash-preview-item">
+                        <div class="ov-trash-preview-main">
+                          <span class="ov-trash-preview-name">${safeText(name)}</span>
+                          <span class="ov-trash-preview-path">${safeText(path)}</span>
+                        </div>
+                        <div class="ov-trash-preview-meta">
+                          <span>${kind}</span>
+                          <span>${safeText(size)}</span>
+                          <span>${trashedAt ? escapeHtml(formatTime(trashedAt)) : "-"}</span>
+                        </div>
+                      </div>
+                    `;
+                  }).join("")}
         </div>
       </div>
     `;

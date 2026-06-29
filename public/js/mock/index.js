@@ -57,6 +57,33 @@ export const mockFiles = [
   },
 ];
 
+export const mockTrashItems = [
+  {
+    id: "trash-001",
+    name: "旧合同.docx",
+    original_key: "客户资料/旧合同.docx",
+    kind: "file",
+    size: 358400,
+    trashed_at: now - 2 * hour,
+  },
+  {
+    id: "trash-002",
+    name: "临时截图.png",
+    original_key: "设计素材/临时截图.png",
+    kind: "file",
+    size: 1843200,
+    trashed_at: now - 6 * hour,
+  },
+  {
+    id: "trash-003",
+    name: "过期交付包",
+    original_key: "2026 归档/过期交付包",
+    kind: "folder",
+    size: 10485760,
+    trashed_at: now - 2 * day,
+  },
+];
+
 export const mockAdminStats = {
   files: {
     count: 128,

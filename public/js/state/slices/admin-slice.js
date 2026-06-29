@@ -54,6 +54,9 @@ export const adminInitialState = {
   trashRetention: null,
   trashRetentionLoading: false,
   trashCleanupBusy: false,
+  trashPreviewItems: [],
+  trashPreviewLoading: false,
+  trashPreviewError: "",
   notifications: [],
   notificationsUnread: 0,
   notificationsLoading: false,
@@ -328,6 +331,25 @@ export function createAdminSlice(initialState) {
       },
       setTrashCleanupBusy(state, action) {
         return { ...state, trashCleanupBusy: !!action.payload };
+      },
+      setTrashPreviewLoading(state, action) {
+        return { ...state, trashPreviewLoading: !!action.payload };
+      },
+      setTrashPreview(state, action) {
+        return {
+          ...state,
+          trashPreviewLoading: false,
+          trashPreviewError: "",
+          trashPreviewItems: action.payload || [],
+        };
+      },
+      setTrashPreviewError(state, action) {
+        return {
+          ...state,
+          trashPreviewLoading: false,
+          trashPreviewError: action.payload || "",
+          trashPreviewItems: [],
+        };
       },
       setNotifications(state, action) {
         return {

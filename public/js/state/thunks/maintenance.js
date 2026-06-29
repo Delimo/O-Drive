@@ -57,6 +57,7 @@ export function createMaintenanceThunks(deps, context) {
           `已清理 ${data.deleted || 0} 条过期记录（保留 ${data.retentionDays || 0} 天）`,
         );
         await dispatch(getThunks().loadMaintenanceSnapshot());
+        await dispatch(getThunks().loadAdminTrashPreview());
       } catch (error) {
         dispatchToast("error", error.message || "清理回收站失败");
       } finally {

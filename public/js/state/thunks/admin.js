@@ -38,6 +38,7 @@ export function createAdminThunks(deps, context) {
     actions,
     authApi,
     adminApi,
+    trashApi,
     shareApi,
     maintenanceApi,
     taskApi,
@@ -421,6 +422,22 @@ export function createAdminThunks(deps, context) {
       }
     },
 
+    loadAdminTrashPreview: () => async (dispatch) => {
+      dispatch(actions.admin.setTrashPreviewLoading(true));
+      if (mock) {
+        const m = await context.getMockModule();
+        dispatch(actions.admin.setTrashPreview(m.mockTrashItems || []));
+        return;
+      }
+      try {
+        const { response, data } = await trashApi.list("");
+        if (!response.ok) throw new Error(data?.message || "回收站预览加载失败");
+        dispatch(actions.admin.setTrashPreview(data.items || []));
+      } catch (error) {
+        dispatch(actions.admin.setTrashPreviewError(error.message || "回收站预览加载失败"));
+      }
+    },
+
     saveAdminStorageConfig: (config) => async (dispatch) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");
@@ -778,6 +795,8 @@ export function createAdminThunks(deps, context) {
             dispatch(t.loadAdminStorageConfig());
           if (!admin.trashRetention && !admin.trashRetentionLoading)
             dispatch(t.loadTrashRetention());
+          if (admin.trashPreviewItems.length === 0 && !admin.trashPreviewLoading)
+            dispatch(t.loadAdminTrashPreview());
           break;
         case "maintenance":
           if (!admin.maintenance && !admin.maintenanceLoading)

@@ -11,7 +11,7 @@ import { createSharedRenderers } from '../public/js/render/shared.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
-import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications } from '../public/js/mock/index.js';
+import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications, mockTrashItems } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
 import { createPageRenderers } from '../public/js/render/pages/index.js';
 
@@ -599,6 +599,7 @@ test('admin quota section renders storage usage', () => {
       webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
       webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
       storageConfig: { r2: { name: 'bucket', usedFormatted: '1.2 GB', quotaFormatted: '5 GB', usedPercent: 24, alertEnabled: true, alertWarningPercent: 76, alertErrorPercent: 91 } }, storageConfigLoading: false, storageConfigError: '',
+      trashPreviewItems: mockTrashItems, trashPreviewLoading: false, trashPreviewError: '',
       maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
       tasks: mockTasks, tasksLoading: false,
     },
@@ -610,6 +611,9 @@ test('admin quota section renders storage usage', () => {
   assert.match(html, /data-action="save-storage-alert-thresholds"/);
   assert.match(html, /value="76"/);
   assert.match(html, /value="91"/);
+  assert.match(html, /最近回收站文件/);
+  assert.match(html, /旧合同\.docx/);
+  assert.match(html, /客户资料\/旧合同\.docx/);
 });
 
 test('admin protected paths section renders path list with delete buttons', () => {
