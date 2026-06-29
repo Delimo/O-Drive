@@ -10,11 +10,11 @@ export function createApiLayer(deps) {
   } = deps;
 
   const apiClient = {
-    async json(pathname, options = {}) {
+    async raw(pathname, options = {}) {
       const state = getState();
       const headers = new HeadersImpl(options.headers || {});
       const requestOptions = { ...options };
-      if (requestOptions.json) {
+      if (Object.prototype.hasOwnProperty.call(requestOptions, "json")) {
         headers.set("Content-Type", "application/json");
         requestOptions.body = JSON.stringify(requestOptions.json);
       }
@@ -22,11 +22,15 @@ export function createApiLayer(deps) {
         headers.set("X-CSRF-Token", state.app.csrf);
       }
       delete requestOptions.json;
-      const response = await fetchImpl(pathname, {
+      delete requestOptions.csrf;
+      return fetchImpl(pathname, {
         ...requestOptions,
         headers,
         credentials: "same-origin",
       });
+    },
+    async json(pathname, options = {}) {
+      const response = await apiClient.raw(pathname, options);
       const isJson = (response.headers.get("content-type") || "").includes(
         "application/json",
       );
@@ -34,16 +38,7 @@ export function createApiLayer(deps) {
       return { response, data };
     },
     async text(pathname, options = {}) {
-      const state = getState();
-      const headers = new HeadersImpl(options.headers || {});
-      if (options.csrf && state.app.csrf) {
-        headers.set("X-CSRF-Token", state.app.csrf);
-      }
-      const response = await fetchImpl(pathname, {
-        ...options,
-        headers,
-        credentials: "same-origin",
-      });
+      const response = await apiClient.raw(pathname, options);
       const text = await response.text();
       return { response, text };
     },
@@ -220,6 +215,13 @@ export function createApiLayer(deps) {
     },
     downloadZip(paths) {
       return request("/api/zip-download", {
+        method: "POST",
+        json: { paths },
+        csrf: true,
+      });
+    },
+    downloadZipResponse(paths) {
+      return apiClient.raw("/api/zip-download", {
         method: "POST",
         json: { paths },
         csrf: true,

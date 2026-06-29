@@ -5,9 +5,6 @@
 @import "./css/components/modals.css";
 @import "./css/components/cards.css";
 @import "./css/components/layout.css";
-@import "./css/pages/explorer.css";
-@import "./css/pages/share.css";
-@import "./css/pages/admin.css";
 @import "./css/responsive.css";
 
 @tailwind base;

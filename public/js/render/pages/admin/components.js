@@ -132,9 +132,12 @@ export function createAdminComponents({ escapeHtml }) {
       });
     });
 
-    root.addEventListener("click", () => {
-      root.querySelectorAll(".cselect.cselect-open").forEach(o => o.classList.remove("cselect-open"));
-    });
+    if (!root._cselectRootBound) {
+      root._cselectRootBound = true;
+      root.addEventListener("click", () => {
+        root.querySelectorAll(".cselect.cselect-open").forEach(o => o.classList.remove("cselect-open"));
+      });
+    }
   }
 
   function renderCustomDatePicker({ id, value, placeholder, actionChange, dataKey, className }) {
@@ -299,9 +302,12 @@ export function createAdminComponents({ escapeHtml }) {
       });
     });
 
-    root.addEventListener("click", () => {
-      root.querySelectorAll(".cdate-panel.cdate-open").forEach(p => p.classList.remove("cdate-open"));
-    });
+    if (!root._cdateRootBound) {
+      root._cdateRootBound = true;
+      root.addEventListener("click", () => {
+        root.querySelectorAll(".cdate-panel.cdate-open").forEach(p => p.classList.remove("cdate-open"));
+      });
+    }
   }
 
   return {

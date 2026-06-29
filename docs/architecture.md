@@ -12,7 +12,7 @@ O-Drive 当前不是 React 项目，也没有使用 Create React App、Ant Desig
 - 字符串模板渲染 HTML。
 - 自研轻量 store、slice 和 thunk。
 - 基于 `data-action` 的事件委托。
-- Tailwind/CSS 源文件构建到 `public/main.css`。
+- Tailwind/CSS 源文件构建到 `public/main.css` 和页面级 CSS。
 - Cloudflare Pages 静态资源 + Pages Functions。
 
 除非单独规划完整迁移，否则新功能应继续沿用当前架构，不要局部混入 React。
@@ -62,16 +62,25 @@ API 请求集中在 API layer，不要在渲染层或事件层散写 `fetch`。
 
 ## 样式约定
 
-页面实际引用的是 `public/main.css`。源样式位于：
+页面实际引用公共 `public/main.css`，并按入口额外引用页面级 CSS：
+
+- 首页：`public/explorer.css`
+- 后台：`public/admin.css`
+- 分享页：`public/share.css`
+
+源样式位于：
 
 - `public/style.css`
+- `public/style.explorer.css`
+- `public/style.admin.css`
+- `public/style.share.css`
 - `public/css/tokens.css`
 - `public/css/base.css`
 - `public/css/responsive.css`
 - `public/css/components/*`
 - `public/css/pages/*`
 
-修改源 CSS 后运行构建生成 `public/main.css`。
+修改源 CSS 后运行构建生成公共和页面级 CSS 产物。
 
 样式优先使用 `public/css/tokens.css` 中的变量：
 
@@ -141,5 +150,5 @@ Cloudflare Pages Functions 的主 API 入口是：
 - `functions/api/[[path]].js` 保持鉴权、限流、CSRF、路径权限等横切职责。
 - 业务逻辑靠近对应业务模块。
 - 写操作相关的 Webhook 和通知应靠近业务 handler 或 route wrapper。
-- 修改源 CSS 后同步构建 `public/main.css`。
+- 修改源 CSS 后同步构建 `public/main.css` 和页面级 CSS。
 - 新代码要兼容 home、admin、share 三类页面入口差异。

@@ -9,7 +9,7 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 当前栈：
 
 - 前端：原生 ES Module、字符串模板渲染、自研 store/slice/thunk。
-- 样式：Tailwind 输入文件 `public/style.css`，源 CSS 位于 `public/css/`，构建产物是 `public/main.css`。
+- 样式：Tailwind 输入文件为 `public/style*.css`，源 CSS 位于 `public/css/`，构建产物是 `public/main.css` 和页面级 CSS。
 - 后端：Cloudflare Pages Functions，主入口 `functions/api/[[path]].js`。
 - 存储：Cloudflare R2 保存对象，D1 保存配置、日志、索引、分享、任务、通知和存储对象引用。
 - 测试：Node test runner 和 Playwright。
@@ -59,7 +59,7 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 ## 后续维护提示
 
 - 修改前端功能时按 `api -> slice -> thunk -> render -> events` 的顺序接入。
-- 修改样式源文件后运行 `npm run build`，不要只改 `public/main.css`。
+- 修改样式源文件后运行 `npm run build`，不要只改构建后的 CSS 产物。
 - 涉及 R2 真实对象、回收站、ZIP、WebDAV 或分享下载时，必须确认读取链路使用 `file_index.object_key`，不要假设用户路径就是 R2 key。
 - 涉及 D1 schema 时同步检查 `migrations/`、`functions/api/lib/schema.js` 和测试 helper。
 - 已完成的规划不要长期留在 `docs/`；把仍有维护价值的结论合并到本文或对应说明文档。

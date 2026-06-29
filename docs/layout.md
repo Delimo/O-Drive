@@ -95,9 +95,9 @@ min-height: 0;
 
 ## CSS 来源
 
-样式源文件在 `public/css/`，构建后输出到 `public/main.css`。
+样式源文件在 `public/css/` 和 `public/style*.css`，构建后输出到公共 `public/main.css` 以及页面级 CSS。
 
-修改源 CSS 后，需要运行构建流程更新 `public/main.css`。不要只改构建产物，否则下一次构建会覆盖。
+修改源 CSS 后，需要运行构建流程更新 CSS 产物。不要只改构建产物，否则下一次构建会覆盖。
 
 主要布局相关文件：
 
@@ -112,7 +112,10 @@ min-height: 0;
 | `public/css/pages/explorer.css` | 首页文件区相关样式。 |
 | `public/css/pages/admin.css` | 后台页面相关样式。 |
 | `public/css/pages/share.css` | 分享页相关样式。 |
-| `public/main.css` | 实际被 HTML 引用的构建产物。 |
+| `public/main.css` | 公共构建产物。 |
+| `public/explorer.css` | 首页页面级构建产物。 |
+| `public/admin.css` | 后台页面级构建产物。 |
+| `public/share.css` | 分享页页面级构建产物。 |
 
 ## 常见问题排查
 
@@ -131,7 +134,7 @@ min-height: 0;
 
 - `.explorer-card` 的 padding 是否被覆盖。
 - 首页 `renderHomePage()` 末尾的底部占位是否仍存在。
-- `public/main.css` 是否已由最新源 CSS 构建生成。
+- `public/main.css` 和页面级 CSS 是否已由最新源 CSS 构建生成。
 
 ### 后台页正常但首页异常
 
@@ -141,7 +144,7 @@ min-height: 0;
 
 优先检查：
 
-- 是否改了源 CSS 但没有重新构建 `public/main.css`。
+- 是否改了源 CSS 但没有重新构建 CSS 产物。
 - 是否浏览器缓存了旧资源。
 - 是否改了某个 Tab 渲染文件，但当前页面没有进入对应 Tab。
 

@@ -154,13 +154,16 @@
 源 CSS 位于：
 
 - `public/style.css`
+- `public/style.explorer.css`
+- `public/style.admin.css`
+- `public/style.share.css`
 - `public/css/tokens.css`
 - `public/css/base.css`
 - `public/css/components/*`
 - `public/css/pages/*`
 - `public/css/responsive.css`
 
-HTML 实际引用 `public/main.css`。修改源 CSS 后必须运行：
+HTML 实际引用公共 `public/main.css`，并按页面引用 `public/explorer.css`、`public/admin.css` 或 `public/share.css`。修改源 CSS 后必须运行：
 
 ```bash
 npm run build
@@ -190,6 +193,6 @@ npm run lint
 - 不要局部引入 React、Ant Design 或 Redux Toolkit。
 - 不要在 HTML 字符串中写内联 `onclick`。
 - 不要在 render 层直接请求接口。
-- 不要只改 `public/main.css`；它是构建产物。
+- 不要只改 `public/main.css` 或页面级 CSS 产物；它们都会被构建覆盖。
 - 新状态要兼容 home、admin、share 三种页面入口。
 - 涉及文件读取时不要假设用户路径就是 R2 key，应尊重后端 `file_index.object_key` 模型。

@@ -82,4 +82,4 @@ WebDAV 连接信息由 `admin/system.js` 渲染，后端入口是 `functions/dav
 - 新增后台 Tab 时，优先新增独立的 `admin/{tab}.js`，再在 `ADMIN_TABS` 和 `renderAdminActiveTab()` 中接入。
 - 新增交互时优先复用 `data-action`，不要在 HTML 字符串里写内联事件。
 - 新增通用 UI 时放进 `admin/components.js`；只服务单个 Tab 的样式和结构留在对应 Tab 文件。
-- 修改后台布局时同步检查 `public/css/pages/admin.css` 和构建后的 `public/main.css`。
+- 修改后台布局时同步检查 `public/css/pages/admin.css` 和构建后的 `public/admin.css`、`public/main.css`。

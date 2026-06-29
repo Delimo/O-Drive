@@ -44,8 +44,9 @@ public/index.html               云盘首页
 public/admin.html               管理后台
 public/share.html               公开分享页
 public/js/                      前端模块
-public/style.css                Tailwind 输入
-public/main.css                 Tailwind 输出
+public/style*.css               Tailwind/CSS 输入
+public/main.css                 公共 CSS 输出
+public/{explorer,admin,share}.css 页面 CSS 输出
 tests/core.test.mjs             核心测试
 tests/helpers/                  测试夹具
 tests/browser/                  浏览器测试

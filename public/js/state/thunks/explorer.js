@@ -243,22 +243,14 @@ export function createExplorerThunks(deps, context) {
       }
     },
 
-    batchDownloadZip: (paths) => async (dispatch, getState) => {
+    batchDownloadZip: (paths) => async (dispatch) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");
         return;
       }
       if (!paths?.length) return;
       try {
-        const state = getState();
-        const headers = { "Content-Type": "application/json" };
-        if (state.app.csrf) headers["X-CSRF-Token"] = state.app.csrf;
-        const response = await fetch("/api/zip-download", {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ paths }),
-          credentials: "same-origin",
-        });
+        const response = await fileApi.downloadZipResponse(paths);
         if (response.status === 202) {
           const data = await response.json().catch(() => ({}));
           dispatchToast("success", "目录较大，已转入后台打包任务");

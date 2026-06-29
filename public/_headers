@@ -12,15 +12,6 @@
 /*.css
   Cache-Control: public, max-age=3600, must-revalidate
 
-/css/admin/admin.css
-  Cache-Control: no-store
-
-/js/api.js
-  Cache-Control: no-store
-
-/upload-worker.js
-  Cache-Control: no-store
-
 /*.html
   Cache-Control: no-store
 
