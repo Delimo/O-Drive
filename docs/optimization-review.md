@@ -10,6 +10,7 @@
 - `npm test` 通过，178 个用例通过，1 个跳过
 - `npm run build` 通过
 - `npm run format:check` 通过
+- 自控 Playwright smoke 通过，未发现 CSS 拆分引入的页面样式回退
 
 需要优先处理的是浏览器测试老化、后台组件重复绑定事件、前端资源拆分和少量交付层配置清理。
 
@@ -191,6 +192,7 @@ npm run lint
 npm test
 npm run build
 npm run format:check
+npm run test:browser
 ```
 
 结果：
@@ -199,7 +201,11 @@ npm run format:check
 - `npm test` 结果：178 个通过，1 个跳过
 - `npm run build` 仍提示 Browserslist 数据过期，P3 因联网审批受限未执行
 - `npm run test:browser` 中 4 个用例均显示通过，但 Playwright 命令在当前环境收尾阶段未退出并被超时截断
-- 已用自控 Playwright smoke 验证：首页 mock、后台概览、系统维护动作、分享列表和页面级 CSS 加载均正常
+- 已用自控 Playwright smoke 验证：首页、后台 mock、分享页的页面级 CSS 加载均正常
+- 暗色主题复查通过：三类页面 `body` 背景均为 `rgb(15, 23, 42)`，没有出现 CSS 拆分后的浅色背景残留
+- 后台通知下拉复查通过：`.notif-dropdown` 为 `position: absolute` 且默认 `display: none`，截图中通知内容撑开 header 的问题已修复
+- smoke 中出现的 404 均来自静态测试服务下缺少后端 API 的预期请求，例如 `/api/auth/role`、`/api/files`，不是静态资源缺失
+- 已为 `tests/helpers/static-server.mjs` 补充 `SIGINT`、`SIGTERM`、`SIGHUP` 关闭处理；当前环境下 Playwright CLI 收尾超时仍存在，需后续单独排查测试进程生命周期
 
 ## 建议处理顺序
 
