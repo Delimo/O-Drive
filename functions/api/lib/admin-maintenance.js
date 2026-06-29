@@ -16,6 +16,7 @@ import { ensureStorageObjectsTable } from "./storage-objects.js";
 import { mapWithConcurrency } from "./r2-tree.js";
 import { storageDelete } from "./storage.js";
 import { cleanupFileTasks } from "./tasks.js";
+import { cleanupZipTaskResults } from "./zip-download.js";
 
 const ALLOWED_COUNT_TABLES = new Set([
   "path_access_attempts",
@@ -180,6 +181,11 @@ export async function handleAdminMaintenanceAction(env, request) {
       `清理已完成后台任务 ${deleted} 条`,
     );
     return jsonResponse({ success: true, action, deleted });
+  }
+  if (action === "cleanup-zip-task-results") {
+    const result = await cleanupZipTaskResults(env, { force: true });
+    await addLog(env, request, "MAINTENANCE", `清理 ZIP 任务结果 ${result.deleted} 个，释放 ${result.bytesFormatted}`);
+    return jsonResponse({ success: true, action, ...result });
   }
   if (action === "cleanup-warnings") {
     const row = await env.D1.prepare(

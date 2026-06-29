@@ -14,12 +14,14 @@ import {
   storageGet,
   storageHead,
   storagePut,
+  storageDelete,
 } from "./storage.js";
 import { createFileTaskDirect } from "./tasks.js";
 
 const DEFAULT_INLINE_MAX_FILES = 200;
 const DEFAULT_INLINE_MAX_BYTES = 100 * 1024 * 1024;
 const ZIP_TASK_PREFIX = ".system/zip-tasks";
+const DEFAULT_ZIP_TASK_RETENTION_DAYS = 7;
 
 function systemCleanPath(path = "") {
   return String(path || "").replace(/^\/+|\/+$/g, "");
@@ -206,12 +208,37 @@ export function zipDownloadUrl(outputKey) {
   return outputKey ? `/api/download/${outputKey.split("/").map(encodeURIComponent).join("/")}` : "";
 }
 
+function zipTaskRetentionMs(env) {
+  const days = Number(env?.ZIP_TASK_RETENTION_DAYS || DEFAULT_ZIP_TASK_RETENTION_DAYS);
+  return Math.max(1, Number.isFinite(days) ? days : DEFAULT_ZIP_TASK_RETENTION_DAYS) * 24 * 60 * 60 * 1000;
+}
+
+export async function cleanupZipTaskResults(env, { force = false, now = Date.now() } = {}) {
+  const cutoff = force ? Infinity : now - zipTaskRetentionMs(env);
+  let deleted = 0;
+  let bytes = 0;
+  let cursor;
+  do {
+    const listed = await storageList(env, "r2", { prefix: `${ZIP_TASK_PREFIX}/`, cursor });
+    for (const obj of listed.objects || []) {
+      const uploaded = obj.uploaded instanceof Date ? obj.uploaded.getTime() : Number(new Date(obj.uploaded || 0).getTime());
+      if (!force && Number.isFinite(uploaded) && uploaded > cutoff) continue;
+      await storageDelete(env, "r2", obj.key);
+      deleted++;
+      bytes += Number(obj.size || 0);
+    }
+    cursor = listed.truncated ? listed.cursor : "";
+  } while (cursor);
+  return { deleted, bytes, bytesFormatted: formatBytes(bytes) };
+}
+
 export async function buildZipArchiveForTask(
   env,
   taskId,
   payload,
   request,
 ) {
+  await cleanupZipTaskResults(env).catch(() => {});
   const paths = Array.isArray(payload.paths) ? payload.paths : [];
   const hiddenPaths = Array.isArray(payload.hiddenPaths) ? payload.hiddenPaths : [];
   const protectedPaths = Array.isArray(payload.protectedPaths) ? payload.protectedPaths : [];

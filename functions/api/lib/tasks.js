@@ -1,4 +1,5 @@
 import { addLog, apiError, jsonResponse } from "./common/index.js";
+import { thresholdAlert } from "./alert-rules.js";
 import { handleBatchDelete, handlePaste } from "./file-mutations/index.js";
 import { createNotification } from "./notifications.js";
 
@@ -139,14 +140,11 @@ async function countRecentFailedTasks(env, since) {
 }
 
 function taskFailureAlertForCount(config, failedCount) {
-  if (!config.enabled) return null;
-  if (failedCount >= config.errorCount) {
-    return { level: "error", threshold: config.errorCount };
-  }
-  if (failedCount >= config.warningCount) {
-    return { level: "warning", threshold: config.warningCount };
-  }
-  return null;
+  return thresholdAlert(failedCount, {
+    enabled: config.enabled,
+    warning: config.warningCount,
+    error: config.errorCount,
+  });
 }
 
 async function notifyTaskFailureAlert(env, config, failedCount, alert) {
@@ -405,6 +403,39 @@ function scheduleTask(env, request, context, task) {
   const run = executeTask(env, request, task);
   if (typeof context?.waitUntil === "function") context.waitUntil(run);
   else run.catch(() => {});
+}
+
+export async function retryFileTask(env, request, context = {}) {
+  await ensureTaskTable(env);
+  const body = await request.json().catch(() => ({}));
+  const id = String(body.id || "").trim();
+  if (!id) return apiError("TASK_ID_REQUIRED", "Task id is required", 400);
+  const row = await env.D1.prepare("SELECT * FROM file_tasks WHERE id = ?")
+    .bind(id)
+    .first();
+  if (!row) return apiError("TASK_NOT_FOUND", "Task not found", 404);
+  const task = mapTask(row);
+  if (task.type === "upload")
+    return apiError("TASK_RETRY_NOT_ALLOWED", "Upload tasks must be retried by the client", 409);
+  if (!["failed", "partial"].includes(task.status))
+    return apiError("TASK_RETRY_NOT_ALLOWED", "Only failed or partial tasks can be retried", 409);
+
+  await updateTask(env, id, {
+    status: "queued",
+    completed: 0,
+    failed: 0,
+    result: task.result?.summary ? { summary: task.result.summary, filename: task.result.filename } : {},
+    error: "",
+    finished_at: 0,
+  });
+  const retryTask = { ...task, status: "queued", completed: 0, failed: 0, error: "", finished_at: 0 };
+  await addLog(env, request, "TASK_RETRY", {
+    details: `${task.type} task ${id}`,
+    status: "queued",
+    metadata: { taskId: id, type: task.type },
+  });
+  scheduleTask(env, request, context, retryTask);
+  return jsonResponse({ success: true, item: { ...retryTask, status: "queued" } }, 202);
 }
 
 export async function createFileTask(env, request, context = {}) {

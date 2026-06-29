@@ -125,6 +125,12 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
+    if (action === "retry-task") {
+      const id = actionNode.dataset.id || "";
+      if (id) store.dispatch(thunks.retryTask(id));
+      return;
+    }
+
     if (action === "save-task-alert-thresholds") {
       const enabled = documentRef.querySelector('[data-binding="task-alert-enabled"]')?.checked !== false;
       const windowHoursInput = documentRef.querySelector('[data-binding="task-alert-window-hours"]');

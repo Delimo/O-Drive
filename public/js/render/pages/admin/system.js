@@ -8,8 +8,10 @@ export function createSystemRenderer({
     const {
       healthLoading, healthError,
       maintenanceLoading, maintenanceError,
-      tasks = [], tasksLoading,
+      tasks = [], tasksLoading, taskRetryingId = "",
       taskAlertConfig = null, taskAlertConfigSaving = false,
+      adminNotifHistory = [], adminNotifHistoryLoading = false,
+      adminNotifFilter = { severity: "all", read: "all", event: "" },
       quota = null
     } = admin;
 
@@ -204,11 +206,14 @@ export function createSystemRenderer({
                       ${tasks.map(tsk => {
                         const progress = tsk.total > 0 ? Math.round((tsk.completed || 0) / tsk.total * 100) : 0;
                         const downloadUrl = tsk.type === "zip_download" && tsk.result?.downloadUrl ? tsk.result.downloadUrl : "";
+                        const canRetry = ["failed", "partial"].includes(tsk.status || "") && tsk.type !== "upload";
+                        const retrying = taskRetryingId === tsk.id;
                         return `
                           <div class="ov-task-item">
                             <div class="ov-task-info">
-                              <span class="ov-task-status">队列: ${escapeHtml(tsk.status || "挂起")}</span>
+                              <span class="ov-task-status">队列: ${escapeHtml(tsk.type || "task")} / ${escapeHtml(tsk.status || "挂起")}</span>
                               <span class="ov-task-time">启动于 ${formatTime(tsk.createdAt)}</span>
+                              ${tsk.error ? `<span class="ov-task-time" style="color:var(--danger);">${escapeHtml(tsk.error)}</span>` : ""}
                             </div>
                             <div class="ov-task-progress">
                               <div class="ov-task-progress-bar">
@@ -217,6 +222,71 @@ export function createSystemRenderer({
                               <span class="ov-task-progress-text">${tsk.completed || 0}/${tsk.total || 0}</span>
                             </div>
                             ${downloadUrl ? `<a class="btn btn-sm" href="${escapeHtml(downloadUrl)}" target="_blank">下载结果</a>` : ""}
+                            ${canRetry ? `<button class="btn btn-sm" type="button" data-action="retry-task" data-id="${escapeHtml(tsk.id)}" ${retrying ? "disabled" : ""}>${retrying ? "重试中..." : "重试"}</button>` : ""}
+                          </div>
+                        `;
+                      }).join("")}
+                    </div>`
+              }
+            </div>
+          </div>
+
+          <div class="ov-tasks">
+            <div class="ov-tasks-header">
+              <span class="ov-tasks-title">通知历史</span>
+              <button class="btn btn-sm" type="button" data-action="refresh-admin-notifications">刷新</button>
+            </div>
+            <div class="ov-tasks-body">
+              <div class="ov-task-alert-form">
+                <label class="ov-task-alert-field">
+                  <span>级别</span>
+                  <select class="input" data-action-change="set-notification-filter" data-key="severity">
+                    ${[
+                      ["all", "全部"],
+                      ["info", "信息"],
+                      ["warning", "警告"],
+                      ["error", "错误"],
+                    ].map(([value, label]) => `<option value="${value}" ${adminNotifFilter.severity === value ? "selected" : ""}>${label}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="ov-task-alert-field">
+                  <span>状态</span>
+                  <select class="input" data-action-change="set-notification-filter" data-key="read">
+                    ${[
+                      ["all", "全部"],
+                      ["unread", "未读"],
+                      ["read", "已读"],
+                    ].map(([value, label]) => `<option value="${value}" ${adminNotifFilter.read === value ? "selected" : ""}>${label}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="ov-task-alert-field">
+                  <span>事件</span>
+                  <input class="input" data-action-change="set-notification-filter" data-key="event" value="${escapeHtml(adminNotifFilter.event || "")}" placeholder="如 zip.ready">
+                </label>
+              </div>
+              ${adminNotifHistoryLoading
+                ? `<div class="ov-empty-inline">载入中...</div>`
+                : adminNotifHistory.length === 0
+                  ? `<div class="ov-tasks-empty">
+                      <span class="ov-tasks-empty-text">当前筛选下没有通知</span>
+                    </div>`
+                  : `<div class="ov-tasks-list">
+                      ${adminNotifHistory.map((item) => {
+                        const severity = item.severity || "info";
+                        const badgeClass = severity === "error" ? "ov-badge-error" : severity === "warning" ? "ov-badge-warning" : "ov-badge-info";
+                        return `
+                          <div class="ov-task-item">
+                            <div class="ov-task-info">
+                              <span class="ov-task-status">${escapeHtml(item.event || "notification")}</span>
+                              <span class="ov-task-time">${formatRelative(item.created_at || item.createdAt || 0)}</span>
+                              <span class="ov-task-time">${item.read ? "已读" : "未读"}</span>
+                            </div>
+                            <span class="ov-badge ${badgeClass}">${escapeHtml(severity)}</span>
+                            <div class="ov-task-info" style="flex:1 1 220px;">
+                              <span class="ov-task-time" style="color:var(--text);">${escapeHtml(item.message || "")}</span>
+                              ${item.path ? `<span class="ov-task-time">${escapeHtml(item.path)}</span>` : ""}
+                            </div>
+                            ${!item.read ? `<button class="btn btn-sm" type="button" data-action="admin-mark-notif-read" data-notif-id="${escapeHtml(item.id)}">标为已读</button>` : ""}
                           </div>
                         `;
                       }).join("")}

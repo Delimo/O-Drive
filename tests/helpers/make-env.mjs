@@ -398,13 +398,15 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               });
             }
             if (/INSERT INTO notifications/i.test(sql)) {
+              const hasSeverity = /severity/i.test(sql);
               notificationRows.push({
                 id: notificationNextId++,
                 event: statement.bound?.[0],
-                message: statement.bound?.[1],
-                path: statement.bound?.[2] || '',
+                severity: hasSeverity ? statement.bound?.[1] || 'info' : 'info',
+                message: hasSeverity ? statement.bound?.[2] : statement.bound?.[1],
+                path: hasSeverity ? statement.bound?.[3] || '' : statement.bound?.[2] || '',
                 read: 0,
-                created_at: statement.bound?.[3],
+                created_at: hasSeverity ? statement.bound?.[4] : statement.bound?.[3],
               });
             }
             if (/INSERT INTO path_access_attempts/i.test(sql)) {
@@ -1042,9 +1044,25 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const limit = Number(statement.bound?.[0] || 20);
               return { results: [...taskRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, limit) };
             }
-            if (/SELECT \* FROM notifications ORDER BY created_at DESC LIMIT \?/i.test(sql)) {
+            if (/SELECT \* FROM notifications\s+ORDER BY created_at DESC LIMIT \?/i.test(sql)) {
               const limit = Number(statement.bound?.[0] || 20);
               return { results: [...notificationRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, limit) };
+            }
+            if (/SELECT \* FROM notifications WHERE/i.test(sql)) {
+              let rows = [...notificationRows];
+              let pi = 0;
+              if (/severity = \?/i.test(sql)) {
+                const severity = statement.bound?.[pi++];
+                rows = rows.filter(row => row.severity === severity);
+              }
+              if (/event = \?/i.test(sql)) {
+                const event = statement.bound?.[pi++];
+                rows = rows.filter(row => row.event === event);
+              }
+              if (/read = 0/i.test(sql)) rows = rows.filter(row => !Number(row.read || 0));
+              if (/read = 1/i.test(sql)) rows = rows.filter(row => Number(row.read || 0));
+              const limit = Number(statement.bound?.[statement.bound.length - 1] || 20);
+              return { results: rows.sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)).slice(0, limit) };
             }
             if (/SELECT \* FROM system_warnings WHERE acknowledged_at = 0 ORDER BY created_at DESC/i.test(sql)) {
               return {

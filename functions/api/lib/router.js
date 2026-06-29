@@ -60,6 +60,7 @@ import {
   createFileTask,
   getFileTask,
   handleTaskAlertSettings,
+  retryFileTask,
   updateFileTask,
 } from "./tasks.js";
 import { notifyDownloadBurst, notifyWebhookWithLog } from "./webhooks.js";
@@ -162,6 +163,8 @@ export async function resolveAdminRoute(
     return await handleAdminNotifications(env, request);
   if (path === "/api/tasks" && method === "POST")
     return await createFileTask(env, request, context);
+  if (path === "/api/tasks/retry" && method === "POST")
+    return await retryFileTask(env, request, context);
   if (path === "/api/tasks" && method === "PATCH")
     return await updateFileTask(env, request, url);
   if (path === "/api/tasks" && method === "GET")

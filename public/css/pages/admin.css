@@ -4275,6 +4275,11 @@
   color: #0e7490;
 }
 
+.ov-badge-warning {
+  background: rgba(183, 110, 17, 0.1);
+  color: #b76e11;
+}
+
 .ov-badge-error {
   background: rgba(220, 38, 38, 0.1);
   color: #dc2626;

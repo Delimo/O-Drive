@@ -15,6 +15,7 @@ import {
 } from "./file-index/index.js";
 import { checkStorageQuota, listConfiguredStorages } from "./storage.js";
 import { createNotification } from "./notifications.js";
+import { thresholdAlert } from "./alert-rules.js";
 import { getTaskFailureAlertState } from "./tasks.js";
 
 const STORAGE_ALERT_STATE_PREFIX = "storage_quota_alert:";
@@ -333,16 +334,11 @@ async function overviewAttention(env, stats, dbStats = {}, index = {}) {
 }
 
 function storageQuotaAlertForTarget(target, usedPercent) {
-  if (target?.alertEnabled === false) return null;
-  const warningThreshold = Number(target?.alertWarningPercent || 90);
-  const errorThreshold = Number(target?.alertErrorPercent || 95);
-  if (usedPercent >= errorThreshold) {
-    return { level: "error", threshold: errorThreshold };
-  }
-  if (usedPercent >= warningThreshold) {
-    return { level: "warning", threshold: warningThreshold };
-  }
-  return null;
+  return thresholdAlert(usedPercent, {
+    enabled: target?.alertEnabled !== false,
+    warning: Number(target?.alertWarningPercent || 90),
+    error: Number(target?.alertErrorPercent || 95),
+  });
 }
 
 async function notifyStorageQuotaAlert(env, target, quota, usedPercent, alert) {

@@ -48,6 +48,11 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 - 普通上传、秒传检查、带 `sha256` 的分片上传、删除、回收站和维护任务已有测试覆盖。
 - 管理后台当前有 6 个 Tab：概览、存储、分享、日志、系统、Webhooks。WebDAV 位于系统 Tab 中，不是独立 Tab。
 - 通知中心位于全局 header，下拉列表通过 `notificationApi` 和 `navigation-actions.js` 维护。
+- 搜索支持名称、路径、元数据筛选和小型文本文件内容命中，命中原因会通过 `searchHit` 返回给前端。
+- 通知记录支持 `severity: info | warning | error`，系统 Tab 可按级别、已读状态和事件筛选通知历史。
+- 后台失败或部分失败任务可从系统 Tab 重试；上传任务仍由浏览器侧上传队列重试。
+- 后台 ZIP 结果写入 `.system/zip-tasks/`，会按 `ZIP_TASK_RETENTION_DAYS` 自动清理，也可通过系统 Tab 的维护指令手动清理。
+- 容量告警和任务失败告警共用 `functions/api/lib/alert-rules.js` 的阈值判断 helper。
 
 ## 后续维护提示
 

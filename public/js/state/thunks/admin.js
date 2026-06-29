@@ -617,6 +617,27 @@ export function createAdminThunks(deps, context) {
       }
     },
 
+    retryTask: (id) => async (dispatch) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+      const taskId = String(id || "");
+      if (!taskId) return;
+      dispatch(actions.admin.setTaskRetryingId(taskId));
+      try {
+        const { response, data } = await taskApi.retry(taskId);
+        if (!response.ok)
+          throw new Error(data?.message || "任务重试失败");
+        dispatchToast("success", "任务已重新入队");
+        await dispatch(getThunks().loadTasks());
+      } catch (error) {
+        dispatchToast("error", error.message || "任务重试失败");
+      } finally {
+        dispatch(actions.admin.setTaskRetryingId(""));
+      }
+    },
+
     saveTaskAlertConfig: (config) => async (dispatch) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");
@@ -701,20 +722,28 @@ export function createAdminThunks(deps, context) {
       } catch (err) { console.error("markAllNotificationsRead 错误:", err); }
     },
 
-    loadAdminNotifications: () => async (dispatch) => {
+    loadAdminNotifications: () => async (dispatch, getState) => {
       dispatch(actions.admin.setAdminNotifHistoryLoading(true));
       if (mock) {
         const m = await context.getMockModule();
+        const filter = getState().admin.adminNotifFilter || {};
+        const items = m.mockNotifications.filter((item) => {
+          if (filter.severity && filter.severity !== "all" && item.severity !== filter.severity) return false;
+          if (filter.read === "read" && !item.read) return false;
+          if (filter.read === "unread" && item.read) return false;
+          return true;
+        });
         dispatch(
           actions.admin.setAdminNotifHistory({
-            items: m.mockNotifications,
+            items,
             unread: m.mockNotifications.filter((n) => !n.read).length,
           }),
         );
         return;
       }
       try {
-        const { response, data } = await notificationApi.list(50);
+        const filter = getState().admin.adminNotifFilter || {};
+        const { response, data } = await notificationApi.list(50, filter);
         if (!response.ok) throw new Error(data?.message || "通知历史加载失败");
         dispatch(actions.admin.setAdminNotifHistory(data));
       } catch (err) {

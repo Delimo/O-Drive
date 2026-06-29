@@ -113,6 +113,13 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         return;
       }
 
+      if (actionChange === "set-notification-filter") {
+        const key = event.target.dataset.key || "severity";
+        store.dispatch(actions.admin.setAdminNotifFilter({ [key]: event.target.value }));
+        store.dispatch(thunks.loadAdminNotifications());
+        return;
+      }
+
       if (event.target.id === "upload-input" || event.target.id === "folder-upload-input") {
         return "upload";
       }

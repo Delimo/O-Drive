@@ -47,6 +47,7 @@ export const adminInitialState = {
   maintenanceBusyAction: "",
   tasks: [],
   tasksLoading: false,
+  taskRetryingId: "",
   taskAlertConfig: null,
   taskAlertConfigSaving: false,
   activeUploadTaskId: "",
@@ -59,6 +60,7 @@ export const adminInitialState = {
   notifOpen: false,
   adminNotifHistory: [],
   adminNotifHistoryLoading: false,
+  adminNotifFilter: { severity: "all", read: "all", event: "" },
   lastNotifIds: [],
   notifInitialized: false,
 };
@@ -302,6 +304,9 @@ export function createAdminSlice(initialState) {
       setTasks(state, action) {
         return { ...state, tasksLoading: false, tasks: action.payload || [] };
       },
+      setTaskRetryingId(state, action) {
+        return { ...state, taskRetryingId: action.payload || "" };
+      },
       setTaskAlertConfig(state, action) {
         return {
           ...state,
@@ -359,6 +364,15 @@ export function createAdminSlice(initialState) {
       },
       setAdminNotifHistoryLoading(state, action) {
         return { ...state, adminNotifHistoryLoading: action.payload || false };
+      },
+      setAdminNotifFilter(state, action) {
+        return {
+          ...state,
+          adminNotifFilter: {
+            ...state.adminNotifFilter,
+            ...(action.payload || {}),
+          },
+        };
       },
       setLastNotifIds(state, action) {
         return { ...state, lastNotifIds: action.payload || [] };

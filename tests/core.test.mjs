@@ -24,7 +24,7 @@ import {
   handleBatchDelete,
   handleUploadCheck,
 } from '../functions/api/lib/file-mutations/index.js';
-import { handleAdminHealth, handleAdminLogs, handleAdminQuota, handleAdminStats } from '../functions/api/lib/admin.js';
+import { handleAdminHealth, handleAdminLogs, handleAdminQuota, handleAdminStats, handleAdminNotifications } from '../functions/api/lib/admin.js';
 import { handleAdminStorage } from '../functions/api/lib/storage.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { resolveZipArchive } from '../functions/api/lib/zip-download.js';
@@ -32,6 +32,7 @@ import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
 import { clearStorageUsedCache, getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index/index.js';
 import { createFileTask, handleTaskAlertSettings, updateFileTask } from '../functions/api/lib/tasks.js';
+import { createNotification } from '../functions/api/lib/notifications.js';
 import {
   handleProtectedSettings,
   handleProtectedUnlock,
@@ -171,6 +172,29 @@ test('search returns hit reasons for name and path matches', async () => {
   const indexedData = await indexedRes.json();
   assert.equal(indexedData.files[0].searchHit.label, '文件名');
   assert.deepEqual(indexedData.files[0].searchHit.filters, ['类型']);
+});
+
+test('indexed search can match small text file contents', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/notes.txt', body: 'alpha planning phrase lives inside this note', size: 45, uploaded: new Date('2026-01-04') },
+    ],
+  });
+  await upsertFileIndex(env, 'docs/notes.txt', { size: 45, contentType: 'text/plain', uploaded: new Date('2026-01-04') });
+
+  const res = await handleSearch(
+    env,
+    new Request('https://example.com/api/search?q=planning&scope=/docs'),
+    new URL('https://example.com/api/search?q=planning&scope=/docs'),
+    [],
+    { role: 'guest' },
+    [],
+  );
+  const data = await res.json();
+
+  assert.deepEqual(data.files.map(file => file.fullKey), ['docs/notes.txt']);
+  assert.equal(data.files[0].searchHit.label, '内容');
+  assert.match(data.files[0].searchHit.value, /planning phrase/);
 });
 
 test('search filters indexed results by kind size and modified dates', async () => {
@@ -690,6 +714,7 @@ test('large zip download is moved to a background task with a downloadable resul
   const notificationData = await notifications.json();
   assert.equal(notificationData.unread, 1);
   assert.equal(notificationData.items[0].event, 'zip.ready');
+  assert.equal(notificationData.items[0].severity, 'info');
   assert.equal(notificationData.items[0].path, statusData.item.result.outputKey);
 
   const download = await onRequest({
@@ -700,6 +725,97 @@ test('large zip download is moved to a background task with a downloadable resul
   });
   assert.equal(download.status, 200);
   assert.equal(download.headers.get('Content-Type'), 'application/zip');
+
+  const cleanup = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/maintenance', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'cleanup-zip-task-results' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(cleanup.status, 200);
+  const cleanupData = await cleanup.json();
+  assert.equal(cleanupData.deleted, 1);
+  assert.equal(await env.R2.get(statusData.item.result.outputKey), null);
+});
+
+test('admin can filter notifications by severity and read state', async () => {
+  const env = makeEnv();
+  await createNotification(env, { event: 'zip.ready', message: 'ready' });
+  await createNotification(env, { event: 'task.failure.error', severity: 'error', message: 'failed' });
+
+  const errors = await handleAdminNotifications(
+    env,
+    new Request('https://example.com/api/notifications?severity=error&read=unread'),
+  );
+  const errorData = await errors.json();
+  assert.equal(errors.status, 200);
+  assert.equal(errorData.items.length, 1);
+  assert.equal(errorData.items[0].event, 'task.failure.error');
+  assert.equal(errorData.items[0].severity, 'error');
+});
+
+test('admin can retry a failed background zip task', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const waitUntilPromises = [];
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const created = await onRequest({
+    env,
+    request: new Request('https://example.com/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'zip_download', payload: { paths: ['later.txt'], auth: { role: 'admin' } } }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+    waitUntil(promise) {
+      waitUntilPromises.push(promise);
+    },
+  });
+  const createdData = await created.json();
+  await Promise.all(waitUntilPromises.splice(0));
+
+  let status = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/tasks?id=${createdData.item.id}`, { headers: { Cookie: cookie } }),
+  });
+  let statusData = await status.json();
+  assert.equal(statusData.item.status, 'failed');
+
+  await env.R2.put('later.txt', 'ready', { httpMetadata: { contentType: 'text/plain' } });
+  const retry = await onRequest({
+    env,
+    request: new Request('https://example.com/api/tasks/retry', {
+      method: 'POST',
+      body: JSON.stringify({ id: createdData.item.id }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+    waitUntil(promise) {
+      waitUntilPromises.push(promise);
+    },
+  });
+  assert.equal(retry.status, 202);
+  await Promise.all(waitUntilPromises.splice(0));
+
+  status = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/tasks?id=${createdData.item.id}`, { headers: { Cookie: cookie } }),
+  });
+  statusData = await status.json();
+  assert.equal(statusData.item.status, 'completed');
+  assert.ok(statusData.item.result.outputKey.startsWith('.system/zip-tasks/'));
 });
 
 test('upload tasks can be created and updated by client uploader', async () => {

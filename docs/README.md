@@ -8,7 +8,6 @@
 | `architecture.md` | 前端分层、样式约定和后端 API 路由约定。 |
 | `layout.md` | 页面布局、region、flex 链路和常见布局排查。 |
 | `admin-page.md` | 后台管理页 Tab、渲染器和事件约定。 |
-| `feature-expansion-roadmap.md` | 仍未完成或仍值得增强的功能 backlog。 |
 
 ## 维护约定
 

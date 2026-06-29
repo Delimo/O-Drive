@@ -322,6 +322,7 @@ export const mockWebhookDeliveries = [
   {
     id: 1,
     event: "file.uploaded",
+    severity: "info",
     endpoint: "文件事件通知",
     url: "https://hooks.example.com/odrive",
     ok: 1,
@@ -333,6 +334,7 @@ export const mockWebhookDeliveries = [
   {
     id: 2,
     event: "file.deleted",
+    severity: "info",
     endpoint: "文件事件通知",
     url: "https://hooks.example.com/odrive",
     ok: 1,
@@ -488,6 +490,7 @@ export const mockNotifications = [
   {
     id: 3,
     event: "file.renamed",
+    severity: "info",
     message: "重命名: /banner.png → /新banner.png",
     path: "/新banner.png",
     read: 0,
@@ -496,6 +499,7 @@ export const mockNotifications = [
   {
     id: 4,
     event: "folder.created",
+    severity: "info",
     message: "新建文件夹: /项目文档",
     path: "/项目文档",
     read: 1,
@@ -504,6 +508,7 @@ export const mockNotifications = [
   {
     id: 5,
     event: "share.expired",
+    severity: "warning",
     message: "分享链接到期: /宣传视频.mp4",
     path: "/宣传视频.mp4",
     read: 1,

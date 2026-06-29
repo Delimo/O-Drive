@@ -56,6 +56,8 @@ WebDAV 连接信息由 `admin/system.js` 渲染，后端入口是 `functions/dav
 | `save-storage-alert-thresholds` | 保存容量阈值告警规则。 |
 | `save-task-alert-thresholds` | 保存失败任务数量告警规则。 |
 | `copy-webdav-url` | 复制 WebDAV 地址。 |
+| `retry-task` | 重试失败或部分失败的后台任务。 |
+| `refresh-admin-notifications` | 刷新系统 Tab 中的通知历史。 |
 | `confirm-maintenance-action` | 打开维护任务确认弹窗。 |
 | `execute-maintenance-action` | 执行维护任务。 |
 
@@ -73,6 +75,7 @@ WebDAV 连接信息由 `admin/system.js` 渲染，后端入口是 `functions/dav
 - 当前没有 `settings.js` facade，后台渲染器由 `public/js/render/pages/index.js` 直接组合。
 - 分享列表当前主要是筛选和搜索，没有独立分页 action；如果后续需要分页，再补 `set-shares-page` 事件和状态。
 - 通知中心当前在全局 header 中渲染，不是独立后台 Tab。
+- 系统 Tab 也渲染通知历史，可按级别、已读状态和事件筛选。
 - 存储对象引用计数维护入口位于系统 Tab，动作定义在 `admin/utils.js`，执行逻辑在 `functions/api/lib/admin-maintenance.js`。
 
 ## 维护建议

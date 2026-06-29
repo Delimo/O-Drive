@@ -24,6 +24,7 @@ const csrfProtectedRoutes = [
   ['/api/admin/settings/task-alerts', ['PUT']],
   ['/api/admin/shares', ['POST', 'DELETE']],
   ['/api/tasks', ['POST', 'PATCH']],
+  ['/api/tasks/retry', ['POST']],
   ['/api/mkdir', ['POST']],
   ['/api/upload-multipart/create', ['POST']],
   ['/api/upload-multipart/part', ['PUT']],

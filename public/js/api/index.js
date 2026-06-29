@@ -534,8 +534,14 @@ export function createApiLayer(deps) {
   };
 
   const notificationApi = {
-    list(limit = 20) {
-      return request(`/api/notifications?limit=${limit}`);
+    list(limit = 20, filters = {}) {
+      const params = new URLSearchParams({ limit: String(limit) });
+      if (filters.severity && filters.severity !== "all")
+        params.set("severity", filters.severity);
+      if (filters.event) params.set("event", filters.event);
+      if (filters.read && filters.read !== "all")
+        params.set("read", filters.read);
+      return request(`/api/notifications?${params.toString()}`);
     },
     markRead(id) {
       return request("/api/notifications", {
@@ -571,6 +577,13 @@ export function createApiLayer(deps) {
       return request(`/api/tasks?id=${encodeURIComponent(id)}`, {
         method: "PATCH",
         json: data,
+        csrf: true,
+      });
+    },
+    retry(id) {
+      return request("/api/tasks/retry", {
+        method: "POST",
+        json: { id },
         csrf: true,
       });
     },

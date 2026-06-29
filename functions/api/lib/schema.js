@@ -121,6 +121,15 @@ export const CORE_TABLE_SQL = [
     UNIQUE (storage_id, sha256, size),
     UNIQUE (storage_id, object_key)
   )`,
+  `CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT NOT NULL,
+    severity TEXT NOT NULL DEFAULT 'info',
+    message TEXT NOT NULL,
+    path TEXT DEFAULT '',
+    read INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  )`,
 ];
 
 export const CORE_MIGRATION_SQL = [
@@ -149,6 +158,9 @@ export const CORE_MIGRATION_SQL = [
   `CREATE INDEX IF NOT EXISTS idx_path_access_attempts_last_attempt ON path_access_attempts(last_attempt)`,
   `CREATE INDEX IF NOT EXISTS idx_file_tasks_finished_at ON file_tasks(finished_at)`,
   `CREATE INDEX IF NOT EXISTS idx_storage_objects_hash ON storage_objects(storage_id, sha256, size)`,
+  `ALTER TABLE notifications ADD COLUMN severity TEXT NOT NULL DEFAULT 'info'`,
+  `CREATE INDEX IF NOT EXISTS idx_notifications_severity_created_at ON notifications(severity, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_notifications_event_created_at ON notifications(event, created_at)`,
 ];
 
 export const SHARE_TABLE_SQL = `

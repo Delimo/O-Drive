@@ -1,6 +1,7 @@
 import { indexedFileCount, indexedFileKind } from "./helpers.js";
 import { ensureFileIndexTable } from "./ensure.js";
 import { mapIndexRow } from "./helpers.js";
+import { storageGet } from "../storage.js";
 
 function searchFilterClauses(filters = {}) {
   const clauses = [];
@@ -70,6 +71,84 @@ function searchHitForRow(row, q, filters = {}) {
     query: q,
     filters: filterLabels,
   };
+}
+
+function isTextSearchCandidate(row) {
+  if (row.kind === "folder") return false;
+  const size = Number(row.size || 0);
+  if (!Number.isFinite(size) || size <= 0 || size > 256 * 1024) return false;
+  const type = String(row.content_type || "").toLowerCase();
+  const name = String(row.name || row.path || "").toLowerCase();
+  if (type.startsWith("text/")) return true;
+  if (/(json|xml|yaml|javascript|typescript|markdown|csv|x-www-form-urlencoded)/.test(type)) return true;
+  return /\.(txt|md|markdown|json|csv|xml|yml|yaml|js|mjs|cjs|ts|tsx|jsx|css|html|htm|sql|log)$/i.test(name);
+}
+
+function contentSnippet(text, needle) {
+  const haystack = String(text || "");
+  const lower = haystack.toLowerCase();
+  const at = lower.indexOf(needle);
+  if (at < 0) return "";
+  const start = Math.max(0, at - 48);
+  const end = Math.min(haystack.length, at + needle.length + 72);
+  const prefix = start > 0 ? "..." : "";
+  const suffix = end < haystack.length ? "..." : "";
+  return `${prefix}${haystack.slice(start, end).replace(/\s+/g, " ").trim()}${suffix}`;
+}
+
+async function readTextObject(env, row) {
+  const objectKey = row.object_key || row.path;
+  const storageId = row.storage_id || "r2";
+  if (!objectKey) return "";
+  const obj = await storageGet(env, storageId, objectKey);
+  if (!obj?.body) return "";
+  return await new Response(obj.body).text();
+}
+
+async function searchFileContents(
+  env,
+  { q, scope, limit, filters = {} },
+  hiddenPaths,
+  auth,
+  excludedPaths,
+) {
+  const needle = String(q || "").toLowerCase();
+  if (!needle || needle.length < 2 || limit <= 0) return [];
+  let rows = [];
+  try {
+    const result = await env.D1.prepare("SELECT * FROM file_index ORDER BY path ASC").all();
+    rows = result.results || [];
+  } catch (_) {
+    return [];
+  }
+  const cleanScope = String(scope || "").replace(/^\/+|\/+$/g, "");
+  const matches = [];
+  let scanned = 0;
+  for (const row of rows) {
+    if (matches.length >= limit) break;
+    if (excludedPaths.has(row.path)) continue;
+    if (cleanScope && row.path !== cleanScope && !String(row.path || "").startsWith(`${cleanScope}/`)) continue;
+    if (auth.role !== "admin" && hiddenPaths.some((hp) => row.path === hp || String(row.path || "").startsWith(`${hp}/`))) continue;
+    if (!rowMatchesSearchFilters(row, filters) || !isTextSearchCandidate(row)) continue;
+    scanned++;
+    if (scanned > 120) break;
+    try {
+      const text = await readTextObject(env, row);
+      const snippet = contentSnippet(text, needle);
+      if (!snippet) continue;
+      matches.push({
+        ...mapIndexRow(row),
+        searchHit: {
+          type: "content",
+          label: "内容",
+          value: snippet,
+          query: q,
+          filters: [],
+        },
+      });
+    } catch (_) {}
+  }
+  return matches;
 }
 
 const searchCache = new Map();
@@ -142,6 +221,16 @@ export async function searchFileIndex(
       searchHit: searchHitForRow(row, q, filters),
     }));
     const hasMore = batch.length > limit;
+    if (!hasMore && page.length < limit) {
+      const contentMatches = await searchFileContents(
+        env,
+        { q, scope, limit: limit - page.length, filters },
+        hiddenPaths,
+        auth,
+        new Set(page.map((item) => item.fullKey)),
+      );
+      page.push(...contentMatches);
+    }
     const data = {
       files: page,
       nextCursor: hasMore
