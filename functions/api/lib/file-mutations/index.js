@@ -4,6 +4,7 @@ export { handleBatchDelete, handleOperationEstimate } from "./batch-delete.js";
 export { handleMkdir } from "./mkdir.js";
 export { handleUpload } from "./upload.js";
 export { handleMultipartCreate, handleMultipartPart, handleMultipartComplete, handleMultipartAbort } from "./multipart.js";
+export { handleUploadCheck } from "./upload-check.js";
 export { handleSaveText } from "./save-text.js";
 
 export {

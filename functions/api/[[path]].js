@@ -29,6 +29,7 @@ const csrfProtectedRoutes = [
   ['/api/upload-multipart/part', ['PUT']],
   ['/api/upload-multipart/complete', ['POST']],
   ['/api/upload-multipart/abort', ['POST']],
+  ['/api/upload/check', ['POST']],
   ['/api/save-text/', ['POST']],
   ['/api/zip-download', ['POST']],
 ];

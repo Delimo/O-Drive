@@ -123,6 +123,13 @@ export function createApiLayer(deps) {
         csrf: true,
       });
     },
+    uploadCheck(payload) {
+      return request("/api/upload/check", {
+        method: "POST",
+        json: payload,
+        csrf: true,
+      });
+    },
     uploadWithProgress(
       targetDir,
       file,

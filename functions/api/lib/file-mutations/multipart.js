@@ -1,14 +1,23 @@
 import { formatBytes as formatQuotaBytes, jsonResponse, addLog } from "../common/index.js";
-import { upsertFileIndex } from "../file-index/index.js";
+import { countFileIndexObjectRefs, getFileIndexEntry, upsertFileIndex } from "../file-index/index.js";
 import {
   checkStorageQuota,
   resolveExistingStorageId,
   storageAbortMultipartUpload,
   storageCompleteMultipartUpload,
+  storageCopy,
   storageCreateMultipartUpload,
+  storageDelete,
   storageHead,
   storageUploadPart,
 } from "../storage.js";
+import {
+  createStorageObject,
+  deleteStorageObjectRecord,
+  ensureStorageObjectsTable,
+  getStorageObjectByHash,
+  storageObjectKeyForSha256,
+} from "../storage-objects.js";
 import { assertUserKey, resolveUploadConflict, uploadKey } from "./helpers.js";
 
 export async function handleMultipartCreate(env, request) {
@@ -81,11 +90,88 @@ export async function handleMultipartPart(env, request, url) {
   return jsonResponse(part);
 }
 
+async function completeAndDeduplicate(env, request, body, storageId, key) {
+  const { uploadId, parts, sha256, size: bodySize } = body;
+  const object = await storageCompleteMultipartUpload(
+    env,
+    storageId,
+    key,
+    uploadId,
+    parts,
+  );
+  if (!sha256 || !(await ensureStorageObjectsTable(env))) {
+    const meta = await storageHead(env, storageId, key);
+    await upsertFileIndex(env, key, {
+      ...(meta || { uploaded: Date.now() }),
+      storageId,
+    });
+    await addLog(env, request, "UPLOAD", key);
+    return jsonResponse({
+      success: true,
+      key: object.key,
+      etag: object.httpEtag,
+      storageId,
+    });
+  }
+  const meta = await storageHead(env, storageId, key);
+  const size = Number(bodySize || meta?.size || 0);
+  const contentType = meta?.httpMetadata?.contentType || "";
+  const previous = await getFileIndexEntry(env, key);
+  let storageObject = await getStorageObjectByHash(
+    env,
+    storageId,
+    sha256,
+    size,
+  );
+  const skippedUpload = Boolean(storageObject);
+  if (storageObject) {
+    await storageDelete(env, storageId, key);
+  } else {
+    const objectKey = storageObjectKeyForSha256(sha256);
+    await storageCopy(env, storageId, key, storageId, objectKey, {
+      httpMetadata: { contentType },
+    });
+    await storageDelete(env, storageId, key);
+    storageObject = await createStorageObject(env, {
+      storageId,
+      sha256,
+      size,
+      contentType,
+    });
+  }
+  if (storageObject) {
+    await upsertFileIndex(env, key, {
+      size,
+      contentType,
+      uploaded: Date.now(),
+      storageId,
+      objectKey: storageObject.object_key,
+    });
+    if (previous && previous.object_key && previous.object_key !== storageObject.object_key) {
+      const refs = await countFileIndexObjectRefs(env, storageId, previous.object_key);
+      if (refs <= 0) {
+        await storageDelete(env, storageId, previous.object_key);
+        await deleteStorageObjectRecord(env, storageId, previous.object_key);
+      }
+    }
+  }
+  await addLog(env, request, "UPLOAD", key);
+  return jsonResponse({
+    success: true,
+    key,
+    etag: object.httpEtag,
+    storageId,
+    skippedUpload,
+  });
+}
+
 export async function handleMultipartComplete(env, request, body) {
   const {
     key,
     uploadId,
     parts,
+    sha256,
+    size: bodySize,
     storageId: bodyStorageId,
   } = body || await request.json();
   if (!key || !uploadId || !Array.isArray(parts) || parts.length === 0) {
@@ -96,25 +182,7 @@ export async function handleMultipartComplete(env, request, body) {
   }
   assertUserKey(key);
   const storageId = bodyStorageId || (await resolveExistingStorageId(env, key));
-  const object = await storageCompleteMultipartUpload(
-    env,
-    storageId,
-    key,
-    uploadId,
-    parts,
-  );
-  const meta = await storageHead(env, storageId, key);
-  await upsertFileIndex(env, key, {
-    ...(meta || { uploaded: Date.now() }),
-    storageId,
-  });
-  await addLog(env, request, "UPLOAD", key);
-  return jsonResponse({
-    success: true,
-    key: object.key,
-    etag: object.httpEtag,
-    storageId,
-  });
+  return completeAndDeduplicate(env, request, { ...body, key, uploadId, parts, sha256, size: bodySize }, storageId, key);
 }
 
 export async function handleMultipartAbort(env, request) {

@@ -22,6 +22,7 @@ import {
   handleTrashRetention,
   handlePaste,
   handleBatchDelete,
+  handleUploadCheck,
 } from '../functions/api/lib/file-mutations/index.js';
 import { handleAdminHealth, handleAdminLogs, handleAdminQuota, handleAdminStats } from '../functions/api/lib/admin.js';
 import { handleAdminStorage } from '../functions/api/lib/storage.js';
@@ -3472,4 +3473,173 @@ test('trash can be cleared and cleanup respects retention setting', async () => 
   assert.equal((await clear.json()).deleted, 1);
   const empty = await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'));
   assert.equal((await empty.json()).items.length, 0);
+});
+
+test('upload check returns exists false for unknown content', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+  const res = await handleUploadCheck(env, new Request('https://example.com/api/upload/check', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '', name: 'unknown.txt', size: 5, sha256: '0000000000000000000000000000000000000000000000000000000000000000' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+  assert.equal(data.success, true);
+  assert.equal(data.exists, false);
+  assert.equal(await getFileIndexEntry(env, 'unknown.txt'), null);
+});
+
+test('upload check returns exists true and creates file index for known content', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const uploadForm = new FormData();
+  uploadForm.append('file', new File(['dedup-check'], 'source.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: uploadForm }), '');
+  const storageObjs = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  const sourceSha256 = storageObjs.results[0]?.sha256;
+  assert.ok(sourceSha256);
+  const sourceEntry = await getFileIndexEntry(env, 'source.txt');
+
+  const res = await handleUploadCheck(env, new Request('https://example.com/api/upload/check', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '', name: 'copy.txt', size: 11, sha256: sourceSha256 }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+  assert.equal(data.success, true);
+  assert.equal(data.exists, true);
+  assert.equal(data.skippedUpload, true);
+  assert.equal(data.key, 'copy.txt');
+
+  const copyEntry = await getFileIndexEntry(env, 'copy.txt');
+  assert.ok(copyEntry);
+  assert.equal(copyEntry.object_key, sourceEntry.object_key);
+
+  const storageObjsAfter = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjsAfter.results.length, 1);
+  assert.equal(storageObjsAfter.results[0].ref_count, 2);
+});
+
+test('upload check returns exists false when there is no matching storage object', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+  const res = await handleUploadCheck(env, new Request('https://example.com/api/upload/check', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: 'docs', name: 'new.bin', size: 999, sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+  assert.equal(data.success, true);
+  assert.equal(data.exists, false);
+  assert.equal(await getFileIndexEntry(env, 'docs/new.bin'), null);
+});
+
+test('multipart upload with sha256 deduplicates storage objects', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const sha256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  const create = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/', name: 'empty.bin', type: 'application/octet-stream' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(create.status, 200);
+  const created = await create.json();
+
+  const part = await handleMultipartPart(env, new Request('https://example.com/api/upload-multipart/part?key=empty.bin&uploadId=upload-1&partNumber=1', {
+    method: 'PUT',
+    body: '',
+  }), new URL('https://example.com/api/upload-multipart/part?key=empty.bin&uploadId=upload-1&partNumber=1'));
+  assert.equal(part.status, 200);
+
+  const complete = await handleMultipartComplete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'empty.bin', uploadId: 'upload-1', parts: [{ partNumber: 1, etag: 'etag-1' }], sha256, size: 0 }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const completeData = await complete.json();
+  assert.equal(completeData.success, true);
+  assert.equal(completeData.skippedUpload, false);
+
+  const entry = await getFileIndexEntry(env, 'empty.bin');
+  assert.ok(entry);
+  assert.match(entry.object_key, /^objects\/sha256\//);
+
+  const storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 1);
+  assert.equal(storageObjects.results[0].ref_count, 1);
+});
+
+test('multipart upload with sha256 skipped when already exists', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const uploadForm = new FormData();
+  uploadForm.append('file', new File(['hello'], 'hello.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: uploadForm }), '');
+  const storageObjs = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  const sha256 = storageObjs.results[0]?.sha256;
+  assert.ok(sha256);
+  const existingSize = storageObjs.results[0]?.size || 5;
+  const existingEntry = await getFileIndexEntry(env, 'hello.txt');
+
+  const create = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/', name: 'hello2.txt', type: 'text/plain' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(create.status, 200);
+
+  const part = await handleMultipartPart(env, new Request('https://example.com/api/upload-multipart/part?key=hello2.txt&uploadId=upload-1&partNumber=1', {
+    method: 'PUT',
+    body: 'hello',
+  }), new URL('https://example.com/api/upload-multipart/part?key=hello2.txt&uploadId=upload-1&partNumber=1'));
+  assert.equal(part.status, 200);
+
+  const complete = await handleMultipartComplete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'hello2.txt', uploadId: 'upload-1', parts: [{ partNumber: 1, etag: 'etag-1' }], sha256, size: existingSize }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const completeData = await complete.json();
+  assert.equal(completeData.success, true);
+  assert.equal(completeData.skippedUpload, true);
+
+  const entry = await getFileIndexEntry(env, 'hello2.txt');
+  assert.equal(entry.object_key, existingEntry.object_key);
+
+  const storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  assert.equal(storageObjects.results.length, 1);
+  assert.equal(storageObjects.results[0].ref_count, 2);
+});
+
+test('multipart upload without sha256 works as before', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+  const create = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/', name: 'legacy.bin', type: 'application/octet-stream' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.equal(create.status, 200);
+
+  await handleMultipartPart(env, new Request('https://example.com/api/upload-multipart/part?key=legacy.bin&uploadId=upload-1&partNumber=1', {
+    method: 'PUT',
+    body: 'legacy',
+  }), new URL('https://example.com/api/upload-multipart/part?key=legacy.bin&uploadId=upload-1&partNumber=1'));
+
+  const complete = await handleMultipartComplete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'legacy.bin', uploadId: 'upload-1', parts: [{ partNumber: 1, etag: 'etag-1' }] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await complete.json();
+  assert.equal(data.success, true);
+  assert.equal(data.skippedUpload, undefined);
+
+  const entry = await getFileIndexEntry(env, 'legacy.bin');
+  assert.ok(entry);
+  assert.equal(entry.object_key, 'legacy.bin');
 });

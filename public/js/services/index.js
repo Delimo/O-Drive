@@ -1,5 +1,12 @@
 import { CHUNK_SIZE } from "../constants.js";
 
+async function sha256Hex(blob) {
+  const buffer = await blob.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(digest));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 function getUploadKey(dir, name) {
   return `od-upload:${dir}/${name}`;
 }
@@ -104,6 +111,20 @@ export function createServices(deps) {
       const file = item.file;
       const name = item.targetName;
       const type = file.type || "application/octet-stream";
+      const sha256 = await sha256Hex(file);
+      const checkRes = await fileApi.uploadCheck({
+        targetDir: item.targetDir === "/" ? "" : item.targetDir,
+        name,
+        size: file.size,
+        sha256,
+        conflict: conflict || item.conflict || "rename",
+      });
+      if (checkRes.response.ok && checkRes.data?.exists) {
+        return {
+          response: checkRes.response,
+          data: { ...checkRes.data, skippedUpload: true },
+        };
+      }
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
       const pKey = getUploadKey(item.targetDir, name);
       const saved = loadProgress(pKey);
@@ -235,6 +256,8 @@ export function createServices(deps) {
         uploadId,
         parts,
         storageId,
+        sha256,
+        size: file.size,
       });
       if (!completeRes.response.ok)
         throw new Error(completeRes.data?.message || "完成分片上传失败");

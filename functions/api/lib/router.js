@@ -13,6 +13,7 @@ import {
   handleMultipartPart,
   handleMultipartComplete,
   handleMultipartAbort,
+  handleUploadCheck,
   handleSaveText,
 } from "./file-mutations/index.js";
 import {
@@ -254,6 +255,11 @@ export async function resolveAdminRoute(
       });
     }
     return res;
+  }
+
+  // Upload check (instant upload / dedup)
+  if (path === "/api/upload/check" && method === "POST") {
+    return await handleUploadCheck(env, request);
   }
 
   // Upload (single)

@@ -7,8 +7,14 @@ import {
   jsonResponse,
   listR2Objects,
 } from "./common/index.js";
-import { fileIndexStatus, rebuildFileIndex } from "./file-index/index.js";
+import {
+  countObjectRefs,
+  fileIndexStatus,
+  rebuildFileIndex,
+} from "./file-index/index.js";
+import { ensureStorageObjectsTable } from "./storage-objects.js";
 import { mapWithConcurrency } from "./r2-tree.js";
+import { storageDelete } from "./storage.js";
 import { cleanupFileTasks } from "./tasks.js";
 
 const ALLOWED_COUNT_TABLES = new Set([
@@ -188,6 +194,47 @@ export async function handleAdminMaintenanceAction(env, request) {
       .bind(Date.now())
       .run();
     await addLog(env, request, "MAINTENANCE", `清理系统提醒 ${deleted} 条`);
+    return jsonResponse({ success: true, action, deleted });
+  }
+  if (action === "rebuild-storage-refs") {
+    await ensureStorageObjectsTable(env);
+    const allObjects = await env.D1.prepare(
+      "SELECT object_key, storage_id FROM storage_objects",
+    )
+      .all()
+      .catch(() => ({ results: [] }));
+    let updated = 0;
+    for (const obj of (allObjects.results || [])) {
+      const refs = await countObjectRefs(env, obj.storage_id || "r2", obj.object_key);
+      await env.D1.prepare(
+        "UPDATE storage_objects SET ref_count = ?, updated_at = ? WHERE storage_id = ? AND object_key = ?",
+      )
+        .bind(refs, Date.now(), obj.storage_id || "r2", obj.object_key)
+        .run();
+      updated++;
+    }
+    const total = (allObjects.results || []).length;
+    await addLog(env, request, "MAINTENANCE", `重建 storage_objects 引用计数，更新 ${updated}/${total} 条`);
+    return jsonResponse({ success: true, action, updated, total });
+  }
+  if (action === "cleanup-orphan-storage-objects") {
+    await ensureStorageObjectsTable(env);
+    const orphans = await env.D1.prepare(
+      "SELECT object_key, storage_id FROM storage_objects WHERE ref_count <= 0",
+    )
+      .all()
+      .catch(() => ({ results: [] }));
+    let deleted = 0;
+    for (const obj of (orphans.results || [])) {
+      await storageDelete(env, obj.storage_id || "r2", obj.object_key);
+      await env.D1.prepare(
+        "DELETE FROM storage_objects WHERE storage_id = ? AND object_key = ?",
+      )
+        .bind(obj.storage_id || "r2", obj.object_key)
+        .run();
+      deleted++;
+    }
+    await addLog(env, request, "MAINTENANCE", `清理孤儿 storage_objects ${deleted} 条`);
     return jsonResponse({ success: true, action, deleted });
   }
   return jsonResponse(
