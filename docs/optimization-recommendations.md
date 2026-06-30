@@ -164,6 +164,12 @@ api -> slice -> thunk -> render -> events -> tests
 
 不要只为了“文件变小”而拆；优先拆那些已经有独立状态、独立事件、独立测试价值的模块。
 
+### 当前推进记录
+
+- 已将 `public/js/render/pages/admin/shares.js` 中的公开分享页渲染拆到 `public/js/render/pages/admin/share-page.js`，后台分享列表渲染继续留在 `shares.js`。
+- `createPageRenderers` 的对外行为保持不变，`renderAdminPage` 和 `renderSharePage` 仍由统一页面渲染入口导出。
+- 已通过 `tests/frontend.test.mjs` 覆盖分享页渲染，拆分后不改变公开分享目录和操作链接输出。
+
 ## 建议四：性能优化方向
 
 ### 大目录和搜索
@@ -181,6 +187,12 @@ api -> slice -> thunk -> render -> events -> tests
 - 搜索结果可以加载更多。
 - 隐藏路径不会因为分页泄露。
 
+当前推进：
+
+- R2 fallback 搜索已改为按较大扫描页读取，并通过 `r2:` cursor 记录页内位置，减少稀疏命中时的小页请求，同时避免同一页内的后续匹配被跳过。
+- 前端搜索状态已记录 `scanned` 和 `scanLimitReached`，页面会展示已扫描数量，并在达到 scan limit 时提示继续扫描更多结果。
+- 已补充稀疏搜索批量扫描、同页多匹配 cursor、加载更多渲染提示等回归测试。
+
 ### 缩略图
 
 建议：
@@ -195,6 +207,12 @@ api -> slice -> thunk -> render -> events -> tests
 - 非图片请求返回明确错误。
 - 别名文件可以正确读取 backing object。
 - 缩略图生成失败不会影响原图预览。
+
+当前推进：
+
+- 缩略图成功生成后会写入 `.thumbs/{width}x{height}/{path}` 持久缓存，并优先复用该缓存。
+- resize 失败时返回原图回退响应并标记 `X-Thumbnail-Fallback: original`，不会把失败回退结果写入 `.thumbs`。
+- 已补充缩略图 R2 缓存复用、失败回退不污染缓存、别名文件读取 backing object 的回归测试。
 
 ### ZIP 下载
 

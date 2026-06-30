@@ -246,9 +246,41 @@ test('home shows searching hint and result count', () => {
       query: 'foo',
       searching: false,
       files: [{ name: 'foo.txt', fullKey: 'foo.txt' }],
+      searchScanned: 80,
     },
   }));
   assert.match(counted, /找到 1 个匹配/);
+});
+
+test('home shows scanned count for completed search', () => {
+  const html = home.renderHomePage(makeState({
+    explorer: {
+      query: 'foo',
+      searching: false,
+      files: [{ name: 'foo.txt', fullKey: 'foo.txt' }],
+      searchScanned: 80,
+    },
+  }));
+
+  assert.match(html, /search-progress-note/);
+  assert.match(html, /80/);
+});
+
+test('home shows scan continuation when search reaches scan limit', () => {
+  const html = home.renderHomePage(makeState({
+    explorer: {
+      query: 'foo',
+      searching: false,
+      files: [{ name: 'foo.txt', fullKey: 'foo.txt' }],
+      hasMore: true,
+      searchScanned: 1000,
+      searchScanLimitReached: true,
+    },
+  }));
+
+  assert.match(html, /search-progress-note/);
+  assert.match(html, /1000/);
+  assert.match(html, /data-action="load-more-search"/);
 });
 
 test('home shows empty state with no entries', () => {

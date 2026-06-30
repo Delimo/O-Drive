@@ -136,11 +136,24 @@ export function createHomeRenderers(deps) {
 
   function renderLoadMore(explorer) {
     if (!explorer.hasMore || explorer.loading) return "";
+    const label = explorer.searchScanLimitReached
+      ? "继续扫描更多结果"
+      : "加载更多结果";
     return `
       <div style="text-align:center;padding:16px;">
-        <button class="btn toolbar-btn" data-action="load-more-search" type="button">加载更多结果</button>
+        <button class="btn toolbar-btn" data-action="load-more-search" type="button">${escapeHtml(label)}</button>
       </div>
     `;
+  }
+
+  function renderSearchProgress(explorer) {
+    if (!explorer.query || explorer.searching) return "";
+    const scanned = Number(explorer.searchScanned || 0);
+    if (!scanned && !explorer.searchScanLimitReached) return "";
+    const text = explorer.searchScanLimitReached
+      ? `已扫描 ${scanned} 项，仍有更多目录可继续加载`
+      : `已扫描 ${scanned} 项`;
+    return `<span class="search-progress-note">${escapeHtml(text)}</span>`;
   }
 
   function renderExplorerContent(state, entries, selectedEntries) {
@@ -157,6 +170,7 @@ export function createHomeRenderers(deps) {
                   ? `正在搜索“${escapeHtml(explorer.query)}”…`
                   : `找到 ${entries.length} 个匹配“${escapeHtml(explorer.query)}”的结果${explorer.filter !== "all" || explorer.filterKind !== "all" ? `（已应用筛选）` : ""}`
               }</span>
+              ${renderSearchProgress(explorer)}
               <button class="btn toolbar-btn" data-action="toggle-search-filters" type="button" style="font-size:12px;padding:2px 8px;margin-left:8px;">${explorer.showFilters ? "收起筛选" : "筛选"}</button>
             </div>
             ${renderFilterPanel(explorer)}

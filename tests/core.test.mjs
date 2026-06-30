@@ -41,6 +41,7 @@ import {
 } from '../functions/api/lib/protected-paths.js';
 import { API_ROUTE_POLICIES, getApiRoutePolicy } from '../functions/api/lib/route-policy.js';
 import { ADMIN_ROUTE_DISPATCHERS, PUBLIC_ROUTE_DISPATCHERS } from '../functions/api/lib/router.js';
+import { SHARE_MIGRATION_SQL } from '../functions/api/lib/schema.js';
 
 import { makeEnv } from './helpers/make-env.mjs';
 import { resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
@@ -130,12 +131,77 @@ test('search returns cursor for loading more results', async () => {
   const first = await handleSearch(env, new Request('https://example.com/api/search?q=.txt&scope=/docs&limit=1'), new URL('https://example.com/api/search?q=.txt&scope=/docs&limit=1'), [], { role: 'guest' }, []);
   const firstData = await first.json();
   assert.deepEqual(firstData.files.map(file => file.fullKey), ['docs/first.txt']);
-  assert.equal(firstData.nextCursor, '1');
+  assert.match(firstData.nextCursor, /^r2:/);
 
-  const second = await handleSearch(env, new Request('https://example.com/api/search?q=.txt&scope=/docs&limit=1&cursor=1'), new URL('https://example.com/api/search?q=.txt&scope=/docs&limit=1&cursor=1'), [], { role: 'guest' }, []);
+  const second = await handleSearch(env, new Request(`https://example.com/api/search?q=.txt&scope=/docs&limit=1&cursor=${encodeURIComponent(firstData.nextCursor)}`), new URL(`https://example.com/api/search?q=.txt&scope=/docs&limit=1&cursor=${encodeURIComponent(firstData.nextCursor)}`), [], { role: 'guest' }, []);
   const secondData = await second.json();
   assert.deepEqual(secondData.files.map(file => file.fullKey), ['docs/second.txt']);
   assert.equal(secondData.nextCursor, '');
+});
+
+test('r2 fallback search scans sparse pages in larger batches', async () => {
+  const env = makeEnv({
+    objects: [
+      ...Array.from({ length: 80 }, (_, index) => ({
+        key: `docs/filler-${String(index).padStart(2, '0')}.txt`,
+        size: 1,
+        uploaded: new Date('2026-01-01'),
+      })),
+      { key: 'docs/needle.txt', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  let listCalls = 0;
+  const originalList = env.R2.list.bind(env.R2);
+  env.R2.list = async (options) => {
+    listCalls++;
+    return originalList(options);
+  };
+
+  const res = await handleSearch(
+    env,
+    new Request('https://example.com/api/search?q=needle&scope=/docs&limit=1&scanLimit=100'),
+    new URL('https://example.com/api/search?q=needle&scope=/docs&limit=1&scanLimit=100'),
+    [],
+    { role: 'guest' },
+    [],
+  );
+  const data = await res.json();
+
+  assert.deepEqual(data.files.map(file => file.fullKey), ['docs/needle.txt']);
+  assert.equal(listCalls, 1);
+});
+
+test('r2 fallback search cursor preserves extra matches from the same scan page', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/alpha-1.txt', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'docs/alpha-2.txt', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'docs/alpha-3.txt', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  const first = await handleSearch(
+    env,
+    new Request('https://example.com/api/search?q=alpha&scope=/docs&limit=1'),
+    new URL('https://example.com/api/search?q=alpha&scope=/docs&limit=1'),
+    [],
+    { role: 'guest' },
+    [],
+  );
+  const firstData = await first.json();
+  assert.deepEqual(firstData.files.map(file => file.fullKey), ['docs/alpha-1.txt']);
+  assert.match(firstData.nextCursor, /^r2:/);
+
+  const second = await handleSearch(
+    env,
+    new Request(`https://example.com/api/search?q=alpha&scope=/docs&limit=1&cursor=${encodeURIComponent(firstData.nextCursor)}`),
+    new URL(`https://example.com/api/search?q=alpha&scope=/docs&limit=1&cursor=${encodeURIComponent(firstData.nextCursor)}`),
+    [],
+    { role: 'guest' },
+    [],
+  );
+  const secondData = await second.json();
+  assert.deepEqual(secondData.files.map(file => file.fullKey), ['docs/alpha-2.txt']);
 });
 
 test('search stops at scan limit and returns cursor for continuing sparse matches', async () => {
@@ -150,10 +216,10 @@ test('search stops at scan limit and returns cursor for continuing sparse matche
   const first = await handleSearch(env, new Request('https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1'), new URL('https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1'), [], { role: 'guest' }, []);
   const firstData = await first.json();
   assert.deepEqual(firstData.files, []);
-  assert.equal(firstData.nextCursor, '1');
+  assert.match(firstData.nextCursor, /^r2:/);
   assert.equal(firstData.scanLimitReached, true);
 
-  const second = await handleSearch(env, new Request('https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1&cursor=1'), new URL('https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1&cursor=1'), [], { role: 'guest' }, []);
+  const second = await handleSearch(env, new Request(`https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1&cursor=${encodeURIComponent(firstData.nextCursor)}`), new URL(`https://example.com/api/search?q=target&scope=/docs&limit=1&scanLimit=1&cursor=${encodeURIComponent(firstData.nextCursor)}`), [], { role: 'guest' }, []);
   const secondData = await second.json();
   assert.deepEqual(secondData.files.map(file => file.fullKey), ['docs/target.txt']);
   assert.equal(secondData.nextCursor, '');
@@ -533,6 +599,35 @@ test('admin write dispatchers require csrf route policy coverage', () => {
       getApiRoutePolicy(path, method).csrf,
       true,
       `${method} ${path} should require CSRF`,
+    );
+  }
+});
+
+test('share table runtime migrations cover legacy columns used by share creation', () => {
+  const migrationSql = SHARE_MIGRATION_SQL.join('\n');
+  const insertedColumns = [
+    'name',
+    'size',
+    'content_type',
+    'target_type',
+    'allow_preview',
+    'allow_download',
+    'expires_at',
+    'max_downloads',
+    'download_count',
+    'password_salt',
+    'password_hash',
+    'expired_notified_at',
+    'created_at',
+    'last_accessed_at',
+    'last_access_ip',
+  ];
+
+  for (const column of insertedColumns) {
+    assert.match(
+      migrationSql,
+      new RegExp(`ALTER TABLE share_links ADD COLUMN ${column}\\b`),
+      `share_links.${column} should be added for legacy tables`,
     );
   }
 });
@@ -1410,7 +1505,47 @@ test('thumbnail endpoint falls back to the original image when resizing fails', 
     const res = await handleThumbnail(env, new Request('https://example.com/api/thumbnail/photos/a.jpg?w=360&h=260'), 'photos/a.jpg', {});
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('Content-Type'), 'image/jpeg');
+    assert.equal(res.headers.get('X-Thumbnail-Fallback'), 'original');
     assert.equal(await res.text(), 'image-bytes');
+    assert.equal(await env.R2.get('.thumbs/360x260/photos/a.jpg'), null);
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
+test('thumbnail endpoint stores and reuses resized images from r2 cache', async () => {
+  const env = makeEnv({
+    objects: [{
+      key: 'photos/a.jpg',
+      body: 'image-bytes',
+      size: 11,
+      uploaded: new Date('2026-01-01'),
+      httpMetadata: { contentType: 'image/jpeg' },
+    }],
+  });
+  const oldFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls++;
+    return new Response('resized-image', {
+      headers: { 'Content-Type': 'image/webp' },
+    });
+  };
+  try {
+    const first = await handleThumbnail(env, new Request('https://example.com/api/thumbnail/photos/a.jpg?w=360&h=260'), 'photos/a.jpg', {});
+    assert.equal(first.status, 200);
+    assert.equal(first.headers.get('X-Thumbnail-Cache'), 'MISS');
+    assert.equal(await first.text(), 'resized-image');
+    assert.ok(await env.R2.get('.thumbs/360x260/photos/a.jpg'));
+
+    globalThis.fetch = async () => {
+      throw new Error('resize should not run for cached thumbnail');
+    };
+    const second = await handleThumbnail(env, new Request('https://example.com/api/thumbnail/photos/a.jpg?w=360&h=260'), 'photos/a.jpg', {});
+    assert.equal(second.headers.get('X-Thumbnail-Cache'), 'R2-HIT');
+    assert.equal(second.headers.get('Content-Type'), 'image/webp');
+    assert.equal(await second.text(), 'resized-image');
+    assert.equal(fetchCalls, 1);
   } finally {
     globalThis.fetch = oldFetch;
   }

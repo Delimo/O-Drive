@@ -732,6 +732,11 @@
 
 .result-hint .status-dot { flex: 0 0 auto; }
 
+.search-progress-note {
+  color: var(--muted);
+  opacity: .82;
+}
+
 .markdown-body {
   line-height: 1.7;
   color: var(--text);

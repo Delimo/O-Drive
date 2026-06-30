@@ -81,6 +81,8 @@ export function createExplorerThunks(deps, context) {
               files: data.files || [],
               cursor: data.nextCursor || "",
               hasMore: Boolean(data.nextCursor),
+              scanned: data.scanned || 0,
+              scanLimitReached: Boolean(data.scanLimitReached),
             }),
           );
           return;
@@ -132,6 +134,8 @@ export function createExplorerThunks(deps, context) {
             files: data.files || [],
             cursor: data.nextCursor || "",
             hasMore: Boolean(data.nextCursor),
+            scanned: data.scanned || 0,
+            scanLimitReached: Boolean(data.scanLimitReached),
           }),
         );
       } catch (error) {

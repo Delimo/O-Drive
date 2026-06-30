@@ -17,6 +17,8 @@ import {
   storageList,
 } from "./storage.js";
 
+const R2_SEARCH_SCAN_PAGE_SIZE = 100;
+
 function mapEntry(o) {
   return {
     name: o.key.split("/").pop(),
@@ -31,6 +33,37 @@ function mapEntry(o) {
 
 function cleanPath(path = "") {
   return String(path || "").replace(/^\/+|\/+$/g, "");
+}
+
+function encodeR2SearchCursor(cursor = {}) {
+  const payload = {
+    r2: cursor.r2Cursor || "",
+    after: cursor.afterKey || "",
+  };
+  return `r2:${btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")}`;
+}
+
+function decodeR2SearchCursor(cursor) {
+  const raw = String(cursor || "");
+  if (!raw) return { r2Cursor: undefined, afterKey: "" };
+  if (!raw.startsWith("r2:")) return { r2Cursor: raw, afterKey: "" };
+  try {
+    const encoded = raw.slice(3).replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(atob(encoded));
+    return {
+      r2Cursor: decoded.r2 || undefined,
+      afterKey: decoded.after || "",
+    };
+  } catch (_) {
+    return { r2Cursor: undefined, afterKey: "" };
+  }
+}
+
+function objectsAfterKey(objects, afterKey) {
+  if (!afterKey) return objects;
+  const index = objects.findIndex((obj) => obj.key === afterKey);
+  if (index >= 0) return objects.slice(index + 1);
+  return objects.filter((obj) => String(obj.key || "") > afterKey);
 }
 
 function searchHitForFile(file, q, filters = {}) {
@@ -74,7 +107,8 @@ export async function handleSearch(
     Math.min(1000, Number(url.searchParams.get("scanLimit") || "1000")),
   );
   const filters = parseSearchFilters(url);
-  let cursor = url.searchParams.get("cursor") || undefined;
+  const rawCursor = url.searchParams.get("cursor") || undefined;
+  let cursor = rawCursor;
   const indexed = await searchFileIndex(
     env,
     { q, scope, limit, cursor, filters },
@@ -94,11 +128,18 @@ export async function handleSearch(
   const matches = [];
   let nextCursor = "";
   let scanned = 0;
+  const r2Cursor = decodeR2SearchCursor(rawCursor);
+  cursor = r2Cursor.r2Cursor;
+  let afterKey = r2Cursor.afterKey;
 
   do {
+    const pageStartCursor = cursor || "";
     const pageLimit = Math.max(
       1,
-      Math.min(limit - matches.length, scanLimit - scanned),
+      Math.min(
+        Math.max(limit - matches.length, R2_SEARCH_SCAN_PAGE_SIZE),
+        scanLimit - scanned,
+      ),
     );
     const listed = await storageList(
       env,
@@ -107,8 +148,9 @@ export async function handleSearch(
       { maxObjects: pageLimit },
     );
     const objects = listed.objects || [];
+    const candidateObjects = objectsAfterKey(objects, afterKey);
     scanned += objects.length;
-    const pageMatches = objects
+    const pageMatches = candidateObjects
       .map((obj) => mapEntry({ ...obj, storageId: "r2" }))
       .filter(
         (f) =>
@@ -123,9 +165,20 @@ export async function handleSearch(
         ...file,
         searchHit: searchHitForFile(file, q, filters),
       }));
+    const remaining = limit - matches.length;
+    if (pageMatches.length > remaining) {
+      const returned = pageMatches.slice(0, remaining);
+      matches.push(...returned);
+      nextCursor = encodeR2SearchCursor({
+        r2Cursor: pageStartCursor,
+        afterKey: returned[returned.length - 1]?.fullKey || "",
+      });
+      break;
+    }
     matches.push(...pageMatches);
+    afterKey = "";
     cursor = listed.truncated ? listed.cursor : undefined;
-    nextCursor = cursor || "";
+    nextCursor = cursor ? encodeR2SearchCursor({ r2Cursor: cursor }) : "";
   } while (cursor && matches.length < limit && scanned < scanLimit);
 
   const visibleMatches = await markProtection(

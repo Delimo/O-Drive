@@ -11,6 +11,15 @@ export function createUploadsRenderer(deps) {
     return "排队中";
   }
 
+  function resumeLabel(item) {
+    if (!item.multipart || !item.totalChunks) return "";
+    const completed = item.completedParts || 0;
+    if (item.resumable || completed > 0) {
+      return `断点 ${completed}/${item.totalChunks}`;
+    }
+    return `分片 ${item.totalChunks}`;
+  }
+
   function renderUploadsPanel(state) {
     const items = state.uploads.items;
     if (!items.length) return "";
@@ -56,10 +65,15 @@ export function createUploadsRenderer(deps) {
             <div class="upload-row" data-status="${escapeHtml(item.status)}">
               <div class="upload-row-icon">${item.status === "error" ? icons.lock : item.status === "success" ? icons.check : item.status === "cancelled" ? icons.close : icons.file}</div>
               <div class="upload-row-main">
-                <div class="upload-row-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}${item.multipart ? '<span class="toolbar-tag" style="font-size:11px;">分片</span>' : ""}</div>
+                <div class="upload-row-name" title="${escapeHtml(item.name)}">
+                  <span class="upload-row-filename">${escapeHtml(item.name)}</span>
+                  ${item.multipart ? '<span class="toolbar-tag upload-row-chip">分片</span>' : ""}
+                  ${resumeLabel(item) ? `<span class="toolbar-tag upload-row-chip">${escapeHtml(resumeLabel(item))}</span>` : ""}
+                </div>
                 <div class="upload-row-track">
                   <div class="upload-row-bar" style="width:${item.status === "success" ? 100 : item.progress || 0}%"></div>
                 </div>
+                ${item.diagnostic ? `<div class="upload-row-diagnostic">${escapeHtml(item.diagnostic)}</div>` : ""}
               </div>
               <div class="upload-row-status">${escapeHtml(statusLabel(item))}</div>
               <div class="upload-row-actions">
@@ -75,12 +89,12 @@ export function createUploadsRenderer(deps) {
                 }
                 ${
                   item.status === "cancelled"
-                    ? `<button class="upload-row-btn" data-action="retry-upload" data-id="${escapeHtml(item.id)}" type="button" title="重试">${icons.refresh}</button><button class="upload-row-remove" data-action="dismiss-upload" data-key="${escapeHtml(item.id)}" type="button" aria-label="移除">×</button>`
+                    ? `<button class="upload-row-btn" data-action="upload" type="button" title="重新选择文件">${icons.refresh}</button><button class="upload-row-remove" data-action="dismiss-upload" data-key="${escapeHtml(item.id)}" type="button" aria-label="移除">×</button>`
                     : ""
                 }
                 ${
                   item.status === "error"
-                    ? `<button class="upload-row-btn" data-action="retry-upload" data-id="${escapeHtml(item.id)}" type="button" title="重试">${icons.refresh}</button><button class="upload-row-remove" data-action="dismiss-upload" data-key="${escapeHtml(item.id)}" type="button" aria-label="移除">×</button>`
+                    ? `<button class="upload-row-btn" data-action="upload" type="button" title="重新选择文件">${icons.refresh}</button><button class="upload-row-remove" data-action="dismiss-upload" data-key="${escapeHtml(item.id)}" type="button" aria-label="移除">×</button>`
                     : ""
                 }
                 ${

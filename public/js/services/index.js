@@ -32,6 +32,30 @@ function clearProgress(key) {
   } catch (_) {}
 }
 
+function inspectMultipartResume(item) {
+  if (!item?.file || item.file.size <= CHUNK_SIZE) {
+    return { resumable: false, completedParts: 0, totalChunks: 0 };
+  }
+  const totalChunks = Math.ceil(item.file.size / CHUNK_SIZE);
+  const key = getUploadKey(item.targetDir, item.targetName);
+  const saved = loadProgress(key);
+  if (!saved) {
+    return { resumable: false, completedParts: 0, totalChunks, key };
+  }
+  const completedParts = Array.isArray(saved.parts) ? saved.parts.length : 0;
+  const matchesFile =
+    saved.fileSize === item.file.size && saved.totalChunks === totalChunks;
+  return {
+    resumable: matchesFile && completedParts > 0,
+    stale: !matchesFile,
+    completedParts: matchesFile ? completedParts : 0,
+    totalChunks,
+    uploadId: saved.uploadId || "",
+    storageId: saved.storageId || "",
+    key,
+  };
+}
+
 export function createServices(deps) {
   const {
     detectContentMode,
@@ -107,6 +131,7 @@ export function createServices(deps) {
     isLargeFile(file) {
       return file.size > CHUNK_SIZE;
     },
+    inspectMultipartResume,
     async multipartUpload(item, onProgress, onCancel, conflict) {
       const file = item.file;
       const name = item.targetName;
@@ -143,6 +168,13 @@ export function createServices(deps) {
         storageId = saved.storageId;
         completedParts = saved.parts || [];
         startChunk = completedParts.length;
+        if (typeof onProgress === "function" && startChunk > 0) {
+          onProgress(Math.round((startChunk / totalChunks) * 100), {
+            resumed: true,
+            completedParts: startChunk,
+            totalChunks,
+          });
+        }
       } else {
         if (saved && saved.uploadId) {
           try {
@@ -171,6 +203,7 @@ export function createServices(deps) {
           storageId,
           totalChunks,
           fileSize: file.size,
+          fileLastModified: file.lastModified || 0,
           parts: [],
         });
       }
@@ -185,9 +218,10 @@ export function createServices(deps) {
       async function uploadWorker() {
         while (nextPartIndex < totalChunks && !cancelled) {
           const i = nextPartIndex++;
-          if (onCancel && onCancel()) {
+          const cancelSignal = onCancel ? onCancel() : false;
+          if (cancelSignal) {
             cancelled = true;
-            throw new Error("UPLOAD_CANCELLED");
+            throw new Error(cancelSignal === "paused" ? "UPLOAD_PAUSED" : "UPLOAD_CANCELLED");
           }
           const start = i * CHUNK_SIZE;
           const end = Math.min(start + CHUNK_SIZE, file.size);
@@ -213,6 +247,7 @@ export function createServices(deps) {
             storageId,
             totalChunks,
             fileSize: file.size,
+            fileLastModified: file.lastModified || 0,
             parts: partResults
               .filter(Boolean)
               .sort((a, b) => a.partNumber - b.partNumber),

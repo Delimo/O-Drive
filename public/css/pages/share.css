@@ -97,6 +97,11 @@
   overflow: hidden;
 }
 
+.share-shell-error {
+  max-width: 500px;
+  min-height: 430px;
+}
+
 /* ─── Top Section ─── */
 .share-top {
   display: flex;
@@ -208,6 +213,57 @@
   background: var(--panel-soft);
   border: 1px solid var(--line);
   flex-shrink: 0;
+}
+
+.share-mid-error {
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 42px 36px 30px;
+}
+
+.share-expired-visual {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  border: 1px solid rgba(220, 38, 38, 0.16);
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.08), rgba(220, 38, 38, 0.03));
+  color: #dc2626;
+}
+
+.share-error-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+  min-height: 42px;
+  margin-top: 6px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(220, 38, 38, 0.14);
+  background: rgba(220, 38, 38, 0.045);
+  text-align: left;
+}
+
+.share-error-note span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.share-error-note strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .share-file-name {
@@ -409,9 +465,14 @@
   justify-content: center;
 }
 
+.share-error-actions {
+  flex-wrap: wrap;
+}
+
 .share-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 20px;
   border-radius: 10px;
@@ -421,6 +482,10 @@
   cursor: pointer;
   transition: all 0.15s ease;
   border: none;
+}
+
+.share-btn-soft {
+  color: var(--muted);
 }
 
 .share-btn-primary {
@@ -509,6 +574,10 @@
     padding: 32px 20px;
   }
 
+  .share-mid-error {
+    padding: 34px 20px 26px;
+  }
+
   .share-mid-folder {
     padding: 28px 16px;
   }
@@ -536,6 +605,17 @@
 
   .share-btn {
     justify-content: center;
+  }
+
+  .share-error-note {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .share-error-note strong {
+    width: 100%;
+    text-align: left;
   }
 
   .share-dir-row {

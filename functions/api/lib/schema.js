@@ -186,11 +186,23 @@ export const SHARE_TABLE_SQL = `
 `;
 
 export const SHARE_MIGRATION_SQL = [
+  `ALTER TABLE share_links ADD COLUMN name TEXT NOT NULL DEFAULT ''`,
+  `ALTER TABLE share_links ADD COLUMN size INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE share_links ADD COLUMN content_type TEXT DEFAULT ''`,
+  `ALTER TABLE share_links ADD COLUMN target_type TEXT NOT NULL DEFAULT 'file'`,
+  `ALTER TABLE share_links ADD COLUMN allow_preview INTEGER NOT NULL DEFAULT 1`,
+  `ALTER TABLE share_links ADD COLUMN allow_download INTEGER NOT NULL DEFAULT 1`,
+  `ALTER TABLE share_links ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE share_links ADD COLUMN max_downloads INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE share_links ADD COLUMN download_count INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE share_links ADD COLUMN password_salt TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN password_hash TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN expired_notified_at INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE share_links ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE share_links ADD COLUMN last_accessed_at INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE share_links ADD COLUMN last_access_ip TEXT DEFAULT ''`,
-  `ALTER TABLE share_links ADD COLUMN target_type TEXT NOT NULL DEFAULT 'file'`,
+  `CREATE INDEX IF NOT EXISTS idx_share_links_created_at ON share_links(created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_share_links_expires_at ON share_links(expires_at)`,
   `CREATE INDEX IF NOT EXISTS idx_share_links_path ON share_links(path)`,
 ];
 

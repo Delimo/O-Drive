@@ -51,11 +51,13 @@ export function createUploadsSlice(initialState) {
         };
       },
       setCancelled(state, action) {
+        const payload = action.payload || {};
+        const id = typeof payload === "string" ? payload : payload.id;
         return {
           ...state,
           items: state.items.map((item) =>
-            item.id === action.payload
-              ? { ...item, status: "cancelled", progress: 0 }
+            item.id === id
+              ? { ...item, status: "cancelled", progress: 0, diagnostic: payload.diagnostic || item.diagnostic || "" }
               : item,
           ),
         };

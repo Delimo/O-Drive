@@ -1,4 +1,4 @@
-export function registerNavigationActions(documentRef, windowRef, store, actions, thunks, dispatchToast) {
+export function registerNavigationActions(documentRef, windowRef, store, actions, thunks, dispatchToast, copyText) {
   return (event) => {
     const actionNode = event.target.closest("[data-action]");
     if (!actionNode) return;
@@ -19,6 +19,11 @@ export function registerNavigationActions(documentRef, windowRef, store, actions
 
     if (action === "logout") {
       store.dispatch(thunks.logout());
+      return;
+    }
+
+    if (action === "copy-current-url") {
+      copyText(windowRef.location.href, "当前链接已复制");
       return;
     }
 

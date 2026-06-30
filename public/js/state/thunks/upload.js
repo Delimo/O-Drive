@@ -7,6 +7,37 @@ const AUTO_CLOSE_DELAY = 3000;
 let autoRemoveTimers = [];
 let autoCloseTimer = null;
 
+function buildResumeDiagnostic(info) {
+  if (!info?.totalChunks) return "";
+  if (info.resumable) {
+    return `检测到本地断点，已完成 ${info.completedParts}/${info.totalChunks} 个分片，重新上传时会继续。`;
+  }
+  if (info.stale) {
+    return "发现旧的分片记录，但文件大小不匹配，将自动清理后重新上传。";
+  }
+  return "";
+}
+
+function buildUploadFailureDiagnostic(error, item) {
+  const message = error?.message || "";
+  if (message === "UPLOAD_PAUSED") {
+    return item.multipart
+      ? "已暂停并保留本地分片记录；重新选择同一文件可继续上传。"
+      : "已暂停；小文件需要重新选择后再上传。";
+  }
+  if (message === "UPLOAD_CANCELLED") {
+    return item.multipart
+      ? "已取消，本地分片记录已清理；需要重新选择文件。"
+      : "已取消；需要重新选择文件。";
+  }
+  if (/quota|容量|空间/i.test(message)) return "存储容量或配额不足，请清理空间后重新选择文件。";
+  if (/csrf|login|unauthorized|forbidden|权限|登录/i.test(message)) return "登录或权限校验失败，请刷新登录状态后重新选择文件。";
+  if (/network|fetch|timeout|Failed to fetch|网络/i.test(message)) return "网络中断或请求超时；大文件若有本地断点，重新选择同一文件可继续。";
+  return item.multipart
+    ? "分片上传失败；如果本地断点仍在，重新选择同一文件会尝试继续。"
+    : "上传失败；浏览器未保留原始文件句柄，请重新选择文件。";
+}
+
 export function clearUploadAutoTimers() {
   autoRemoveTimers.forEach(clearTimeout);
   autoRemoveTimers = [];
@@ -46,6 +77,9 @@ export function createUploadThunks(deps, context) {
           ? `${item.relativeDir}/${item.file.name}`
           : item.file.name,
         multipart: item.file.size > CHUNK_SIZE,
+        resumeInfo: uploadService.inspectMultipartResume
+          ? uploadService.inspectMultipartResume(item)
+          : null,
       }));
 
       dispatch(
@@ -57,6 +91,10 @@ export function createUploadThunks(deps, context) {
             progress: 0,
             error: "",
             multipart: q.multipart,
+            resumable: Boolean(q.resumeInfo?.resumable),
+            completedParts: q.resumeInfo?.completedParts || 0,
+            totalChunks: q.resumeInfo?.totalChunks || 0,
+            diagnostic: buildResumeDiagnostic(q.resumeInfo),
           })),
         ),
       );
@@ -130,7 +168,10 @@ export function createUploadThunks(deps, context) {
           actions.uploads.update({
             id: q.id,
             status: "uploading",
-            progress: 0,
+            progress: q.resumeInfo?.resumable
+              ? Math.round((q.resumeInfo.completedParts / q.resumeInfo.totalChunks) * 100)
+              : 0,
+            diagnostic: buildResumeDiagnostic(q.resumeInfo),
           }),
         );
 
@@ -146,19 +187,30 @@ export function createUploadThunks(deps, context) {
             let cancelled = false;
             await uploadService.multipartUpload(
               item,
-              (pct) => {
+              (pct, meta = {}) => {
                 const s = getState();
                 const ci = s.uploads.items.find((i) => i.id === q.id);
                 if (ci?.status === "cancelling") {
                   cancelled = true;
                   return;
                 }
-                dispatch(actions.uploads.update({ id: q.id, progress: pct }));
+                dispatch(actions.uploads.update({
+                  id: q.id,
+                  progress: pct,
+                  resumable: Boolean(meta.resumed || ci?.resumable),
+                  completedParts: meta.completedParts || ci?.completedParts || 0,
+                  totalChunks: meta.totalChunks || ci?.totalChunks || q.resumeInfo?.totalChunks || 0,
+                  diagnostic: meta.resumed
+                    ? `正在从断点继续：${meta.completedParts}/${meta.totalChunks} 个分片已完成。`
+                    : ci?.diagnostic || "",
+                }));
               },
               () => {
                 const s = getState();
                 const ci = s.uploads.items.find((i) => i.id === q.id);
-                return ci?.status === "cancelling" || ci?.status === "paused";
+                if (ci?.status === "cancelling") return "cancelled";
+                if (ci?.status === "paused") return "paused";
+                return false;
               },
               conflictMode,
             );
@@ -186,6 +238,8 @@ export function createUploadThunks(deps, context) {
               id: q.id,
               status: "success",
               progress: 100,
+              diagnostic: "",
+              resumable: false,
             }),
           );
           const successId = q.id;
@@ -198,7 +252,16 @@ export function createUploadThunks(deps, context) {
         } catch (error) {
           if (error.message === "UPLOAD_CANCELLED") {
             cancelledItems.push(q.id);
-            dispatch(actions.uploads.setCancelled(q.id));
+            dispatch(actions.uploads.setCancelled({
+              id: q.id,
+              diagnostic: buildUploadFailureDiagnostic(error, q),
+            }));
+          } else if (error.message === "UPLOAD_PAUSED") {
+            dispatch(actions.uploads.update({
+              id: q.id,
+              status: "paused",
+              diagnostic: buildUploadFailureDiagnostic(error, q),
+            }));
           } else {
             failed += 1;
             dispatch(
@@ -206,6 +269,7 @@ export function createUploadThunks(deps, context) {
                 id: q.id,
                 status: "error",
                 error: error.message || "上传失败",
+                diagnostic: buildUploadFailureDiagnostic(error, q),
               }),
             );
           }
@@ -263,14 +327,13 @@ export function createUploadThunks(deps, context) {
       const state = getState();
       const item = state.uploads.items.find((i) => i.id === id);
       if (!item) return;
-      dispatch(actions.uploads.retryItem(id));
-      const files = state.explorer.files || [];
-      const folders = state.explorer.folders || [];
-      const entry = [...folders, ...files].find((e) => e.name === item.name);
-      if (entry) {
-        dispatchToast("info", `重新上传 ${item.name}`);
-        return;
-      }
+      dispatch(actions.uploads.update({
+        id,
+        diagnostic: item.multipart
+          ? "请重新选择同一文件；若本地断点仍在，将从已完成分片继续。"
+          : "请重新选择该文件后再上传。",
+      }));
+      dispatchToast("info", item.multipart ? "请重新选择同一大文件以继续上传" : "请重新选择文件后上传");
     },
   };
 }

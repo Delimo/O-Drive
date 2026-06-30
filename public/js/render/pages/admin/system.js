@@ -3,6 +3,60 @@ import { MAINTENANCE_ACTIONS } from "./utils.js";
 export function createSystemRenderer({
   safeText, escapeHtml, renderEmptyState, renderEmptyStateCompact, formatTime, formatRelative, formatBytes, components
 }) {
+  function taskTypeLabel(type) {
+    if (type === "zip_download") return "ZIP 下载";
+    if (type === "upload") return "上传队列";
+    return type || "后台任务";
+  }
+
+  function taskStatusLabel(status) {
+    if (status === "completed") return "已完成";
+    if (status === "running") return "执行中";
+    if (status === "failed") return "失败";
+    if (status === "partial") return "部分失败";
+    if (status === "pending") return "等待中";
+    return status || "挂起";
+  }
+
+  function taskStatusClass(status) {
+    if (status === "completed") return "ov-task-state-ok";
+    if (status === "failed") return "ov-task-state-error";
+    if (status === "partial") return "ov-task-state-warning";
+    if (status === "running") return "ov-task-state-running";
+    return "ov-task-state-muted";
+  }
+
+  function buildTaskDiagnostics(tsk, progress, canRetry, downloadUrl) {
+    const details = [];
+    const result = tsk.result || {};
+    const payload = tsk.payload || {};
+
+    if (tsk.type === "zip_download") {
+      if (downloadUrl) details.push("结果可下载");
+      else if (tsk.status === "completed") details.push("结果链接缺失，请检查 ZIP 任务产物");
+      else if (tsk.status === "failed") details.push(canRetry ? "ZIP 生成失败，可重试" : "ZIP 生成失败");
+      else if (tsk.status === "running") details.push(`正在打包 ${progress}%`);
+      else details.push("等待后台打包");
+
+      const outputName = result.filename || payload.filename || result.name || "";
+      if (outputName) details.push(`文件：${outputName}`);
+      if (result.outputKey) details.push(`产物：${result.outputKey}`);
+      if (result.size) details.push(`大小：${formatBytes(result.size)}`);
+    } else if (tsk.type === "upload") {
+      const failedCount = Number(tsk.failed || 0);
+      if (failedCount > 0) details.push(`失败 ${failedCount} 个`);
+      if (tsk.status === "partial") details.push("上传任务部分完成，请查看上传面板诊断");
+      if (tsk.status === "failed") details.push("上传任务失败，请重新选择失败文件");
+    } else if (canRetry) {
+      details.push("失败任务可重试");
+    }
+
+    if (tsk.error) details.push(`错误：${tsk.error}`);
+    if (tsk.finishedAt) details.push(`结束：${formatTime(tsk.finishedAt)}`);
+    else if (tsk.updatedAt) details.push(`更新：${formatTime(tsk.updatedAt)}`);
+
+    return details.filter(Boolean);
+  }
 
   function renderSystemSection(admin) {
     const {
@@ -233,12 +287,18 @@ export function createSystemRenderer({
                         const downloadUrl = tsk.type === "zip_download" && tsk.result?.downloadUrl ? tsk.result.downloadUrl : "";
                         const canRetry = ["failed", "partial"].includes(tsk.status || "") && tsk.type !== "upload";
                         const retrying = taskRetryingId === tsk.id;
+                        const details = buildTaskDiagnostics(tsk, progress, canRetry, downloadUrl);
                         return `
                           <div class="ov-task-item">
                             <div class="ov-task-info">
-                              <span class="ov-task-status">队列: ${escapeHtml(tsk.type || "task")} / ${escapeHtml(tsk.status || "挂起")}</span>
+                              <div class="ov-task-title-row">
+                                <span class="ov-task-status">${escapeHtml(taskTypeLabel(tsk.type))}</span>
+                                <span class="ov-task-state ${taskStatusClass(tsk.status)}">${escapeHtml(taskStatusLabel(tsk.status))}</span>
+                              </div>
                               <span class="ov-task-time">启动于 ${formatTime(tsk.createdAt)}</span>
-                              ${tsk.error ? `<span class="ov-task-time" style="color:var(--danger);">${escapeHtml(tsk.error)}</span>` : ""}
+                              ${details.length ? `<div class="ov-task-diagnostics">
+                                ${details.map(detail => `<span class="ov-task-diagnostic">${escapeHtml(detail)}</span>`).join("")}
+                              </div>` : ""}
                             </div>
                             <div class="ov-task-progress">
                               <div class="ov-task-progress-bar">

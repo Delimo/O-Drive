@@ -1,4 +1,4 @@
-import { resolveExistingObjectLocation, storageGet } from "./storage.js";
+import { resolveExistingObjectLocation, storageGet, storagePut } from "./storage.js";
 
 const THUMBNAIL_RESIZE_TIMEOUT_MS = 1500;
 
@@ -15,6 +15,29 @@ async function originalImageResponse(env, r2Key) {
       "Content-Type":
         obj.httpMetadata?.contentType || "application/octet-stream",
       "Cache-Control": "public, max-age=3600, s-maxage=86400",
+    },
+  });
+}
+
+function thumbnailCacheKey(r2Key, width, height) {
+  return `.thumbs/${width}x${height}/${String(r2Key || "").replace(/^\/+/, "")}`;
+}
+
+function thumbnailHeaders(sourceHeaders = new Headers(), contentType = "") {
+  const headers = new Headers(sourceHeaders);
+  headers.set("Cache-Control", "public, max-age=86400, s-maxage=604800");
+  if (contentType && !headers.get("Content-Type")) {
+    headers.set("Content-Type", contentType);
+  }
+  return headers;
+}
+
+function fallbackImageResponse(sourceObj, contentType) {
+  return new Response(sourceObj.body, {
+    headers: {
+      "Content-Type": contentType || "application/octet-stream",
+      "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      "X-Thumbnail-Fallback": "original",
     },
   });
 }
@@ -68,6 +91,17 @@ export async function handleThumbnail(env, request, r2Key, context) {
     return hit;
   }
 
+  const r2ThumbnailKey = thumbnailCacheKey(r2Key, width, height);
+  const storedThumbnail = await storageGet(env, "r2", r2ThumbnailKey);
+  if (storedThumbnail) {
+    const headers = thumbnailHeaders(
+      new Headers(),
+      storedThumbnail.httpMetadata?.contentType || "image/webp",
+    );
+    headers.set("X-Thumbnail-Cache", "R2-HIT");
+    return new Response(storedThumbnail.body, { headers });
+  }
+
   // Call storage directly instead of routing through /api/preview/ pipeline
   let sourceObj;
   try {
@@ -91,25 +125,14 @@ export async function handleThumbnail(env, request, r2Key, context) {
   try {
     response = await resizedImageResponse(request, sourceUrl, width, height);
   } catch (e) {
-    response = new Response(sourceObj.body, {
-      headers: {
-        "Content-Type": contentType || "application/octet-stream",
-        "Cache-Control": "public, max-age=3600, s-maxage=86400",
-      },
-    });
+    response = fallbackImageResponse(sourceObj, contentType);
   }
 
   if (!response.ok) {
-    response = new Response(sourceObj.body, {
-      headers: {
-        "Content-Type": contentType || "application/octet-stream",
-        "Cache-Control": "public, max-age=3600, s-maxage=86400",
-      },
-    });
+    response = fallbackImageResponse(sourceObj, contentType);
   }
 
-  const headers = new Headers(response.headers);
-  headers.set("Cache-Control", "public, max-age=86400, s-maxage=604800");
+  const headers = thumbnailHeaders(response.headers, contentType);
   headers.set("X-Thumbnail-Cache", "MISS");
   const thumbnail = new Response(response.body, {
     status: response.status,
@@ -117,6 +140,21 @@ export async function handleThumbnail(env, request, r2Key, context) {
   });
 
   if (cache) context?.waitUntil?.(cache.put(cacheKey, thumbnail.clone()));
+  if (!headers.get("X-Thumbnail-Fallback")) {
+    const storeTask = thumbnail
+      .clone()
+      .arrayBuffer()
+      .then((body) =>
+        storagePut(env, "r2", r2ThumbnailKey, body, {
+          httpMetadata: {
+            contentType: headers.get("Content-Type") || contentType || "image/webp",
+          },
+        }),
+      )
+      .catch(() => {});
+    if (context?.waitUntil) context.waitUntil(storeTask);
+    else await storeTask;
+  }
 
   return thumbnail;
 }

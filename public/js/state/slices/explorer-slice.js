@@ -15,6 +15,8 @@ export const explorerInitialState = {
   filterDateTo: "",
   searchCursor: "",
   hasMore: false,
+  searchScanned: 0,
+  searchScanLimitReached: false,
   view: "grid",
   sort: "smart",
   sortField: "name",
@@ -101,6 +103,10 @@ export function createExplorerSlice(initialState) {
           files: action.payload.files || [],
           trashItems: action.payload.trashItems || [],
           storageId: action.payload.storageId || state.storageId,
+          searchCursor: "",
+          hasMore: false,
+          searchScanned: 0,
+          searchScanLimitReached: false,
           selectedKeys: [],
         };
       },
@@ -114,11 +120,14 @@ export function createExplorerSlice(initialState) {
           files: files || [],
           searchCursor: cursor || "",
           hasMore: hasMore || false,
+          searchScanned: Number(action.payload.scanned || 0),
+          searchScanLimitReached: Boolean(action.payload.scanLimitReached),
           selectedKeys: [],
         };
       },
       appendSearchResults(state, action) {
-        const { files, cursor, hasMore } = action.payload || {};
+        const { files, cursor, hasMore, scanned, scanLimitReached } =
+          action.payload || {};
         const existing = state.files || [];
         return {
           ...state,
@@ -127,6 +136,9 @@ export function createExplorerSlice(initialState) {
           files: [...existing, ...(files || [])],
           searchCursor: cursor || "",
           hasMore: hasMore || false,
+          searchScanned:
+            Number(state.searchScanned || 0) + Number(scanned || 0),
+          searchScanLimitReached: Boolean(scanLimitReached),
           selectedKeys: [],
         };
       },
