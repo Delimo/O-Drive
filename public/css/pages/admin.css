@@ -1707,6 +1707,7 @@
 .ov-rules-editor {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   border-radius: 0;
   background: transparent;
   border: none;
@@ -2468,14 +2469,16 @@
 }
 
 .ov-share-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(260px, 1.25fr) minmax(300px, 0.9fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
-  padding: 16px 18px;
+  padding: 14px 16px 14px 18px;
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
+  border-left-width: 3px;
+  text-align: left;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -2484,10 +2487,22 @@
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
+.ov-share-item.is-active {
+  border-left-color: var(--accent);
+}
+
+.ov-share-item.is-expired {
+  border-left-color: var(--danger);
+}
+
+.ov-share-item.is-exhausted {
+  border-left-color: #d97706;
+}
+
 .ov-share-main {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   flex: 1;
 }
@@ -2504,7 +2519,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .ov-share-dot {
@@ -2525,6 +2540,10 @@
   font-weight: 700;
   color: var(--text);
   min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ov-share-path {
@@ -2547,6 +2566,45 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.ov-share-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.ov-share-metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.ov-share-metric-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ov-share-metric strong {
+  display: block;
+  min-width: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .ov-share-pill {
@@ -2588,6 +2646,14 @@
   color: #b45309;
 }
 
+.ov-share-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: max-content;
+}
+
 .ov-share-empty {
   flex: 1;
   min-height: 420px;
@@ -2613,6 +2679,47 @@
   color: var(--muted);
 }
 
+@media (max-width: 1180px) {
+  .ov-share-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .ov-share-metrics {
+    grid-column: 1 / -1;
+  }
+
+  .ov-share-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .ov-share-item {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .ov-share-item-title-row {
+    flex-wrap: wrap;
+  }
+
+  .ov-share-metrics {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .ov-share-actions {
+    grid-column: auto;
+    grid-row: auto;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+}
+
 /* ─── Paths Section ─── */
 .ov-shares-paths {
   display: grid;
@@ -2623,8 +2730,9 @@
 
 /* ─── Rules Editor ─── */
 .ov-rules-editor-header {
-  padding: 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .ov-rules-editor-title-row {
@@ -2649,17 +2757,23 @@
 }
 
 .ov-rules-editor-body {
-  padding: 16px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .ov-rules-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+}
+
+.ov-rules-field .input {
+  min-height: 34px;
 }
 
 .ov-rules-label {
@@ -2671,14 +2785,15 @@
 .ov-rules-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ov-rules-checkbox {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--panel-soft);
@@ -2691,7 +2806,7 @@
 }
 
 .ov-rules-checkbox input[type="checkbox"] {
-  margin-top: 2px;
+  margin: 0;
   accent-color: var(--accent);
 }
 
@@ -2708,8 +2823,7 @@
 }
 
 .ov-rules-checkbox-desc {
-  font-size: 11px;
-  color: var(--muted);
+  display: none;
 }
 
 /* ─── Rules List ─── */
@@ -4518,13 +4632,30 @@
 }
 
 .ov-webdav-connection-card {
-  gap: 16px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
 }
 
 .ov-webdav-section {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.ov-webdav-connection-card .ov-webdav-section:first-child {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   gap: 8px;
+}
+
+.ov-webdav-connection-card .ov-webdav-section:first-child .ov-webdav-conn-title {
+  white-space: nowrap;
+}
+
+.ov-webdav-connection-card .ov-webdav-section + .ov-webdav-section .ov-webdav-conn-title {
+  display: none;
 }
 
 .ov-webdav-url-row {
@@ -4538,9 +4669,9 @@
   display: flex;
   align-items: center;
   flex: 1;
-  min-height: 36px;
+  min-height: 34px;
   min-width: 0;
-  padding: 0 12px;
+  padding: 0 11px;
   border-radius: 8px;
   border: 1px solid rgba(14, 116, 144, 0.12);
   background: var(--accent-soft);
@@ -4555,15 +4686,17 @@
 .ov-webdav-credential-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .ov-webdav-credential {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   min-width: 0;
-  padding: 10px 12px;
+  min-height: 34px;
+  padding: 7px 10px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--panel-soft);
@@ -4571,17 +4704,21 @@
 
 .ov-webdav-credential strong {
   color: var(--text);
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ov-webdav-meta {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
-  padding-top: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--line);
 }
 
@@ -4594,8 +4731,8 @@
 .ov-webdav-limits span {
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
-  padding: 0 8px;
+  min-height: 22px;
+  padding: 0 7px;
   border-radius: 999px;
   background: rgba(100, 116, 139, 0.08);
   border: 1px solid rgba(100, 116, 139, 0.14);
@@ -4649,10 +4786,13 @@
 .ov-webdav-op {
   background: var(--panel-soft);
   border: 1px solid var(--line);
-  padding: 2px 8px;
+  min-height: 22px;
+  padding: 0 8px;
   border-radius: 6px;
   font-size: 12px;
   color: var(--text);
+  display: inline-flex;
+  align-items: center;
 }
 
 .ov-webdav-ops-sep {
@@ -4707,6 +4847,15 @@
   }
 
   .ov-webdav-url-row {
+    flex-direction: column;
+  }
+
+  .ov-webdav-connection-card .ov-webdav-section:first-child {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .ov-webdav-meta {
     flex-direction: column;
   }
 }

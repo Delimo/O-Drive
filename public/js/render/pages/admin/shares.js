@@ -60,31 +60,43 @@ export function createSharesRenderer({
       const targetLabel = share?.targetType === "folder" ? "文件夹" : "文件";
       const statusText = isExpired ? "已失效" : isExhausted ? "已用尽" : "有效";
       const statusClass = isExpired ? "ov-badge-error" : isExhausted ? "ov-badge-warn" : "ov-badge-ok";
+      const itemStateClass = isExpired ? " is-expired" : isExhausted ? " is-exhausted" : " is-active";
       const lastAccessText = share?.lastAccessedAt
-        ? `最近访问 ${formatRelative(share.lastAccessedAt)}`
-        : "暂无访问记录";
+        ? formatRelative(share.lastAccessedAt)
+        : "暂无记录";
+      const downloadsText = `${share.downloadCount || 0}/${share.maxDownloads || "∞"}`;
+      const expiresText = share?.expiresAt ? formatTime(share.expiresAt) : "无限期";
 
       return `
-        <div class="ov-share-item">
+        <div class="ov-share-item${itemStateClass}">
           <div class="ov-share-main">
             <div class="ov-share-item-head">
               <div class="ov-share-item-title-row">
                 <span class="ov-share-dot${isActive ? " is-on" : ""}"></span>
                 <span class="ov-share-name">${safeText(share.name, "未命名资源")}</span>
                 <span class="ov-share-pill">${escapeHtml(targetLabel)}</span>
-                <span class="ov-badge ${statusClass}">${statusText}</span>
-                ${share?.hasPassword ? `<span class="ov-share-pill tag-password">有密码</span>` : ""}
               </div>
               <div class="ov-share-path">${escapeHtml(share.path || "-")}</div>
             </div>
-            <div class="ov-share-meta">
-              <span>${escapeHtml(lastAccessText)}</span>
-              <span>下载 ${escapeHtml(String(share.downloadCount || 0))}/${escapeHtml(String(share.maxDownloads || "∞"))}</span>
-              ${share?.expiresAt ? `<span>到期 ${escapeHtml(formatTime(share.expiresAt))}</span>` : `<span>无限期</span>`}
-            </div>
             <div class="ov-share-tags">
+              <span class="ov-badge ${statusClass}">${statusText}</span>
+              ${share?.hasPassword ? `<span class="ov-share-pill tag-password">有密码</span>` : ""}
               ${renderShareTags(share)}
             </div>
+          </div>
+          <div class="ov-share-metrics">
+            <span class="ov-share-metric">
+              <span class="ov-share-metric-label">最近访问</span>
+              <strong>${escapeHtml(lastAccessText)}</strong>
+            </span>
+            <span class="ov-share-metric">
+              <span class="ov-share-metric-label">下载</span>
+              <strong>${escapeHtml(downloadsText)}</strong>
+            </span>
+            <span class="ov-share-metric">
+              <span class="ov-share-metric-label">到期</span>
+              <strong>${escapeHtml(expiresText)}</strong>
+            </span>
           </div>
           <div class="ov-share-actions">
             <button class="btn btn-sm" type="button"

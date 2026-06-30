@@ -129,14 +129,6 @@ export function createStorageRenderer({
                 <label class="ov-rules-label">路径</label>
                 <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path">
               </div>
-              <div class="ov-rules-field">
-                <label class="ov-rules-label">访问密码</label>
-                <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
-              </div>
-              <div class="ov-rules-field">
-                <label class="ov-rules-label">备注</label>
-                <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
-              </div>
               <div class="ov-rules-options">
                 <label class="ov-rules-checkbox">
                   <input type="checkbox" data-action-change="toggle-rule-hide">
@@ -152,6 +144,14 @@ export function createStorageRenderer({
                     <span class="ov-rules-checkbox-desc">受密码保护时仍显示名称</span>
                   </span>
                 </label>
+              </div>
+              <div class="ov-rules-field">
+                <label class="ov-rules-label">访问密码</label>
+                <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
+              </div>
+              <div class="ov-rules-field">
+                <label class="ov-rules-label">备注</label>
+                <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
               </div>
             </div>
           </div>
