@@ -151,9 +151,19 @@ async function searchFileContents(
   return matches;
 }
 
-const searchCache = new Map();
+const searchCaches = new WeakMap();
 const SEARCH_CACHE_TTL = 10000;
 const SEARCH_CACHE_MAX_SIZE = 500;
+
+function searchCacheForEnv(env) {
+  if (!env || typeof env !== "object") return new Map();
+  let cache = searchCaches.get(env);
+  if (!cache) {
+    cache = new Map();
+    searchCaches.set(env, cache);
+  }
+  return cache;
+}
 
 export async function searchFileIndex(
   env,
@@ -164,8 +174,13 @@ export async function searchFileIndex(
   const count = await indexedFileCount(env);
   if (!count) return null;
   if (!q || String(q).length < 2) return null;
-  const cacheKey = `${q}|${scope}|${limit}|${cursor}|${JSON.stringify(filters)}`;
-  const cached = searchCache.get(cacheKey);
+  const cache = searchCacheForEnv(env);
+  const visibilityKey =
+    auth.role === "admin"
+      ? "admin"
+      : `guest:${[...hiddenPaths].sort().join(",")}`;
+  const cacheKey = `${visibilityKey}|${q}|${scope}|${limit}|${cursor}|${JSON.stringify(filters)}`;
+  const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.ts < SEARCH_CACHE_TTL) return cached.data;
 
   let cursorPath = "";
@@ -239,11 +254,11 @@ export async function searchFileIndex(
       scanned: page.length,
       scanLimitReached: false,
     };
-    if (searchCache.size >= SEARCH_CACHE_MAX_SIZE) {
-      const oldest = searchCache.entries().next().value;
-      if (oldest) searchCache.delete(oldest[0]);
+    if (cache.size >= SEARCH_CACHE_MAX_SIZE) {
+      const oldest = cache.entries().next().value;
+      if (oldest) cache.delete(oldest[0]);
     }
-    searchCache.set(cacheKey, { data, ts: Date.now() });
+    cache.set(cacheKey, { data, ts: Date.now() });
     return data;
   } catch (_) {
     console.warn("[file-index] searchFileIndex query failed");

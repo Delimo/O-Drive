@@ -24,6 +24,9 @@ export function createStorageRenderer({
     const alertWarningPercent = r2.alertWarningPercent || storageConfig.r2AlertWarningPercent || 90;
     const alertErrorPercent = r2.alertErrorPercent || storageConfig.r2AlertErrorPercent || 95;
     const fillColor = usedPercent > 80 ? 'var(--danger)' : usedPercent > 60 ? 'var(--warning)' : 'var(--accent)';
+    const hiddenRuleCount = (hiddenPaths || []).length;
+    const protectedRuleCount = (protectedPaths || []).length;
+    const accessRuleCount = hiddenRuleCount + protectedRuleCount;
 
     return `
       <div class="ov-storage">
@@ -116,10 +119,24 @@ export function createStorageRenderer({
         </div>
 
         <div class="ov-storage-bottom">
+          <div class="ov-rules-shell-header">
+            <div class="ov-rules-shell-title-group">
+              <span class="ov-rules-shell-kicker">访问控制</span>
+              <h3 class="ov-rules-shell-title">路径规则</h3>
+              <p class="ov-rules-shell-desc">为目录或文件设置密码保护，也可以从访客文件列表中隐藏路径。</p>
+            </div>
+            <div class="ov-rules-shell-meta" aria-label="路径规则统计">
+              <span><strong>${accessRuleCount}</strong> 条规则</span>
+              <span>${hiddenRuleCount} 隐藏</span>
+              <span>${protectedRuleCount} 密码</span>
+            </div>
+          </div>
+
+          <div class="ov-rules-workspace">
           <div class="ov-rules-editor">
             <div class="ov-rules-editor-header">
               <div class="ov-rules-editor-title-row">
-                <h3 class="ov-rules-editor-title">规则编辑</h3>
+                <h3 class="ov-rules-editor-title">新建规则</h3>
                 <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule">保存规则</button>
               </div>
               <p class="ov-rules-editor-desc">路径可以是目录，也可以是具体文件。</p>
@@ -161,11 +178,14 @@ export function createStorageRenderer({
           <div class="ov-rules-list">
             <div class="ov-rules-list-header">
               <h3 class="ov-rules-list-title">规则列表</h3>
-              <span class="ov-rules-list-count">${(protectedPaths || []).length + (hiddenPaths || []).length} 条规则</span>
+              <span class="ov-rules-list-count">${accessRuleCount} 条规则</span>
             </div>
             <div class="ov-rules-list-body">
-              ${(protectedPaths || []).length === 0 && (hiddenPaths || []).length === 0
-                ? `<div class="ov-empty-inline">暂无访问控制规则</div>`
+              ${accessRuleCount === 0
+                ? `<div class="ov-rules-empty">
+                    <span class="ov-rules-empty-title">暂无访问控制规则</span>
+                    <span class="ov-rules-empty-copy">在左侧填写路径后保存，可创建隐藏路径或密码保护规则。</span>
+                  </div>`
                 : `
                   <div class="ov-rules-table-wrap">
                     <table class="ov-rules-table">
@@ -208,6 +228,7 @@ export function createStorageRenderer({
                   </div>
                 `}
             </div>
+          </div>
           </div>
         </div>
       </div>

@@ -253,6 +253,33 @@ test('indexed search keeps scanning past hidden rows for guest pagination', asyn
   assert.equal(indexed.nextCursor, '');
 });
 
+test('indexed search cache is scoped by role and hidden paths', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'hidden/cache-leak-secret.txt', { size: 1, uploaded: Date.now() });
+  await upsertFileIndex(env, 'visible/cache-leak-public.txt', { size: 1, uploaded: Date.now() });
+
+  const adminResult = await searchFileIndex(
+    env,
+    { q: 'cache-leak', scope: '/', limit: 10, cursor: '' },
+    ['hidden'],
+    { role: 'admin' },
+  );
+  assert.deepEqual(adminResult.files.map(file => file.fullKey), [
+    'hidden/cache-leak-secret.txt',
+    'visible/cache-leak-public.txt',
+  ]);
+
+  const guestResult = await searchFileIndex(
+    env,
+    { q: 'cache-leak', scope: '/', limit: 10, cursor: '' },
+    ['hidden'],
+    { role: 'guest' },
+  );
+  assert.deepEqual(guestResult.files.map(file => file.fullKey), [
+    'visible/cache-leak-public.txt',
+  ]);
+});
+
 test('preview response streams existing object, supports range, and 404s missing object', async () => {
   const env = makeEnv({
     objects: [{ key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') }],
@@ -2968,6 +2995,7 @@ test('admin can send generic webhook test messages', async () => {
     assert.equal(calls[0].url, 'https://example.com/webhook');
     assert.equal(calls[0].body.event, 'webhook.test');
     assert.match(calls[0].body.data.message, /O-Drive/);
+    assert.doesNotMatch(JSON.stringify(calls[0].body), /SEC123/);
 
     const deliveries = await onRequest({
       env,
@@ -2980,6 +3008,8 @@ test('admin can send generic webhook test messages', async () => {
     assert.equal(deliveryData.items.length, 1);
     assert.equal(deliveryData.items[0].event, 'webhook.test');
     assert.equal(deliveryData.items[0].ok, 1);
+    assert.doesNotMatch(deliveryData.items[0].payload, /SEC123/);
+    assert.doesNotMatch(deliveryData.items[0].endpoint_config, /SEC123/);
   } finally {
     globalThis.fetch = originalFetch;
   }
