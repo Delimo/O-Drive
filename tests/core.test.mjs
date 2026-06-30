@@ -447,14 +447,15 @@ test('csrf route policies have matching dispatchers', () => {
     const methodMatches = !route.methods || route.methods.includes(method);
     return pathMatches && methodMatches;
   };
-  const samplePath = policy => {
+  const samplePath = (policy, method) => {
     if (policy.path) return policy.path;
+    if (policy.prefix === '/api/files' && method === 'PUT') return '/api/files/__sample__';
     return policy.prefix.endsWith('/') ? `${policy.prefix}__sample__` : policy.prefix;
   };
 
   for (const policy of API_ROUTE_POLICIES.filter(item => item.csrf)) {
     for (const method of policy.methods || ['GET']) {
-      const path = samplePath(policy);
+      const path = samplePath(policy, method);
       assert.ok(
         dispatchers.some(route => routeMatches(route, path, method)),
         `${method} ${path} should have a dispatcher`,
@@ -497,14 +498,19 @@ test('api rejects reserved and encoded traversal write targets with client error
 
   const traversal = await onRequest({
     env,
-    request: new Request('https://example.com/api/mkdir/%2e%2e', {
+    request: new Request('https://example.com/api/upload/check', {
       method: 'POST',
-      body: JSON.stringify({ folderName: 'child' }),
+      body: JSON.stringify({
+        targetDir: '..',
+        name: 'note.txt',
+        size: 1,
+        sha256: 'b'.repeat(64),
+      }),
       headers,
     }),
   });
   assert.equal(traversal.status, 400);
-  assert.equal((await traversal.json()).message, 'Invalid path');
+  assert.match((await traversal.json()).message, /^Invalid (name|path)$/);
 });
 
 test('token secret signs admin sessions independently from admin password', async () => {
@@ -1133,10 +1139,11 @@ test('protected paths require password and unlock with signed cookie', async () 
   assert.equal(access.ok, true);
 });
 
-test('route enforces protected access for download and preview endpoints', async () => {
+test('route enforces protected access for download preview and thumbnail endpoints', async () => {
   const env = makeEnv({
     objects: [
       { key: 'private/secret.txt', body: 'secret', size: 6, uploaded: new Date('2026-01-01') },
+      { key: 'private/photo.jpg', body: 'jpeg', size: 4, uploaded: new Date('2026-01-01'), httpMetadata: { contentType: 'image/jpeg' } },
     ],
   });
   env.ALLOW_GUEST = 'true';
@@ -1156,6 +1163,13 @@ test('route enforces protected access for download and preview endpoints', async
   assert.equal(blocked.status, 403);
   assert.equal((await blocked.json()).code, 'password_required');
 
+  const blockedThumbnail = await onRequest({
+    env,
+    request: new Request('https://example.com/api/thumbnail/private/photo.jpg'),
+  });
+  assert.equal(blockedThumbnail.status, 403);
+  assert.equal((await blockedThumbnail.json()).code, 'password_required');
+
   const rules = await loadProtectedPaths(env);
   const unlock = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
     method: 'POST',
@@ -1172,6 +1186,14 @@ test('route enforces protected access for download and preview endpoints', async
   });
   assert.equal(preview.status, 200);
   assert.equal(await preview.text(), 'secret');
+
+  const thumbnail = await onRequest({
+    env,
+    request: new Request('https://example.com/api/thumbnail/private/photo.jpg', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  assert.equal(thumbnail.status, 200);
 });
 
 test('protected path passwords reject very short secrets and store pbkdf2 hashes', async () => {
@@ -3349,6 +3371,12 @@ test('admin can create folder share links and browse shared folders', async () =
   assert.equal(nestedInfo.status, 200);
   const nestedData = await nestedInfo.json();
   assert.deepEqual(nestedData.directory.files.map((item) => item.name), ['deep.txt']);
+
+  const outsideRoot = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info?path=..`),
+  });
+  assert.equal(outsideRoot.status, 400);
 
   const fileDownload = await onRequest({
     env,

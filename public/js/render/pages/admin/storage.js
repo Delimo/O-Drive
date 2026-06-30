@@ -145,13 +145,15 @@ export function createStorageRenderer({
                   </span>
                 </label>
               </div>
-              <div class="ov-rules-field">
-                <label class="ov-rules-label">访问密码</label>
-                <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
-              </div>
-              <div class="ov-rules-field">
-                <label class="ov-rules-label">备注</label>
-                <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
+              <div class="ov-rules-inline-fields">
+                <div class="ov-rules-field">
+                  <label class="ov-rules-label">访问密码</label>
+                  <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
+                </div>
+                <div class="ov-rules-field">
+                  <label class="ov-rules-label">备注</label>
+                  <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
+                </div>
               </div>
             </div>
           </div>

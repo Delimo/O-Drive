@@ -96,16 +96,15 @@ export function createSystemRenderer({
                 </div>
                 <div class="ov-system-info-body">
                   ${davEnabled ? `
-                    <div class="ov-webdav-conn ov-webdav-connection-card">
-                      <div class="ov-webdav-section">
-                        <span class="ov-webdav-conn-title">连接地址</span>
-                        <div class="ov-webdav-url-row">
-                          <code class="ov-webdav-url" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">${escapeHtml(davUrl)}</code>
-                          <button class="btn btn-sm" type="button" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">复制地址</button>
+                    <div class="ov-webdav-panel">
+                      <div class="ov-webdav-main">
+                        <div class="ov-webdav-url-block">
+                          <span class="ov-webdav-eyebrow">连接地址</span>
+                          <div class="ov-webdav-url-row">
+                            <code class="ov-webdav-url" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">${escapeHtml(davUrl)}</code>
+                            <button class="btn btn-sm" type="button" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">复制</button>
+                          </div>
                         </div>
-                      </div>
-                      <div class="ov-webdav-section">
-                        <span class="ov-webdav-conn-title">登录方式</span>
                         <div class="ov-webdav-credential-list">
                           <div class="ov-webdav-credential">
                             <span class="ov-webdav-conn-label">用户名</span>
@@ -117,21 +116,25 @@ export function createSystemRenderer({
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div class="ov-webdav-meta">
-                      <div class="ov-webdav-ops" aria-label="WebDAV 支持的操作">
-                        <span class="ov-webdav-op">浏览</span>
-                        <span class="ov-webdav-op">下载</span>
-                        <span class="ov-webdav-op">上传</span>
-                        <span class="ov-webdav-op">新建</span>
-                        <span class="ov-webdav-op">删除</span>
-                        <span class="ov-webdav-op">移动</span>
-                        <span class="ov-webdav-op">复制</span>
-                      </div>
-                      <div class="ov-webdav-limits">
-                        <span>DAV Level 1</span>
-                        <span>不支持 LOCK</span>
-                        <span>单次 PUT &le; 100MB</span>
+                      <div class="ov-webdav-summary">
+                        <div class="ov-webdav-summary-top">
+                          <span class="ov-webdav-live-dot"></span>
+                          <span>服务可用</span>
+                          <strong>DAV Level 1</strong>
+                        </div>
+                        <div class="ov-webdav-limits">
+                          <span>不支持 LOCK</span>
+                          <span>单次 PUT &le; 100MB</span>
+                        </div>
+                        <div class="ov-webdav-ops" aria-label="WebDAV 支持的操作">
+                          <span class="ov-webdav-op">浏览</span>
+                          <span class="ov-webdav-op">下载</span>
+                          <span class="ov-webdav-op">上传</span>
+                          <span class="ov-webdav-op">新建</span>
+                          <span class="ov-webdav-op">删除</span>
+                          <span class="ov-webdav-op">移动</span>
+                          <span class="ov-webdav-op">复制</span>
+                        </div>
                       </div>
                     </div>
                   ` : `

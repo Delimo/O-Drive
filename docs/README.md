@@ -7,6 +7,7 @@
 | `maintenance-handoff.md` | 后续维护者的接手入口，本地命令、核心模块、近期变更和下一步建议。 |
 | `architecture.md` | 前端分层、样式约定和后端 API 路由约定。 |
 | `frontend.md` | 前端入口、状态、渲染、事件、工作流和测试维护说明。 |
+| `frontend-style.md` | 前端视觉风格指南，记录颜色、排版、组件、页面密度和重做页面时的设计检查清单。 |
 | `layout.md` | 页面布局、region、flex 链路和常见布局排查。 |
 | `admin-page.md` | 后台管理页 Tab、渲染器和事件约定。 |
 

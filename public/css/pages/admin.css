@@ -2730,7 +2730,7 @@
 
 /* ─── Rules Editor ─── */
 .ov-rules-editor-header {
-  padding: 14px 16px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
@@ -2740,7 +2740,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .ov-rules-editor-title {
@@ -2751,16 +2751,17 @@
 }
 
 .ov-rules-editor-desc {
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.25;
   color: var(--muted);
   margin: 0;
 }
 
 .ov-rules-editor-body {
-  padding: 14px 16px;
+  padding: 6px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -2769,17 +2770,25 @@
 .ov-rules-field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
 }
 
 .ov-rules-field .input {
-  min-height: 34px;
+  min-height: 28px;
+  font-size: 12px;
+  padding: 0 9px;
 }
 
 .ov-rules-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text);
+}
+
+.ov-rules-inline-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
 }
 
 .ov-rules-options {
@@ -2792,8 +2801,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 6px 8px;
+  min-height: 30px;
+  padding: 5px 8px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--panel-soft);
@@ -2817,13 +2826,19 @@
 }
 
 .ov-rules-checkbox-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text);
 }
 
 .ov-rules-checkbox-desc {
   display: none;
+}
+
+@media (max-width: 768px) {
+  .ov-rules-inline-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ─── Rules List ─── */
@@ -4631,6 +4646,77 @@
   flex: 1;
 }
 
+.ov-webdav-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.95fr);
+  gap: 12px;
+  min-height: 156px;
+}
+
+.ov-webdav-main,
+.ov-webdav-summary {
+  min-width: 0;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.ov-webdav-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel);
+}
+
+.ov-webdav-url-block {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.ov-webdav-eyebrow {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ov-webdav-summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  background: linear-gradient(180deg, var(--panel-soft), var(--panel));
+}
+
+.ov-webdav-summary-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ov-webdav-summary-top strong {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ov-webdav-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+  flex-shrink: 0;
+}
+
 .ov-webdav-connection-card {
   gap: 10px;
   padding: 10px 12px;
@@ -4661,7 +4747,7 @@
 .ov-webdav-url-row {
   display: flex;
   align-items: stretch;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -4669,9 +4755,9 @@
   display: flex;
   align-items: center;
   flex: 1;
-  min-height: 34px;
+  min-height: 38px;
   min-width: 0;
-  padding: 0 11px;
+  padding: 0 12px;
   border-radius: 8px;
   border: 1px solid rgba(14, 116, 144, 0.12);
   background: var(--accent-soft);
@@ -4687,6 +4773,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  min-width: 0;
 }
 
 .ov-webdav-credential {
@@ -4695,8 +4782,8 @@
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
-  min-height: 34px;
-  padding: 7px 10px;
+  min-height: 42px;
+  padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--panel-soft);
@@ -4726,6 +4813,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
 }
 
 .ov-webdav-limits span {
@@ -4773,7 +4861,7 @@
 .ov-webdav-ops {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
   font-size: 13px;
   color: var(--muted);
@@ -4786,8 +4874,8 @@
 .ov-webdav-op {
   background: var(--panel-soft);
   border: 1px solid var(--line);
-  min-height: 22px;
-  padding: 0 8px;
+  min-height: 24px;
+  padding: 0 9px;
   border-radius: 6px;
   font-size: 12px;
   color: var(--text);
@@ -4838,6 +4926,10 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .ov-webdav-panel {
+    grid-template-columns: 1fr;
+  }
+
   .ov-webdav-grid {
     grid-template-columns: 1fr;
   }
