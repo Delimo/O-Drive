@@ -431,6 +431,44 @@ async function cleanupExpiredShares(
   return expiredRows.length;
 }
 
+function isLikelyShareSchemaError(error) {
+  const message = String(error?.message || error || "");
+  return /share_links/i.test(message) && /column|schema|SQLITE_ERROR|no such table/i.test(message);
+}
+
+async function insertShareLink(env, row) {
+  const runInsert = () =>
+    env.D1.prepare(
+      `INSERT INTO share_links
+       (token, path, name, size, content_type, target_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, expired_notified_at, created_at, last_accessed_at, last_access_ip)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, 0, '')`,
+    )
+      .bind(
+        row.token,
+        row.path,
+        row.name,
+        Number(row.size || 0),
+        row.contentType || "",
+        row.targetType || "file",
+        row.allowPreview,
+        row.allowDownload,
+        row.expiresAt,
+        row.maxDownloads,
+        row.passwordSalt || "",
+        row.passwordHash || "",
+        row.createdAt,
+      )
+      .run();
+
+  try {
+    await runInsert();
+  } catch (error) {
+    if (!isLikelyShareSchemaError(error)) throw error;
+    await ensureShareTable(env, { force: true });
+    await runInsert();
+  }
+}
+
 async function expiredResponse(
   env,
   token,
@@ -514,27 +552,22 @@ export async function handleAdminShares(env, request, method, url) {
       : "";
     const name = path.split("/").pop() || path;
     const contentType = target.contentType || "";
-    await env.D1.prepare(
-      `INSERT INTO share_links
-       (token, path, name, size, content_type, target_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, expired_notified_at, created_at, last_accessed_at, last_access_ip)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, 0, '')`,
-    )
-      .bind(
-        token,
-        path,
-        name,
-        Number(target.size || 0),
-        contentType,
-        target.targetType,
-        allowPreview,
-        allowDownload,
-        expiresAt,
-        maxDownloads,
-        passwordSalt,
-        passwordHash,
-        Date.now(),
-      )
-      .run();
+    const createdAt = Date.now();
+    await insertShareLink(env, {
+      token,
+      path,
+      name,
+      size: Number(target.size || 0),
+      contentType,
+      targetType: target.targetType,
+      allowPreview,
+      allowDownload,
+      expiresAt,
+      maxDownloads,
+      passwordSalt,
+      passwordHash,
+      createdAt,
+    });
     await addLog(env, request, "SHARE_CREATE", path);
     return jsonResponse({
       success: true,
@@ -551,7 +584,7 @@ export async function handleAdminShares(env, request, method, url) {
         max_downloads: maxDownloads,
         download_count: 0,
         password_hash: passwordHash,
-        created_at: Date.now(),
+        created_at: createdAt,
         last_accessed_at: 0,
         last_access_ip: "",
       }),

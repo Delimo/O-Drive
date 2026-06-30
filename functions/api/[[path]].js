@@ -42,6 +42,7 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
   const routePolicy = getApiRoutePolicy(path, method);
+  let auth = null;
 
   try {
     await ensureCoreTablesOnce(env);
@@ -67,7 +68,7 @@ export async function onRequest(context) {
       if (shareResult) return shareResult;
     }
 
-    const auth = await verifyAuth(request, env);
+    auth = await verifyAuth(request, env);
     if (!auth) return unauthorizedResponse();
     if (routePolicy.postAuth === 'authRole') return authRoleResponse(auth, env);
 
@@ -101,7 +102,12 @@ export async function onRequest(context) {
     return jsonResponse({ success: false, message: 'Not Found' }, 404);
   } catch (err) {
     const status = Number(err.status || statusForKnownClientError(err) || 500);
-    const message = status >= 500 ? 'Internal Server Error' : err.message;
+    if (status >= 500)
+      console.error('[api]', method, path, err?.stack || err?.message || err);
+    const message =
+      status >= 500 && (!auth || !isAdmin(auth))
+        ? 'Internal Server Error'
+        : err.message;
     return jsonResponse({ success: false, message }, status);
   }
 }
