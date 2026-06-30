@@ -250,8 +250,8 @@ export async function ensureCoreTables(env) {
   initializedCoreTables.add(env);
 }
 
-export async function ensureShareTable(env) {
-  if (!env?.D1 || initializedShareTable.has(env)) return;
+export async function ensureShareTable(env, { force = false } = {}) {
+  if (!env?.D1 || (!force && initializedShareTable.has(env))) return;
   await runSchemaStatements(env, [SHARE_TABLE_SQL], SHARE_MIGRATION_SQL);
   initializedShareTable.add(env);
 }
