@@ -35,47 +35,107 @@ export function createSharedRenderers(deps) {
       selected.path ||
       selected.name ||
       "";
+    const key = entryKey(selected);
+    const kindLabelMap = {
+      folder: "文件夹",
+      image: "图片",
+      video: "视频",
+      audio: "音频",
+      pdf: "PDF",
+      text: "文本",
+      archive: "压缩包",
+      file: "文件",
+    };
+    const kindLabel = kindLabelMap[kind] || "文件";
+    const sizeText = isFolder
+      ? "文件夹"
+      : selected.sizeFormatted || formatBytes(selected.rawSize || 0);
+    const timeValue = selected.trashedAt || selected.time || 0;
+    const timeLabel = state.explorer.trashMode ? "删除时间" : "更新时间";
+    const timeText = formatTime(timeValue);
+    const relativeText = timeValue ? formatRelative(timeValue) : "";
+    const iconContent =
+      kind === "image" && thumbnailUrl
+        ? `<img class="details-summary-thumb" src="${escapeHtml(thumbnailUrl(pathValue, 320, 240))}" alt="${escapeHtml(selected.name || "")}" loading="lazy" onerror="this.onerror=null;this.src='/icons/file-type-${kind}.svg'">`
+        : iconForKind(kind, selected.name);
+    const primaryActions = state.explorer.trashMode
+      ? `
+        <button class="btn btn-primary details-action-btn" data-action="restore-trash" data-key="${escapeHtml(key)}">
+          <span class="icon">${icons.restore}</span>恢复
+        </button>
+        <button class="btn btn-danger details-action-btn" data-action="delete-trash" data-key="${escapeHtml(key)}">
+          <span class="icon">${icons.trash}</span>彻底删除
+        </button>
+      `
+      : `
+        ${isFolder ? `<button class="btn btn-primary details-action-btn" data-action="open-entry" data-key="${escapeHtml(key)}"><span class="icon">${icons.folder}</span>打开文件夹</button>` : ""}
+        ${previewable ? `<button class="btn btn-primary details-action-btn" data-action="preview-entry" data-key="${escapeHtml(key)}"><span class="icon">${icons.eye}</span>预览</button>` : ""}
+        ${canDownload ? `<button class="btn details-action-btn" data-action="download-entry" data-key="${escapeHtml(key)}"><span class="icon">${icons.download}</span>下载</button>` : ""}
+      `;
+    const manageActions =
+      !state.explorer.trashMode && state.app.role === "admin"
+        ? `
+          <div class="details-action-row details-action-row-secondary">
+            <button class="btn btn-small" data-action="open-share-modal" data-key="${escapeHtml(key)}">
+              <span class="icon">${icons.share}</span>分享
+            </button>
+            <button class="btn btn-small" data-action="open-rename-modal" data-key="${escapeHtml(key)}">
+              <span class="icon">${icons.edit}</span>重命名
+            </button>
+          </div>
+        `
+        : "";
 
     return `
       <div class="details-panel-shell">
-        <div class="details-panel-head">
-          <div>
-            <h3 class="details-panel-title">${escapeHtml(selected.name || "未命名")}</h3>
-            <p class="details-panel-copy">${escapeHtml(pathValue || "/")}</p>
+        <section class="details-summary">
+          <div class="details-summary-icon ${iconClass(kind)} ${kind === "image" ? "details-summary-image" : ""}">
+            ${iconContent}
           </div>
-        </div>
+          <div class="details-summary-main">
+            <h3 class="details-panel-title" title="${escapeHtml(selected.name || "未命名")}">${escapeHtml(selected.name || "未命名")}</h3>
+            <p class="details-panel-copy" title="${escapeHtml(pathValue || "/")}">${escapeHtml(pathValue || "/")}</p>
+            <div class="details-chip-row">
+              <span class="details-chip">${escapeHtml(kindLabel)}</span>
+              <span class="details-chip">${escapeHtml(sizeText)}</span>
+              ${previewable ? `<span class="details-chip details-chip-accent">可预览</span>` : ""}
+              ${state.explorer.trashMode ? `<span class="details-chip details-chip-danger">回收站</span>` : ""}
+            </div>
+          </div>
+        </section>
 
-        <div class="details-panel-grid">
-          <div class="details-kv">
-            <div class="details-k">类型</div>
-            <div class="details-v">${escapeHtml(kind)}</div>
+        <section class="details-section">
+          <div class="details-section-title">属性</div>
+          <div class="details-list">
+            <div class="details-row">
+              <div class="details-row-label">类型</div>
+              <div class="details-row-value">${escapeHtml(kindLabel)}</div>
+            </div>
+            <div class="details-row">
+              <div class="details-row-label">大小</div>
+              <div class="details-row-value">${escapeHtml(sizeText)}</div>
+            </div>
+            <div class="details-row">
+              <div class="details-row-label">${timeLabel}</div>
+              <div class="details-row-value">
+                <span>${escapeHtml(timeText)}</span>
+                ${relativeText ? `<span class="details-row-note">${escapeHtml(relativeText)}</span>` : ""}
+              </div>
+            </div>
+            <div class="details-row details-row-path">
+              <div class="details-row-label">路径</div>
+              <div class="details-row-value details-path-value" title="${escapeHtml(pathValue || "/")}">${escapeHtml(pathValue || "/")}</div>
+            </div>
           </div>
-          <div class="details-kv">
-            <div class="details-k">${state.explorer.trashMode ? "删除时间" : "更新时间"}</div>
-            <div class="details-v">${escapeHtml(formatTime(selected.trashedAt || selected.time || 0))}</div>
-          </div>
-          <div class="details-kv">
-            <div class="details-k">大小</div>
-            <div class="details-v">${escapeHtml(selected.sizeFormatted || formatBytes(selected.rawSize || 0))}</div>
-          </div>
-        </div>
+        </section>
 
-        <div class="details-panel-actions">
-          ${
-            state.explorer.trashMode
-              ? `
-                <button class="btn" data-action="restore-trash" data-key="${escapeHtml(entryKey(selected))}">恢复</button>
-                <button class="btn btn-danger" data-action="delete-trash" data-key="${escapeHtml(entryKey(selected))}">彻底删除</button>
-              `
-              : `
-                ${isFolder ? `<button class="btn" data-action="open-entry" data-key="${escapeHtml(entryKey(selected))}">打开文件夹</button>` : ""}
-                ${previewable ? `<button class="btn" data-action="preview-entry" data-key="${escapeHtml(entryKey(selected))}">预览</button>` : ""}
-                ${canDownload ? `<button class="btn" data-action="download-entry" data-key="${escapeHtml(entryKey(selected))}">下载</button>` : ""}
-                ${state.app.role === "admin" ? `<button class="btn" data-action="open-share-modal" data-key="${escapeHtml(entryKey(selected))}">分享</button>` : ""}
-                ${state.app.role === "admin" ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(entryKey(selected))}">重命名</button>` : ""}
-              `
-          }
-        </div>
+        <section class="details-panel-actions">
+          <div class="details-section-title">操作</div>
+          <div class="details-action-row">
+            ${primaryActions}
+          </div>
+          ${manageActions}
+        </section>
       </div>
     `;
   }

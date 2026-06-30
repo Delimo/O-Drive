@@ -105,6 +105,32 @@ function makeState(overrides = {}) {
   };
 }
 
+// ===== 共享渲染器 =====
+
+test('inspector renders file summary, properties and actions', () => {
+  const html = shared.renderInspector(
+    {
+      name: 'report.pdf',
+      fullKey: 'docs/report.pdf',
+      kind: 'pdf',
+      rawSize: 2048,
+      time: 1710000000,
+    },
+    makeState(),
+  );
+
+  assert.match(html, /details-summary/);
+  assert.match(html, /report\.pdf/);
+  assert.match(html, /docs\/report\.pdf/);
+  assert.match(html, /属性/);
+  assert.match(html, /PDF/);
+  assert.match(html, /2\.0 KB/);
+  assert.match(html, /data-action="preview-entry"/);
+  assert.match(html, /data-action="download-entry"/);
+  assert.match(html, /data-action="open-share-modal"/);
+  assert.match(html, /data-action="open-rename-modal"/);
+});
+
 // ===== Markdown 渲染与安全 =====
 
 test('markdown renders common syntax', () => {
