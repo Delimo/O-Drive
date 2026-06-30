@@ -89,7 +89,7 @@ export function createSystemRenderer({
             const origin = typeof location !== 'undefined' ? location.origin : '';
             const davUrl = origin ? `${origin}/dav/` : '/dav/';
             return `
-              <div class="ov-system-info-card">
+              <div class="ov-system-info-card ov-webdav-card">
                 <div class="ov-system-info-header">
                   <span class="ov-system-info-title">WebDAV</span>
                   <span class="ov-badge ${davEnabled ? 'ov-badge-ok' : 'ov-badge-info'}">${davEnabled ? '已启用' : '未配置'}</span>
@@ -97,34 +97,40 @@ export function createSystemRenderer({
                 <div class="ov-system-info-body">
                   ${davEnabled ? `
                     <div class="ov-webdav-panel">
-                      <div class="ov-webdav-main">
-                        <div class="ov-webdav-url-block">
+                      <div class="ov-webdav-endpoint">
+                        <div class="ov-webdav-endpoint-head">
                           <span class="ov-webdav-eyebrow">连接地址</span>
-                          <div class="ov-webdav-url-row">
-                            <code class="ov-webdav-url" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">${escapeHtml(davUrl)}</code>
-                            <button class="btn btn-sm" type="button" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">复制</button>
-                          </div>
+                          <span class="ov-webdav-live"><span class="ov-webdav-live-dot"></span>服务可用</span>
                         </div>
-                        <div class="ov-webdav-credential-list">
-                          <div class="ov-webdav-credential">
-                            <span class="ov-webdav-conn-label">用户名</span>
-                            <strong>使用管理员用户名</strong>
-                          </div>
-                          <div class="ov-webdav-credential">
-                            <span class="ov-webdav-conn-label">密码</span>
-                            <strong>使用管理员密码</strong>
-                          </div>
+                        <div class="ov-webdav-url-row">
+                          <code class="ov-webdav-url" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">${escapeHtml(davUrl)}</code>
+                          <button class="btn btn-sm" type="button" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">复制</button>
                         </div>
                       </div>
-                      <div class="ov-webdav-summary">
-                        <div class="ov-webdav-summary-top">
-                          <span class="ov-webdav-live-dot"></span>
-                          <span>服务可用</span>
+
+                      <div class="ov-webdav-facts">
+                        <div class="ov-webdav-fact">
+                          <span>协议</span>
                           <strong>DAV Level 1</strong>
                         </div>
+                        <div class="ov-webdav-fact">
+                          <span>用户名</span>
+                          <strong>管理员用户名</strong>
+                        </div>
+                        <div class="ov-webdav-fact">
+                          <span>密码</span>
+                          <strong>管理员密码</strong>
+                        </div>
+                        <div class="ov-webdav-fact">
+                          <span>上传限制</span>
+                          <strong>单次 PUT &le; 100MB</strong>
+                        </div>
+                      </div>
+
+                      <div class="ov-webdav-foot">
                         <div class="ov-webdav-limits">
                           <span>不支持 LOCK</span>
-                          <span>单次 PUT &le; 100MB</span>
+                          <span>使用后台账号认证</span>
                         </div>
                         <div class="ov-webdav-ops" aria-label="WebDAV 支持的操作">
                           <span class="ov-webdav-op">浏览</span>

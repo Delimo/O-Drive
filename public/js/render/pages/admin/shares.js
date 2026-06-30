@@ -84,27 +84,29 @@ export function createSharesRenderer({
               ${renderShareTags(share)}
             </div>
           </div>
-          <div class="ov-share-metrics">
-            <span class="ov-share-metric">
-              <span class="ov-share-metric-label">最近访问</span>
-              <strong>${escapeHtml(lastAccessText)}</strong>
+          <div class="ov-share-meta-strip">
+            <span class="ov-share-meta-item">
+              <span class="ov-share-meta-label">最近访问</span>
+              <strong class="ov-share-meta-value">${escapeHtml(lastAccessText)}</strong>
             </span>
-            <span class="ov-share-metric">
-              <span class="ov-share-metric-label">下载</span>
-              <strong>${escapeHtml(downloadsText)}</strong>
+            <span class="ov-share-meta-item">
+              <span class="ov-share-meta-label">下载</span>
+              <strong class="ov-share-meta-value">${escapeHtml(downloadsText)}</strong>
             </span>
-            <span class="ov-share-metric">
-              <span class="ov-share-metric-label">到期</span>
-              <strong>${escapeHtml(expiresText)}</strong>
+            <span class="ov-share-meta-item">
+              <span class="ov-share-meta-label">到期</span>
+              <strong class="ov-share-meta-value">${escapeHtml(expiresText)}</strong>
             </span>
           </div>
           <div class="ov-share-actions">
             <button class="btn btn-sm" type="button"
-                    data-action="copy-share-link" data-key="${escapeHtml(share.token)}">复制</button>
+                    data-action="copy-share-link" data-key="${escapeHtml(share.token)}"
+                    aria-label="复制分享链接">复制</button>
             <button class="btn btn-danger btn-sm" type="button"
                     data-action="confirm-delete-share"
                     data-key="${escapeHtml(share.token)}"
-                    data-name="${escapeHtml(share.name)}">移除</button>
+                    data-name="${escapeHtml(share.name)}"
+                    aria-label="移除分享链接">移除</button>
           </div>
         </div>
       `;

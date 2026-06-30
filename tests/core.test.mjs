@@ -422,7 +422,14 @@ test('api route policy describes csrf, rate limit, upload body, and protected ac
   assert.equal(getApiRoutePolicy('/api/upload-multipart/part', 'PUT').uploadBody, true);
   assert.equal(getApiRoutePolicy('/api/batch-delete', 'POST').csrf, true);
   assert.equal(getApiRoutePolicy('/api/batch-delete', 'POST').uploadBody, false);
+  assert.equal(getApiRoutePolicy('/api/trash/restore-preview', 'POST').csrf, true);
+  assert.equal(getApiRoutePolicy('/api/trash/restore-batch', 'POST').csrf, true);
   assert.equal(getApiRoutePolicy('/api/share/token/info', 'GET').csrf, false);
+  assert.equal(getApiRoutePolicy('/api/filesevil', 'POST').csrf, false);
+  assert.equal(getApiRoutePolicy('/api/trash/restore-previewed', 'POST').csrf, false);
+  assert.equal(getApiRoutePolicy('/api/admin/settings/storage', 'PUT').csrf, true);
+  assert.equal(getApiRoutePolicy('/api/admin/webhook-deliveries/retry', 'POST').csrf, true);
+  assert.equal(getApiRoutePolicy('/api/notifications', 'POST').csrf, true);
   assert.equal(getApiRoutePolicy('/api/admin/settings/webhooks', 'POST').userWritableKey, true);
 });
 
@@ -470,7 +477,9 @@ test('router dispatcher metadata covers simple admin and public routes', () => {
 test('csrf route policies have matching dispatchers', () => {
   const dispatchers = [...ADMIN_ROUTE_DISPATCHERS, ...PUBLIC_ROUTE_DISPATCHERS];
   const routeMatches = (route, path, method) => {
-    const pathMatches = route.path ? path === route.path : path.startsWith(route.prefix);
+    const pathMatches = route.path ? path === route.path : (
+      path === route.prefix || (route.prefix.endsWith('/') ? path.startsWith(route.prefix) : path.startsWith(`${route.prefix}/`))
+    );
     const methodMatches = !route.methods || route.methods.includes(method);
     return pathMatches && methodMatches;
   };
@@ -489,6 +498,59 @@ test('csrf route policies have matching dispatchers', () => {
       );
     }
   }
+});
+
+test('admin write dispatchers require csrf route policy coverage', () => {
+  const writeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+  const sampleRoutePath = route => {
+    if (route.path) return route.path;
+    return route.prefix.endsWith('/') ? `${route.prefix}__sample__` : route.prefix;
+  };
+  const wildcardWriteSamples = [
+    ['/api/admin/settings/hidden', 'POST'],
+    ['/api/admin/settings/hidden', 'DELETE'],
+    ['/api/admin/settings/protected', 'POST'],
+    ['/api/admin/settings/protected', 'DELETE'],
+    ['/api/admin/settings/trash-retention', 'PUT'],
+    ['/api/admin/settings/quota', 'PUT'],
+    ['/api/admin/settings/storage', 'PUT'],
+    ['/api/admin/settings/webhooks', 'PUT'],
+    ['/api/admin/settings/webhooks', 'POST'],
+    ['/api/admin/settings/task-alerts', 'PUT'],
+    ['/api/admin/shares', 'POST'],
+    ['/api/admin/shares', 'DELETE'],
+    ['/api/notifications', 'POST'],
+    ['/api/batch-delete', 'POST'],
+  ];
+  const declaredWriteSamples = ADMIN_ROUTE_DISPATCHERS.flatMap(route =>
+    (route.methods || [])
+      .filter(method => writeMethods.has(method))
+      .map(method => [sampleRoutePath(route), method]),
+  );
+
+  for (const [path, method] of [...declaredWriteSamples, ...wildcardWriteSamples]) {
+    assert.equal(
+      getApiRoutePolicy(path, method).csrf,
+      true,
+      `${method} ${path} should require CSRF`,
+    );
+  }
+});
+
+test('api route prefixes do not match unrelated path segments', async () => {
+  const env = makeEnv();
+  const { cookie } = await loginAsAdmin(env);
+
+  const res = await onRequest({
+    env,
+    request: new Request('https://example.com/api/filesevil', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'note.txt' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    }),
+  });
+
+  assert.equal(res.status, 404);
 });
 
 test('api rejects reserved and encoded traversal write targets with client errors', async () => {
@@ -953,6 +1015,34 @@ test('admin can filter notifications by severity and read state', async () => {
   assert.equal(errorData.items.length, 1);
   assert.equal(errorData.items[0].event, 'task.failure.error');
   assert.equal(errorData.items[0].severity, 'error');
+});
+
+test('notification write actions require csrf through api route', async () => {
+  const env = makeEnv();
+  const { cookie, csrf } = await loginAsAdmin(env);
+  await createNotification(env, { event: 'zip.ready', message: 'ready' });
+
+  const missingCsrf = await onRequest({
+    env,
+    request: new Request('https://example.com/api/notifications', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'mark-all-read' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    }),
+  });
+  assert.equal(missingCsrf.status, 403);
+  assert.equal((await missingCsrf.json()).message, 'Invalid CSRF token');
+
+  const valid = await onRequest({
+    env,
+    request: new Request('https://example.com/api/notifications', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'mark-all-read' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+    }),
+  });
+  assert.equal(valid.status, 200);
+  assert.equal((await valid.json()).success, true);
 });
 
 test('admin can retry a failed background zip task', async () => {

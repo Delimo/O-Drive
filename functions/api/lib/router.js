@@ -120,8 +120,14 @@ async function monitorDownloadBurst(env, request, auth, r2Key, context) {
   }
 }
 
+function prefixMatches(path, prefix) {
+  if (path === prefix) return true;
+  if (prefix.endsWith("/")) return path.startsWith(prefix);
+  return path.startsWith(`${prefix}/`);
+}
+
 function matchesDispatchRoute(route, path, method) {
-  const pathMatches = route.path ? path === route.path : path.startsWith(route.prefix);
+  const pathMatches = route.path ? path === route.path : prefixMatches(path, route.prefix);
   const methodMatches = !route.methods || route.methods.includes(method);
   return pathMatches && methodMatches;
 }
