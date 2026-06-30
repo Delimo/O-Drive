@@ -120,6 +120,198 @@ async function monitorDownloadBurst(env, request, auth, r2Key, context) {
   }
 }
 
+function matchesDispatchRoute(route, path, method) {
+  const pathMatches = route.path ? path === route.path : path.startsWith(route.prefix);
+  const methodMatches = !route.methods || route.methods.includes(method);
+  return pathMatches && methodMatches;
+}
+
+function findDispatchRoute(routes, path, method) {
+  return routes.find(route => matchesDispatchRoute(route, path, method));
+}
+
+async function handlePasteRoute({ env, request, context }) {
+  const body = await request.json().catch(() => null);
+  const res = await handlePaste(env, request, body);
+  if (res.ok && body) {
+    await notifyAfterOk(
+      env,
+      context,
+      res,
+      body.action === "move" ? "file.moved" : "file.copied",
+      { paths: body.paths, targetDir: body.targetDir },
+    );
+  }
+  return res;
+}
+
+async function handleRenameRoute({ env, request, r2Key, context }) {
+  const body = await request.json().catch(() => null);
+  const res = await handleRename(env, request, r2Key, body);
+  if (res.ok && body) {
+    await notifyAfterOk(env, context, res, "file.renamed", {
+      oldPath: "/" + r2Key,
+      newName: body.newName,
+    });
+  }
+  return res;
+}
+
+async function handleBatchDeleteRoute({ env, request, context }) {
+  const body = await request.json().catch(() => null);
+  const res = await handleBatchDelete(env, request, body);
+  if (res.ok && body) {
+    await notifyAfterOk(env, context, res, "file.deleted", {
+      paths: body.paths,
+    });
+  }
+  return res;
+}
+
+async function handleTrashDeleteRoute({ env, request, context }) {
+  const res = await handleTrashDelete(env, request);
+  const data = res.ok
+    ? await res
+        .clone()
+        .json()
+        .catch(() => null)
+    : null;
+  if (res.ok && data?.originalKey) {
+    await notifyAfterOk(env, context, res, "file.purged", {
+      paths: [data.originalKey],
+    });
+  }
+  return res;
+}
+
+async function handleMkdirRoute({ env, request, r2Key, context }) {
+  const res = await handleMkdir(env, request, r2Key);
+  const data = res.ok
+    ? await res
+        .clone()
+        .json()
+        .catch(() => null)
+    : null;
+  if (res.ok && data?.path) {
+    await notifyAfterOk(env, context, res, "folder.created", {
+      path: data.path,
+    });
+  }
+  return res;
+}
+
+async function handleSingleUploadRoute({ env, request, r2Key, context }) {
+  assertBodySize(request, true);
+  const res = await handleUpload(env, request, r2Key);
+  const data = res.ok
+    ? await res
+        .clone()
+        .json()
+        .catch(() => null)
+    : null;
+  if (res.ok && data?.key && !data?.skipped) {
+    await notifyAfterOk(env, context, res, "file.uploaded", {
+      path: "/" + data.key,
+      uploader: "admin",
+    });
+  }
+  return res;
+}
+
+async function handleMultipartPartRoute({ env, request, url }) {
+  assertBodySize(request, true);
+  return await handleMultipartPart(env, request, url);
+}
+
+async function handleMultipartCompleteRoute({ env, request, context }) {
+  const body = await request.json().catch(() => null);
+  const res = await handleMultipartComplete(env, request, body);
+  if (res.ok && body?.key) {
+    await notifyAfterOk(env, context, res, "file.uploaded", {
+      path: "/" + body.key,
+      uploader: "admin",
+    });
+  }
+  return res;
+}
+
+async function handleDownloadOrPreviewRoute({ env, request, path, auth, r2Key, context }) {
+  if (path.startsWith("/api/download/")) {
+    const blocked = await checkDownloadBlocked(env, request, auth);
+    if (blocked.blocked) {
+      return jsonResponse(
+        {
+          success: false,
+          code: "DOWNLOAD_BLOCKED",
+          message: "Download temporarily blocked",
+          retryAfter: blocked.retryAfter,
+        },
+        429,
+        { "Retry-After": String(blocked.retryAfter) },
+      );
+    }
+  }
+  const res = await handleDownloadOrPreview(env, request, path, r2Key);
+  if (res.ok && path.startsWith("/api/download/"))
+    waitForWebhook(
+      context,
+      monitorDownloadBurst(env, request, auth, r2Key, context),
+    );
+  return res;
+}
+
+export const ADMIN_ROUTE_DISPATCHERS = [
+  { path: "/api/admin/logs", handler: ({ env, url }) => handleAdminLogs(env, url) },
+  { path: "/api/admin/stats", handler: ({ env, context }) => handleAdminStats(env, context) },
+  { path: "/api/admin/health", handler: ({ env }) => handleAdminHealth(env) },
+  { path: "/api/admin/maintenance", methods: ["GET"], handler: ({ env }) => handleAdminMaintenance(env) },
+  { path: "/api/admin/maintenance", methods: ["POST"], handler: ({ env, request }) => handleAdminMaintenanceAction(env, request) },
+  { path: "/api/admin/settings/hidden", handler: ({ env, request, method, url, hiddenPaths }) => handleHiddenSettings(env, request, method, url, hiddenPaths) },
+  { path: "/api/admin/settings/protected", handler: ({ env, request, method, url }) => handleProtectedSettings(env, request, method, url) },
+  { path: "/api/admin/settings/trash-retention", handler: ({ env, request, method }) => handleTrashRetention(env, request, method) },
+  { path: "/api/admin/settings/quota", handler: ({ env, request, method }) => handleAdminQuota(env, request, method) },
+  { path: "/api/admin/settings/storage", handler: ({ env, request, method }) => handleAdminStorage(env, request, method) },
+  { path: "/api/admin/settings/webhooks", handler: ({ env, request, method }) => handleAdminWebhooks(env, request, method) },
+  { path: "/api/admin/settings/task-alerts", handler: ({ env, request, method }) => handleTaskAlertSettings(env, request, method) },
+  { path: "/api/admin/webhook-deliveries", handler: ({ env }) => handleAdminWebhookDeliveries(env) },
+  { path: "/api/admin/webhook-deliveries/retry", methods: ["POST"], handler: ({ env, request }) => handleAdminWebhookDeliveryRetry(env, request) },
+  { path: "/api/admin/shares", handler: ({ env, request, method, url }) => handleAdminShares(env, request, method, url) },
+  { path: "/api/notifications", handler: ({ env, request }) => handleAdminNotifications(env, request) },
+  { path: "/api/tasks", methods: ["POST"], handler: ({ env, request, context }) => createFileTask(env, request, context) },
+  { path: "/api/tasks/retry", methods: ["POST"], handler: ({ env, request, context }) => retryFileTask(env, request, context) },
+  { path: "/api/tasks", methods: ["PATCH"], handler: ({ env, request, url }) => updateFileTask(env, request, url) },
+  { path: "/api/tasks", methods: ["GET"], handler: ({ env, url }) => getFileTask(env, url) },
+  { path: "/api/operation-estimate", methods: ["POST"], handler: ({ env, request }) => handleOperationEstimate(env, request) },
+  { path: "/api/trash", methods: ["GET"], handler: ({ env, url }) => handleTrashList(env, url) },
+  { path: "/api/trash/restore-preview", methods: ["POST"], handler: ({ env, request }) => handleTrashRestorePreview(env, request) },
+  { path: "/api/trash/restore-batch", methods: ["POST"], handler: ({ env, request }) => handleTrashBatchRestore(env, request) },
+  { path: "/api/trash/restore", methods: ["POST"], handler: ({ env, request }) => handleTrashRestore(env, request) },
+  { path: "/api/trash/clear", methods: ["DELETE"], handler: ({ env, request }) => handleTrashClear(env, request) },
+  { path: "/api/trash/cleanup", methods: ["POST"], handler: ({ env, request }) => handleTrashCleanup(env, request) },
+  { path: "/api/upload/check", methods: ["POST"], handler: ({ env, request }) => handleUploadCheck(env, request) },
+  { path: "/api/upload-multipart/create", methods: ["POST"], handler: ({ env, request }) => handleMultipartCreate(env, request) },
+  { path: "/api/upload-multipart/abort", methods: ["POST"], handler: ({ env, request }) => handleMultipartAbort(env, request) },
+  { prefix: "/api/save-text/", methods: ["POST"], handler: ({ env, request, r2Key }) => handleSaveText(env, request, r2Key) },
+  { path: "/api/paste", methods: ["POST"], handler: handlePasteRoute },
+  { prefix: "/api/files/", methods: ["PUT"], handler: handleRenameRoute },
+  { path: "/api/batch-delete", handler: handleBatchDeleteRoute },
+  { path: "/api/trash/delete", methods: ["DELETE"], handler: handleTrashDeleteRoute },
+  { prefix: "/api/mkdir", methods: ["POST"], handler: handleMkdirRoute },
+  { prefix: "/api/files", methods: ["POST"], handler: handleSingleUploadRoute },
+  { path: "/api/upload-multipart/part", methods: ["PUT"], handler: handleMultipartPartRoute },
+  { path: "/api/upload-multipart/complete", methods: ["POST"], handler: handleMultipartCompleteRoute },
+];
+
+export const PUBLIC_ROUTE_DISPATCHERS = [
+  { path: "/api/zip-download", methods: ["POST"], handler: ({ env, request, hiddenPaths, auth, protectedPaths, context }) => handleZipDownload(env, request, hiddenPaths, auth, protectedPaths, context) },
+  { path: "/api/access/unlock", methods: ["POST"], handler: ({ env, request, auth, protectedPaths }) => handleProtectedUnlock(env, request, auth, protectedPaths) },
+  { path: "/api/search", handler: ({ env, request, url, hiddenPaths, auth, protectedPaths }) => handleSearch(env, request, url, hiddenPaths, auth, protectedPaths) },
+  { prefix: "/api/files", methods: ["GET"], handler: ({ env, request, hiddenPaths, auth, r2Key, protectedPaths }) => handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths) },
+  { prefix: "/api/thumbnail/", handler: ({ env, request, r2Key }) => handleThumbnail(env, request, r2Key, { env }) },
+  { prefix: "/api/download/", handler: handleDownloadOrPreviewRoute },
+  { prefix: "/api/preview/", handler: handleDownloadOrPreviewRoute },
+];
+
 /** Resolve admin-only routes. Returns a Response or null if not an admin route. */
 export async function resolveAdminRoute(
   env,
@@ -132,185 +324,10 @@ export async function resolveAdminRoute(
   protectedPaths,
   context = {},
 ) {
-  if (path === "/api/admin/logs") return await handleAdminLogs(env, url);
-  if (path === "/api/admin/stats") return await handleAdminStats(env, context);
-  if (path === "/api/admin/health") return await handleAdminHealth(env);
-  if (path === "/api/admin/maintenance" && method === "GET")
-    return await handleAdminMaintenance(env);
-  if (path === "/api/admin/maintenance" && method === "POST")
-    return await handleAdminMaintenanceAction(env, request);
-  if (path === "/api/admin/settings/hidden")
-    return await handleHiddenSettings(env, request, method, url, hiddenPaths);
-  if (path === "/api/admin/settings/protected")
-    return await handleProtectedSettings(env, request, method, url);
-  if (path === "/api/admin/settings/trash-retention")
-    return await handleTrashRetention(env, request, method);
-  if (path === "/api/admin/settings/quota")
-    return await handleAdminQuota(env, request, method);
-  if (path === "/api/admin/settings/storage")
-    return await handleAdminStorage(env, request, method);
-  if (path === "/api/admin/settings/webhooks")
-    return await handleAdminWebhooks(env, request, method);
-  if (path === "/api/admin/settings/task-alerts")
-    return await handleTaskAlertSettings(env, request, method);
-  if (path === "/api/admin/webhook-deliveries")
-    return await handleAdminWebhookDeliveries(env);
-  if (path === "/api/admin/webhook-deliveries/retry" && method === "POST")
-    return await handleAdminWebhookDeliveryRetry(env, request);
-  if (path === "/api/admin/shares")
-    return await handleAdminShares(env, request, method, url);
-  if (path === "/api/notifications")
-    return await handleAdminNotifications(env, request);
-  if (path === "/api/tasks" && method === "POST")
-    return await createFileTask(env, request, context);
-  if (path === "/api/tasks/retry" && method === "POST")
-    return await retryFileTask(env, request, context);
-  if (path === "/api/tasks" && method === "PATCH")
-    return await updateFileTask(env, request, url);
-  if (path === "/api/tasks" && method === "GET")
-    return await getFileTask(env, url);
-
-  // Paste
-  if (path === "/api/paste" && method === "POST") {
-    const body = await request.json().catch(() => null);
-    const res = await handlePaste(env, request, body);
-    if (res.ok && body) {
-      await notifyAfterOk(
-        env,
-        context,
-        res,
-        body.action === "move" ? "file.moved" : "file.copied",
-        { paths: body.paths, targetDir: body.targetDir },
-      );
-    }
-    return res;
+  const dispatchRoute = findDispatchRoute(ADMIN_ROUTE_DISPATCHERS, path, method);
+  if (dispatchRoute) {
+    return await dispatchRoute.handler({ env, request, method, path, url, r2Key, hiddenPaths, protectedPaths, context });
   }
-
-  // Rename
-  if (path.startsWith("/api/files/") && method === "PUT") {
-    const body = await request.json().catch(() => null);
-    const res = await handleRename(env, request, r2Key, body);
-    if (res.ok && body) {
-      await notifyAfterOk(env, context, res, "file.renamed", {
-        oldPath: "/" + r2Key,
-        newName: body.newName,
-      });
-    }
-    return res;
-  }
-
-  // Batch delete
-  if (path === "/api/batch-delete") {
-    const body = await request.json().catch(() => null);
-    const res = await handleBatchDelete(env, request, body);
-    if (res.ok && body) {
-      await notifyAfterOk(env, context, res, "file.deleted", {
-        paths: body.paths,
-      });
-    }
-    return res;
-  }
-
-  if (path === "/api/operation-estimate" && method === "POST")
-    return await handleOperationEstimate(env, request);
-  if (path === "/api/trash" && method === "GET")
-    return await handleTrashList(env, url);
-  if (path === "/api/trash/restore-preview" && method === "POST")
-    return await handleTrashRestorePreview(env, request);
-  if (path === "/api/trash/restore-batch" && method === "POST")
-    return await handleTrashBatchRestore(env, request);
-  if (path === "/api/trash/restore" && method === "POST")
-    return await handleTrashRestore(env, request);
-  if (path === "/api/trash/clear" && method === "DELETE")
-    return await handleTrashClear(env, request);
-  if (path === "/api/trash/cleanup" && method === "POST")
-    return await handleTrashCleanup(env, request);
-
-  // Trash delete (purge)
-  if (path === "/api/trash/delete" && method === "DELETE") {
-    const res = await handleTrashDelete(env, request);
-    const data = res.ok
-      ? await res
-          .clone()
-          .json()
-          .catch(() => null)
-      : null;
-    if (res.ok && data?.originalKey) {
-      await notifyAfterOk(env, context, res, "file.purged", {
-        paths: [data.originalKey],
-      });
-    }
-    return res;
-  }
-
-  // Mkdir
-  if (path.startsWith("/api/mkdir") && method === "POST") {
-    const res = await handleMkdir(env, request, r2Key);
-    const data = res.ok
-      ? await res
-          .clone()
-          .json()
-          .catch(() => null)
-      : null;
-    if (res.ok && data?.path) {
-      await notifyAfterOk(env, context, res, "folder.created", {
-        path: data.path,
-      });
-    }
-    return res;
-  }
-
-  // Upload check (instant upload / dedup)
-  if (path === "/api/upload/check" && method === "POST") {
-    return await handleUploadCheck(env, request);
-  }
-
-  // Upload (single)
-  if (path.startsWith("/api/files") && method === "POST") {
-    assertBodySize(request, true);
-    const res = await handleUpload(env, request, r2Key);
-    const data = res.ok
-      ? await res
-          .clone()
-          .json()
-          .catch(() => null)
-      : null;
-    if (res.ok && data?.key && !data?.skipped) {
-      await notifyAfterOk(env, context, res, "file.uploaded", {
-        path: "/" + data.key,
-        uploader: "admin",
-      });
-    }
-    return res;
-  }
-
-  // Multipart
-  if (path === "/api/upload-multipart/create" && method === "POST") {
-    return await handleMultipartCreate(env, request);
-  }
-
-  if (path === "/api/upload-multipart/part" && method === "PUT") {
-    assertBodySize(request, true);
-    return await handleMultipartPart(env, request, url);
-  }
-
-  if (path === "/api/upload-multipart/complete" && method === "POST") {
-    const body = await request.json().catch(() => null);
-    const res = await handleMultipartComplete(env, request, body);
-    if (res.ok && body) {
-      if (body.key)
-        await notifyAfterOk(env, context, res, "file.uploaded", {
-          path: "/" + body.key,
-          uploader: "admin",
-        });
-    }
-    return res;
-  }
-
-  if (path === "/api/upload-multipart/abort" && method === "POST")
-    return await handleMultipartAbort(env, request);
-  if (path.startsWith("/api/save-text/") && method === "POST")
-    return await handleSaveText(env, request, r2Key);
 
   return null; // Not an admin route
 }
@@ -328,60 +345,9 @@ export async function resolvePublicRoute(
   protectedPaths,
   context = {},
 ) {
-  if (path === "/api/zip-download" && method === "POST")
-    return await handleZipDownload(
-      env,
-      request,
-      hiddenPaths,
-      auth,
-      protectedPaths,
-      context,
-    );
-  if (path === "/api/access/unlock" && method === "POST")
-    return await handleProtectedUnlock(env, request, auth, protectedPaths);
-  if (path === "/api/search")
-    return await handleSearch(
-      env,
-      request,
-      url,
-      hiddenPaths,
-      auth,
-      protectedPaths,
-    );
-  if (path.startsWith("/api/files") && method === "GET")
-    return await handleListFiles(
-      env,
-      request,
-      hiddenPaths,
-      auth,
-      r2Key,
-      protectedPaths,
-    );
-  if (path.startsWith("/api/thumbnail/"))
-    return await handleThumbnail(env, request, r2Key, { env });
-  if (path.startsWith("/api/download/") || path.startsWith("/api/preview/")) {
-    if (path.startsWith("/api/download/")) {
-      const blocked = await checkDownloadBlocked(env, request, auth);
-      if (blocked.blocked) {
-        return jsonResponse(
-          {
-            success: false,
-            code: "DOWNLOAD_BLOCKED",
-            message: "Download temporarily blocked",
-            retryAfter: blocked.retryAfter,
-          },
-          429,
-          { "Retry-After": String(blocked.retryAfter) },
-        );
-      }
-    }
-    const res = await handleDownloadOrPreview(env, request, path, r2Key);
-    if (res.ok && path.startsWith("/api/download/"))
-      waitForWebhook(
-        context,
-        monitorDownloadBurst(env, request, auth, r2Key, context),
-      );
-    return res;
+  const dispatchRoute = findDispatchRoute(PUBLIC_ROUTE_DISPATCHERS, path, method);
+  if (dispatchRoute) {
+    return await dispatchRoute.handler({ env, request, url, path, method, hiddenPaths, auth, r2Key, protectedPaths, context });
   }
 
   return null; // Not a public route

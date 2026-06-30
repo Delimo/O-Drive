@@ -39,6 +39,8 @@ import {
   loadProtectedPaths,
   checkProtectedAccess,
 } from '../functions/api/lib/protected-paths.js';
+import { getApiRoutePolicy } from '../functions/api/lib/route-policy.js';
+import { ADMIN_ROUTE_DISPATCHERS, PUBLIC_ROUTE_DISPATCHERS } from '../functions/api/lib/router.js';
 
 import { makeEnv } from './helpers/make-env.mjs';
 import { resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
@@ -339,6 +341,85 @@ test('admin login issues csrf token and write requests must echo it', async () =
     method: 'POST',
     headers: { Cookie: cookie, 'X-CSRF-Token': 'bad' },
   }), auth), false);
+});
+
+test('api route policy describes csrf, rate limit, upload body, and protected access behavior', () => {
+  assert.equal(getApiRoutePolicy('/api/login', 'POST').preAuth, 'login');
+  assert.equal(getApiRoutePolicy('/api/login', 'GET').preAuth, '');
+  assert.equal(getApiRoutePolicy('/api/logout', 'GET').preAuth, 'logout');
+  assert.equal(getApiRoutePolicy('/api/share/token/info', 'GET').preAuth, 'publicShare');
+  assert.equal(getApiRoutePolicy('/api/share/token/unlock', 'POST').preAuth, 'publicShare');
+  assert.equal(getApiRoutePolicy('/api/auth/role', 'GET').postAuth, 'authRole');
+
+  const fileUpload = getApiRoutePolicy('/api/files', 'POST');
+  assert.equal(fileUpload.csrf, true);
+  assert.equal(fileUpload.rateLimit, true);
+  assert.equal(fileUpload.hasBody, true);
+  assert.equal(fileUpload.uploadBody, true);
+  assert.equal(fileUpload.protectedAccess, false);
+
+  const fileRename = getApiRoutePolicy('/api/files/docs/a.txt', 'PUT');
+  assert.equal(fileRename.csrf, true);
+  assert.equal(fileRename.hasBody, true);
+  assert.equal(fileRename.uploadBody, false);
+
+  const fileRead = getApiRoutePolicy('/api/files/docs/a.txt', 'GET');
+  assert.equal(fileRead.csrf, false);
+  assert.equal(fileRead.hasBody, false);
+  assert.equal(fileRead.uploadBody, false);
+
+  assert.equal(getApiRoutePolicy('/api/download/a.txt', 'GET').rateLimit, false);
+  assert.equal(getApiRoutePolicy('/api/preview/a.txt', 'GET').rateLimit, false);
+  assert.equal(getApiRoutePolicy('/api/thumbnail/a.txt', 'GET').rateLimit, false);
+  assert.equal(getApiRoutePolicy('/api/download/a.txt', 'GET').protectedAccess, true);
+  assert.equal(getApiRoutePolicy('/api/preview/a.txt', 'GET').protectedAccess, true);
+  assert.equal(getApiRoutePolicy('/api/thumbnail/a.txt', 'GET').protectedAccess, true);
+  assert.equal(getApiRoutePolicy('/api/upload-multipart/part', 'PUT').uploadBody, true);
+  assert.equal(getApiRoutePolicy('/api/batch-delete', 'POST').csrf, true);
+  assert.equal(getApiRoutePolicy('/api/batch-delete', 'POST').uploadBody, false);
+  assert.equal(getApiRoutePolicy('/api/share/token/info', 'GET').csrf, false);
+  assert.equal(getApiRoutePolicy('/api/admin/settings/webhooks', 'POST').userWritableKey, true);
+});
+
+test('router dispatcher metadata covers simple admin and public routes', () => {
+  const routeSignature = route => `${route.path || route.prefix}:${route.methods?.join(',') || '*'}`;
+  const adminRoutes = ADMIN_ROUTE_DISPATCHERS.map(routeSignature);
+  assert.ok(adminRoutes.includes('/api/admin/health:*'));
+  assert.ok(adminRoutes.includes('/api/admin/maintenance:GET'));
+  assert.ok(adminRoutes.includes('/api/admin/maintenance:POST'));
+  assert.ok(adminRoutes.includes('/api/admin/settings/webhooks:*'));
+  assert.ok(adminRoutes.includes('/api/tasks:POST'));
+  assert.ok(adminRoutes.includes('/api/tasks:PATCH'));
+  assert.ok(adminRoutes.includes('/api/tasks:GET'));
+  assert.ok(adminRoutes.includes('/api/tasks/retry:POST'));
+  assert.ok(adminRoutes.includes('/api/operation-estimate:POST'));
+  assert.ok(adminRoutes.includes('/api/trash:GET'));
+  assert.ok(adminRoutes.includes('/api/trash/restore-preview:POST'));
+  assert.ok(adminRoutes.includes('/api/trash/restore-batch:POST'));
+  assert.ok(adminRoutes.includes('/api/trash/restore:POST'));
+  assert.ok(adminRoutes.includes('/api/trash/clear:DELETE'));
+  assert.ok(adminRoutes.includes('/api/trash/cleanup:POST'));
+  assert.ok(adminRoutes.includes('/api/upload/check:POST'));
+  assert.ok(adminRoutes.includes('/api/upload-multipart/create:POST'));
+  assert.ok(adminRoutes.includes('/api/upload-multipart/abort:POST'));
+  assert.ok(adminRoutes.includes('/api/save-text/:POST'));
+  assert.ok(adminRoutes.includes('/api/paste:POST'));
+  assert.ok(adminRoutes.includes('/api/files/:PUT'));
+  assert.ok(adminRoutes.includes('/api/batch-delete:*'));
+  assert.ok(adminRoutes.includes('/api/trash/delete:DELETE'));
+  assert.ok(adminRoutes.includes('/api/mkdir:POST'));
+  assert.ok(adminRoutes.includes('/api/files:POST'));
+  assert.ok(adminRoutes.includes('/api/upload-multipart/part:PUT'));
+  assert.ok(adminRoutes.includes('/api/upload-multipart/complete:POST'));
+
+  const publicRoutes = PUBLIC_ROUTE_DISPATCHERS.map(routeSignature);
+  assert.ok(publicRoutes.includes('/api/zip-download:POST'));
+  assert.ok(publicRoutes.includes('/api/access/unlock:POST'));
+  assert.ok(publicRoutes.includes('/api/search:*'));
+  assert.ok(publicRoutes.includes('/api/files:GET'));
+  assert.ok(publicRoutes.includes('/api/thumbnail/:*'));
+  assert.ok(publicRoutes.includes('/api/download/:*'));
+  assert.ok(publicRoutes.includes('/api/preview/:*'));
 });
 
 test('token secret signs admin sessions independently from admin password', async () => {
@@ -965,6 +1046,47 @@ test('protected paths require password and unlock with signed cookie', async () 
     headers: { Cookie: cookie },
   }), env, { role: 'guest' }, rules, 'private/secret.txt');
   assert.equal(access.ok, true);
+});
+
+test('route enforces protected access for download and preview endpoints', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'private/secret.txt', body: 'secret', size: 6, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  env.ALLOW_GUEST = 'true';
+  env.ADMIN_PASSWORD = 'pass';
+
+  const create = await handleProtectedSettings(env, new Request('https://example.com/api/admin/settings/protected', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '12345678' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'POST', new URL('https://example.com/api/admin/settings/protected'));
+  assert.equal(create.status, 200);
+
+  const blocked = await onRequest({
+    env,
+    request: new Request('https://example.com/api/download/private/secret.txt'),
+  });
+  assert.equal(blocked.status, 403);
+  assert.equal((await blocked.json()).code, 'password_required');
+
+  const rules = await loadProtectedPaths(env);
+  const unlock = await handleProtectedUnlock(env, new Request('https://example.com/api/access/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ path: '/private', password: '12345678' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), { role: 'guest' }, rules);
+  const cookie = unlock.headers.get('Set-Cookie');
+
+  const preview = await onRequest({
+    env,
+    request: new Request('https://example.com/api/preview/private/secret.txt', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  assert.equal(preview.status, 200);
+  assert.equal(await preview.text(), 'secret');
 });
 
 test('protected path passwords reject very short secrets and store pbkdf2 hashes', async () => {

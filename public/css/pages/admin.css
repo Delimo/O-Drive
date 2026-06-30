@@ -4517,6 +4517,93 @@
   flex: 1;
 }
 
+.ov-webdav-connection-card {
+  gap: 16px;
+}
+
+.ov-webdav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ov-webdav-url-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ov-webdav-url {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-height: 36px;
+  min-width: 0;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(14, 116, 144, 0.12);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-all;
+  user-select: all;
+}
+
+.ov-webdav-credential-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ov-webdav-credential {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.ov-webdav-credential strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ov-webdav-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.ov-webdav-limits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ov-webdav-limits span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.08);
+  border: 1px solid rgba(100, 116, 139, 0.14);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .ov-webdav-client-item {
   display: flex;
   align-items: baseline;
@@ -4613,6 +4700,14 @@
 @media (max-width: 768px) {
   .ov-webdav-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ov-webdav-credential-list {
+    grid-template-columns: 1fr;
+  }
+
+  .ov-webdav-url-row {
+    flex-direction: column;
   }
 }
 

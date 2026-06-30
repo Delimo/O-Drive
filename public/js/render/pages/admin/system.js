@@ -96,25 +96,43 @@ export function createSystemRenderer({
                 </div>
                 <div class="ov-system-info-body">
                   ${davEnabled ? `
-                    <div class="ov-webdav-conn">
-                      <div class="ov-webdav-conn-row">
-                        <span class="ov-webdav-conn-label">地址</span>
-                        <code class="ov-webdav-conn-value" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">${escapeHtml(davUrl)}</code>
-                        <button class="btn btn-sm" type="button" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">复制</button>
+                    <div class="ov-webdav-conn ov-webdav-connection-card">
+                      <div class="ov-webdav-section">
+                        <span class="ov-webdav-conn-title">连接地址</span>
+                        <div class="ov-webdav-url-row">
+                          <code class="ov-webdav-url" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">${escapeHtml(davUrl)}</code>
+                          <button class="btn btn-sm" type="button" data-action="copy-webdav-url" data-url="${escapeHtml(davUrl)}">复制地址</button>
+                        </div>
                       </div>
-                      <div class="ov-webdav-conn-row">
-                        <span class="ov-webdav-conn-label">用户名</span>
-                        <span class="ov-webdav-conn-value">管理员用户名</span>
-                      </div>
-                      <div class="ov-webdav-conn-row">
-                        <span class="ov-webdav-conn-label">密码</span>
-                        <span class="ov-webdav-conn-value">管理员密码</span>
+                      <div class="ov-webdav-section">
+                        <span class="ov-webdav-conn-title">登录方式</span>
+                        <div class="ov-webdav-credential-list">
+                          <div class="ov-webdav-credential">
+                            <span class="ov-webdav-conn-label">用户名</span>
+                            <strong>使用管理员用户名</strong>
+                          </div>
+                          <div class="ov-webdav-credential">
+                            <span class="ov-webdav-conn-label">密码</span>
+                            <strong>使用管理员密码</strong>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;">
-                      <span>浏览</span><span>下载</span><span>上传</span><span>删除</span><span>新建</span><span>移动</span><span>复制</span>
-                      <span style="color:var(--line-strong);margin:0 2px;">|</span>
-                      <span>DAV Level 1，无 LOCK，单次 PUT ≤100MB</span>
+                    <div class="ov-webdav-meta">
+                      <div class="ov-webdav-ops" aria-label="WebDAV 支持的操作">
+                        <span class="ov-webdav-op">浏览</span>
+                        <span class="ov-webdav-op">下载</span>
+                        <span class="ov-webdav-op">上传</span>
+                        <span class="ov-webdav-op">新建</span>
+                        <span class="ov-webdav-op">删除</span>
+                        <span class="ov-webdav-op">移动</span>
+                        <span class="ov-webdav-op">复制</span>
+                      </div>
+                      <div class="ov-webdav-limits">
+                        <span>DAV Level 1</span>
+                        <span>不支持 LOCK</span>
+                        <span>单次 PUT &le; 100MB</span>
+                      </div>
                     </div>
                   ` : `
                     <div style="padding:16px 0;text-align:center;font-size:13px;color:var(--muted);">

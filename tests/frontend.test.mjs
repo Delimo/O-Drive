@@ -14,6 +14,8 @@ import { createUploadsRenderer } from '../public/js/render/uploads.js';
 import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications, mockTrashItems } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
 import { createPageRenderers } from '../public/js/render/pages/index.js';
+import { createHeaderRenderer } from '../public/js/render/header.js';
+import { createNotificationPolling } from '../public/js/services/notifications.js';
 
 // 任意图标都返回占位 SVG，避免在测试里维护完整图标表
 const icons = new Proxy({}, { get: () => '<svg></svg>' });
@@ -64,6 +66,7 @@ const pages = createPageRenderers({
 });
 
 const uploads = createUploadsRenderer({ icons, escapeHtml });
+const header = createHeaderRenderer({ icons, escapeHtml, formatRelative });
 
 function makeState(overrides = {}) {
   return {
@@ -964,4 +967,92 @@ test('mock notifications have correct structure', () => {
   }
   const unread = mockNotifications.filter(n => !n.read);
   assert.ok(unread.length > 0);
+});
+
+test('header renderer shows admin controls and notification state', () => {
+  const html = header.renderHeader({
+    app: { role: 'admin', guestMode: false },
+    explorer: { queryDraft: '<report>' },
+    admin: {
+      notifOpen: true,
+      notificationsUnread: true,
+      notifications: [{ id: 7, message: '<unsafe>', read: 0, created_at: Date.now() }],
+    },
+  }, 'home');
+
+  assert.match(html, /data-role="search-input"/);
+  assert.match(html, /value="&lt;report&gt;"/);
+  assert.match(html, /href="\/admin"/);
+  assert.match(html, /data-action="logout"/);
+  assert.match(html, /notif-open/);
+  assert.match(html, /&lt;unsafe&gt;/);
+  assert.match(html, /data-action="mark-notification-read"/);
+});
+
+test('header renderer shows guest login controls without notifications', () => {
+  const html = header.renderHeader({
+    app: { role: 'guest', guestMode: true },
+    explorer: { queryDraft: 'public' },
+    admin: { notifOpen: false, notificationsUnread: false, notifications: [] },
+  }, 'home');
+
+  assert.match(html, /data-role="search-input"/);
+  assert.match(html, /data-action="open-login"/);
+  assert.doesNotMatch(html, /data-action="toggle-notifications"/);
+  assert.doesNotMatch(html, /href="\/admin"/);
+});
+
+test('notification polling pauses on hidden document and resumes on visible document', () => {
+  const originalSetInterval = globalThis.setInterval;
+  const originalClearInterval = globalThis.clearInterval;
+  const intervals = new Map();
+  const cleared = [];
+  const listeners = new Map();
+  let nextTimerId = 1;
+
+  globalThis.setInterval = (fn, ms) => {
+    const id = nextTimerId++;
+    intervals.set(id, { fn, ms });
+    return id;
+  };
+  globalThis.clearInterval = (id) => {
+    cleared.push(id);
+    intervals.delete(id);
+  };
+
+  const documentRef = {
+    hidden: false,
+    addEventListener(type, fn, options = {}) {
+      listeners.set(type, fn);
+      options.signal?.addEventListener('abort', () => listeners.delete(type), { once: true });
+    },
+  };
+  const dispatched = [];
+  const store = { dispatch(action) { dispatched.push(action); } };
+  const thunks = { loadNotifications: () => ({ type: 'notifications/load' }) };
+
+  try {
+    const polling = createNotificationPolling({ documentRef, intervalMs: 123 });
+    polling.start(store, thunks);
+    assert.equal(intervals.get(1).ms, 123);
+
+    intervals.get(1).fn();
+    assert.deepEqual(dispatched, [{ type: 'notifications/load' }]);
+
+    documentRef.hidden = true;
+    listeners.get('visibilitychange')();
+    assert.deepEqual(cleared, [1]);
+    assert.equal(intervals.size, 0);
+
+    documentRef.hidden = false;
+    listeners.get('visibilitychange')();
+    assert.equal(intervals.get(2).ms, 123);
+
+    polling.stop();
+    assert.deepEqual(cleared, [1, 2]);
+    assert.equal(listeners.has('visibilitychange'), false);
+  } finally {
+    globalThis.setInterval = originalSetInterval;
+    globalThis.clearInterval = originalClearInterval;
+  }
 });

@@ -5,35 +5,7 @@ import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin
 import { checkRateLimit, getClientIp } from './lib/rate-limiter.js';
 import { resolveAdminRoute, resolvePublicRoute } from './lib/router.js';
 import { handlePublicShare } from './lib/shares.js';
-
-const csrfProtectedRoutes = [
-  ['/api/admin/settings/hidden', ['POST', 'DELETE']],
-  ['/api/admin/settings/protected', ['POST', 'DELETE']],
-  ['/api/admin/maintenance', ['POST']],
-  ['/api/paste', ['POST']],
-  ['/api/files', ['POST', 'PUT']],
-  ['/api/batch-delete', ['POST']],
-  ['/api/operation-estimate', ['POST']],
-  ['/api/trash/restore', ['POST']],
-  ['/api/trash/delete', ['DELETE']],
-  ['/api/trash/clear', ['DELETE']],
-  ['/api/trash/cleanup', ['POST']],
-  ['/api/admin/settings/trash-retention', ['PUT']],
-  ['/api/admin/settings/quota', ['PUT']],
-  ['/api/admin/settings/webhooks', ['PUT', 'POST']],
-  ['/api/admin/settings/task-alerts', ['PUT']],
-  ['/api/admin/shares', ['POST', 'DELETE']],
-  ['/api/tasks', ['POST', 'PATCH']],
-  ['/api/tasks/retry', ['POST']],
-  ['/api/mkdir', ['POST']],
-  ['/api/upload-multipart/create', ['POST']],
-  ['/api/upload-multipart/part', ['PUT']],
-  ['/api/upload-multipart/complete', ['POST']],
-  ['/api/upload-multipart/abort', ['POST']],
-  ['/api/upload/check', ['POST']],
-  ['/api/save-text/', ['POST']],
-  ['/api/zip-download', ['POST']],
-];
+import { getApiRoutePolicy } from './lib/route-policy.js';
 
 let coreTablesReady;
 
@@ -45,17 +17,16 @@ function ensureCoreTablesOnce(env) {
   return coreTablesReady;
 }
 
-function needsCsrf(path, method) {
-  return csrfProtectedRoutes.some(([prefix, methods]) => path.startsWith(prefix) && methods.includes(method));
+function unauthorizedResponse() {
+  return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
 }
 
-function hasBody(method) {
-  return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
-}
-
-function isUploadBody(path, method) {
-  return (path.startsWith('/api/files') && method === 'POST')
-    || (path === '/api/upload-multipart/part' && method === 'PUT');
+function authRoleResponse(auth, env) {
+  return jsonResponse({
+    role: auth.role,
+    csrf: auth.role === 'admin' ? auth.csrf : undefined,
+    guestMode: env.ALLOW_GUEST === "true",
+  });
 }
 
 export async function onRequest(context) {
@@ -63,12 +34,13 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
+  const routePolicy = getApiRoutePolicy(path, method);
 
   try {
     await ensureCoreTablesOnce(env);
 
     // Global API rate limit: 120 requests per minute per IP (skip file download streams)
-    if (!path.startsWith('/api/download/') && !path.startsWith('/api/preview/') && !path.startsWith('/api/thumbnail/')) {
+    if (routePolicy.rateLimit) {
       const rl = checkRateLimit(`ip:${getClientIp(request)}`, 120, 60000);
       if (!rl.allowed) {
         return jsonResponse(
@@ -79,32 +51,32 @@ export async function onRequest(context) {
       }
     }
 
-    if (hasBody(method)) assertBodySize(request, isUploadBody(path, method));
+    if (routePolicy.hasBody) assertBodySize(request, routePolicy.uploadBody);
 
-    if (path === '/api/login' && method === 'POST') return await handleLogin(request, env, context);
-    if (path === '/api/logout') return handleLogout(request);
-    if (path.startsWith('/api/share/')) {
+    if (routePolicy.preAuth === 'login') return await handleLogin(request, env, context);
+    if (routePolicy.preAuth === 'logout') return handleLogout(request);
+    if (routePolicy.preAuth === 'publicShare') {
       const shareResult = await handlePublicShare(env, request, path);
       if (shareResult) return shareResult;
     }
 
     const auth = await verifyAuth(request, env);
-    if (!auth) return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
-    if (path === '/api/auth/role') return jsonResponse({ role: auth.role, csrf: auth.role === 'admin' ? auth.csrf : undefined, guestMode: env.ALLOW_GUEST === "true" });
+    if (!auth) return unauthorizedResponse();
+    if (routePolicy.postAuth === 'authRole') return authRoleResponse(auth, env);
 
     const [hiddenPaths, protectedPaths] = await Promise.all([loadHiddenPaths(env), loadProtectedPaths(env)]);
     const r2Key = getR2KeyFromPath(path);
 
     if (!canReadKey(auth, r2Key, hiddenPaths)) return jsonResponse({ success: false, message: 'Forbidden' }, 403);
-    if (isAdmin(auth) && needsCsrf(path, method) && !(await verifyCsrf(request, auth))) {
+    if (isAdmin(auth) && routePolicy.csrf && !(await verifyCsrf(request, auth))) {
       return jsonResponse({ success: false, message: 'Invalid CSRF token' }, 403);
     }
-    if (isAdmin(auth) && r2Key && needsCsrf(path, method) && !canWriteUserKey(r2Key)) {
+    if (isAdmin(auth) && r2Key && routePolicy.userWritableKey && !canWriteUserKey(r2Key)) {
       return jsonResponse({ success: false, message: 'Reserved system path' }, 403);
     }
 
     // Protected path access check for download/preview/thumbnail
-    if (r2Key && (path.startsWith('/api/thumbnail/') || path.startsWith('/api/download/') || path.startsWith('/api/preview/'))) {
+    if (r2Key && routePolicy.protectedAccess) {
       const access = await checkProtectedAccess(request, env, auth, protectedPaths, r2Key);
       if (!access.ok) return jsonResponse({ success: false, code: 'password_required', path: access.rule.path, message: 'Password required' }, 403);
     }
