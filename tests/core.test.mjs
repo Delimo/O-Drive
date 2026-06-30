@@ -39,13 +39,31 @@ import {
   loadProtectedPaths,
   checkProtectedAccess,
 } from '../functions/api/lib/protected-paths.js';
-import { getApiRoutePolicy } from '../functions/api/lib/route-policy.js';
+import { API_ROUTE_POLICIES, getApiRoutePolicy } from '../functions/api/lib/route-policy.js';
 import { ADMIN_ROUTE_DISPATCHERS, PUBLIC_ROUTE_DISPATCHERS } from '../functions/api/lib/router.js';
 
 import { makeEnv } from './helpers/make-env.mjs';
 import { resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
 
 test.beforeEach(() => { resetRateLimiter(); });
+
+async function loginAsAdmin(env, username = 'admin', password = 'admin-secret') {
+  env.ADMIN_USERNAME = username;
+  env.ADMIN_PASSWORD = password;
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const data = await login.json();
+  return {
+    csrf: data.csrf,
+    cookie: login.headers.get('Set-Cookie'),
+  };
+}
 
 test('list files filters empty root folders and hidden paths for guests', async () => {
   const env = makeEnv({
@@ -420,6 +438,73 @@ test('router dispatcher metadata covers simple admin and public routes', () => {
   assert.ok(publicRoutes.includes('/api/thumbnail/:*'));
   assert.ok(publicRoutes.includes('/api/download/:*'));
   assert.ok(publicRoutes.includes('/api/preview/:*'));
+});
+
+test('csrf route policies have matching dispatchers', () => {
+  const dispatchers = [...ADMIN_ROUTE_DISPATCHERS, ...PUBLIC_ROUTE_DISPATCHERS];
+  const routeMatches = (route, path, method) => {
+    const pathMatches = route.path ? path === route.path : path.startsWith(route.prefix);
+    const methodMatches = !route.methods || route.methods.includes(method);
+    return pathMatches && methodMatches;
+  };
+  const samplePath = policy => {
+    if (policy.path) return policy.path;
+    return policy.prefix.endsWith('/') ? `${policy.prefix}__sample__` : policy.prefix;
+  };
+
+  for (const policy of API_ROUTE_POLICIES.filter(item => item.csrf)) {
+    for (const method of policy.methods || ['GET']) {
+      const path = samplePath(policy);
+      assert.ok(
+        dispatchers.some(route => routeMatches(route, path, method)),
+        `${method} ${path} should have a dispatcher`,
+      );
+    }
+  }
+});
+
+test('api rejects reserved and encoded traversal write targets with client errors', async () => {
+  const env = makeEnv();
+  const { cookie, csrf } = await loginAsAdmin(env);
+  const headers = { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+
+  const reservedFromRoute = await onRequest({
+    env,
+    request: new Request('https://example.com/api/mkdir/.system', {
+      method: 'POST',
+      body: JSON.stringify({ folderName: 'child' }),
+      headers,
+    }),
+  });
+  assert.equal(reservedFromRoute.status, 403);
+  assert.equal((await reservedFromRoute.json()).message, 'Reserved system path');
+
+  const reservedFromBody = await onRequest({
+    env,
+    request: new Request('https://example.com/api/upload/check', {
+      method: 'POST',
+      body: JSON.stringify({
+        targetDir: '.system',
+        name: 'note.txt',
+        size: 1,
+        sha256: 'a'.repeat(64),
+      }),
+      headers,
+    }),
+  });
+  assert.equal(reservedFromBody.status, 403);
+  assert.equal((await reservedFromBody.json()).message, 'Reserved system path');
+
+  const traversal = await onRequest({
+    env,
+    request: new Request('https://example.com/api/mkdir/%2e%2e', {
+      method: 'POST',
+      body: JSON.stringify({ folderName: 'child' }),
+      headers,
+    }),
+  });
+  assert.equal(traversal.status, 400);
+  assert.equal((await traversal.json()).message, 'Invalid path');
 });
 
 test('token secret signs admin sessions independently from admin password', async () => {

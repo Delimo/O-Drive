@@ -29,6 +29,13 @@ function authRoleResponse(auth, env) {
   });
 }
 
+function statusForKnownClientError(err) {
+  const message = String(err?.message || "");
+  if (message === "Reserved system path") return 403;
+  if (/^Invalid (name|path)/.test(message)) return 400;
+  return 0;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -93,7 +100,7 @@ export async function onRequest(context) {
 
     return jsonResponse({ success: false, message: 'Not Found' }, 404);
   } catch (err) {
-    const status = Number(err.status || 500);
+    const status = Number(err.status || statusForKnownClientError(err) || 500);
     const message = status >= 500 ? 'Internal Server Error' : err.message;
     return jsonResponse({ success: false, message }, status);
   }
