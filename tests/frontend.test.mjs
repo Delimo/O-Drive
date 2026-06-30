@@ -221,6 +221,30 @@ test('uploads panel shows pause button on active items and resume on paused', ()
   assert.match(paused, /已暂停/);
 });
 
+test('uploads panel shows multipart resume and failure diagnostics', () => {
+  const html = uploads.renderUploadsPanel(makeState({
+    uploads: { items: [
+      {
+        id: 'large',
+        name: 'large.bin',
+        status: 'error',
+        progress: 50,
+        error: '网络中断',
+        multipart: true,
+        resumable: true,
+        completedParts: 2,
+        totalChunks: 4,
+        diagnostic: '重新选择同一文件会尝试继续。',
+      },
+    ] },
+  }));
+
+  assert.match(html, /断点 2\/4/);
+  assert.match(html, /重新选择同一文件会尝试继续/);
+  assert.match(html, /title="重新选择文件"/);
+  assert.match(html, /data-action="upload"/);
+});
+
 // ===== 批量栏忙碌态 =====
 
 test('batch bar disables actions while busy', () => {
@@ -619,6 +643,35 @@ test('admin logs section renders log entries with pagination', () => {
   assert.match(html, /admin/);
 });
 
+test('admin shares section formats millisecond expiry timestamps', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      activeTab: 'shares',
+      stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [{
+        token: 'share-token',
+        name: 'demo.txt',
+        path: '/demo.txt',
+        targetType: 'file',
+        allowPreview: true,
+        allowDownload: true,
+        expiresAt: Date.UTC(2026, 0, 2, 3, 4),
+        maxDownloads: 5,
+        downloadCount: 0,
+      }],
+      sharesLoading: false,
+      sharesError: '',
+      shareFilter: 'all',
+      shareSearch: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /demo\.txt/);
+  assert.match(html, /2026/);
+  assert.doesNotMatch(html, /58454/);
+});
+
 test('admin quota section renders storage usage', () => {
   const state = {
     app: { role: 'admin' },
@@ -829,6 +882,45 @@ test('admin task list renders zip task download result link', () => {
   const html = pages.renderAdminPage(state);
   assert.match(html, /下载结果/);
   assert.match(html, /\/api\/download\/\.system\/zip-tasks\/zip-1\/archive\.zip/);
+});
+
+test('admin task list renders zip task diagnostics and retry action', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, activeTab: 'system', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+      maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
+      taskRetryingId: '',
+      tasks: [{
+        id: 'zip-failed',
+        type: 'zip_download',
+        status: 'failed',
+        total: 3,
+        completed: 1,
+        error: 'R2 写入失败',
+        result: { outputKey: '.system/zip-tasks/zip-failed/archive.zip', filename: 'archive.zip' },
+        createdAt: 1710000000000,
+        finishedAt: 1710000000100,
+      }],
+      tasksLoading: false,
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /ZIP 下载/);
+  assert.match(html, /ZIP 生成失败，可重试/);
+  assert.match(html, /R2 写入失败/);
+  assert.match(html, /\.system\/zip-tasks\/zip-failed\/archive\.zip/);
+  assert.match(html, /data-action="retry-task"/);
 });
 
 test('webhook delivery list shows retry action for failed rows', () => {

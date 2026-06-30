@@ -2183,7 +2183,15 @@
 .ov-task-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ov-task-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .ov-task-status {
@@ -2192,9 +2200,65 @@
   color: var(--text);
 }
 
+.ov-task-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ov-task-state-ok {
+  color: #18794e;
+  border-color: color-mix(in srgb, #18794e 28%, transparent);
+  background: color-mix(in srgb, #18794e 8%, transparent);
+}
+
+.ov-task-state-running {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.ov-task-state-warning {
+  color: #9a6700;
+  border-color: color-mix(in srgb, #9a6700 28%, transparent);
+  background: color-mix(in srgb, #9a6700 8%, transparent);
+}
+
+.ov-task-state-error {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 28%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
 .ov-task-time {
   font-size: 10px;
   color: var(--muted);
+}
+
+.ov-task-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 520px;
+}
+
+.ov-task-diagnostic {
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2592,6 +2656,7 @@
 .ov-share-main {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 7px;
   min-width: 0;
   flex: 1;
@@ -2608,6 +2673,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
   min-width: 0;
   flex-wrap: nowrap;
 }
@@ -2640,6 +2706,7 @@
   font-size: 12px;
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2657,6 +2724,7 @@
   display: flex;
   gap: 5px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .ov-share-meta-strip {

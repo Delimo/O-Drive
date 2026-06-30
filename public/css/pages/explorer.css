@@ -648,12 +648,26 @@
 }
 
 .upload-row-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 13px;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 4px;
+}
+
+.upload-row-filename {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upload-row-chip {
+  flex: 0 0 auto;
+  font-size: 11px;
 }
 
 .upload-row-track {
@@ -684,6 +698,14 @@
 
 .upload-row[data-status="success"] .upload-row-bar { background: #18794e; }
 .upload-row[data-status="error"] .upload-row-bar { background: #c0392b; }
+
+.upload-row-diagnostic {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
 
 .upload-row-status {
   font-size: 12px;

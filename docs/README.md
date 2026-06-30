@@ -10,6 +10,13 @@
 | `frontend-style.md` | 前端视觉风格指南，记录颜色、排版、组件、页面密度和重做页面时的设计检查清单。 |
 | `layout.md` | 页面布局、region、flex 链路和常见布局排查。 |
 | `admin-page.md` | 后台管理页 Tab、渲染器和事件约定。 |
+| `optimization-recommendations.md` | 长期优化建议和阶段性落地记录，已完成的临时计划应合并到这里或直接清理。 |
+
+## 治理状态
+
+- 当前目录没有保留已完成的一次性 mockup、临时交接稿或过期路线图。
+- `frontend-style.md` 和 `layout.md` 仍是长期设计/布局参考，不作为临时计划清理。
+- 后续如果出现 `*-review.md`、`*-plan.md`、`*-todo.md` 等阶段性文档，完成后优先合并到本索引、`maintenance-handoff.md` 或 `optimization-recommendations.md`，再删除原文件。
 
 ## 维护约定
 

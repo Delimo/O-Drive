@@ -130,6 +130,7 @@ export function createUploadThunks(deps, context) {
       let uploaded = 0;
       let failed = 0;
       let cancelledItems = [];
+      let pausedItems = [];
       let uploadTaskId = "";
 
       const dirsToCreate = [
@@ -257,6 +258,7 @@ export function createUploadThunks(deps, context) {
               diagnostic: buildUploadFailureDiagnostic(error, q),
             }));
           } else if (error.message === "UPLOAD_PAUSED") {
+            pausedItems.push(q.id);
             dispatch(actions.uploads.update({
               id: q.id,
               status: "paused",
@@ -280,7 +282,11 @@ export function createUploadThunks(deps, context) {
       if (uploadTaskId) {
         try {
           const finalStatus =
-            failed === 0 ? "completed" : uploaded === 0 ? "failed" : "partial";
+            failed === 0 && cancelledItems.length === 0 && pausedItems.length === 0
+              ? "completed"
+              : uploaded === 0
+                ? "failed"
+                : "partial";
           await taskApi.update(uploadTaskId, {
             status: finalStatus,
             finishedAt: Date.now(),
@@ -289,7 +295,9 @@ export function createUploadThunks(deps, context) {
         dispatch(actions.admin.setActiveUploadTaskId(""));
       }
 
-      if (failed === 0 && cancelledItems.length === 0) {
+      if (pausedItems.length > 0) {
+        dispatchToast("info", `已暂停 ${pausedItems.length} 个文件`);
+      } else if (failed === 0 && cancelledItems.length === 0) {
         dispatchToast("success", `已上传 ${uploaded} 个文件`);
       } else if (uploaded === 0 && failed === 0) {
         dispatchToast("info", `已取消 ${cancelledItems.length} 个文件`);

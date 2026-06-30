@@ -59,6 +59,7 @@ export function createSharesRenderer({
       const isExpired = share?.expired || (share?.expiresAt && share.expiresAt < now);
       const isExhausted = share?.exhausted;
       const isActive = isShareActive(share);
+      const expiresAt = Number(share?.expiresAt || 0);
       const targetLabel = share?.targetType === "folder" ? "文件夹" : "文件";
       const statusText = isExpired ? "已失效" : isExhausted ? "已用尽" : "有效";
       const statusClass = isExpired ? "ov-badge-error" : isExhausted ? "ov-badge-warn" : "ov-badge-ok";
@@ -67,7 +68,7 @@ export function createSharesRenderer({
         ? formatRelative(share.lastAccessedAt)
         : "暂无记录";
       const downloadsText = `${share.downloadCount || 0}/${share.maxDownloads || "∞"}`;
-      const expiresText = share?.expiresAt ? formatTime(share.expiresAt) : "无限期";
+      const expiresText = expiresAt ? formatTime(Math.floor(expiresAt / 1000)) : "无限期";
 
       return `
         <div class="ov-share-item${itemStateClass}">

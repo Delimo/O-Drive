@@ -289,7 +289,7 @@ export function createSystemRenderer({
                         const retrying = taskRetryingId === tsk.id;
                         const details = buildTaskDiagnostics(tsk, progress, canRetry, downloadUrl);
                         return `
-                          <div class="ov-task-item">
+                          <div class="ov-task-item" data-task-type="${escapeHtml(tsk.type || "")}" data-task-status="${escapeHtml(tsk.status || "")}">
                             <div class="ov-task-info">
                               <div class="ov-task-title-row">
                                 <span class="ov-task-status">${escapeHtml(taskTypeLabel(tsk.type))}</span>
