@@ -8,6 +8,7 @@ import { inferKind, iconForKind, iconClass, isProtectedEntry, canPreview } from 
 import { escapeHtml } from '../public/js/utils/text.js';
 import { createStateSelectors } from '../public/js/state/selectors.js';
 import { createSharedRenderers } from '../public/js/render/shared.js';
+import { createUiComponents } from '../public/js/render/components.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
@@ -16,6 +17,7 @@ import { createDeferredAction, openDownload } from '../public/js/utils/helpers.j
 import { createPageRenderers } from '../public/js/render/pages/index.js';
 import { createHeaderRenderer } from '../public/js/render/header.js';
 import { createNotificationPolling } from '../public/js/services/notifications.js';
+import { assertApiOk } from '../public/js/state/thunks/errors.js';
 
 // 任意图标都返回占位 SVG，避免在测试里维护完整图标表
 const icons = new Proxy({}, { get: () => '<svg></svg>' });
@@ -167,6 +169,24 @@ test('inspector renders folder stats and folder actions', () => {
   assert.match(html, /data-action="open-entry"/);
   assert.match(html, /data-action="open-share-modal"/);
   assert.match(html, /data-action="open-rename-modal"/);
+});
+
+test('ui components render reusable empty states and detail rows', () => {
+  const ui = createUiComponents({ escapeHtml });
+  const empty = ui.renderEmptyState('暂无内容', '请选择一个项目', '<svg></svg>', true);
+  const row = ui.renderDetailRow({
+    label: '路径',
+    value: 'docs/readme.md',
+    className: 'details-row-path',
+    valueClassName: 'details-path-value',
+    title: 'docs/readme.md',
+  });
+
+  assert.match(empty, /empty-state-compact/);
+  assert.match(empty, /暂无内容/);
+  assert.match(row, /details-row-path/);
+  assert.match(row, /details-path-value/);
+  assert.match(row, /docs\/readme\.md/);
 });
 
 // ===== Markdown 渲染与安全 =====
@@ -459,6 +479,21 @@ test('createDeferredAction builds action object', () => {
   const action = createDeferredAction('navigate', { path: '/foo' });
   assert.equal(action.kind, 'navigate');
   assert.equal(action.path, '/foo');
+});
+
+test('assertApiOk accepts success, rejects failures, and preserves completed partials', () => {
+  const human = (_response, data, fallback) => data?.message || fallback;
+
+  assert.doesNotThrow(() =>
+    assertApiOk({ ok: true }, { success: true }, '失败', human),
+  );
+  assert.doesNotThrow(() =>
+    assertApiOk({ ok: false }, { success: false, completed: 2 }, '失败', human, { allowCompleted: true }),
+  );
+  assert.throws(
+    () => assertApiOk({ ok: false }, { message: '坏了' }, '失败', human),
+    /坏了/,
+  );
 });
 
 test('openDownload calls apiClient.downloadUrl with entry path', () => {

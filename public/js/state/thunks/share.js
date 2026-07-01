@@ -1,3 +1,5 @@
+import { assertApiOk } from "./errors.js";
+
 export function createShareThunks(deps, context) {
   const {
     actions,
@@ -11,11 +13,6 @@ export function createShareThunks(deps, context) {
 
   const { mock, getThunks } = context;
   const page = getPage();
-
-  function assertShareOk(response, data, fallback, isValid = () => true) {
-    if (response.ok && data?.success !== false && isValid(data)) return;
-    throw new Error(humanError(response, data, fallback));
-  }
 
   return {
     loadShare: () => async (dispatch, getState) => {
@@ -92,11 +89,12 @@ export function createShareThunks(deps, context) {
           allowDownload: Boolean(values.allowDownload),
         };
         const { response, data } = await shareApi.create(payload);
-        assertShareOk(
+        assertApiOk(
           response,
           data,
           "创建分享失败",
-          (result) => Boolean(result?.item?.token),
+          humanError,
+          { isValid: (result) => Boolean(result?.item?.token) },
         );
 
         const link = `${window.location.origin}/share.html?token=${encodeURIComponent(data.item.token)}`;
@@ -127,7 +125,7 @@ export function createShareThunks(deps, context) {
       dispatch(actions.admin.setShareBusyToken(token));
       try {
         const { response, data } = await shareApi.remove(token);
-        assertShareOk(response, data, "删除分享失败");
+        assertApiOk(response, data, "删除分享失败", humanError);
         dispatchToast("success", "分享已删除");
         await dispatch(getThunks().loadAdminShares());
       } catch (error) {
@@ -148,7 +146,7 @@ export function createShareThunks(deps, context) {
       dispatch(actions.app.setModal({ ...modal, loading: true, error: "" }));
       try {
         const { response, data } = await shareApi.remove(token);
-        assertShareOk(response, data, "删除分享失败");
+        assertApiOk(response, data, "删除分享失败", humanError);
         dispatch(actions.app.setModal(null));
         dispatchToast("success", "分享已删除");
         await dispatch(getThunks().loadAdminShares());
@@ -171,7 +169,7 @@ export function createShareThunks(deps, context) {
       dispatch(actions.admin.setShareBusyToken("__cleanup__"));
       try {
         const { response, data } = await shareApi.cleanupExpired();
-        assertShareOk(response, data, "清理过期分享失败");
+        assertApiOk(response, data, "清理过期分享失败", humanError);
         dispatchToast("success", "已清理过期分享");
         await dispatch(getThunks().loadAdminShares());
       } catch (error) {
@@ -191,7 +189,7 @@ export function createShareThunks(deps, context) {
       dispatch(actions.app.setModal({ ...modal, loading: true, error: "" }));
       try {
         const { response, data } = await shareApi.cleanupExpired();
-        assertShareOk(response, data, "清理过期分享失败");
+        assertApiOk(response, data, "清理过期分享失败", humanError);
         dispatch(actions.app.setModal(null));
         dispatchToast("success", "已清理过期分享");
         await dispatch(getThunks().loadAdminShares());
@@ -225,7 +223,7 @@ export function createShareThunks(deps, context) {
         const { response, data } = await shareApi.reactivateExpired(token, {
           expiresInDays,
         });
-        assertShareOk(response, data, "重新启用分享失败");
+        assertApiOk(response, data, "重新启用分享失败", humanError);
         dispatch(actions.app.setModal(null));
         dispatchToast("success", "分享链接已重新启用");
         await dispatch(getThunks().loadAdminShares());

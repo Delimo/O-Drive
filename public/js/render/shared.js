@@ -1,3 +1,5 @@
+import { createUiComponents } from "./components.js";
+
 export function createSharedRenderers(deps) {
   const {
     icons,
@@ -13,6 +15,10 @@ export function createSharedRenderers(deps) {
     normalizeKey,
     thumbnailUrl,
   } = deps;
+  const {
+    renderDetailRow,
+    renderEmptyState: renderEmptyStateBase,
+  } = createUiComponents({ escapeHtml });
 
   function renderInspector(selected, state) {
     if (!selected) {
@@ -120,51 +126,31 @@ export function createSharedRenderers(deps) {
         <section class="details-section">
           <div class="details-section-title">属性</div>
           <div class="details-list">
-            <div class="details-row">
-              <div class="details-row-label">类型</div>
-              <div class="details-row-value">${escapeHtml(kindLabel)}</div>
-            </div>
-            <div class="details-row">
-              <div class="details-row-label">大小</div>
-              <div class="details-row-value">${escapeHtml(sizeText)}</div>
-            </div>
+            ${renderDetailRow({ label: "类型", value: kindLabel })}
+            ${renderDetailRow({ label: "大小", value: sizeText })}
             ${isFolder ? `
-            <div class="details-row">
-              <div class="details-row-label">文件数</div>
-              <div class="details-row-value">${folderStats ? escapeHtml(String(folderStats.fileCount || 0)) : folderStatsLoading ? "统计中" : "未加载"}</div>
-            </div>
-            <div class="details-row">
-              <div class="details-row-label">当前层文件</div>
-              <div class="details-row-value">${folderStats ? escapeHtml(String(folderStats.directFileCount || 0)) : folderStatsLoading ? "统计中" : "未加载"}</div>
-            </div>
-            <div class="details-row">
-              <div class="details-row-label">子文件夹</div>
-              <div class="details-row-value">${folderStats ? escapeHtml(String(folderStats.folderCount || 0)) : folderStatsLoading ? "统计中" : "未加载"}</div>
-            </div>
+            ${renderDetailRow({ label: "文件数", value: folderStats ? String(folderStats.fileCount || 0) : folderStatsLoading ? "统计中" : "未加载" })}
+            ${renderDetailRow({ label: "当前层文件", value: folderStats ? String(folderStats.directFileCount || 0) : folderStatsLoading ? "统计中" : "未加载" })}
+            ${renderDetailRow({ label: "子文件夹", value: folderStats ? String(folderStats.folderCount || 0) : folderStatsLoading ? "统计中" : "未加载" })}
             ${folderStats?.truncated ? `
-            <div class="details-row">
-              <div class="details-row-label">统计范围</div>
-              <div class="details-row-value">目录过大，已显示前 10000 个对象</div>
-            </div>
+            ${renderDetailRow({ label: "统计范围", value: "目录过大，已显示前 10000 个对象" })}
             ` : ""}
             ${folderStatsError ? `
-            <div class="details-row">
-              <div class="details-row-label">统计状态</div>
-              <div class="details-row-value">${escapeHtml(folderStatsError)}</div>
-            </div>
+            ${renderDetailRow({ label: "统计状态", value: folderStatsError })}
             ` : ""}
             ` : ""}
-            <div class="details-row">
-              <div class="details-row-label">${timeLabel}</div>
-              <div class="details-row-value">
-                <span>${escapeHtml(timeText)}</span>
-                ${relativeText ? `<span class="details-row-note">${escapeHtml(relativeText)}</span>` : ""}
-              </div>
-            </div>
-            <div class="details-row details-row-path">
-              <div class="details-row-label">路径</div>
-              <div class="details-row-value details-path-value" title="${escapeHtml(pathValue || "/")}">${escapeHtml(pathValue || "/")}</div>
-            </div>
+            ${renderDetailRow({
+              label: timeLabel,
+              valueHtml: `<span>${escapeHtml(timeText)}</span>`,
+              noteHtml: relativeText ? `<span class="details-row-note">${escapeHtml(relativeText)}</span>` : "",
+            })}
+            ${renderDetailRow({
+              label: "路径",
+              value: pathValue || "/",
+              className: "details-row-path",
+              valueClassName: "details-path-value",
+              title: pathValue || "/",
+            })}
           </div>
         </section>
 
@@ -373,27 +359,11 @@ export function createSharedRenderers(deps) {
   }
 
   function renderEmptyState(title, copy, icon) {
-    return `
-      <div class="empty-state">
-        <div>
-          <div class="empty-orb">${icon}</div>
-          <h3 class="empty-title">${escapeHtml(title)}</h3>
-          <p class="empty-copy">${escapeHtml(copy)}</p>
-        </div>
-      </div>
-    `;
+    return renderEmptyStateBase(title, copy, icon);
   }
 
   function renderEmptyStateCompact(title, copy, icon) {
-    return `
-      <div class="empty-state-compact">
-        <div>
-          ${icon ? `<div class="empty-orb">${icon}</div>` : ""}
-          <h3 class="empty-title">${escapeHtml(title)}</h3>
-          <p class="empty-copy">${escapeHtml(copy)}</p>
-        </div>
-      </div>
-    `;
+    return renderEmptyStateBase(title, copy, icon, true);
   }
 
   return {

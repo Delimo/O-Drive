@@ -1,26 +1,18 @@
+import { createUiComponents } from "../../components.js";
+
 export function createAdminComponents({ escapeHtml }) {
+  const { renderEmptyState } = createUiComponents({ escapeHtml });
+
   function renderEmptyCard({ icon, title, description, action }) {
     const actionHtml = action
       ? `<div class="mt-3"><button class="btn toolbar-btn" type="button" data-action="${escapeHtml(action.action)}">${escapeHtml(action.label)}</button></div>`
       : "";
 
-    return `
-      <div class="empty-state">
-        <div class="empty-orb">${icon || ""}</div>
-        <p class="empty-copy">${escapeHtml(description || "")}</p>
-        ${actionHtml}
-      </div>
-    `;
+    return renderEmptyState(title || "", description || "", icon, false, actionHtml);
   }
 
   function renderLoadingCard({ icon, title, description }) {
-    return `
-      <div class="empty-state-compact">
-        <div class="empty-orb">${icon || ""}</div>
-        <h3 class="empty-title">${escapeHtml(title || "加载中")}</h3>
-        <p class="empty-copy">${escapeHtml(description || "")}</p>
-      </div>
-    `;
+    return renderEmptyState(title || "加载中", description || "", icon, true);
   }
 
   function renderErrorCard({ icon, error, onRetry }) {
@@ -28,13 +20,7 @@ export function createAdminComponents({ escapeHtml }) {
       ? `<div class="mt-3"><button class="btn toolbar-btn" type="button" data-action="${escapeHtml(onRetry)}">重新加载</button></div>`
       : "";
 
-    return `
-      <div class="empty-state">
-        <div class="empty-orb">${icon || ""}</div>
-        <p class="empty-copy">${escapeHtml(error)}</p>
-        ${retryHtml}
-      </div>
-    `;
+    return renderEmptyState("", error || "", icon, false, retryHtml);
   }
 
   function renderSectionCard({ title, description, actions, content }) {

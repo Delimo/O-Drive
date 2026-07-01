@@ -1,3 +1,5 @@
+import { assertApiOk } from "./errors.js";
+
 export function createExplorerThunks(deps, context) {
   const {
     actions,
@@ -175,8 +177,7 @@ export function createExplorerThunks(deps, context) {
 
       try {
         const { response, data } = await fileApi.folderStats(path);
-        if (!response.ok || data?.success === false)
-          throw new Error(humanError(response, data, "文件夹统计加载失败"));
+        assertApiOk(response, data, "文件夹统计加载失败", humanError);
         dispatch(
           actions.explorer.setFolderStats({
             path,
@@ -284,8 +285,7 @@ export function createExplorerThunks(deps, context) {
 
       try {
         const { response, data } = await fileApi.saveText(path, content);
-        if (!response.ok || data?.success === false)
-          throw new Error(humanError(response, data, "保存失败"));
+        assertApiOk(response, data, "保存失败", humanError);
         const { draftContent: _, ...cleanModal } = modal;
         dispatch(
           actions.app.setModal({ ...cleanModal, editing: false, content }),
@@ -343,9 +343,9 @@ export function createExplorerThunks(deps, context) {
       dispatch(actions.explorer.setBatchBusy(true));
       try {
         const { response, data } = await fileApi.batchDelete(paths);
-        if ((!response.ok || data?.success === false) && !data?.completed) {
-          throw new Error(humanError(response, data, "删除失败"));
-        }
+        assertApiOk(response, data, "删除失败", humanError, {
+          allowCompleted: true,
+        });
         dispatch(actions.explorer.setSelectedKeys([]));
         dispatchToast(
           "success",
@@ -368,8 +368,7 @@ export function createExplorerThunks(deps, context) {
 
       try {
         const { response, data } = await fileApi.rename(path, newName);
-        if (!response.ok)
-          throw new Error(humanError(response, data, "重命名失败"));
+        assertApiOk(response, data, "重命名失败", humanError);
         dispatch(actions.app.setModal(null));
         dispatchToast("success", "已完成重命名");
         await dispatch(getThunks().loadExplorer());
@@ -401,9 +400,9 @@ export function createExplorerThunks(deps, context) {
           `/${normalizeKey(getState().explorer.path)}`.replace(/\/$/, "") ||
             "/",
         );
-        if ((!response.ok || data?.success === false) && !data?.completed) {
-          throw new Error(humanError(response, data, "粘贴失败"));
-        }
+        assertApiOk(response, data, "粘贴失败", humanError, {
+          allowCompleted: true,
+        });
         dispatch(actions.explorer.setClipboard(null));
         dispatch(actions.explorer.setSelectedKeys([]));
         dispatchToast(
