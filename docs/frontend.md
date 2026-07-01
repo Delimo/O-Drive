@@ -44,7 +44,7 @@
 | slice | 文件 | 用途 |
 | --- | --- | --- |
 | `app` | `public/js/state/slices/app-slice.js` | 页面、角色、CSRF、弹窗、toast、全局启动状态。 |
-| `explorer` | `public/js/state/slices/explorer-slice.js` | 当前路径、搜索、筛选、文件列表、回收站、选择、剪贴板。 |
+| `explorer` | `public/js/state/slices/explorer-slice.js` | 当前路径、搜索、筛选、文件列表、文件夹统计、回收站、选择、剪贴板。 |
 | `admin` | `public/js/state/slices/admin-slice.js` | 后台 Tab、统计、日志、分享、存储、系统、任务、通知。 |
 | `share` | `public/js/state/slices/share-slice.js` | 分享页信息、密码状态、目录浏览。 |
 | `uploads` | `public/js/state/slices/uploads-slice.js` | 上传队列、进度、暂停、失败、冲突策略。 |
@@ -58,9 +58,10 @@
 - 首页：`public/js/render/home.js`
 - 后台页：`public/js/render/pages/index.js`
 - 后台 Tab：`public/js/render/pages/admin/*`
-- 分享页：`public/js/render/pages/admin/shares.js` 中的 `renderSharePage`
+- 分享页：`public/js/render/pages/admin/share-page.js` 中的 `renderSharePage`，由 `admin/shares.js` 组合导出。
 - 弹窗：`public/js/render/modal.js`
 - 通用文件卡片、面包屑、空状态：`public/js/render/shared.js`
+- 通用 UI helper：`public/js/render/components.js`
 - 上传面板：`public/js/render/uploads.js`
 
 渲染函数不要直接 `fetch`，不要直接修改 state，也不要绑定 DOM 事件。交互通过 `data-action`、`data-form`、`data-binding`、`data-action-change` 等属性交给事件层。
@@ -115,6 +116,21 @@
 - 搜索调用 `fileApi.search()`，支持名称、路径、元数据筛选和小型文本内容命中。
 - 搜索结果的命中原因在 `item.searchHit`，由 `shared.js` 渲染到文件卡片。
 - 加载更多搜索结果走 `loadMoreSearchResults()`。
+- 文件夹详情统计走 `fileApi.folderStats()` 和 `loadFolderStats()`，状态缓存在 `explorer.folderStats`，由 `shared.js` 的详情面板渲染文件数、子文件夹数、总大小和最近更新时间。
+
+### 分享流程
+
+- 文件和文件夹都可以创建分享，`share.js` 会根据 `entry.kind` 或弹窗 `targetType` 传递 `targetType`。
+- 分享弹窗在 `modal.js` 中按文件/文件夹显示不同文案；文件夹分享页支持目录浏览和 ZIP 下载。
+- 后台分享列表由 `admin/shares.js` 渲染，会区分文件/文件夹、有效/过期/耗尽状态。
+- 到期但仍在保留期内的分享可通过 `reactivateExpiredShareWithModal()` 重新启用，原 token 保持不变。
+
+### API 错误处理
+
+- 标准 API 响应断言优先使用 `public/js/state/thunks/errors.js` 的 `assertApiOk()`。
+- 批量删除/粘贴等部分完成场景使用 `allowCompleted` 保留兼容语义。
+- Webhook 测试/重试这类 HTTP 成功但业务投递失败仍需展示详情的场景使用 `allowSuccessFalse`。
+- 弹窗错误和帮助文案优先复用 `public/js/render/components.js` 的 `renderFormFeedback()`。
 
 ### 文件预览与文本编辑
 
@@ -176,6 +192,8 @@ npm run build
 | 改动 | 推荐测试 |
 | --- | --- |
 | 工具函数、渲染输出、状态选择器 | `tests/frontend.test.mjs` |
+| thunk 错误状态和 toast 输出 | `tests/thunks.test.mjs` |
+| 架构边界、后台 Tab 接线、CSS 构建约束 | `tests/architecture.test.mjs` |
 | API 行为、D1/R2 逻辑、任务、通知 | `tests/core.test.mjs` |
 | 页面流程 | `tests/browser/*.spec.mjs` |
 | 样式或入口构建 | `npm run build` |

@@ -146,7 +146,10 @@ export function createSystemRenderer({
               <div class="ov-system-info-card ov-webdav-card">
                 <div class="ov-system-info-header">
                   <span class="ov-system-info-title">WebDAV</span>
-                  <span class="ov-badge ${davEnabled ? 'ov-badge-ok' : 'ov-badge-info'}">${davEnabled ? '已启用' : '未配置'}</span>
+                  ${components.renderBadge({
+                    label: davEnabled ? "已启用" : "未配置",
+                    className: davEnabled ? "ov-badge-ok" : "ov-badge-info",
+                  })}
                 </div>
                 <div class="ov-system-info-body">
                   ${davEnabled ? `

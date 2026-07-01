@@ -85,7 +85,7 @@ export function createSharesRenderer({
               <div class="ov-share-path">${escapeHtml(share.path || "-")}</div>
             </div>
             <div class="ov-share-tags">
-              <span class="ov-badge ${statusClass}">${statusText}</span>
+              ${components.renderBadge({ label: statusText, className: statusClass })}
               ${share?.hasPassword ? `<span class="ov-share-pill tag-password">有密码</span>` : ""}
               ${renderShareTags(share)}
             </div>

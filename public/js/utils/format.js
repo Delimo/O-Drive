@@ -21,13 +21,15 @@ const _timeFmt = new Intl.DateTimeFormat("zh-CN", {
 export function formatTime(value) {
   const time = Number(value || 0);
   if (!time) return "未知时间";
-  return _timeFmt.format(new Date(time * 1000));
+  const timeMs = time > 100000000000 ? time : time * 1000;
+  return _timeFmt.format(new Date(timeMs));
 }
 
 export function formatRelative(value) {
   const time = Number(value || 0);
   if (!time) return "刚刚";
-  const diff = Date.now() - time * 1000;
+  const timeMs = time > 100000000000 ? time : time * 1000;
+  const diff = Date.now() - timeMs;
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;

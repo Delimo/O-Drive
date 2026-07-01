@@ -1,4 +1,5 @@
 import { CHUNK_SIZE } from "../../constants.js";
+import { assertApiOk } from "./errors.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -53,6 +54,7 @@ export function createUploadThunks(deps, context) {
     uploadService,
     normalizeKey,
     dispatchToast,
+    humanError,
     taskApi,
   } = deps;
 
@@ -228,9 +230,9 @@ export function createUploadThunks(deps, context) {
               },
               conflictMode,
             );
-            if (!response.ok || !data?.success) {
-              throw new Error(data?.message || `上传 ${item.file.name} 失败`);
-            }
+            assertApiOk(response, data, `上传 ${item.file.name} 失败`, humanError, {
+              isValid: (result) => result?.success === true,
+            });
           }
 
           uploaded += 1;

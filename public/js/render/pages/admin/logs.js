@@ -15,6 +15,7 @@ export function createLogsRenderer({
     purge: "永久清理",
     trash_clear: "清空回收站",
     task_create: "创建任务",
+    maintenance: "运维指令",
     copy: "复制",
     move: "移动",
     restore: "恢复",
@@ -25,6 +26,10 @@ export function createLogsRenderer({
     if (!raw) return "未知操作";
     const normalized = raw.toLowerCase().replace(/-/g, "_");
     return ACTION_LABELS[normalized] || raw.toUpperCase();
+  }
+
+  function getLogTime(log = {}) {
+    return log.timestamp || log.createdAt || log.created_at || log.time || 0;
   }
 
   function renderAdminLogsSection(admin) {
@@ -114,9 +119,10 @@ export function createLogsRenderer({
                       const actKey = rawAction.toLowerCase().replace(/-/g, "_");
                       const actCls = actKey === "delete" || actKey === "purge" || actKey === "trash_clear" ? "ov-action-danger" : actKey === "login" ? "ov-action-ok" : "";
                       const actLabel = getActionLabel(rawAction);
+                      const logTime = getLogTime(log);
                       return `
                         <tr>
-                          <td class="ov-td-muted">${formatTime(log.timestamp ? Math.floor(log.timestamp / 1000) : log.createdAt)}</td>
+                          <td class="ov-td-muted">${formatTime(logTime)}</td>
                           <td>
                             <span class="ov-action-tag ${actCls}" title="${escapeHtml(rawAction)}">
                               <span class="ov-action-main">${escapeHtml(actLabel)}</span>

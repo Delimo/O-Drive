@@ -107,6 +107,21 @@ function makeState(overrides = {}) {
   };
 }
 
+test('format helpers accept second and millisecond timestamps', () => {
+  const realNow = Date.now;
+  const now = Date.UTC(2026, 0, 2, 12, 0, 0);
+  const hour = 60 * 60 * 1000;
+  Date.now = () => now;
+  try {
+    assert.match(formatTime(Math.floor((now - 2 * hour) / 1000)), /2026/);
+    assert.match(formatTime(now - 2 * hour), /2026/);
+    assert.equal(formatRelative(Math.floor((now - 2 * hour) / 1000)), '2 小时前');
+    assert.equal(formatRelative(now - 2 * hour), '2 小时前');
+  } finally {
+    Date.now = realNow;
+  }
+});
+
 // ===== 共享渲染器 =====
 
 test('inspector renders file summary, properties and actions', () => {
@@ -183,6 +198,11 @@ test('ui components render reusable empty states and detail rows', () => {
   });
   const helper = ui.renderFormFeedback('', '请填写名称');
   const error = ui.renderFormFeedback('<失败>', '请填写名称');
+  const badge = ui.renderBadge({
+    label: '<状态>',
+    className: 'ov-badge-ok',
+    title: '<可用>',
+  });
 
   assert.match(empty, /empty-state-compact/);
   assert.match(empty, /暂无内容/);
@@ -193,6 +213,9 @@ test('ui components render reusable empty states and detail rows', () => {
   assert.match(helper, /请填写名称/);
   assert.match(error, /error-text/);
   assert.match(error, /&lt;失败&gt;/);
+  assert.match(badge, /class="ov-badge ov-badge-ok"/);
+  assert.match(badge, /title="&lt;可用&gt;"/);
+  assert.match(badge, /&lt;状态&gt;/);
 });
 
 // ===== Markdown 渲染与安全 =====
@@ -763,6 +786,35 @@ test('admin logs section renders log entries with pagination', () => {
   assert.match(html, /admin/);
 });
 
+test('admin logs section accepts api timestamp field variants', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, activeTab: 'logs', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false,
+      logs: [
+        { action: 'UPLOAD', details: 'docs/readme.txt', ip: '192.0.2.10', timestamp: Date.UTC(2026, 0, 2, 3, 4) },
+        { action: 'DELETE', details: 'docs/old.txt', ip: '192.0.2.11', created_at: Date.UTC(2026, 0, 3, 4, 5) },
+        { action: 'MAINTENANCE', details: '清理旧操作日志 8 条', ip: '192.0.2.12', timestamp: Date.UTC(2026, 0, 4, 5, 6) },
+      ],
+      logsError: '', logsPage: 1, logsTotalPages: 1, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /2026/);
+  assert.match(html, /运维指令/);
+  assert.doesNotMatch(html, /未知时间/);
+});
+
 test('admin shares section formats millisecond expiry timestamps', () => {
   const state = {
     app: { role: 'admin' },
@@ -779,6 +831,7 @@ test('admin shares section formats millisecond expiry timestamps', () => {
         expiresAt: Date.UTC(2026, 0, 2, 3, 4),
         maxDownloads: 5,
         downloadCount: 0,
+        lastAccessedAt: Date.now() - 2 * 60 * 60 * 1000,
       }],
       sharesLoading: false,
       sharesError: '',
@@ -789,6 +842,7 @@ test('admin shares section formats millisecond expiry timestamps', () => {
   const html = pages.renderAdminPage(state);
   assert.match(html, /demo\.txt/);
   assert.match(html, /2026/);
+  assert.match(html, /2 小时前/);
   assert.doesNotMatch(html, /58454/);
 });
 

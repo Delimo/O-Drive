@@ -56,7 +56,7 @@ export function createExplorerThunks(deps, context) {
       try {
         if (state.explorer.trashMode) {
           const { response, data } = await trashApi.list(query);
-          if (!response.ok) throw new Error(data?.message || "回收站加载失败");
+          assertApiOk(response, data, "回收站加载失败", humanError);
           dispatch(actions.explorer.setData({ trashItems: data.items || [] }));
           return;
         }
@@ -77,7 +77,7 @@ export function createExplorerThunks(deps, context) {
             modifiedAfter: filterDateFrom || "",
             modifiedBefore: filterDateTo || "",
           });
-          if (!response.ok) throw new Error(data?.message || "搜索失败");
+          assertApiOk(response, data, "搜索失败", humanError);
           dispatch(
             actions.explorer.setSearchData({
               files: data.files || [],
@@ -91,7 +91,7 @@ export function createExplorerThunks(deps, context) {
         }
 
         const { response, data } = await fileApi.list(path);
-        if (!response.ok) throw new Error(data?.message || "目录加载失败");
+        assertApiOk(response, data, "目录加载失败", humanError);
         dispatch(
           actions.explorer.setData({
             folders: data.folders || [],
@@ -130,7 +130,7 @@ export function createExplorerThunks(deps, context) {
           modifiedAfter: filterDateFrom || "",
           modifiedBefore: filterDateTo || "",
         });
-        if (!response.ok) throw new Error(data?.message || "搜索失败");
+        assertApiOk(response, data, "搜索失败", humanError);
         dispatch(
           actions.explorer.appendSearchResults({
             files: data.files || [],
@@ -210,8 +210,9 @@ export function createExplorerThunks(deps, context) {
           name,
           state.explorer.storageId || "r2",
         );
-        if (!response.ok || !data?.success)
-          throw new Error(data?.message || "创建文件夹失败");
+        assertApiOk(response, data, "创建文件夹失败", humanError, {
+          isValid: (result) => result?.success === true,
+        });
         dispatch(actions.app.setModal(null));
         dispatchToast("success", `已创建文件夹"${name}"`);
         await dispatch(getThunks().loadExplorer());

@@ -122,7 +122,7 @@ export function createWebhookRenderer({
               <div class="ov-webhook-notif-item ${item.read ? "" : "is-unread"}">
                 <div class="ov-webhook-notif-main">
                   <div class="ov-webhook-notif-head">
-                    <span class="ov-badge ${badgeClass}">${escapeHtml(severity)}</span>
+                    ${components.renderBadge({ label: severity, className: badgeClass })}
                     <span class="ov-webhook-notif-event">${escapeHtml(item.event || "notification")}</span>
                     <span class="ov-webhook-notif-time">${formatRelative(item.created_at || item.createdAt || 0)}</span>
                   </div>

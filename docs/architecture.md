@@ -29,6 +29,7 @@ O-Drive 当前不是 React 项目，也没有使用 Create React App、Ant Desig
 | 新增状态字段和同步 action | `public/js/state/slices/*` |
 | 新增异步流程 | `public/js/state/thunks/*` |
 | 新增页面 HTML | `public/js/render/*` |
+| 新增可复用 UI 片段 | `public/js/render/components.js` |
 | 新增点击、输入、表单交互 | `public/js/events/*` |
 | 上传、预览等可复用业务流程 | `public/js/services/*` |
 | 路径、格式化、文本工具 | `public/js/utils/*` |
@@ -38,6 +39,8 @@ O-Drive 当前不是 React 项目，也没有使用 Create React App、Ant Desig
 事件层只做交互分发，复杂流程交给 thunk。
 
 API 请求集中在 API layer，不要在渲染层或事件层散写 `fetch`。
+
+异步流程中的标准 API 错误判断优先复用 `public/js/state/thunks/errors.js` 的 `assertApiOk()`；需要保留部分完成语义或业务失败详情时使用 helper 选项，不要在各个 thunk 中重复散写分支。
 
 ## 新功能接入顺序
 
@@ -102,6 +105,8 @@ API 请求集中在 API layer，不要在渲染层或事件层散写 `fetch`。
 
 新增 UI 前先判断能否复用 `.btn`、`.mini-stat`、`.detail-card`、`.data-table-compact` 等现有组件。不要为了单个按钮新增全局按钮类。
 
+HTML 字符串中的常见空状态、详情行和表单反馈优先复用 `public/js/render/components.js`。只服务后台页的组合控件仍放在 `public/js/render/pages/admin/components.js`。
+
 ## 后端 API 路由
 
 Cloudflare Pages Functions 的主 API 入口是：
@@ -152,3 +157,5 @@ Cloudflare Pages Functions 的主 API 入口是：
 - 写操作相关的 Webhook 和通知应靠近业务 handler 或 route wrapper。
 - 修改源 CSS 后同步构建 `public/main.css` 和页面级 CSS。
 - 新代码要兼容 home、admin、share 三类页面入口差异。
+- 架构边界、后台 Tab 接线和 CSS 构建脚本约束由 `tests/architecture.test.mjs` 守护。
+- thunk 错误状态和 toast 输出由 `tests/thunks.test.mjs` 补充覆盖。

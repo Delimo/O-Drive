@@ -1,7 +1,7 @@
 import { createUiComponents } from "../../components.js";
 
 export function createAdminComponents({ escapeHtml }) {
-  const { renderEmptyState } = createUiComponents({ escapeHtml });
+  const { renderEmptyState, renderBadge } = createUiComponents({ escapeHtml });
 
   function renderEmptyCard({ icon, title, description, action }) {
     const actionHtml = action
@@ -303,6 +303,7 @@ export function createAdminComponents({ escapeHtml }) {
     renderSectionCard,
     renderRefreshButton,
     renderStatusTag,
+    renderBadge,
     renderCustomSelect,
     bindCustomSelects,
     renderCustomDatePicker,

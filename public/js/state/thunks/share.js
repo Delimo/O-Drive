@@ -40,7 +40,7 @@ export function createShareThunks(deps, context) {
           dispatch(actions.share.setPasswordRequired("该分享需要访问密码。"));
           return;
         }
-        if (!response.ok) throw new Error(data?.message || "分享信息加载失败");
+        assertApiOk(response, data, "分享信息加载失败", humanError);
         dispatch(actions.share.setData({ item: data.item, directory: data.directory }));
       } catch (error) {
         dispatch(actions.share.setError(error.message || "分享信息加载失败"));
@@ -250,8 +250,9 @@ export function createShareThunks(deps, context) {
       dispatch(actions.share.setLoading(true));
       try {
         const { response, data } = await shareApi.unlock(token, password);
-        if (!response.ok || !data?.success)
-          throw new Error(data?.message || "密码错误");
+        assertApiOk(response, data, "密码错误", humanError, {
+          isValid: (result) => result?.success === true,
+        });
         dispatchToast("success", "分享已解锁");
         dispatch(actions.share.setPassword(""));
         await dispatch(getThunks().loadShare());

@@ -38,9 +38,16 @@ export function createUiComponents({ escapeHtml }) {
       : `<div class="helper-text"${styleAttr}>${escapeHtml(helperText || "")}</div>`;
   }
 
+  function renderBadge({ label, className = "", baseClass = "ov-badge", title = "" }) {
+    const classes = [baseClass, className].filter(Boolean).join(" ");
+    const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
+    return `<span class="${escapeHtml(classes)}"${titleAttr}>${escapeHtml(label || "")}</span>`;
+  }
+
   return {
     renderEmptyState,
     renderDetailRow,
     renderFormFeedback,
+    renderBadge,
   };
 }

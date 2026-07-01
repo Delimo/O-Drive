@@ -1,6 +1,6 @@
 # O-Drive 维护交接
 
-> 更新时间：2026-06-29。本文是接手入口，只记录当前代码库的实际状态。
+> 更新时间：2026-07-01。本文是接手入口，只记录当前代码库的实际状态。
 
 ## 项目现状
 
@@ -47,10 +47,15 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 
 - R2 内容去重已经实现，不再保留单独方案文档。相关代码在 `functions/api/lib/storage-objects.js`、`functions/api/lib/file-mutations/upload.js`、`functions/api/lib/file-mutations/upload-check.js` 和 `functions/api/lib/file-mutations/multipart.js`。
 - `storage_objects` 表已由 `migrations/0007_add_storage_objects.sql` 和 `functions/api/lib/schema.js` 管理。
-- 普通上传、秒传检查、带 `sha256` 的分片上传、删除、回收站和维护任务已有测试覆盖。
+- 普通上传、秒传检查、带 `sha256` 的分片上传、删除、回收站、维护任务、架构边界和 thunk 错误状态已有测试覆盖。
 - 管理后台当前有 6 个 Tab：概览、存储、分享、日志、系统、通知。WebDAV 位于系统 Tab 中，不是独立 Tab。
 - 通知中心位于全局 header，下拉列表通过 `notificationApi` 和 `navigation-actions.js` 维护。
 - 搜索支持名称、路径、元数据筛选和小型文本文件内容命中，命中原因会通过 `searchHit` 返回给前端。
+- 文件夹详情已经接入 `/api/folder-stats/:path`，前端会缓存统计结果并在详情面板展示文件数、子文件夹数、总大小和最近更新时间。
+- 分享支持文件和文件夹两类目标；文件夹分享页支持目录浏览和 ZIP 下载，后台分享列表会显示目标类型。
+- 到期但仍在 7 天保留期内的分享可以在后台重新启用，保持原 token、路径、密码和权限设置。
+- 前端通用 UI helper 位于 `public/js/render/components.js`，当前已沉淀空状态、详情行和表单反馈。
+- 标准 API 错误处理已收敛到 `public/js/state/thunks/errors.js` 的 `assertApiOk()`，admin、maintenance、explorer 和 share 相关 thunk 均已接入。
 - 通知记录支持 `severity: info | warning | error`，通知 Tab 可按级别、已读状态和事件筛选通知历史，并展示 Webhook 通道配置与最近投递。
 - 后台失败或部分失败任务可从系统 Tab 重试；上传任务仍由浏览器侧上传队列重试。
 - 后台 ZIP 结果写入 `.system/zip-tasks/`，会按 `ZIP_TASK_RETENTION_DAYS` 自动清理，也可通过系统 Tab 的维护指令手动清理。
@@ -60,6 +65,8 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 
 - 修改前端功能时按 `api -> slice -> thunk -> render -> events` 的顺序接入。
 - 修改样式源文件后运行 `npm run build`，不要只改构建后的 CSS 产物。
+- 新增后台 Tab、入口分层或 CSS 构建脚本相关改动后，确认 `tests/architecture.test.mjs` 仍通过。
+- 新增 thunk 错误处理分支后，优先复用 `assertApiOk()` 并补 `tests/thunks.test.mjs` 或对应前端测试。
 - 涉及 R2 真实对象、回收站、ZIP、WebDAV 或分享下载时，必须确认读取链路使用 `file_index.object_key`，不要假设用户路径就是 R2 key。
 - 涉及 D1 schema 时同步检查 `migrations/`、`functions/api/lib/schema.js` 和测试 helper。
 - 已完成的规划不要长期留在 `docs/`；把仍有维护价值的结论合并到本文或对应说明文档。

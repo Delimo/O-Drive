@@ -204,7 +204,7 @@ export function createStorageRenderer({
                           return `
                             <tr>
                               <td class="ov-td-mono">${safeText(path)}</td>
-                              <td><span class="ov-badge ov-badge-purple">隐藏</span></td>
+                              <td>${components.renderBadge({ label: "隐藏", className: "ov-badge-purple" })}</td>
                               <td class="ov-td-muted">${safeText(note, "-")}</td>
                               <td><button class="btn btn-sm" type="button" data-action="confirm-delete-hidden-path" data-path="${escapeHtml(path)}">移除</button></td>
                             </tr>
@@ -217,7 +217,7 @@ export function createStorageRenderer({
                           return `
                             <tr>
                               <td class="ov-td-mono">${safeText(path)}</td>
-                              <td><span class="ov-badge ov-badge-accent">${showName ? '密码(显示)' : '密码(隐藏)'}</span></td>
+                              <td>${components.renderBadge({ label: showName ? "密码(显示)" : "密码(隐藏)", className: "ov-badge-accent" })}</td>
                               <td class="ov-td-muted">${safeText(note, "-")}</td>
                               <td><button class="btn btn-sm" type="button" data-action="confirm-delete-protected-path" data-path="${escapeHtml(path)}">移除</button></td>
                             </tr>
