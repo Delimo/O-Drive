@@ -47,12 +47,14 @@ export function createShareThunks(deps, context) {
 
     createShare: (entry) => async (dispatch) => {
       if (!entry || !getEntryPath(entry)) return;
+      const targetType = entry.kind === "folder" ? "folder" : "file";
       dispatch(
         actions.app.setModal({
           type: "share",
           loading: false,
           error: "",
           entry,
+          targetType,
           values: {
             expiresInDays: "7",
             maxDownloads: "0",
@@ -77,6 +79,7 @@ export function createShareThunks(deps, context) {
       try {
         const payload = {
           path,
+          targetType: modal?.targetType || entry.kind || "file",
           expiresInDays: Number(values.expiresInDays || 0),
           maxDownloads: Number(values.maxDownloads || 0),
           password: String(values.password || "").trim(),

@@ -1,10 +1,12 @@
 import { createSlice } from "../create-slice.js";
 import { getSharePath, getShareToken } from "../../utils/path.js";
 
+const initialShareToken = getShareToken();
+
 export const shareInitialState = {
-  token: getShareToken(),
+  token: initialShareToken,
   path: getSharePath(),
-  loading: false,
+  loading: Boolean(initialShareToken),
   item: null,
   directory: null,
   error: "",

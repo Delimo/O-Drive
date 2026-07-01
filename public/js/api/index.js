@@ -84,6 +84,9 @@ export function createApiLayer(deps) {
       const route = path ? `/api/files/${encodeRouteKey(path)}` : "/api/files";
       return request(route);
     },
+    folderStats(path) {
+      return request(`/api/folder-stats/${encodeRouteKey(path)}`);
+    },
     search(query, scope, cursor = "", filters = {}) {
       const params = new URLSearchParams({ q: query, scope, limit: "60" });
       if (cursor) params.set("cursor", cursor);

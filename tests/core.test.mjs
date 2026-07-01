@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { onRequest } from '../functions/api/[[path]].js';
 import { recordSystemWarning } from '../functions/api/lib/common/index.js';
-import { handleListFiles, handleDownloadOrPreview, handleSearch } from '../functions/api/lib/file-reads.js';
+import { handleListFiles, handleFolderStats, handleDownloadOrPreview, handleSearch } from '../functions/api/lib/file-reads.js';
 import {
   handleMultipartCreate,
   handleMultipartPart,
@@ -101,6 +101,35 @@ test('reserved storage prefixes are hidden from normal file listings', async () 
   const adminRes = await handleListFiles(env, new Request('https://example.com/api/files'), [], { role: 'admin' }, '');
   const adminData = await adminRes.json();
   assert.deepEqual(adminData.folders.map(f => f.fullKey), ['public']);
+});
+
+test('folder stats combines direct children and recursive totals', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/a.txt', size: 5, uploaded: new Date('2026-01-01T00:00:00Z') },
+      { key: 'docs/nested/b.txt', size: 4, uploaded: new Date('2026-01-02T00:00:00Z') },
+      { key: 'docs/.folder', size: 0, uploaded: new Date('2026-01-01T00:00:00Z') },
+    ],
+  });
+
+  const res = await handleFolderStats(
+    env,
+    new Request('https://example.com/api/folder-stats/docs'),
+    [],
+    { role: 'guest' },
+    'docs',
+  );
+  const data = await res.json();
+
+  assert.equal(res.status, 200);
+  assert.equal(data.success, true);
+  assert.equal(data.fileCount, 2);
+  assert.equal(data.directFileCount, 1);
+  assert.equal(data.folderCount, 1);
+  assert.equal(data.directFolderCount, 1);
+  assert.equal(data.totalSize, 9);
+  assert.equal(data.sizeFormatted, '9 B');
+  assert.equal(data.latestTime, 1767312000);
 });
 
 test('search reads paginated R2 listings', async () => {

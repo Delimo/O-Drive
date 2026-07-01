@@ -28,6 +28,7 @@ import {
 } from "./trash.js";
 import {
   handleSearch,
+  handleFolderStats,
   handleListFiles,
   handleDownloadOrPreview,
 } from "./file-reads.js";
@@ -312,6 +313,7 @@ export const PUBLIC_ROUTE_DISPATCHERS = [
   { path: "/api/zip-download", methods: ["POST"], handler: ({ env, request, hiddenPaths, auth, protectedPaths, context }) => handleZipDownload(env, request, hiddenPaths, auth, protectedPaths, context) },
   { path: "/api/access/unlock", methods: ["POST"], handler: ({ env, request, auth, protectedPaths }) => handleProtectedUnlock(env, request, auth, protectedPaths) },
   { path: "/api/search", handler: ({ env, request, url, hiddenPaths, auth, protectedPaths }) => handleSearch(env, request, url, hiddenPaths, auth, protectedPaths) },
+  { prefix: "/api/folder-stats/", methods: ["GET"], handler: ({ env, request, hiddenPaths, auth, r2Key, protectedPaths }) => handleFolderStats(env, request, hiddenPaths, auth, r2Key, protectedPaths) },
   { prefix: "/api/files", methods: ["GET"], handler: ({ env, request, hiddenPaths, auth, r2Key, protectedPaths }) => handleListFiles(env, request, hiddenPaths, auth, r2Key, protectedPaths) },
   { prefix: "/api/thumbnail/", handler: ({ env, request, r2Key }) => handleThumbnail(env, request, r2Key, { env }) },
   { prefix: "/api/download/", handler: handleDownloadOrPreviewRoute },

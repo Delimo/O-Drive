@@ -131,6 +131,44 @@ test('inspector renders file summary, properties and actions', () => {
   assert.match(html, /data-action="open-rename-modal"/);
 });
 
+test('inspector renders folder stats and folder actions', () => {
+  const html = shared.renderInspector(
+    {
+      name: 'docs',
+      fullKey: 'docs',
+      kind: 'folder',
+      time: 0,
+    },
+    makeState({
+      explorer: {
+        folderStats: {
+          docs: {
+            path: 'docs',
+            fileCount: 2,
+            directFileCount: 1,
+            folderCount: 1,
+            directFolderCount: 1,
+            totalSize: 9,
+            sizeFormatted: '9 B',
+            latestTime: 1767312000,
+          },
+        },
+        folderStatsLoadingKey: '',
+        folderStatsErrors: {},
+      },
+    }),
+  );
+
+  assert.match(html, /docs/);
+  assert.match(html, /文件数/);
+  assert.match(html, /当前层文件/);
+  assert.match(html, /子文件夹/);
+  assert.match(html, /9 B/);
+  assert.match(html, /data-action="open-entry"/);
+  assert.match(html, /data-action="open-share-modal"/);
+  assert.match(html, /data-action="open-rename-modal"/);
+});
+
 // ===== Markdown 渲染与安全 =====
 
 test('markdown renders common syntax', () => {
@@ -372,6 +410,18 @@ test('entry card renders search hit reason', () => {
   }, makeState({ explorer: { query: 'nested' } }), new Set());
   assert.match(html, /路径：docs\/nested\/readme\.txt/);
   assert.match(html, /筛选：类型/);
+});
+
+test('folder entry card exposes share action for admins', () => {
+  const html = shared.renderEntryCard({
+    name: 'docs',
+    fullKey: 'docs',
+    kind: 'folder',
+  }, makeState({ app: { role: 'admin' } }), new Set());
+
+  assert.match(html, /title="分享文件夹"/);
+  assert.match(html, /data-action="open-share-modal"/);
+  assert.match(html, /data-action="info"/);
 });
 
 // ===== 新增选择器：findEntryByKey / collectSelectedPaths =====
@@ -754,6 +804,35 @@ test('reactivate share modal renders expiry form', () => {
   assert.match(html, /data-form="reactivate-share"/);
   assert.match(html, /name="expiresInDays"/);
   assert.match(html, /value="7"/);
+});
+
+test('share modal labels folder shares explicitly', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'share',
+        loading: false,
+        error: '',
+        targetType: 'folder',
+        entry: { name: 'docs', fullKey: 'docs', kind: 'folder' },
+        values: { expiresInDays: '7', maxDownloads: '0', allowPreview: true, allowDownload: true },
+      },
+    },
+  });
+
+  assert.match(html, /分享文件夹/);
+  assert.match(html, /允许浏览文件夹内容/);
+  assert.match(html, /允许下载文件夹 ZIP/);
+  assert.match(html, /data-form="share"/);
 });
 
 test('admin quota section renders storage usage', () => {
@@ -1161,6 +1240,25 @@ test('share page renders folder directory entries and action urls', () => {
   assert.match(html, /\/api\/share\/share-token\/preview\?path=nested%2Fdeep\.txt/);
   assert.match(html, /\/api\/share\/share-token\/download\?path=nested%2Fdeep\.txt/);
   assert.match(html, /\/api\/share\/share-token\/download\?path=nested/);
+});
+
+test('share page renders missing data state with retry action', () => {
+  const html = pages.renderSharePage({
+    app: { role: 'admin' },
+    share: {
+      token: 'missing-share-token',
+      loading: false,
+      error: '',
+      item: null,
+      requiresPassword: false,
+      password: '',
+    },
+  });
+
+  assert.match(html, /分享信息未载入/);
+  assert.match(html, /data-action="refresh-share"/);
+  assert.match(html, /data-action="copy-current-url"/);
+  assert.match(html, /missin\.\.\.oken/);
 });
 
 test('mock notifications have correct structure', () => {

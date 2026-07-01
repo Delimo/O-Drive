@@ -7,6 +7,7 @@ import {
 import { checkProtectedAccess, markProtection } from "./protected-paths.js";
 import {
   indexedFileKind,
+  listFileIndexPrefix,
   listIndexedDirectory,
   searchFileIndex,
 } from "./file-index/index.js";
@@ -87,6 +88,31 @@ function mapEntry(o) {
 
 function cleanPath(path = "") {
   return String(path || "").replace(/^\/+|\/+$/g, "");
+}
+
+function isVisibleFileKey(key, hiddenPaths, auth) {
+  return (
+    key &&
+    !String(key).endsWith("/.folder") &&
+    String(key).split("/").pop() !== ".folder" &&
+    !isReservedKey(key) &&
+    (auth.role === "admin" || !isHiddenKey(key, hiddenPaths))
+  );
+}
+
+function objectUploadedSeconds(uploaded) {
+  if (!uploaded) return 0;
+  if (typeof uploaded.getTime === "function")
+    return Math.floor(uploaded.getTime() / 1000);
+  const value = Number(uploaded || 0);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return value > 100000000000 ? Math.floor(value / 1000) : Math.floor(value);
+}
+
+function rowUpdatedSeconds(row) {
+  const value = Number(row?.updated_at || row?.uploaded_at || row?.time || 0);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return value > 100000000000 ? Math.floor(value / 1000) : Math.floor(value);
 }
 
 function encodeR2SearchCursor(cursor = {}) {
@@ -376,6 +402,119 @@ export async function handleListFiles(
     protectedPaths,
   );
   return jsonResponse({ folders, files, storageId: "r2" });
+}
+
+export async function handleFolderStats(
+  env,
+  request,
+  hiddenPaths,
+  auth,
+  r2Key,
+  protectedPaths = [],
+) {
+  const access = await checkProtectedAccess(
+    request,
+    env,
+    auth,
+    protectedPaths,
+    r2Key,
+  );
+  if (!access.ok) {
+    return jsonResponse(
+      {
+        success: false,
+        code: "password_required",
+        path: access.rule.path,
+        message: "Password required",
+      },
+      403,
+    );
+  }
+
+  const dir = cleanPath(r2Key);
+  if (!dir || isReservedKey(dir)) {
+    return jsonResponse(
+      { success: false, message: "Invalid folder path" },
+      400,
+    );
+  }
+
+  const prefix = `${dir}/`;
+  const directFolders = new Map();
+  const directFiles = new Map();
+  const countedFiles = new Set();
+  let fileCount = 0;
+  let totalSize = 0;
+  let latestTime = 0;
+
+  const addDirectFolder = (fullKey) => {
+    const clean = cleanPath(fullKey);
+    if (
+      !clean ||
+      clean === dir ||
+      isReservedKey(clean) ||
+      (auth.role !== "admin" && isHiddenKey(clean, hiddenPaths))
+    )
+      return;
+    directFolders.set(clean, true);
+  };
+
+  const addDirectFile = (key) => {
+    if (isVisibleFileKey(key, hiddenPaths, auth)) directFiles.set(key, true);
+  };
+
+  const addRecursiveFile = (key, size, time) => {
+    if (!isVisibleFileKey(key, hiddenPaths, auth) || countedFiles.has(key))
+      return;
+    countedFiles.add(key);
+    fileCount += 1;
+    totalSize += Number(size || 0);
+    latestTime = Math.max(latestTime, Number(time || 0));
+  };
+
+  const indexed = await listIndexedDirectory(env, dir);
+  for (const folder of indexed.folders || []) addDirectFolder(folder.fullKey);
+  for (const file of indexed.files || []) addDirectFile(file.fullKey);
+
+  const indexedRows = await listFileIndexPrefix(env, dir);
+  for (const row of indexedRows || []) {
+    const key = cleanPath(row?.path || "");
+    if (!key || key === dir || !key.startsWith(prefix)) continue;
+    addRecursiveFile(key, row.size, rowUpdatedSeconds(row));
+  }
+
+  const listedDirect = await storageList(
+    env,
+    "r2",
+    { prefix, delimiter: "/" },
+    { maxObjects: 1000 },
+  );
+  for (const p of listedDirect.delimitedPrefixes || [])
+    addDirectFolder(String(p || "").slice(0, -1));
+  for (const obj of listedDirect.objects || []) addDirectFile(obj.key);
+
+  const listedAll = await storageList(
+    env,
+    "r2",
+    { prefix },
+    { maxObjects: 10000 },
+  );
+  for (const obj of listedAll.objects || []) {
+    addRecursiveFile(obj.key, obj.size, objectUploadedSeconds(obj.uploaded));
+  }
+
+  return jsonResponse({
+    success: true,
+    path: dir,
+    fileCount,
+    folderCount: directFolders.size,
+    directFileCount: directFiles.size,
+    directFolderCount: directFolders.size,
+    totalSize,
+    sizeFormatted: formatBytes(totalSize),
+    latestTime,
+    truncated: Boolean(listedDirect.truncated || listedAll.truncated),
+  });
 }
 
 function parseByteRange(rangeHeader) {

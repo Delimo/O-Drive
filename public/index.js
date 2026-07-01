@@ -420,7 +420,13 @@ const unsubscribers = [
     subscribeSlice(s => s.admin.notifOpen, renderHeaderRegion),
     subscribeSlice(s => s.admin.notificationsUnread, renderHeaderRegion),
     subscribeSlice(s => s.admin.notifications, renderHeaderRegion),
-    subscribeSlice(s => s.explorer.selectedKey, renderDetailDrawerRegion),
+    subscribeSlice(s => {
+      const selected = getSelectedEntry(s);
+      const path = selected ? normalizeKey(getEntryPath(selected)) : "";
+      const stats = path ? s.explorer.folderStats?.[path] : null;
+      const error = path ? s.explorer.folderStatsErrors?.[path] || "" : "";
+      return `${s.explorer.selectedKey}|${path}|${s.explorer.folderStatsLoadingKey}|${error}|${stats?.fileCount ?? ""}|${stats?.folderCount ?? ""}|${stats?.directFileCount ?? ""}|${stats?.totalSize ?? ""}|${stats?.latestTime ?? ""}|${stats?.truncated ?? ""}`;
+    }, renderDetailDrawerRegion),
     subscribeSlice(
       s => `${s.explorer.folders?.length}|${s.explorer.files?.length}|${s.explorer.sort}|${s.explorer.view}|${s.explorer.filter}|${s.explorer.loading}|${s.explorer.query}|${s.explorer.trashMode}|${s.explorer.searching}|${s.explorer.hasMore}|${s.explorer.selectedKeys?.length}|${s.explorer.trashSelectedKeys?.length}|${s.explorer.trashBatchBusy}|${s.explorer.clipboard?.paths?.length}|${s.explorer.showFilters}|${s.explorer.filterKind}|${s.explorer.filterMinSize}|${s.explorer.filterMaxSize}|${s.explorer.filterDateFrom}|${s.explorer.filterDateTo}`,
       renderExplorerRegion,

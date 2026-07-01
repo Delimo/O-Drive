@@ -27,6 +27,11 @@ export function registerNavigationActions(documentRef, windowRef, store, actions
       return;
     }
 
+    if (action === "refresh-share") {
+      store.dispatch(thunks.loadShare());
+      return;
+    }
+
     if (action === "toggle-theme") {
       const root = document.documentElement;
       const stored = localStorage.getItem("theme");

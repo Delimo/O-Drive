@@ -7,6 +7,7 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
     preview: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
     arrow: '<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>',
+    refresh: '<path d="M20 5v5h-5"/><path d="M4 19v-5h5"/><path d="M19 10a7 7 0 0 0-12.13-4.74L4 8"/><path d="M5 14a7 7 0 0 0 12.13 4.74L20 16"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     file: '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>',
     image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
@@ -48,6 +49,13 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
         <strong>${escapeHtml(value || "-")}</strong>
       </div>
     `;
+  }
+
+  function maskToken(token = "") {
+    const value = String(token || "").trim();
+    if (!value) return "未提供";
+    if (value.length <= 12) return value;
+    return `${value.slice(0, 6)}...${value.slice(-4)}`;
   }
 
   function renderPermission(label, enabled) {
@@ -206,21 +214,58 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
       </div>`;
   }
 
-  function renderEmpty() {
+  function renderEmpty(share, isAdmin) {
+    const token = String(share?.token || "").trim();
+    const hasToken = Boolean(token);
+    const title = hasToken ? "分享信息未载入" : "缺少分享 Token";
+    const desc = hasToken
+      ? "这个链接还没有返回可用的分享内容。可以重新加载一次；如果仍然如此，请把链接复制给分享者确认。"
+      : "当前地址里没有 token 参数，无法定位分享内容。请使用完整的分享链接打开。";
+    const statusLabel = hasToken ? "等待数据" : "缺少 Token";
+    const statusClass = hasToken ? "share-status-loading" : "share-status-error";
+    const stateText = hasToken ? "等待分享信息" : "无法定位链接";
+    const reasonText = hasToken ? "信息尚未返回" : "地址缺少 token 参数";
+    const suggestText = hasToken ? "重新加载或联系分享者确认" : "使用完整分享链接";
+
     return `
       <div class="share-page">
-        <div class="share-shell share-shell-state">
+        <div class="share-shell share-shell-file share-shell-empty">
           <div class="share-top">
             ${renderBrand()}
+            ${renderStatus(statusClass, statusLabel)}
           </div>
-          <div class="share-mid share-mid-state">
-            <div class="share-preview-placeholder">
-              ${svg("link", 48, 1.5)}
+
+          <div class="share-mid share-mid-resource">
+            <section class="share-resource-main">
+              <div class="share-preview-icon share-preview-missing">
+                ${svg(hasToken ? "link" : "file", 52, 1.5)}
+              </div>
+              <div class="share-resource-copy">
+                <span class="share-kicker${hasToken ? "" : " share-kicker-danger"}">分享链接</span>
+                <h1 class="share-file-name">${escapeHtml(title)}</h1>
+                <p class="share-file-desc">${escapeHtml(desc)}</p>
+              </div>
+            </section>
+            <aside class="share-access-panel share-access-neutral">
+              <div class="share-access-head">
+                <span>访问状态</span>
+                <strong>${escapeHtml(stateText)}</strong>
+              </div>
+              <div class="share-detail-list">
+                ${renderDetailRow("链接标识", maskToken(token))}
+                ${renderDetailRow("原因", reasonText)}
+                ${renderDetailRow("处理建议", suggestText)}
+              </div>
+            </aside>
+          </div>
+
+          <div class="share-bottom">
+            <div class="share-actions">
+              ${hasToken ? `<button class="share-btn share-btn-primary" type="button" data-action="refresh-share">${svg("refresh", 16)}重新加载</button>` : ""}
+              <button class="share-btn share-btn-ghost" type="button" data-action="copy-current-url">复制链接</button>
+              ${isAdmin ? `<a class="share-btn share-btn-ghost share-btn-soft" href="/admin.html">进入管理后台</a>` : ""}
             </div>
-            <h2 class="share-file-name">暂无分享内容</h2>
-            <p class="share-file-desc">分享信息不可用。</p>
           </div>
-          <div class="share-bottom"></div>
         </div>
       </div>`;
   }
@@ -233,7 +278,7 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
     if (loading) return renderLoading();
     if (requiresPassword) return renderPassword(error, password);
     if (error) return renderError(error, isAdmin);
-    if (!item) return renderEmpty();
+    if (!item) return renderEmpty(share, isAdmin);
 
     const token = share.token;
     const currentSharePath = String(share.path || directory?.path || "").replace(/^\/+|\/+$/g, "");

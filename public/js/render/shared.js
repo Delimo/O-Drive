@@ -35,6 +35,15 @@ export function createSharedRenderers(deps) {
       selected.path ||
       selected.name ||
       "";
+    const folderPathKey = normalizeKey(pathValue);
+    const folderStats = isFolder
+      ? state.explorer.folderStats?.[folderPathKey]
+      : null;
+    const folderStatsLoading =
+      isFolder && state.explorer.folderStatsLoadingKey === folderPathKey;
+    const folderStatsError = isFolder
+      ? state.explorer.folderStatsErrors?.[folderPathKey] || ""
+      : "";
     const key = entryKey(selected);
     const kindLabelMap = {
       folder: "文件夹",
@@ -48,9 +57,13 @@ export function createSharedRenderers(deps) {
     };
     const kindLabel = kindLabelMap[kind] || "文件";
     const sizeText = isFolder
-      ? "文件夹"
+      ? folderStats?.sizeFormatted || (folderStatsLoading ? "统计中" : "文件夹")
       : selected.sizeFormatted || formatBytes(selected.rawSize || 0);
-    const timeValue = selected.trashedAt || selected.time || 0;
+    const timeValue =
+      (isFolder && folderStats?.latestTime) ||
+      selected.trashedAt ||
+      selected.time ||
+      0;
     const timeLabel = state.explorer.trashMode ? "删除时间" : "更新时间";
     const timeText = formatTime(timeValue);
     const relativeText = timeValue ? formatRelative(timeValue) : "";
@@ -115,6 +128,32 @@ export function createSharedRenderers(deps) {
               <div class="details-row-label">大小</div>
               <div class="details-row-value">${escapeHtml(sizeText)}</div>
             </div>
+            ${isFolder ? `
+            <div class="details-row">
+              <div class="details-row-label">文件数</div>
+              <div class="details-row-value">${folderStats ? escapeHtml(String(folderStats.fileCount || 0)) : folderStatsLoading ? "统计中" : "未加载"}</div>
+            </div>
+            <div class="details-row">
+              <div class="details-row-label">当前层文件</div>
+              <div class="details-row-value">${folderStats ? escapeHtml(String(folderStats.directFileCount || 0)) : folderStatsLoading ? "统计中" : "未加载"}</div>
+            </div>
+            <div class="details-row">
+              <div class="details-row-label">子文件夹</div>
+              <div class="details-row-value">${folderStats ? escapeHtml(String(folderStats.folderCount || 0)) : folderStatsLoading ? "统计中" : "未加载"}</div>
+            </div>
+            ${folderStats?.truncated ? `
+            <div class="details-row">
+              <div class="details-row-label">统计范围</div>
+              <div class="details-row-value">目录过大，已显示前 10000 个对象</div>
+            </div>
+            ` : ""}
+            ${folderStatsError ? `
+            <div class="details-row">
+              <div class="details-row-label">统计状态</div>
+              <div class="details-row-value">${escapeHtml(folderStatsError)}</div>
+            </div>
+            ` : ""}
+            ` : ""}
             <div class="details-row">
               <div class="details-row-label">${timeLabel}</div>
               <div class="details-row-value">
@@ -314,6 +353,7 @@ export function createSharedRenderers(deps) {
             : ""
         }
         <div class="item-actions">
+          ${isFolder && state.app.role === "admin" ? `<button class="item-action-btn" data-action="open-share-modal" data-key="${escapeHtml(key)}" title="分享文件夹">${icons.share}</button>` : ""}
           ${!isFolder && canPreview(item) ? `<button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ""}
           ${
             !isFolder
@@ -323,11 +363,9 @@ export function createSharedRenderers(deps) {
               : ""
           }
           ${
-            !isFolder
-              ? `<button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
+            `<button class="item-action-btn" data-action="info" data-key="${escapeHtml(key)}" title="详细">
             ${icons.info}
           </button>`
-              : ""
           }
         </div>
       </article>

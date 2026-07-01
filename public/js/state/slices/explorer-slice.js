@@ -35,6 +35,9 @@ export const explorerInitialState = {
   searching: false,
   batchBusy: false,
   trashBatchBusy: false,
+  folderStats: {},
+  folderStatsLoadingKey: "",
+  folderStatsErrors: {},
 };
 
 export function createExplorerSlice(initialState) {
@@ -98,6 +101,42 @@ export function createExplorerSlice(initialState) {
       },
       setTrashBatchBusy(state, action) {
         return { ...state, trashBatchBusy: action.payload };
+      },
+      setFolderStatsLoading(state, action) {
+        const path = action.payload || "";
+        const nextErrors = { ...(state.folderStatsErrors || {}) };
+        if (path) delete nextErrors[path];
+        return {
+          ...state,
+          folderStatsLoadingKey: path,
+          folderStatsErrors: nextErrors,
+        };
+      },
+      setFolderStats(state, action) {
+        const { path, stats } = action.payload || {};
+        if (!path) return { ...state, folderStatsLoadingKey: "" };
+        return {
+          ...state,
+          folderStatsLoadingKey:
+            state.folderStatsLoadingKey === path ? "" : state.folderStatsLoadingKey,
+          folderStats: {
+            ...(state.folderStats || {}),
+            [path]: stats,
+          },
+        };
+      },
+      setFolderStatsError(state, action) {
+        const { path, error } = action.payload || {};
+        if (!path) return { ...state, folderStatsLoadingKey: "" };
+        return {
+          ...state,
+          folderStatsLoadingKey:
+            state.folderStatsLoadingKey === path ? "" : state.folderStatsLoadingKey,
+          folderStatsErrors: {
+            ...(state.folderStatsErrors || {}),
+            [path]: error || "加载失败",
+          },
+        };
       },
       setClipboard(state, action) {
         return { ...state, clipboard: action.payload };

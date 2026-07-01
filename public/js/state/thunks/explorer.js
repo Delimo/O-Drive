@@ -144,6 +144,55 @@ export function createExplorerThunks(deps, context) {
       }
     },
 
+    loadFolderStats: (entry) => async (dispatch, getState) => {
+      const path = normalizeKey(getEntryPath(entry));
+      if (!path) return;
+      const state = getState();
+      if (state.explorer.folderStats?.[path]) return;
+      if (state.explorer.folderStatsLoadingKey === path) return;
+
+      dispatch(actions.explorer.setFolderStatsLoading(path));
+
+      if (mock) {
+        dispatch(
+          actions.explorer.setFolderStats({
+            path,
+            stats: {
+              path,
+              fileCount: 0,
+              folderCount: 0,
+              directFileCount: 0,
+              directFolderCount: 0,
+              totalSize: 0,
+              sizeFormatted: "0 B",
+              latestTime: 0,
+              truncated: false,
+            },
+          }),
+        );
+        return;
+      }
+
+      try {
+        const { response, data } = await fileApi.folderStats(path);
+        if (!response.ok || data?.success === false)
+          throw new Error(humanError(response, data, "文件夹统计加载失败"));
+        dispatch(
+          actions.explorer.setFolderStats({
+            path,
+            stats: { ...data, path },
+          }),
+        );
+      } catch (error) {
+        dispatch(
+          actions.explorer.setFolderStatsError({
+            path,
+            error: error.message || "文件夹统计加载失败",
+          }),
+        );
+      }
+    },
+
     createFolder: (folderName) => async (dispatch, getState) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");

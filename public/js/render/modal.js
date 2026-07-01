@@ -98,18 +98,23 @@ export function createModalRenderers(deps) {
 
     if (modal.type === "share") {
       const values = modal.values || {};
+      const isFolderShare =
+        modal.targetType === "folder" || modal.entry?.kind === "folder";
+      const targetLabel = isFolderShare ? "文件夹" : "文件";
+      const downloadLabel = isFolderShare ? "允许下载文件夹 ZIP" : "允许下载文件";
+      const previewLabel = isFolderShare ? "允许浏览文件夹内容" : "允许在线预览";
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">
           <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="share-title" data-stop-close="true">
-            <h3 id="share-title" class="modal-title">创建分享链接</h3>
-            <p class="modal-copy">你正在为 ${escapeHtml(modal.entry?.name || "当前文件")} 生成对外分享地址，可控制有效期、下载次数与访问密码。</p>
+            <h3 id="share-title" class="modal-title">分享${targetLabel}</h3>
+            <p class="modal-copy">你正在为${targetLabel}「${escapeHtml(modal.entry?.name || `当前${targetLabel}`)}」生成对外分享地址，可控制有效期、下载次数与访问密码。</p>
             <form class="modal-form" data-form="share">
               <div class="form-grid">
                 <input class="inline-input" name="expiresInDays" type="number" min="0" max="3650" placeholder="有效期天数" value="${escapeHtml(values.expiresInDays || "7")}">
                 <input class="inline-input" name="maxDownloads" type="number" min="0" max="1000000" placeholder="最大下载次数，0 为不限" value="${escapeHtml(values.maxDownloads || "0")}">
                 <input class="inline-input" name="password" type="text" placeholder="访问密码，可留空" value="${escapeHtml(values.password || "")}">
-                <label class="check-row"><input type="checkbox" name="allowPreview" ${values.allowPreview !== false ? "checked" : ""}>允许在线预览</label>
-                <label class="check-row"><input type="checkbox" name="allowDownload" ${values.allowDownload !== false ? "checked" : ""}>允许下载文件</label>
+                <label class="check-row"><input type="checkbox" name="allowPreview" ${values.allowPreview !== false ? "checked" : ""}>${previewLabel}</label>
+                <label class="check-row"><input type="checkbox" name="allowDownload" ${values.allowDownload !== false ? "checked" : ""}>${downloadLabel}</label>
               </div>
               ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">创建成功后会自动复制分享链接到剪贴板。</div>'}
               <div class="btn-row" style="margin-top:6px;">

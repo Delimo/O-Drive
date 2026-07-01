@@ -128,7 +128,11 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     }
 
     if (action === "select-entry") {
+      const entry = findEntryByKey(key);
       store.dispatch(actions.explorer.setSelection(key || ""));
+      if (entry && (entry.kind || inferKind(entry)) === "folder") {
+        store.dispatch(thunks.loadFolderStats(entry));
+      }
       return;
     }
 
@@ -277,6 +281,9 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       const entry = findEntryByKey(key);
       if (entry) {
         store.dispatch(actions.explorer.setSelection(key));
+        if ((entry.kind || inferKind(entry)) === "folder") {
+          store.dispatch(thunks.loadFolderStats(entry));
+        }
       }
       return;
     }

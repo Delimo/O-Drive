@@ -107,6 +107,11 @@
   min-height: 560px;
 }
 
+.share-shell-empty {
+  max-width: 760px;
+  min-height: 420px;
+}
+
 .share-top {
   display: flex;
   align-items: center;
@@ -225,6 +230,10 @@
   color: var(--danger);
 }
 
+.share-access-neutral .share-access-head strong {
+  color: var(--accent);
+}
+
 .share-detail-list {
   display: flex;
   flex-direction: column;
@@ -337,6 +346,7 @@
 .share-preview-folder { color: var(--warning); background: rgba(183, 110, 17, 0.1); border-color: rgba(183, 110, 17, 0.18); }
 .share-preview-locked { color: var(--warning); background: rgba(183, 110, 17, 0.1); border-color: rgba(183, 110, 17, 0.18); }
 .share-preview-expired { color: var(--danger); background: rgba(192, 57, 43, 0.09); border-color: rgba(192, 57, 43, 0.16); }
+.share-preview-missing { color: var(--accent); background: var(--accent-soft); border-color: rgba(14, 116, 144, 0.16); }
 
 .share-mid-state,
 .share-mid-error {
