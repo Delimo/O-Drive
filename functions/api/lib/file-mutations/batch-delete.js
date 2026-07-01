@@ -65,7 +65,13 @@ export async function handleBatchDelete(env, request, body) {
     env,
     request,
     "DELETE",
-    `Move to trash ${completed}/${normalizedPaths.length} items`,
+    {
+      details: `Move to trash ${completed}/${normalizedPaths.length} items`,
+      targetPath:
+        normalizedPaths.length === 1
+          ? normalizedPaths[0]
+          : normalizedPaths.join(", "),
+    },
   );
   return jsonResponse(
     { success: failed.length === 0, completed, failed },

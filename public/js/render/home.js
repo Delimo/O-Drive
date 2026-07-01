@@ -93,6 +93,28 @@ export function createHomeRenderers(deps) {
     return `<div class="crumbs-bar">${buildBreadcrumbs(path, expanded).map(renderCrumb).join("")}</div>`;
   }
 
+  function renderCustomSelect({ id, value, options, actionChange, dataKey, className = "" }) {
+    const selected = options.find((option) => option.value === value) || options[0];
+    return `
+      <div class="cselect ${className}" data-cselect="${escapeHtml(id)}"
+           data-action-change="${escapeHtml(actionChange || "")}"
+           data-key="${escapeHtml(dataKey || "")}"
+           data-value="${escapeHtml(selected?.value || "")}">
+        <button class="cselect-trigger" type="button" tabindex="0">
+          <span class="cselect-value">${escapeHtml(selected?.label || "")}</span>
+          <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="cselect-dropdown">
+          ${options.map((option) => `
+            <div class="cselect-option ${option.value === selected?.value ? "cselect-active" : ""}" data-value="${escapeHtml(option.value)}">
+              ${escapeHtml(option.label)}
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
   function renderFilterPanel(explorer) {
     if (!explorer.showFilters) return "";
     const kindOptions = [
@@ -109,9 +131,16 @@ export function createHomeRenderers(deps) {
       <div class="filter-panel">
         <div class="filter-field">
           <label class="filter-label">类型</label>
-          <select class="inline-input filter-input" data-role="filter-kind">
-            ${kindOptions.map((k) => `<option value="${k}" ${explorer.filterKind === k ? "selected" : ""}>${k === "all" ? "全部" : k}</option>`).join("")}
-          </select>
+          ${renderCustomSelect({
+            id: "home-filter-kind",
+            value: explorer.filterKind,
+            actionChange: "set-filter-kind",
+            className: "filter-input home-filter-select",
+            options: kindOptions.map((kind) => ({
+              value: kind,
+              label: kind === "all" ? "全部" : kind,
+            })),
+          })}
         </div>
         <div class="filter-field">
           <label class="filter-label">最小大小 (KB)</label>

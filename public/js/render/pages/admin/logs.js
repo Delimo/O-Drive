@@ -32,6 +32,10 @@ export function createLogsRenderer({
     return log.timestamp || log.createdAt || log.created_at || log.time || 0;
   }
 
+  function getLogPath(log = {}) {
+    return log.path || log.targetPath || log.target_path || log.details || "";
+  }
+
   function renderAdminLogsSection(admin) {
     const { logs = [], logsLoading, logsError, logsPage = 1, logsTotalPages = 1, logsFilter = {} } = admin;
 
@@ -120,6 +124,7 @@ export function createLogsRenderer({
                       const actCls = actKey === "delete" || actKey === "purge" || actKey === "trash_clear" ? "ov-action-danger" : actKey === "login" ? "ov-action-ok" : "";
                       const actLabel = getActionLabel(rawAction);
                       const logTime = getLogTime(log);
+                      const logPath = getLogPath(log);
                       return `
                         <tr>
                           <td class="ov-td-muted">${formatTime(logTime)}</td>
@@ -129,7 +134,7 @@ export function createLogsRenderer({
                               <span class="ov-action-sub">${escapeHtml(rawAction)}</span>
                             </span>
                           </td>
-                          <td class="ov-td-mono" title="${escapeHtml(String(log.path || "-"))}">${safeText(log.path, "-")}</td>
+                          <td class="ov-td-mono" title="${escapeHtml(String(logPath || "-"))}">${safeText(logPath, "-")}</td>
                           <td class="ov-td-mono ov-td-muted" title="${escapeHtml(String(log.ip || "-"))}">${safeText(log.ip, "-")}</td>
                         </tr>
                       `;

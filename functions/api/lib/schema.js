@@ -140,6 +140,7 @@ export const CORE_MIGRATION_SQL = [
   `ALTER TABLE logs ADD COLUMN target_path TEXT DEFAULT ''`,
   `ALTER TABLE logs ADD COLUMN error_code TEXT DEFAULT ''`,
   `ALTER TABLE logs ADD COLUMN metadata TEXT DEFAULT ''`,
+  `ALTER TABLE logs ADD COLUMN timestamp INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE trash ADD COLUMN storage_id TEXT NOT NULL DEFAULT 'r2'`,
   `ALTER TABLE system_warnings ADD COLUMN level TEXT NOT NULL DEFAULT 'warning'`,
   `ALTER TABLE system_warnings ADD COLUMN acknowledged_at INTEGER NOT NULL DEFAULT 0`,

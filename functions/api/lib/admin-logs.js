@@ -1,5 +1,17 @@
 import { jsonResponse } from "./common/index.js";
 
+function normalizeLogRow(row = {}) {
+  const timestamp = Number(row.timestamp || row.created_at || row.createdAt || 0);
+  const targetPath = row.target_path || row.targetPath || row.path || "";
+  return {
+    ...row,
+    path: targetPath || row.details || "",
+    targetPath,
+    createdAt: timestamp,
+    timestamp,
+  };
+}
+
 export async function handleAdminLogs(env, url) {
   const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
   const size = Math.max(
@@ -18,8 +30,8 @@ export async function handleAdminLogs(env, url) {
   const from = String(url.searchParams.get("from") || "").trim();
   const to = String(url.searchParams.get("to") || "").trim();
   if (q) {
-    filters.push("(action LIKE ? OR details LIKE ? OR ip LIKE ?)");
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    filters.push("(action LIKE ? OR details LIKE ? OR target_path LIKE ? OR ip LIKE ?)");
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
   if (action) {
     filters.push("action = ?");
@@ -55,7 +67,7 @@ export async function handleAdminLogs(env, url) {
     .bind(...params, size, (page - 1) * size)
     .all();
   return jsonResponse({
-    logs: logs.results,
+    logs: (logs.results || []).map(normalizeLogRow),
     totalPages: Math.ceil((totalRes?.count || 0) / size),
     currentPage: page,
   });

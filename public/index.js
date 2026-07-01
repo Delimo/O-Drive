@@ -355,7 +355,10 @@ function renderDetailDrawerRegion() {
 function renderExplorerRegion() {
   const state = store.getState();
   const el = root.querySelector('[data-region="explorer"]');
-  if (el && page === 'home') renderRegion(el, homeRenderer(state));
+  if (el && page === 'home') {
+    renderRegion(el, homeRenderer(state));
+    bindCustomSelects(root);
+  }
 }
 
 function renderModal() {

@@ -134,6 +134,25 @@ export function registerAppEvents(deps) {
     "cselect-change",
     (event) => {
       const { actionChange, key, value } = event.detail;
+      if (actionChange === "set-filter-kind") {
+        store.dispatch(actions.explorer.setFilterKind(value));
+        if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
+        return;
+      }
+      if (actionChange === "set-upload-conflict-mode") {
+        const modal = store.getState().app.modal;
+        if (modal && modal.type === "upload-confirm") {
+          store.dispatch(actions.app.setModal({ ...modal, conflictMode: value }));
+        }
+        return;
+      }
+      if (actionChange === "set-trash-restore-conflict-mode") {
+        const modal = store.getState().app.modal;
+        if (modal && modal.type === "trash-restore-confirm") {
+          store.dispatch(actions.app.setModal({ ...modal, conflictMode: value }));
+        }
+        return;
+      }
       if (actionChange === "set-logs-filter") {
         store.dispatch(actions.admin.setLogsFilter({ [key || "q"]: value }));
         store.dispatch(thunks.loadAdminLogs(1));

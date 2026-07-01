@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +12,15 @@ function readProjectFile(path) {
 
 function importedSpecifiers(source) {
   return [...source.matchAll(/import\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g)].map((match) => match[1]);
+}
+
+function listProjectFiles(path) {
+  const absolute = join(ROOT, path);
+  return readdirSync(absolute).flatMap((entry) => {
+    const child = join(path, entry);
+    const childAbsolute = join(ROOT, child);
+    return statSync(childAbsolute).isDirectory() ? listProjectFiles(child) : [child.replace(/\\/g, '/')];
+  });
 }
 
 test('entry file keeps app assembly inside approved frontend layers', () => {
@@ -71,4 +80,23 @@ test('css build keeps generated files derived from source stylesheets', () => {
     assert.match(build, new RegExp(`tailwindcss -i ./public/${sourceFile} -o ./public/${outputFile}`));
   }
   assert.match(build, /ensure-final-newline\.mjs \.\/public\/main\.css \.\/public\/explorer\.css \.\/public\/admin\.css \.\/public\/share\.css/);
+});
+
+test('new renderer dropdowns use the optimized custom select by default', () => {
+  const renderFiles = listProjectFiles('public/js/render').filter((file) => file.endsWith('.js'));
+  const rawSelects = [];
+
+  for (const file of renderFiles) {
+    const source = readProjectFile(file);
+    for (const match of source.matchAll(/<select\b[^>]*>/g)) {
+      const tag = match[0];
+      rawSelects.push(`${file}: ${tag}`);
+    }
+  }
+
+  assert.deepEqual(
+    rawSelects,
+    [],
+    'Use renderCustomSelect/cselect for new dropdowns, or add a deliberate exception here.',
+  );
 });

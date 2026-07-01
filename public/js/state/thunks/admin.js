@@ -779,8 +779,7 @@ export function createAdminThunks(deps, context) {
             dispatch(t.loadAdminShares());
           break;
         case "logs":
-          if (admin.logs.length === 0 && !admin.logsLoading)
-            dispatch(t.loadAdminLogs(1));
+          if (!admin.logsLoading) dispatch(t.loadAdminLogs(1));
           break;
         case "paths":
           if (admin.protectedPaths.length === 0 && !admin.protectedPathsLoading)

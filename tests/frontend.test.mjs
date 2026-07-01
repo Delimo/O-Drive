@@ -838,6 +838,7 @@ test('admin logs section accepts api timestamp field variants', () => {
       logs: [
         { action: 'UPLOAD', details: 'docs/readme.txt', ip: '192.0.2.10', timestamp: Date.UTC(2026, 0, 2, 3, 4) },
         { action: 'DELETE', details: 'docs/old.txt', ip: '192.0.2.11', created_at: Date.UTC(2026, 0, 3, 4, 5) },
+        { action: 'SHARE_CREATE', details: 'share created', target_path: 'docs/shared.txt', ip: '192.0.2.13', timestamp: Date.UTC(2026, 0, 3, 5, 6) },
         { action: 'MAINTENANCE', details: '清理旧操作日志 8 条', ip: '192.0.2.12', timestamp: Date.UTC(2026, 0, 4, 5, 6) },
       ],
       logsError: '', logsPage: 1, logsTotalPages: 1, logsFilter: { q: '', action: '', from: '', to: '' },
@@ -851,6 +852,7 @@ test('admin logs section accepts api timestamp field variants', () => {
   };
   const html = pages.renderAdminPage(state);
   assert.match(html, /2026/);
+  assert.match(html, /docs\/shared\.txt/);
   assert.match(html, /运维指令/);
   assert.doesNotMatch(html, /未知时间/);
 });

@@ -58,7 +58,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
     let rows = materializedLogs();
     let idx = 0;
     const likeText = value => String(value || '').replace(/%/g, '').toLowerCase();
-    if (/\(action LIKE \? OR details LIKE \? OR ip LIKE \?\)/i.test(sql)) {
+    if (/\(action LIKE \? OR details LIKE \? OR target_path LIKE \? OR ip LIKE \?\)/i.test(sql)) {
+      const q = likeText(bound[idx]);
+      idx += 4;
+      rows = rows.filter(row => String(row.action || '').toLowerCase().includes(q)
+        || String(row.details || '').toLowerCase().includes(q)
+        || String(row.target_path || '').toLowerCase().includes(q)
+        || String(row.ip || '').toLowerCase().includes(q));
+    } else if (/\(action LIKE \? OR details LIKE \? OR ip LIKE \?\)/i.test(sql)) {
       const q = likeText(bound[idx]);
       idx += 3;
       rows = rows.filter(row => String(row.action || '').toLowerCase().includes(q)

@@ -175,7 +175,7 @@
   }
 
   .filter-panel .inline-input,
-  .filter-panel select {
+  .filter-panel .cselect {
     width: 100%;
     min-height: 40px;
     font-size: 14px;
@@ -224,7 +224,12 @@
     margin-left: 0;
   }
 
-  .conflict-selector select {
+  .conflict-cselect {
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .conflict-cselect .cselect-trigger {
     min-height: 36px;
     font-size: 14px;
   }

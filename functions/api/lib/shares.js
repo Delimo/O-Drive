@@ -643,7 +643,11 @@ export async function handleAdminShares(env, request, method, url) {
       passwordHash,
       createdAt,
     });
-    await addLog(env, request, "SHARE_CREATE", path);
+    await addLog(env, request, "SHARE_CREATE", {
+      details: path,
+      targetPath: path,
+      metadata: { token, targetType: target.targetType },
+    });
     return jsonResponse({
       success: true,
       item: mapShare({
@@ -671,7 +675,10 @@ export async function handleAdminShares(env, request, method, url) {
     if (!token)
       return jsonResponse({ success: false, message: "Missing token" }, 400);
     await deleteShare(env, token);
-    await addLog(env, request, "SHARE_DELETE", token);
+    await addLog(env, request, "SHARE_DELETE", {
+      details: token,
+      targetPath: token,
+    });
     return jsonResponse({ success: true });
   }
 

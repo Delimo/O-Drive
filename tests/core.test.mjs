@@ -26,6 +26,7 @@ import {
 } from '../functions/api/lib/file-mutations/index.js';
 import { handleAdminHealth, handleAdminLogs, handleAdminQuota, handleAdminStats, handleAdminNotifications } from '../functions/api/lib/admin.js';
 import { handleAdminStorage } from '../functions/api/lib/storage.js';
+import { handleAdminShares } from '../functions/api/lib/shares.js';
 import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { resolveZipArchive } from '../functions/api/lib/zip-download.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
@@ -1712,6 +1713,37 @@ test('admin logs can be filtered by query action ip and date range', async () =>
   assert.equal(data.logs.length, 1);
   assert.equal(data.logs[0].action, 'UPLOAD');
   assert.equal(data.logs[0].details, 'docs/readme.txt');
+  assert.equal(data.logs[0].path, 'docs/readme.txt');
+  assert.ok(data.logs[0].createdAt > 0);
+});
+
+test('share creation and file deletion produce admin log paths and timestamps', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  const shareRequest = new Request('https://example.com/api/admin/shares', {
+    method: 'POST',
+    body: JSON.stringify({ path: 'docs/readme.txt' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '192.0.2.30' },
+  });
+  await handleAdminShares(env, shareRequest, 'POST', new URL(shareRequest.url));
+
+  await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/readme.txt'] }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '192.0.2.31' },
+  }), { paths: ['docs/readme.txt'] });
+
+  const res = await handleAdminLogs(env, new URL('https://example.com/api/admin/logs?page=1&size=20'));
+  const data = await res.json();
+  const shareLog = data.logs.find(row => row.action === 'SHARE_CREATE');
+  const deleteLog = data.logs.find(row => row.action === 'DELETE');
+  assert.equal(shareLog.path, 'docs/readme.txt');
+  assert.equal(deleteLog.path, 'docs/readme.txt');
+  assert.ok(shareLog.createdAt > 0);
+  assert.ok(deleteLog.createdAt > 0);
 });
 
 test('user writes cannot target reserved system prefixes', async () => {

@@ -15,11 +15,18 @@ export function createModalRenderers(deps) {
   const renderOptionalFormFeedback = (error, helperText, style = "") =>
     error || helperText ? renderFormFeedback(error, helperText, style) : "";
 
-  function renderModalCustomSelect({ id, inputName, value, options, className = "" }) {
+  function renderModalCustomSelect({ id, inputName = "", value, options, className = "", actionChange = "", dataKey = "" }) {
     const selected = options.find(option => option.value === value) || options[0];
+    const hiddenInput = inputName
+      ? `<input type="hidden" name="${escapeHtml(inputName)}" value="${escapeHtml(selected?.value || "")}">`
+      : "";
+    const inputNameAttr = inputName ? ` data-input-name="${escapeHtml(inputName)}"` : "";
     return `
-      <input type="hidden" name="${escapeHtml(inputName)}" value="${escapeHtml(selected?.value || "")}">
-      <div class="cselect modal-cselect ${className}" data-cselect="${escapeHtml(id)}" data-input-name="${escapeHtml(inputName)}" data-value="${escapeHtml(selected?.value || "")}">
+      ${hiddenInput}
+      <div class="cselect modal-cselect ${className}" data-cselect="${escapeHtml(id)}"${inputNameAttr}
+           data-action-change="${escapeHtml(actionChange || "")}"
+           data-key="${escapeHtml(dataKey || "")}"
+           data-value="${escapeHtml(selected?.value || "")}">
         <button class="cselect-trigger" type="button" tabindex="0">
           <span class="cselect-value">${escapeHtml(selected?.label || "")}</span>
           <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -312,11 +319,17 @@ export function createModalRenderers(deps) {
 
             <div style="display:flex;align-items:center;gap:10px;margin:12px 0;">
               <label style="flex-shrink:0;font-size:13px;color:var(--muted);">冲突策略</label>
-              <select class="inline-input conflict-select" data-action="set-trash-restore-conflict-mode" style="flex:0 0 auto;width:auto;min-height:38px;font-size:13px;">
-                <option value="rename" ${conflictMode === "rename" ? "selected" : ""}>自动重命名</option>
-                <option value="skip" ${conflictMode === "skip" ? "selected" : ""}>跳过冲突</option>
-                <option value="overwrite" ${conflictMode === "overwrite" ? "selected" : ""}>覆盖已有</option>
-              </select>
+              ${renderModalCustomSelect({
+                id: "trash-restore-conflict-mode",
+                value: conflictMode,
+                actionChange: "set-trash-restore-conflict-mode",
+                className: "conflict-cselect",
+                options: [
+                  { value: "rename", label: "自动重命名" },
+                  { value: "skip", label: "跳过冲突" },
+                  { value: "overwrite", label: "覆盖已有" },
+                ],
+              })}
             </div>
 
             ${items.length ? `
@@ -698,11 +711,17 @@ export function createModalRenderers(deps) {
             <div style="padding:12px 24px;border-top:1px solid var(--line);margin-top:8px;">
               <div style="display:flex;align-items:center;gap:10px;">
                 <label style="flex-shrink:0;font-size:13px;color:var(--muted);">冲突策略</label>
-                <select class="inline-input conflict-select" data-action="set-upload-conflict-mode" style="flex:0 0 auto;width:auto;min-height:36px;font-size:13px;">
-                  <option value="rename" ${conflictMode === "rename" ? "selected" : ""}>自动重命名</option>
-                  <option value="overwrite" ${conflictMode === "overwrite" ? "selected" : ""}>覆盖已有</option>
-                  <option value="skip" ${conflictMode === "skip" ? "selected" : ""}>跳过</option>
-                </select>
+                ${renderModalCustomSelect({
+                  id: "upload-conflict-mode",
+                  value: conflictMode,
+                  actionChange: "set-upload-conflict-mode",
+                  className: "conflict-cselect",
+                  options: [
+                    { value: "rename", label: "自动重命名" },
+                    { value: "overwrite", label: "覆盖已有" },
+                    { value: "skip", label: "跳过" },
+                  ],
+                })}
               </div>
             </div>
             <div style="padding:0 24px 20px;display:flex;gap:10px;">
