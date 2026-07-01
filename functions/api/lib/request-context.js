@@ -5,6 +5,7 @@ const keyPrefixes = [
   ["/api/download/", 14],
   ["/api/preview/", 13],
   ["/api/thumbnail/", 15],
+  ["/api/folder-stats/", 18],
   ["/api/mkdir/", 11],
   ["/api/save-text/", 15],
 ];

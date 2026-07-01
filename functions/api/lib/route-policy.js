@@ -39,7 +39,7 @@ const API_ENTRY_POLICIES = [
   { path: "/api/auth/role", postAuth: "authRole" },
 ];
 
-const FILE_ACCESS_PREFIXES = ["/api/download/", "/api/preview/", "/api/thumbnail/"];
+const FILE_ACCESS_PREFIXES = ["/api/download/", "/api/preview/", "/api/thumbnail/", "/api/folder-stats/"];
 
 function prefixMatches(path, prefix) {
   if (path === prefix) return true;

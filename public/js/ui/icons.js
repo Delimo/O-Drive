@@ -113,7 +113,7 @@ export const icons = {
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 9.2 17 19 7.5"/></svg>',
   link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 13.5 13.5 10.5m-6.25 6.25 2.5-2.5a3 3 0 0 0 0-4.25 3 3 0 0 0-4.25 0L3 12.5a3 3 0 0 0 4.25 4.25Zm9.5-9.5-2.5 2.5a3 3 0 0 0 0 4.25 3 3 0 0 0 4.25 0L21 11.5a3 3 0 0 0-4.25-4.25Z"/></svg>',
   share:
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 8a3 3 0 1 0-2.65-4.41M9 14l6-3m-6 0 6 3M9 10a3 3 0 1 0-2.65 4.41M15 16a3 3 0 1 0 2.65 4.41"/></svg>',
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7.75H6.75A2.75 2.75 0 0 0 4 10.5v6.75A2.75 2.75 0 0 0 6.75 20h6.75a2.75 2.75 0 0 0 2.75-2.75V16a.75.75 0 0 0-1.5 0v1.25c0 .69-.56 1.25-1.25 1.25H6.75c-.69 0-1.25-.56-1.25-1.25V10.5c0-.69.56-1.25 1.25-1.25H8a.75.75 0 0 0 0-1.5Zm4-3.75a.75.75 0 0 0 0 1.5h5.44l-7.22 7.22a.75.75 0 1 0 1.06 1.06l7.22-7.22V12a.75.75 0 0 0 1.5 0V4.75A.75.75 0 0 0 19.25 4H12Z"/></svg>',
   restore:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7v5h5M20 17a8 8 0 1 1-2.34-5.66L20 12"/></svg>',
   edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Zm8.8-13.8 3.4 3.4"/></svg>',
