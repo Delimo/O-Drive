@@ -160,31 +160,45 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
 
     return `
       <div class="share-page">
-        <div class="share-shell share-shell-error">
+        <div class="share-shell share-shell-file share-shell-error">
           <div class="share-top">
             ${renderBrand()}
             ${renderStatus("share-status-error", isExpired ? "链接已过期" : "无法访问")}
           </div>
-          <div class="share-mid share-mid-error">
-            <div class="share-expired-visual">
-              <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M7 3.75h6.2l3.8 3.8v12.7H7a2 2 0 0 1-2-2V5.75a2 2 0 0 1 2-2Z"/>
-                <path d="M13 4v4h4"/>
-                <circle cx="15.75" cy="15.75" r="3.25"/>
-                <path d="M15.75 14v1.85l1.25.75"/>
-              </svg>
-            </div>
-            <h2 class="share-file-name">${escapeHtml(errorTitle)}</h2>
-            <p class="share-file-desc">${escapeHtml(errorDesc)}</p>
-            <div class="share-error-note">
-              <span>原因</span>
-              <strong>${escapeHtml(errorReason)}</strong>
-            </div>
+
+          <div class="share-mid share-mid-resource">
+            <section class="share-resource-main">
+              <div class="share-preview-icon share-preview-expired">
+                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M7 3.75h6.2l3.8 3.8v12.7H7a2 2 0 0 1-2-2V5.75a2 2 0 0 1 2-2Z"/>
+                  <path d="M13 4v4h4"/>
+                  <circle cx="15.75" cy="15.75" r="3.25"/>
+                  <path d="M15.75 14v1.85l1.25.75"/>
+                </svg>
+              </div>
+              <div class="share-resource-copy">
+                <span class="share-kicker share-kicker-danger">${isExpired ? "分享已失效" : "访问受限"}</span>
+                <h1 class="share-file-name">${escapeHtml(errorTitle)}</h1>
+                <p class="share-file-desc">${escapeHtml(errorDesc)}</p>
+              </div>
+            </section>
+            <aside class="share-access-panel share-access-danger">
+              <div class="share-access-head">
+                <span>访问状态</span>
+                <strong>${isExpired ? "已过期" : "无法访问"}</strong>
+              </div>
+              <div class="share-detail-list">
+                ${renderDetailRow("资源类型", "分享链接")}
+                ${renderDetailRow("原因", errorReason)}
+                ${renderDetailRow("处理建议", isExpired ? "联系分享者重新生成" : "确认链接状态")}
+              </div>
+            </aside>
           </div>
+
           <div class="share-bottom">
-            <div class="share-actions share-error-actions">
+            <div class="share-actions">
               <a class="share-btn share-btn-primary" href="/">返回 O-Drive</a>
-              <button class="share-btn share-btn-ghost" type="button" data-action="copy-current-url">复制当前链接</button>
+              <button class="share-btn share-btn-ghost" type="button" data-action="copy-current-url">复制链接</button>
               ${isAdmin ? `<a class="share-btn share-btn-ghost share-btn-soft" href="/admin.html">进入管理后台</a>` : ""}
             </div>
           </div>

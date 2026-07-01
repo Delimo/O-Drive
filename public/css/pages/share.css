@@ -97,8 +97,7 @@
   overflow: hidden;
 }
 
-.share-shell-state,
-.share-shell-error {
+.share-shell-state {
   max-width: 520px;
   min-height: 430px;
 }
@@ -222,6 +221,10 @@
   font-weight: 800;
 }
 
+.share-access-danger .share-access-head strong {
+  color: var(--danger);
+}
+
 .share-detail-list {
   display: flex;
   flex-direction: column;
@@ -303,6 +306,10 @@
   font-weight: 800;
 }
 
+.share-kicker-danger {
+  color: var(--danger);
+}
+
 .share-preview-icon,
 .share-preview-placeholder {
   display: grid;
@@ -329,6 +336,7 @@
 .share-preview-text { color: var(--accent); background: var(--accent-soft); border-color: rgba(14, 116, 144, 0.16); }
 .share-preview-folder { color: var(--warning); background: rgba(183, 110, 17, 0.1); border-color: rgba(183, 110, 17, 0.18); }
 .share-preview-locked { color: var(--warning); background: rgba(183, 110, 17, 0.1); border-color: rgba(183, 110, 17, 0.18); }
+.share-preview-expired { color: var(--danger); background: rgba(192, 57, 43, 0.09); border-color: rgba(192, 57, 43, 0.16); }
 
 .share-mid-state,
 .share-mid-error {
@@ -604,8 +612,7 @@
   justify-content: flex-end;
 }
 
-.share-shell-state .share-actions,
-.share-shell-error .share-actions {
+.share-shell-state .share-actions {
   justify-content: center;
 }
 
@@ -787,8 +794,7 @@
   }
 
   .share-actions,
-  .share-shell-state .share-actions,
-  .share-shell-error .share-actions {
+  .share-shell-state .share-actions {
     flex-direction: column;
     justify-content: stretch;
   }
