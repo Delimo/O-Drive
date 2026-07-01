@@ -3,10 +3,11 @@ export function assertApiOk(
   data,
   fallback,
   humanError,
-  { isValid = () => true, allowCompleted = false } = {},
+  { isValid = () => true, allowCompleted = false, allowSuccessFalse = false } = {},
 ) {
   const acceptedPartial = allowCompleted && data?.completed;
-  if (acceptedPartial || (response.ok && data?.success !== false && isValid(data)))
+  const acceptedBusinessFailure = allowSuccessFalse || data?.success !== false;
+  if (acceptedPartial || (response.ok && acceptedBusinessFailure && isValid(data)))
     return;
 
   const message =

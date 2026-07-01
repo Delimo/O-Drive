@@ -1,3 +1,5 @@
+import { assertApiOk } from "./errors.js";
+
 export function createMaintenanceThunks(deps, context) {
   const {
     actions,
@@ -20,7 +22,7 @@ export function createMaintenanceThunks(deps, context) {
       }
       try {
         const { response, data } = await trashApi.getRetention();
-        if (!response.ok) throw new Error(data?.message || "加载保留天数失败");
+        assertApiOk(response, data, "加载保留天数失败", humanError);
         dispatch(actions.admin.setTrashRetention(data));
       } catch (error) {
         dispatch(actions.admin.setTrashRetentionLoading(false));
@@ -35,7 +37,7 @@ export function createMaintenanceThunks(deps, context) {
       }
       try {
         const { response, data } = await trashApi.setRetention(days);
-        if (!response.ok) throw new Error(data?.message || "设置保留天数失败");
+        assertApiOk(response, data, "设置保留天数失败", humanError);
         dispatch(actions.admin.setTrashRetention(data));
         dispatchToast("success", `回收站保留天数已设为 ${days} 天`);
       } catch (error) {
@@ -51,7 +53,7 @@ export function createMaintenanceThunks(deps, context) {
       dispatch(actions.admin.setTrashCleanupBusy(true));
       try {
         const { response, data } = await trashApi.cleanup();
-        if (!response.ok) throw new Error(data?.message || "清理回收站失败");
+        assertApiOk(response, data, "清理回收站失败", humanError);
         dispatchToast(
           "success",
           `已清理 ${data.deleted || 0} 条过期记录（保留 ${data.retentionDays || 0} 天）`,
@@ -73,7 +75,7 @@ export function createMaintenanceThunks(deps, context) {
       if (!paths?.length) return;
       try {
         const { response, data } = await fileApi.operationEstimate(paths);
-        if (!response.ok) throw new Error(data?.message || "操作预估失败");
+        assertApiOk(response, data, "操作预估失败", humanError);
         dispatch(actions.app.setModal({ type: "operation-estimate", loading: false, error: "", estimate: data, paths, operation: "delete" }));
       } catch (error) {
         dispatchToast("error", error.message || "操作预估失败");
@@ -88,7 +90,7 @@ export function createMaintenanceThunks(deps, context) {
       if (!paths?.length) return;
       try {
         const { response, data } = await fileApi.operationEstimate(paths);
-        if (!response.ok) throw new Error(data?.message || "操作预估失败");
+        assertApiOk(response, data, "操作预估失败", humanError);
         dispatch(actions.app.setModal({ type: "operation-estimate", loading: false, error: "", estimate: data, paths, operation: action }));
       } catch (error) {
         dispatchToast("error", error.message || "操作预估失败");
@@ -104,8 +106,7 @@ export function createMaintenanceThunks(deps, context) {
       if (!ids.length) return;
       try {
         const { response, data } = await trashApi.restorePreview(ids);
-        if (!response.ok || data?.success === false)
-          throw new Error(humanError(response, data, "恢复预检失败"));
+        assertApiOk(response, data, "恢复预检失败", humanError);
         if (options.single && !data?.hasConflicts) {
           await dispatch(getThunks().executeTrashRestore(ids, "error"));
           return;
@@ -138,8 +139,7 @@ export function createMaintenanceThunks(deps, context) {
           ? trashApi.restore(ids[0], conflictMode)
           : trashApi.restoreBatch(ids, conflictMode);
         const { response, data } = await apiCall;
-        if (!response.ok)
-          throw new Error(humanError(response, data, "恢复失败"));
+        assertApiOk(response, data, "恢复失败", humanError);
         dispatch(actions.app.setModal(null));
         dispatch(actions.explorer.setTrashSelectedKeys([]));
         const completed = data.completed ?? (data.skipped ? 0 : 1);
@@ -181,8 +181,7 @@ export function createMaintenanceThunks(deps, context) {
       }
       try {
         const { response, data } = await trashApi.remove(trashId);
-        if (!response.ok || data?.success === false)
-          throw new Error(humanError(response, data, "彻底删除失败"));
+        assertApiOk(response, data, "彻底删除失败", humanError);
         dispatchToast("success", "回收站记录已彻底删除");
         await dispatch(getThunks().loadExplorer());
       } catch (error) {
@@ -197,8 +196,7 @@ export function createMaintenanceThunks(deps, context) {
       }
       try {
         const { response, data } = await trashApi.clear();
-        if (!response.ok)
-          throw new Error(humanError(response, data, "清空回收站失败"));
+        assertApiOk(response, data, "清空回收站失败", humanError);
         dispatchToast("success", "回收站已清空");
         await dispatch(getThunks().loadExplorer());
       } catch (error) {
@@ -214,8 +212,7 @@ export function createMaintenanceThunks(deps, context) {
 
       try {
         const { response, data } = await trashApi.clear();
-        if (!response.ok)
-          throw new Error(humanError(response, data, "清空回收站失败"));
+        assertApiOk(response, data, "清空回收站失败", humanError);
         dispatch(actions.app.setModal(null));
         dispatchToast("success", "回收站已清空");
         await dispatch(getThunks().loadExplorer());
@@ -253,9 +250,7 @@ export function createMaintenanceThunks(deps, context) {
       for (const id of trashIds) {
         try {
           const { response, data } = await trashApi.remove(id);
-          if (!response.ok || data?.success === false) {
-            throw new Error(humanError(response, data, "删除失败"));
-          }
+          assertApiOk(response, data, "删除失败", humanError);
           successCount++;
         } catch (error) {
           failCount++;
@@ -283,7 +278,7 @@ export function createMaintenanceThunks(deps, context) {
       }
       try {
         const { response, data } = await maintenanceApi.snapshot();
-        if (!response.ok) throw new Error(data?.message || "维护快照加载失败");
+        assertApiOk(response, data, "维护快照加载失败", humanError);
         dispatch(actions.admin.setMaintenance(data));
       } catch (error) {
         dispatch(
@@ -302,7 +297,7 @@ export function createMaintenanceThunks(deps, context) {
       dispatch(actions.admin.setMaintenanceBusyAction(action));
       try {
         const { response, data } = await maintenanceApi.executeAction(action);
-        if (!response.ok) throw new Error(data?.message || "执行维护操作失败");
+        assertApiOk(response, data, "执行维护操作失败", humanError);
         dispatch(actions.app.setModal(null));
         dispatchToast("success", data?.message || "维护操作已完成");
         await dispatch(getThunks().loadMaintenanceSnapshot());

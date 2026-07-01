@@ -112,19 +112,42 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
   function renderLoading() {
     return `
       <div class="share-page">
-        <div class="share-shell share-shell-state">
+        <div class="share-shell share-shell-file share-shell-loading">
           <div class="share-top">
             ${renderBrand()}
-            ${renderStatus("share-status-loading", "载入中")}
+            ${renderStatus("share-status-loading", "正在载入")}
           </div>
-          <div class="share-mid share-mid-state">
-            <div class="share-preview-placeholder">
-              ${svg("clock", 48, 1.5)}
+
+          <div class="share-mid share-mid-resource">
+            <section class="share-resource-main">
+              <div class="share-preview-icon share-preview-loading">
+                ${svg("clock", 52, 1.5)}
+              </div>
+              <div class="share-resource-copy">
+                <span class="share-kicker">分享链接</span>
+                <h1 class="share-file-name">正在获取分享信息</h1>
+                <p class="share-file-desc">正在读取链接状态和资源权限。</p>
+              </div>
+            </section>
+            <aside class="share-access-panel share-access-loading">
+              <div class="share-access-head">
+                <span>访问状态</span>
+                <strong>连接中</strong>
+              </div>
+              <div class="share-loading-list" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </aside>
+          </div>
+
+          <div class="share-bottom">
+            <div class="share-actions">
+              <button class="share-btn share-btn-ghost" type="button" data-action="copy-current-url">复制链接</button>
+              <button class="share-btn share-btn-ghost share-btn-soft" type="button" data-action="refresh-share">${svg("refresh", 16)}重新加载</button>
             </div>
-            <h1 class="share-file-name">正在获取分享信息</h1>
-            <p class="share-file-desc">请稍候</p>
           </div>
-          <div class="share-bottom"></div>
         </div>
       </div>`;
   }

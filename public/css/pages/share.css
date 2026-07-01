@@ -107,6 +107,11 @@
   min-height: 560px;
 }
 
+.share-shell-loading {
+  max-width: 760px;
+  min-height: 420px;
+}
+
 .share-shell-empty {
   max-width: 760px;
   min-height: 420px;
@@ -230,6 +235,7 @@
   color: var(--danger);
 }
 
+.share-access-loading .share-access-head strong,
 .share-access-neutral .share-access-head strong {
   color: var(--accent);
 }
@@ -346,7 +352,42 @@
 .share-preview-folder { color: var(--warning); background: rgba(183, 110, 17, 0.1); border-color: rgba(183, 110, 17, 0.18); }
 .share-preview-locked { color: var(--warning); background: rgba(183, 110, 17, 0.1); border-color: rgba(183, 110, 17, 0.18); }
 .share-preview-expired { color: var(--danger); background: rgba(192, 57, 43, 0.09); border-color: rgba(192, 57, 43, 0.16); }
+.share-preview-loading { color: var(--accent); background: var(--accent-soft); border-color: rgba(14, 116, 144, 0.16); animation: sharePulse 1.45s ease-in-out infinite; }
 .share-preview-missing { color: var(--accent); background: var(--accent-soft); border-color: rgba(14, 116, 144, 0.16); }
+
+.share-loading-list {
+  display: grid;
+  gap: 10px;
+}
+
+.share-loading-list span {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--line), var(--panel), var(--line));
+  background-size: 220% 100%;
+  animation: shareLoading 1.2s ease-in-out infinite;
+}
+
+.share-loading-list span:nth-child(2) {
+  width: 78%;
+  animation-delay: 0.12s;
+}
+
+.share-loading-list span:nth-child(3) {
+  width: 58%;
+  animation-delay: 0.24s;
+}
+
+@keyframes shareLoading {
+  0% { background-position: 220% 0; }
+  100% { background-position: -220% 0; }
+}
+
+@keyframes sharePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
 
 .share-mid-state,
 .share-mid-error {

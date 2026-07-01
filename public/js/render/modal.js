@@ -1,3 +1,5 @@
+import { createUiComponents } from "./components.js";
+
 export function createModalRenderers(deps) {
   const {
     icons,
@@ -8,6 +10,10 @@ export function createModalRenderers(deps) {
     isMarkdownName,
     formatBytes,
   } = deps;
+
+  const { renderFormFeedback } = createUiComponents({ escapeHtml });
+  const renderOptionalFormFeedback = (error, helperText, style = "") =>
+    error || helperText ? renderFormFeedback(error, helperText, style) : "";
 
   function renderPreviewModalBody(modal) {
     if (modal.loading)
@@ -45,7 +51,7 @@ export function createModalRenderers(deps) {
             <form class="modal-form" data-form="login">
               <input class="inline-input" name="username" placeholder="用户名" value="${escapeHtml(values.username || "")}">
               <input class="inline-input" type="password" name="password" placeholder="密码" value="${escapeHtml(values.password || "")}">
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">登录成功后会自动刷新当前页面的数据权限。</div>'}
+              ${renderFormFeedback(modal.error, "登录成功后会自动刷新当前页面的数据权限。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "登录中..." : "登录"}</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -65,7 +71,7 @@ export function createModalRenderers(deps) {
             <p class="modal-copy">在当前文件夹下创建一个新的文件夹，你可以随后继续上传文件或整理层级。</p>
             <form class="modal-form" data-form="folder">
               <input class="inline-input" name="folderName" placeholder="例如：品牌素材 / 2026 归档" value="${escapeHtml(values.folderName || "")}">
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">名称会直接作为路径的一部分，请尽量简洁清晰。</div>'}
+              ${renderFormFeedback(modal.error, "名称会直接作为路径的一部分，请尽量简洁清晰。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit">创建文件夹</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -85,7 +91,7 @@ export function createModalRenderers(deps) {
             <p class="modal-copy">新的名称会直接应用到当前文件或文件夹。请保持名称清晰，并避免与同层级项目重名。</p>
             <form class="modal-form" data-form="rename">
               <input class="inline-input" name="newName" placeholder="输入新的名称" value="${escapeHtml(values.newName || modal.entry?.name || "")}">
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">重命名会保持当前路径层级不变，只修改当前项目名称。</div>'}
+              ${renderFormFeedback(modal.error, "重命名会保持当前路径层级不变，只修改当前项目名称。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit">确认重命名</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -116,7 +122,7 @@ export function createModalRenderers(deps) {
                 <label class="check-row"><input type="checkbox" name="allowPreview" ${values.allowPreview !== false ? "checked" : ""}>${previewLabel}</label>
                 <label class="check-row"><input type="checkbox" name="allowDownload" ${values.allowDownload !== false ? "checked" : ""}>${downloadLabel}</label>
               </div>
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">创建成功后会自动复制分享链接到剪贴板。</div>'}
+              ${renderFormFeedback(modal.error, "创建成功后会自动复制分享链接到剪贴板。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit">生成分享</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -136,7 +142,7 @@ export function createModalRenderers(deps) {
             <form class="modal-form" data-form="unlock-path">
               <div class="helper-text">目标路径：${escapeHtml(modal.path || "")}</div>
               <input class="inline-input" name="password" type="password" placeholder="输入访问密码">
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">验证通过后会自动继续预览、下载或进入文件夹。</div>'}
+              ${renderFormFeedback(modal.error, "验证通过后会自动继续预览、下载或进入文件夹。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit">解锁并继续</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -188,7 +194,7 @@ export function createModalRenderers(deps) {
             <p class="modal-copy">为"${escapeHtml(shareName)}"设置新的有效期。原链接、密码和访问权限会继续保留。</p>
             <form class="modal-form" data-form="reactivate-share">
               <input class="inline-input" name="expiresInDays" type="number" min="0" max="3650" placeholder="有效期天数，0 为长期有效" value="${escapeHtml(values.expiresInDays || "7")}">
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">仅能重新启用仍在 7 天保留期内、且尚未被清理的过期分享。</div>'}
+              ${renderFormFeedback(modal.error, "仅能重新启用仍在 7 天保留期内、且尚未被清理的过期分享。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "启用中..." : "重新启用"}</button>
                 <button class="btn" type="button" data-action="close-modal" ${modal.loading ? "disabled" : ""}>取消</button>
@@ -210,8 +216,7 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作不可撤销</h3>
               <div class="attention-copy">删除后，分享链接将立即失效，所有访问者将无法再通过此链接访问文件。</div>
             </div>
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除分享，请稍候...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "正在删除分享，请稍候..." : "", "margin:12px 0;")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-delete-share" data-key="${escapeHtml(modal.token || "")}" ${modal.loading ? "disabled" : ""}>
                 ${icons.trash}
@@ -234,8 +239,7 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作不可撤销</h3>
               <div class="attention-copy">清空后，所有回收站中的项目将被永久删除，无法恢复。请确认你不再需要这些文件。</div>
             </div>
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在清空回收站，请稍候...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "正在清空回收站，请稍候..." : "", "margin:12px 0;")}
             <div class="btn-row" style="margin-top:6px;justify-content:flex-end;">
               <button class="btn btn-danger" type="button" data-action="execute-clear-trash" ${modal.loading ? "disabled" : ""}>
                 ${modal.loading ? "清空中..." : "确认清空"}
@@ -302,8 +306,7 @@ export function createModalRenderers(deps) {
               </div>
             ` : ""}
 
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在恢复，请勿刷新页面...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "正在恢复，请勿刷新页面..." : "", "margin:12px 0;")}
 
             <div class="btn-row" style="margin-top:12px;justify-content:flex-end;">
               <button class="btn btn-primary" type="button" data-action="execute-trash-restore" ${modal.loading ? "disabled" : ""}>
@@ -327,7 +330,7 @@ export function createModalRenderers(deps) {
               <input class="inline-input" type="password" name="password" placeholder="访问密码" value="${escapeHtml(modal.password || "")}" required>
               <input class="inline-input" name="showName" placeholder="显示名称（可选）" value="${escapeHtml(modal.showName || "")}">
               <input class="inline-input" name="note" placeholder="备注说明（可选）" value="${escapeHtml(modal.note || "")}">
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">设置后，访问该路径需要输入密码。</div>'}
+              ${renderFormFeedback(modal.error, "设置后，访问该路径需要输入密码。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "创建中..." : "创建"}</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -349,8 +352,7 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作可恢复</h3>
               <div class="attention-copy">删除后，该路径将不再需要密码即可访问。如果需要重新保护，可以再次添加。</div>
             </div>
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除，请稍候...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "正在删除，请稍候..." : "", "margin:12px 0;")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-delete-protected-path" data-path="${escapeHtml(delPath)}" ${modal.loading ? "disabled" : ""}>
                 ${icons.trash}
@@ -371,7 +373,7 @@ export function createModalRenderers(deps) {
             <p class="modal-copy">被隐藏的路径对游客不可见，但管理员仍可正常访问。</p>
             <form class="modal-form" data-form="add-hidden-path">
               <input class="inline-input" name="path" placeholder="例如 /.env 或 /config" value="${escapeHtml(modal.path || "")}" required>
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">输入相对于根目录的路径，支持文件和文件夹。</div>'}
+              ${renderFormFeedback(modal.error, "输入相对于根目录的路径，支持文件和文件夹。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "添加中..." : "添加"}</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -393,8 +395,7 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作可恢复</h3>
               <div class="attention-copy">取消隐藏后，该路径将对游客重新可见。如果需要再次隐藏，可以重新添加。</div>
             </div>
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除，请稍候...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "正在删除，请稍候..." : "", "margin:12px 0;")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-delete-hidden-path" data-path="${escapeHtml(delPath)}" ${modal.loading ? "disabled" : ""}>
                 ${icons.trash}
@@ -435,7 +436,7 @@ export function createModalRenderers(deps) {
                 </div>
                 <input type="hidden" name="r2QuotaUnit" value="${quotaGB >= 1 ? "GB" : "MB"}">
               </div>
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">设置为 0 表示不限制。保存后对所有上传生效。</div>'}
+              ${renderFormFeedback(modal.error, "设置为 0 表示不限制。保存后对所有上传生效。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "保存中..." : "保存"}</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -483,7 +484,7 @@ export function createModalRenderers(deps) {
               <input class="inline-input" name="events" placeholder="事件类型（逗号分隔）" value="${escapeHtml((modal.events || []).join(", "))}">
               <div style="font-size:12px;color:var(--muted);margin:-4px 0 8px;">可选事件：${eventOptions.join(", ")}</div>
               <label class="check-row"><input type="checkbox" name="enabled" ${modal.enabled !== false ? "checked" : ""}>启用</label>
-              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">支持事件变量：{{event}}、{{message}}、{{path}} 等。</div>'}
+              ${renderFormFeedback(modal.error, "支持事件变量：{{event}}、{{message}}、{{path}} 等。")}
               <div class="btn-row" style="margin-top:6px;">
                 <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "保存中..." : isEdit ? "保存" : "添加"}</button>
                 <button class="btn" type="button" data-action="close-modal">取消</button>
@@ -505,8 +506,7 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作不可撤销</h3>
               <div class="attention-copy">删除后，该 Webhook 将立即停止投递事件通知。</div>
             </div>
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在删除，请稍候...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "正在删除，请稍候..." : "", "margin:12px 0;")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-delete-webhook" ${modal.loading ? "disabled" : ""}>
                 ${icons.trash}
@@ -530,8 +530,7 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作可能需要一定时间</h3>
               <div class="attention-copy">执行过程中请勿刷新页面。操作完成后会自动刷新维护快照。</div>
             </div>
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在执行，请稍候...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "正在执行，请稍候..." : "", "margin:12px 0;")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-maintenance-action" ${modal.loading ? "disabled" : ""}>
                 <span>${modal.loading ? "执行中..." : "确认执行"}</span>
@@ -553,8 +552,7 @@ export function createModalRenderers(deps) {
               <h3 class="attention-title">此操作不可撤销</h3>
               <div class="attention-copy">清理后，所有已过期的分享记录将被永久删除，相关链接将立即失效。</div>
             </div>
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">正在清理过期分享，请稍候...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "正在清理过期分享，请稍候..." : "", "margin:12px 0;")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-danger" type="button" data-action="execute-cleanup-expired-shares" ${modal.loading ? "disabled" : ""}>
                 <span>${modal.loading ? "清理中..." : "确认清理"}</span>
@@ -619,8 +617,7 @@ export function createModalRenderers(deps) {
               </div>
             ` : ""}
 
-            ${modal.error ? `<div class="error-text" style="margin:12px 0;">${escapeHtml(modal.error)}</div>` : ""}
-            ${modal.loading ? '<div class="helper-text" style="margin:12px 0;">执行中，请勿刷新页面...</div>' : ""}
+            ${renderOptionalFormFeedback(modal.error, modal.loading ? "执行中，请勿刷新页面..." : "", "margin:12px 0;")}
 
             <div class="btn-row" style="margin-top:12px;">
               <button class="btn btn-danger" type="button"

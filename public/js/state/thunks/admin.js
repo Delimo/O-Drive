@@ -1,3 +1,5 @@
+import { assertApiOk } from "./errors.js";
+
 let _audioCtx;
 
 function showNotificationAlert(message) {
@@ -170,7 +172,7 @@ export function createAdminThunks(deps, context) {
           dispatch(actions.admin.setStatsLoadingHint("索引数据量较大，正在后台处理，请耐心等待..."));
         }, 15000);
         const { response, data } = await adminApi.stats();
-        if (!response.ok) throw new Error(data?.message || "后台概览加载失败");
+        assertApiOk(response, data, "后台概览加载失败", humanError);
         if (data?.indexing) {
           dispatch(actions.admin.setStatsLoadingHint("文件索引正在后台构建中，10秒后自动刷新..."));
           retryTimer = setTimeout(() => {
@@ -195,7 +197,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await shareApi.list();
-        if (!response.ok) throw new Error(data?.message || "分享列表加载失败");
+        assertApiOk(response, data, "分享列表加载失败", humanError);
         dispatch(actions.admin.setShares(data?.items || []));
       } catch (error) {
         dispatch(
@@ -213,7 +215,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.health();
-        if (!response.ok) throw new Error(data?.message || "健康检查加载失败");
+        assertApiOk(response, data, "健康检查加载失败", humanError);
         dispatch(actions.admin.setHealth(data));
       } catch (error) {
         dispatch(
@@ -235,8 +237,7 @@ export function createAdminThunks(deps, context) {
         try {
           const params = { page: logPage, size: 20, ...filter };
           const { response, data } = await adminApi.logs(params);
-          if (!response.ok)
-            throw new Error(data?.message || "操作日志加载失败");
+          assertApiOk(response, data, "操作日志加载失败", humanError);
           dispatch(
             actions.admin.setLogs({
               items: data.logs || [],
@@ -260,7 +261,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.quota();
-        if (!response.ok) throw new Error(data?.message || "存储配额加载失败");
+        assertApiOk(response, data, "存储配额加载失败", humanError);
         dispatch(actions.admin.setQuota(data));
       } catch (error) {
         dispatch(
@@ -276,7 +277,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.setQuota(bytes);
-        if (!response.ok) throw new Error(data?.message || "设置存储配额失败");
+        assertApiOk(response, data, "设置存储配额失败", humanError);
         dispatchToast("success", "存储配额已更新");
         await dispatch(getThunks().loadAdminQuota());
       } catch (error) {
@@ -293,8 +294,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.protectedPaths();
-        if (!response.ok)
-          throw new Error(data?.message || "受保护路径加载失败");
+        assertApiOk(response, data, "受保护路径加载失败", humanError);
         dispatch(
           actions.admin.setProtectedPaths(data.list || data.items || []),
         );
@@ -321,8 +321,7 @@ export function createAdminThunks(deps, context) {
           modal.note,
           modal.showName,
         );
-        if (!response.ok)
-          throw new Error(data?.message || "创建受保护路径失败");
+        assertApiOk(response, data, "创建受保护路径失败", humanError);
         dispatch(actions.app.setModal(null));
         dispatchToast("success", "受保护路径已创建");
         await dispatch(getThunks().loadAdminProtectedPaths());
@@ -343,8 +342,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.deleteProtectedPath(path);
-        if (!response.ok)
-          throw new Error(data?.message || "删除受保护路径失败");
+        assertApiOk(response, data, "删除受保护路径失败", humanError);
         dispatchToast("success", "受保护路径已删除");
         await dispatch(getThunks().loadAdminProtectedPaths());
       } catch (error) {
@@ -361,7 +359,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.hiddenPaths();
-        if (!response.ok) throw new Error(data?.message || "隐藏路径加载失败");
+        assertApiOk(response, data, "隐藏路径加载失败", humanError);
         dispatch(actions.admin.setHiddenPaths(data.list || []));
       } catch (error) {
         dispatch(
@@ -379,7 +377,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.createHiddenPath(targetPath);
-        if (!response.ok) throw new Error(data?.message || "添加隐藏路径失败");
+        assertApiOk(response, data, "添加隐藏路径失败", humanError);
         dispatchToast("success", "隐藏路径已添加");
         await dispatch(getThunks().loadAdminHiddenPaths());
       } catch (error) {
@@ -394,7 +392,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.deleteHiddenPath(path);
-        if (!response.ok) throw new Error(data?.message || "删除隐藏路径失败");
+        assertApiOk(response, data, "删除隐藏路径失败", humanError);
         dispatchToast("success", "隐藏路径已删除");
         await dispatch(getThunks().loadAdminHiddenPaths());
       } catch (error) {
@@ -411,7 +409,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.storageConfig();
-        if (!response.ok) throw new Error(data?.message || "存储配置加载失败");
+        assertApiOk(response, data, "存储配置加载失败", humanError);
         dispatch(actions.admin.setStorageConfig(data));
       } catch (error) {
         dispatch(
@@ -431,7 +429,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await trashApi.list("");
-        if (!response.ok) throw new Error(data?.message || "回收站预览加载失败");
+        assertApiOk(response, data, "回收站预览加载失败", humanError);
         dispatch(actions.admin.setTrashPreview(data.items || []));
       } catch (error) {
         dispatch(actions.admin.setTrashPreviewError(error.message || "回收站预览加载失败"));
@@ -446,7 +444,7 @@ export function createAdminThunks(deps, context) {
       dispatch(actions.admin.setStorageConfigSaving(true));
       try {
         const { response, data } = await adminApi.saveStorageConfig(config);
-        if (!response.ok) throw new Error(data?.message || "保存存储配置失败");
+        assertApiOk(response, data, "保存存储配置失败", humanError);
         dispatchToast("success", "存储配置已更新");
         dispatch(actions.admin.setStorageConfig(data));
       } catch (error) {
@@ -464,8 +462,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.webhooks();
-        if (!response.ok)
-          throw new Error(data?.message || "Webhook 配置加载失败");
+        assertApiOk(response, data, "Webhook 配置加载失败", humanError);
         dispatch(actions.admin.setWebhooks(data.items || []));
       } catch (error) {
         dispatch(
@@ -483,8 +480,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.saveWebhooks(items);
-        if (!response.ok)
-          throw new Error(data?.message || "保存 Webhook 配置失败");
+        assertApiOk(response, data, "保存 Webhook 配置失败", humanError);
         dispatchToast("success", "Webhook 配置已更新");
         dispatch(actions.admin.setWebhooks(data.items || []));
       } catch (error) {
@@ -499,7 +495,9 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.testWebhook(endpoint);
-        if (!response.ok) throw new Error(data?.message || "测试投递失败");
+        assertApiOk(response, data, "测试投递失败", humanError, {
+          allowSuccessFalse: true,
+        });
         dispatchToast(
           data.success ? "success" : "error",
           data.success
@@ -520,7 +518,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await adminApi.webhookDeliveries();
-        if (!response.ok) throw new Error(data?.message || "投递记录加载失败");
+        assertApiOk(response, data, "投递记录加载失败", humanError);
         dispatch(actions.admin.setWebhookDeliveries(data.items || []));
       } catch (error) {
         dispatch(actions.admin.setWebhookDeliveriesLoading(false));
@@ -538,7 +536,9 @@ export function createAdminThunks(deps, context) {
       dispatch(actions.admin.setWebhookRetryingId(deliveryId));
       try {
         const { response, data } = await adminApi.retryWebhookDelivery(deliveryId);
-        if (!response.ok) throw new Error(data?.message || "重试投递失败");
+        assertApiOk(response, data, "重试投递失败", humanError, {
+          allowSuccessFalse: true,
+        });
         dispatchToast(
           data.success ? "success" : "error",
           data.success
@@ -625,7 +625,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await taskApi.list(20);
-        if (!response.ok) throw new Error(data?.message || "任务列表加载失败");
+        assertApiOk(response, data, "任务列表加载失败", humanError);
         dispatch(actions.admin.setTasks(data.items || []));
         dispatch(actions.admin.setTaskAlertConfig(data.alertConfig || null));
       } catch (err) {
@@ -644,8 +644,7 @@ export function createAdminThunks(deps, context) {
       dispatch(actions.admin.setTaskRetryingId(taskId));
       try {
         const { response, data } = await taskApi.retry(taskId);
-        if (!response.ok)
-          throw new Error(data?.message || "任务重试失败");
+        assertApiOk(response, data, "任务重试失败", humanError);
         dispatchToast("success", "任务已重新入队");
         await dispatch(getThunks().loadTasks());
       } catch (error) {
@@ -663,8 +662,7 @@ export function createAdminThunks(deps, context) {
       dispatch(actions.admin.setTaskAlertConfigSaving(true));
       try {
         const { response, data } = await adminApi.saveTaskAlertConfig(config);
-        if (!response.ok)
-          throw new Error(data?.message || "保存任务告警规则失败");
+        assertApiOk(response, data, "保存任务告警规则失败", humanError);
         dispatch(actions.admin.setTaskAlertConfig(data.config || null));
         dispatchToast("success", "任务告警规则已更新");
         await Promise.all([
@@ -692,7 +690,7 @@ export function createAdminThunks(deps, context) {
       }
       try {
         const { response, data } = await notificationApi.list(20);
-        if (!response.ok) throw new Error(data?.message || "通知列表加载失败");
+        assertApiOk(response, data, "通知列表加载失败", humanError);
         const state = getState();
         const oldIds = state.admin.lastNotifIds;
         const newIds = (data.items || []).map((n) => n.id);
@@ -761,7 +759,7 @@ export function createAdminThunks(deps, context) {
       try {
         const filter = getState().admin.adminNotifFilter || {};
         const { response, data } = await notificationApi.list(50, filter);
-        if (!response.ok) throw new Error(data?.message || "通知历史加载失败");
+        assertApiOk(response, data, "通知历史加载失败", humanError);
         dispatch(actions.admin.setAdminNotifHistory(data));
       } catch (err) {
         console.error("loadAdminNotifications 错误:", err);

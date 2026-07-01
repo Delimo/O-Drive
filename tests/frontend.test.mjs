@@ -181,12 +181,18 @@ test('ui components render reusable empty states and detail rows', () => {
     valueClassName: 'details-path-value',
     title: 'docs/readme.md',
   });
+  const helper = ui.renderFormFeedback('', '请填写名称');
+  const error = ui.renderFormFeedback('<失败>', '请填写名称');
 
   assert.match(empty, /empty-state-compact/);
   assert.match(empty, /暂无内容/);
   assert.match(row, /details-row-path/);
   assert.match(row, /details-path-value/);
   assert.match(row, /docs\/readme\.md/);
+  assert.match(helper, /helper-text/);
+  assert.match(helper, /请填写名称/);
+  assert.match(error, /error-text/);
+  assert.match(error, /&lt;失败&gt;/);
 });
 
 // ===== Markdown 渲染与安全 =====
@@ -489,6 +495,9 @@ test('assertApiOk accepts success, rejects failures, and preserves completed par
   );
   assert.doesNotThrow(() =>
     assertApiOk({ ok: false }, { success: false, completed: 2 }, '失败', human, { allowCompleted: true }),
+  );
+  assert.doesNotThrow(() =>
+    assertApiOk({ ok: true }, { success: false, message: '业务失败' }, '失败', human, { allowSuccessFalse: true }),
   );
   assert.throws(
     () => assertApiOk({ ok: false }, { message: '坏了' }, '失败', human),
@@ -1232,6 +1241,26 @@ test('admin task list is hidden when empty', () => {
   };
   const html = pages.renderAdminPage(state);
   assert.doesNotMatch(html, /文件数/);
+});
+
+test('share page loading state matches public share layout', () => {
+  const html = pages.renderSharePage({
+    app: { role: 'guest' },
+    share: {
+      token: 'share-token',
+      loading: true,
+      error: '',
+      item: null,
+      requiresPassword: false,
+      password: '',
+    },
+  });
+
+  assert.match(html, /share-shell-loading/);
+  assert.match(html, /share-mid-resource/);
+  assert.match(html, /正在获取分享信息/);
+  assert.match(html, /share-loading-list/);
+  assert.match(html, /data-action="refresh-share"/);
 });
 
 test('share page renders folder directory entries and action urls', () => {
