@@ -48,6 +48,20 @@ export function createExplorerSlice(initialState) {
       setPath(state, action) {
         return { ...state, path: action.payload };
       },
+      startNavigation(state, action) {
+        return {
+          ...state,
+          trashMode: false,
+          path: action.payload || "",
+          query: "",
+          queryDraft: "",
+          loading: true,
+          error: "",
+          selectedKey: "",
+          selectedKeys: [],
+          trashSelectedKeys: [],
+        };
+      },
       setQueryDraft(state, action) {
         return { ...state, queryDraft: action.payload };
       },

@@ -398,13 +398,8 @@ function renderMain(state) {
 }
 
 function navigateToExplorerPath(path = '') {
-  store.batchDispatch([
-    actions.explorer.setTrashMode(false),
-    actions.explorer.setPath(path),
-    actions.explorer.setQuery(''),
-    actions.explorer.setQueryDraft(''),
-    thunks.loadExplorer(),
-  ]);
+  store.dispatch(actions.explorer.startNavigation(normalizeKey(path)));
+  store.dispatch(thunks.loadExplorer());
 }
 
 function subscribeSlice(selector, fn) {
