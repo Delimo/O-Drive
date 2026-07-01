@@ -5539,6 +5539,12 @@ select.input {
   z-index: 160;
 }
 
+@media (max-width: 640px) {
+  .webhook-modal-select-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ─── Custom Select ─── */
 .cselect {
   position: relative;

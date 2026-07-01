@@ -657,6 +657,46 @@ test('confirm-clear-trash modal shows loading state', () => {
   assert.match(html, /disabled/);
 });
 
+test('webhook modal uses custom selects with hidden form values', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'add-webhook',
+        loading: false,
+        error: '',
+        name: '',
+        url: '',
+        msgtype: 'markdown',
+        method: 'PATCH',
+        contentType: 'application/json',
+        headers: '',
+        body: '',
+        events: [],
+        enabled: true,
+      },
+    },
+  });
+
+  assert.match(html, /data-form="add-webhook"/);
+  assert.match(html, /data-cselect="webhook-msgtype"/);
+  assert.match(html, /data-input-name="msgtype"/);
+  assert.match(html, /name="msgtype" value="markdown"/);
+  assert.match(html, /data-cselect="webhook-method"/);
+  assert.match(html, /data-input-name="method"/);
+  assert.match(html, /name="method" value="PATCH"/);
+  assert.doesNotMatch(html, /<select class="inline-input" name="msgtype"/);
+  assert.doesNotMatch(html, /<select class="inline-input" name="method"/);
+});
+
 test('trash restore confirm modal shows conflict summary and strategy', () => {
   const { renderModal } = createModalRenderers({
     icons,
