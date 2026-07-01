@@ -326,6 +326,13 @@ export function createApiLayer(deps) {
         csrf: true,
       });
     },
+    reactivateExpired(token, payload = {}) {
+      return request("/api/admin/shares", {
+        method: "POST",
+        json: { action: "reactivate-expired", token, ...payload },
+        csrf: true,
+      });
+    },
     unlock(token, password) {
       return request(`/api/share/${encodeURIComponent(token)}/unlock`, {
         method: "POST",

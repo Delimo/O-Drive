@@ -153,6 +153,13 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         return;
       }
 
+      if (form === "reactivate-share") {
+        store.dispatch(thunks.reactivateExpiredShareWithModal({
+          expiresInDays: String(data.get("expiresInDays") || "7"),
+        }));
+        return;
+      }
+
       if (form === "unlock-path") {
         store.dispatch(thunks.unlockProtectedPath(String(data.get("password") || "")));
         return;

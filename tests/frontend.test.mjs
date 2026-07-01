@@ -698,6 +698,64 @@ test('admin shares section formats millisecond expiry timestamps', () => {
   assert.doesNotMatch(html, /58454/);
 });
 
+test('admin shares section offers reactivation for retained expired links', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      activeTab: 'shares',
+      stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [{
+        token: 'expired-token',
+        name: 'old.txt',
+        path: '/old.txt',
+        targetType: 'file',
+        expired: true,
+        canReactivate: true,
+        autoDeleteAt: Date.now() + 3600000,
+        expiresAt: Date.now() - 1000,
+        maxDownloads: 0,
+        downloadCount: 0,
+      }],
+      sharesLoading: false,
+      sharesError: '',
+      shareFilter: 'all',
+      shareSearch: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /data-action="confirm-reactivate-share"/);
+  assert.match(html, /data-key="expired-token"/);
+  assert.match(html, /重新启用/);
+});
+
+test('reactivate share modal renders expiry form', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'reactivate-share',
+        loading: false,
+        error: '',
+        token: 'expired-token',
+        shareName: 'old.txt',
+        values: { expiresInDays: '7' },
+      },
+    },
+  });
+  assert.match(html, /重新启用分享/);
+  assert.match(html, /data-form="reactivate-share"/);
+  assert.match(html, /name="expiresInDays"/);
+  assert.match(html, /value="7"/);
+});
+
 test('admin quota section renders storage usage', () => {
   const state = {
     app: { role: 'admin' },

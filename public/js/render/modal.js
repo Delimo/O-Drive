@@ -173,6 +173,27 @@ export function createModalRenderers(deps) {
       `;
     }
 
+    if (modal.type === "reactivate-share") {
+      const values = modal.values || {};
+      const shareName = modal.shareName || "此分享";
+      return `
+        <div class="modal-wrap" data-action="close-modal-backdrop">
+          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="reactivate-share-title" data-stop-close="true">
+            <h3 id="reactivate-share-title" class="modal-title">重新启用分享</h3>
+            <p class="modal-copy">为"${escapeHtml(shareName)}"设置新的有效期。原链接、密码和访问权限会继续保留。</p>
+            <form class="modal-form" data-form="reactivate-share">
+              <input class="inline-input" name="expiresInDays" type="number" min="0" max="3650" placeholder="有效期天数，0 为长期有效" value="${escapeHtml(values.expiresInDays || "7")}">
+              ${modal.error ? `<div class="error-text">${escapeHtml(modal.error)}</div>` : '<div class="helper-text">仅能重新启用仍在 7 天保留期内、且尚未被清理的过期分享。</div>'}
+              <div class="btn-row" style="margin-top:6px;">
+                <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "启用中..." : "重新启用"}</button>
+                <button class="btn" type="button" data-action="close-modal" ${modal.loading ? "disabled" : ""}>取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
     if (modal.type === "confirm-delete-share") {
       const shareName = modal.shareName || "此分享";
       return `

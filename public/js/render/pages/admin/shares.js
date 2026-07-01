@@ -59,6 +59,9 @@ export function createSharesRenderer({
       const isExpired = share?.expired || (share?.expiresAt && share.expiresAt < now);
       const isExhausted = share?.exhausted;
       const isActive = isShareActive(share);
+      const canReactivate = Boolean(
+        share?.canReactivate || (isExpired && !isExhausted && Number(share?.autoDeleteAt || 0) > now),
+      );
       const expiresAt = Number(share?.expiresAt || 0);
       const targetLabel = share?.targetType === "folder" ? "文件夹" : "文件";
       const statusText = isExpired ? "已失效" : isExhausted ? "已用尽" : "有效";
@@ -105,6 +108,13 @@ export function createSharesRenderer({
             <button class="btn btn-sm" type="button"
                     data-action="copy-share-link" data-key="${escapeHtml(share.token)}"
                     aria-label="复制分享链接">复制</button>
+            ${canReactivate ? `
+              <button class="btn btn-primary btn-sm" type="button"
+                      data-action="confirm-reactivate-share"
+                      data-key="${escapeHtml(share.token)}"
+                      data-name="${escapeHtml(share.name)}"
+                      aria-label="重新启用分享链接">重新启用</button>
+            ` : ""}
             <button class="btn btn-danger btn-sm" type="button"
                     data-action="confirm-delete-share"
                     data-key="${escapeHtml(share.token)}"

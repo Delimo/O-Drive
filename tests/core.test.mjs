@@ -368,6 +368,41 @@ test('preview response streams existing object, supports range, and 404s missing
   assert.equal(missing.status, 404);
 });
 
+test('text preview transcodes legacy Chinese text to UTF-8 without changing downloads', async () => {
+  const gb18030 = Uint8Array.from([
+    0xc8, 0xb0, 0xd1, 0xa7, 0x0a, 0xbe, 0xfd, 0xd7, 0xd3, 0xd4, 0xbb, 0xa3,
+    0xba, 0xd1, 0xa7, 0xb2, 0xbb, 0xbf, 0xc9, 0xd2, 0xd4, 0xd2, 0xd1, 0xa1,
+    0xa3,
+  ]);
+  const env = makeEnv({
+    objects: [{
+      key: 'docs/gb18030.txt',
+      body: gb18030,
+      size: gb18030.byteLength,
+      uploaded: new Date('2026-01-01'),
+      httpMetadata: { contentType: 'text/plain' },
+    }],
+  });
+
+  const preview = await handleDownloadOrPreview(
+    env,
+    new Request('https://example.com/api/preview/docs/gb18030.txt'),
+    '/api/preview/docs/gb18030.txt',
+    'docs/gb18030.txt',
+  );
+  assert.equal(preview.status, 200);
+  assert.equal(preview.headers.get('Content-Type'), 'text/plain; charset=utf-8');
+  assert.equal(await preview.text(), '劝学\n君子曰：学不可以已。');
+
+  const download = await handleDownloadOrPreview(
+    env,
+    new Request('https://example.com/api/download/docs/gb18030.txt'),
+    '/api/download/docs/gb18030.txt',
+    'docs/gb18030.txt',
+  );
+  assert.deepEqual(new Uint8Array(await download.arrayBuffer()), gb18030);
+});
+
 test('request context extracts encoded R2 keys and guards hidden paths', () => {
   assert.equal(getR2KeyFromPath('/api/preview/%E8%B5%A4%E5%A3%81%E8%B5%8B.txt'), '赤壁赋.txt');
   assert.equal(canReadKey({ role: 'guest' }, 'secret/a.txt', ['secret']), false);
@@ -3853,6 +3888,53 @@ test('recently expired share records are retained until manual delete or retenti
   });
   assert.equal(deleted.status, 200);
   assert.deepEqual(await deleted.json(), { success: true });
+});
+
+test('admin can reactivate recently expired share links with the same token', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/reactivate.txt', body: 'again', size: 5, uploaded: new Date('2026-01-01') }],
+  });
+  const { csrf, cookie } = await loginAsAdmin(env);
+
+  const create = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ path: 'docs/reactivate.txt', expiresAt: Date.now() - 1000 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+    }),
+  });
+  assert.equal(create.status, 200);
+  const token = (await create.json()).item.token;
+
+  const expired = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info`),
+  });
+  assert.equal(expired.status, 410);
+
+  const reactivate = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'reactivate-expired', token, expiresInDays: 3 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+    }),
+  });
+  assert.equal(reactivate.status, 200);
+  const reactivatedData = await reactivate.json();
+  assert.equal(reactivatedData.item.token, token);
+  assert.equal(reactivatedData.item.expired, false);
+  assert.equal(reactivatedData.item.canReactivate, false);
+  assert.equal(reactivatedData.item.expiredNotifiedAt, 0);
+  assert.ok(reactivatedData.item.expiresAt > Date.now());
+
+  const info = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info`),
+  });
+  assert.equal(info.status, 200);
+  assert.equal((await info.json()).item.path, 'docs/reactivate.txt');
 });
 
 test('expired share access sends one webhook notification', async () => {

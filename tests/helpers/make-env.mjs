@@ -609,6 +609,16 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) row.expired_notified_at = statement.bound?.[0];
             }
+            if (/UPDATE share_links\s+SET expires_at = \?, expired_notified_at = 0, size = \?, content_type = \?, target_type = \?\s+WHERE token = \?/i.test(sql)) {
+              const row = shareRows.find(item => item.token === statement.bound?.[4]);
+              if (row) {
+                row.expires_at = statement.bound?.[0];
+                row.expired_notified_at = 0;
+                row.size = statement.bound?.[1];
+                row.content_type = statement.bound?.[2] || '';
+                row.target_type = statement.bound?.[3] || row.target_type || 'file';
+              }
+            }
             if (/UPDATE share_links SET download_count = download_count \+ 1/i.test(sql)) {
               const row = shareRows.find(item => item.token === (statement.bound?.[2] ?? statement.bound?.[1]));
               if (row) {

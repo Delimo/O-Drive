@@ -145,6 +145,8 @@ function mapShare(row) {
   const downloadCount = Number(row.download_count || 0);
   const autoDeleteAt =
     expiresAt > 0 ? expiresAt + EXPIRED_SHARE_AUTO_DELETE_MS : 0;
+  const expired = Boolean(expiresAt && expiresAt <= Date.now());
+  const exhausted = Boolean(maxDownloads && downloadCount >= maxDownloads);
   return {
     token: row.token,
     path: row.path,
@@ -158,11 +160,12 @@ function mapShare(row) {
     hasPassword: Boolean(row.password_hash),
     expiredNotifiedAt: Number(row.expired_notified_at || 0),
     expiresAt,
-    expired: Boolean(expiresAt && expiresAt <= Date.now()),
+    expired,
     autoDeleteAt,
+    canReactivate: Boolean(expired && !exhausted && autoDeleteAt > Date.now()),
     maxDownloads,
     downloadCount,
-    exhausted: Boolean(maxDownloads && downloadCount >= maxDownloads),
+    exhausted,
     createdAt: Number(row.created_at || 0),
     lastAccessedAt: Number(row.last_accessed_at || 0),
     lastAccessIp: row.last_access_ip || "",
@@ -469,6 +472,75 @@ async function insertShareLink(env, row) {
   }
 }
 
+async function reactivateExpiredShare(env, request, body) {
+  const token = String(body.token || "").trim();
+  if (!token)
+    return jsonResponse({ success: false, message: "Missing token" }, 400);
+
+  const row = await getShare(env, token);
+  if (!row)
+    return jsonResponse(
+      { success: false, message: "Share link not found" },
+      404,
+    );
+
+  const item = mapShare(row);
+  if (!item.expired)
+    return jsonResponse(
+      { success: false, message: "Share link is not expired" },
+      400,
+    );
+  if (item.exhausted)
+    return jsonResponse(
+      { success: false, message: "Share download limit reached" },
+      400,
+    );
+  if (canAutoDeleteExpiredShare(row))
+    return jsonResponse(
+      { success: false, message: "Share link cleanup retention passed" },
+      410,
+    );
+
+  const target = await detectShareTarget(env, row.path);
+  if (!target)
+    return jsonResponse({ success: false, message: "File or folder not found" }, 404);
+
+  const expiresAt = ttlToExpiresAt(body);
+  if (expiresAt && expiresAt <= Date.now())
+    return jsonResponse(
+      { success: false, message: "New expiry must be in the future" },
+      400,
+    );
+
+  await env.D1.prepare(
+    `UPDATE share_links
+     SET expires_at = ?, expired_notified_at = 0, size = ?, content_type = ?, target_type = ?
+     WHERE token = ?`,
+  )
+    .bind(
+      expiresAt,
+      Number(target.size || 0),
+      target.contentType || "",
+      target.targetType || row.target_type || "file",
+      token,
+    )
+    .run();
+
+  await addLog(env, request, "SHARE_REACTIVATE", row.path);
+
+  return jsonResponse({
+    success: true,
+    item: mapShare({
+      ...row,
+      expires_at: expiresAt,
+      expired_notified_at: 0,
+      size: Number(target.size || 0),
+      content_type: target.contentType || "",
+      target_type: target.targetType || row.target_type || "file",
+    }),
+  });
+}
+
 async function expiredResponse(
   env,
   token,
@@ -525,6 +597,9 @@ export async function handleAdminShares(env, request, method, url) {
       const deleted = await cleanupExpiredShares(env, { manual: true });
       await addLog(env, request, "SHARE_CLEANUP", `清理过期分享 ${deleted} 条`);
       return jsonResponse({ success: true, deleted });
+    }
+    if (body.action === "reactivate-expired") {
+      return reactivateExpiredShare(env, request, body);
     }
 
     const path = normalizeSharePath(body.path);

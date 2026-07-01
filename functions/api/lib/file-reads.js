@@ -19,6 +19,60 @@ import {
 
 const R2_SEARCH_SCAN_PAGE_SIZE = 100;
 
+const TEXT_PREVIEW_EXTENSIONS = new Set([
+  "bash",
+  "bat",
+  "c",
+  "cfg",
+  "conf",
+  "cpp",
+  "cs",
+  "css",
+  "csv",
+  "go",
+  "h",
+  "hpp",
+  "htm",
+  "html",
+  "ini",
+  "java",
+  "js",
+  "json",
+  "jsx",
+  "log",
+  "md",
+  "mjs",
+  "php",
+  "ps1",
+  "py",
+  "rb",
+  "rs",
+  "rtf",
+  "sh",
+  "sql",
+  "svg",
+  "toml",
+  "ts",
+  "tsv",
+  "tsx",
+  "txt",
+  "vtt",
+  "xml",
+  "yaml",
+  "yml",
+]);
+
+const TEXT_PREVIEW_CONTENT_TYPES = new Set([
+  "application/javascript",
+  "application/json",
+  "application/ld+json",
+  "application/manifest+json",
+  "application/rtf",
+  "application/xml",
+  "application/x-javascript",
+  "application/x-ndjson",
+]);
+
 function mapEntry(o) {
   return {
     name: o.key.split("/").pop(),
@@ -340,6 +394,88 @@ function makeDisposition(path, filename) {
     : "inline";
 }
 
+function extensionOf(path = "") {
+  const name = String(path || "").split("?")[0].split("/").pop() || "";
+  const dot = name.lastIndexOf(".");
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
+}
+
+function baseContentType(contentType = "") {
+  return String(contentType || "").split(";")[0].trim().toLowerCase();
+}
+
+function charsetFromContentType(contentType = "") {
+  const match = String(contentType || "").match(/;\s*charset\s*=\s*"?([^";\s]+)/i);
+  return match?.[1]?.toLowerCase() || "";
+}
+
+function withUtf8Charset(contentType = "", fallback = "text/plain") {
+  const base = baseContentType(contentType) || fallback;
+  return `${base}; charset=utf-8`;
+}
+
+function isTextPreviewContentType(contentType = "") {
+  const base = baseContentType(contentType);
+  return (
+    base.startsWith("text/") ||
+    TEXT_PREVIEW_CONTENT_TYPES.has(base) ||
+    base.endsWith("+json") ||
+    base.endsWith("+xml")
+  );
+}
+
+function shouldTranscodeTextPreview(path, r2Key, headers) {
+  if (!path.startsWith("/api/preview/")) return false;
+  const contentType = headers.get("Content-Type") || "";
+  if (isTextPreviewContentType(contentType)) return true;
+  return TEXT_PREVIEW_EXTENSIONS.has(extensionOf(r2Key || path));
+}
+
+function decodeBytes(bytes, encoding, fatal = true) {
+  return new TextDecoder(encoding, { fatal }).decode(bytes);
+}
+
+function tryDecodeBytes(bytes, encoding) {
+  try {
+    return decodeBytes(bytes, encoding);
+  } catch (_) {
+    return null;
+  }
+}
+
+function decodeTextPreview(bytes, contentType = "") {
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf)
+    return decodeBytes(bytes.slice(3), "utf-8", false);
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    const decoded = tryDecodeBytes(bytes.slice(2), "utf-16le");
+    if (decoded != null) return decoded;
+  }
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    const decoded = tryDecodeBytes(bytes.slice(2), "utf-16be");
+    if (decoded != null) return decoded;
+  }
+
+  const declaredCharset = charsetFromContentType(contentType);
+  if (declaredCharset && declaredCharset !== "utf-8" && declaredCharset !== "utf8") {
+    const declared = tryDecodeBytes(bytes, declaredCharset);
+    if (declared != null) return declared;
+  }
+
+  const utf8 = tryDecodeBytes(bytes, "utf-8");
+  if (utf8 != null) return utf8;
+
+  const gb18030 = tryDecodeBytes(bytes, "gb18030");
+  if (gb18030 != null) return gb18030;
+  return decodeBytes(bytes, "utf-8", false);
+}
+
+async function readObjectBodyBytes(obj) {
+  if (typeof obj.arrayBuffer === "function")
+    return new Uint8Array(await obj.arrayBuffer());
+  const buffer = await new Response(obj.body).arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
 export async function handleDownloadOrPreview(env, request, path, r2Key) {
   const rangeHeader = request.headers.get("Range");
   const parsedRange = parseByteRange(rangeHeader);
@@ -369,6 +505,20 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
   );
 
   if (!wantsRange) {
+    if (shouldTranscodeTextPreview(path, r2Key, headers)) {
+      const bytes = await readObjectBodyBytes(obj);
+      const text = decodeTextPreview(bytes, headers.get("Content-Type") || "");
+      const body = new TextEncoder().encode(text);
+      const contentType = headers.get("Content-Type") || "";
+      headers.set(
+        "Content-Type",
+        withUtf8Charset(
+          isTextPreviewContentType(contentType) ? contentType : "text/plain",
+        ),
+      );
+      headers.set("Content-Length", String(body.byteLength));
+      return new Response(body, { headers });
+    }
     const contentLength = Number(obj.size);
     if (Number.isFinite(contentLength) && contentLength > 0)
       headers.set("Content-Length", String(contentLength));

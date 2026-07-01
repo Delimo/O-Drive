@@ -202,6 +202,43 @@ export function createShareThunks(deps, context) {
       }
     },
 
+    reactivateExpiredShareWithModal: (values) => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+
+      const modal = getState().app.modal;
+      const token = modal?.token || "";
+      if (!token) return;
+
+      const expiresInDays = Math.max(
+        0,
+        Math.min(3650, Number(values.expiresInDays || 0) || 0),
+      );
+      dispatch(actions.app.setModal({ ...modal, loading: true, error: "" }));
+      try {
+        const { response, data } = await shareApi.reactivateExpired(token, {
+          expiresInDays,
+        });
+        if (!response.ok || data?.success === false) {
+          throw new Error(humanError(response, data, "重新启用分享失败"));
+        }
+        dispatch(actions.app.setModal(null));
+        dispatchToast("success", "分享链接已重新启用");
+        await dispatch(getThunks().loadAdminShares());
+      } catch (error) {
+        dispatch(
+          actions.app.setModal({
+            ...modal,
+            loading: false,
+            error: error.message || "重新启用分享失败",
+            values: { expiresInDays: String(expiresInDays || "0") },
+          }),
+        );
+      }
+    },
+
     unlockShare: (password) => async (dispatch, getState) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");

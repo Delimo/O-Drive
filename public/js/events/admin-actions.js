@@ -295,6 +295,19 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
+    if (action === "confirm-reactivate-share") {
+      const shareName = actionNode.dataset.name || key;
+      store.dispatch(actions.app.setModal({
+        type: "reactivate-share",
+        loading: false,
+        error: "",
+        token: key,
+        shareName,
+        values: { expiresInDays: "7" },
+      }));
+      return;
+    }
+
     if (action === "confirm-cleanup-expired-shares") {
       store.dispatch(actions.app.setModal({ type: "confirm-cleanup-expired", loading: false, error: "" }));
       return;
