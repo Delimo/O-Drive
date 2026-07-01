@@ -223,18 +223,25 @@
 }
 
 .item-card-back {
-  justify-content: center;
-  width: 150px;
+  border-color: var(--line);
 }
 
-.item-card-back .item-icon {
-  color: var(--muted);
-  background: var(--bg);
+.item-card-back:hover {
+  border-color: var(--accent-soft);
+}
+
+.item-card-back .item-back-icon {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid rgba(14, 116, 144, 0.16);
 }
 
 .item-card-back .item-title {
-  font-size: 13px;
-  color: var(--muted);
+  color: var(--text);
+}
+
+.item-card-back .item-meta {
+  margin-top: 2px;
 }
 
 .item-chip {

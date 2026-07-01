@@ -217,6 +217,27 @@ export function createHomeRenderers(deps) {
     return "";
   }
 
+  function renderBackCard(parentPath) {
+    const parentLabel = parentPath
+      ? parentPath.split("/").filter(Boolean).pop() || "上级目录"
+      : "根目录";
+
+    return `
+      <article class="item-card item-card-legacy item-card-back" data-action="crumb" data-path="${escapeHtml(parentPath)}" aria-label="返回上一层">
+        <div class="item-icon file item-back-icon">
+          ${icons.arrowLeft}
+        </div>
+        <div class="item-content">
+          <h3 class="item-title">返回上一层</h3>
+          <div class="item-meta">
+            <span class="item-chip">上级目录</span>
+            <span class="item-chip">${escapeHtml(parentLabel)}</span>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
   function renderExplorerBody(state, entries) {
     const explorer = state.explorer;
 
@@ -256,16 +277,7 @@ export function createHomeRenderers(deps) {
         <div class="file-grid">
           ${
             showBackButton
-              ? `
-          <article class="item-card item-card-back" data-action="crumb" data-path="${escapeHtml(parentPath)}">
-            <div class="item-icon file">
-              <span style="display:grid;place-items:center;width:100%;height:100%">${icons.arrowLeft}</span>
-            </div>
-            <div class="item-content">
-              <h3 class="item-title">返回上一层</h3>
-            </div>
-          </article>
-          `
+              ? renderBackCard(parentPath)
               : ""
           }
           ${entries.map((item) => renderEntryCard(item, state, selectedSet)).join("")}
@@ -287,14 +299,7 @@ export function createHomeRenderers(deps) {
     if (showBackButton) {
       return `
         <div class="file-grid">
-          <article class="item-card item-card-back" data-action="crumb" data-path="${escapeHtml(parentPath)}">
-            <div class="item-icon file">
-              <span style="display:grid;place-items:center;width:100%;height:100%">${icons.arrowLeft}</span>
-            </div>
-            <div class="item-content">
-              <h3 class="item-title">返回上一层</h3>
-            </div>
-          </article>
+          ${renderBackCard(parentPath)}
         </div>
         ${renderEmptyState(emptyTitle, emptyCopy, "<span></span>")}
       `;
