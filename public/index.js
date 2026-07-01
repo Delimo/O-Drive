@@ -436,6 +436,7 @@ const unsubscribers = [
     subscribeSlice(s => s.admin, render),
   ] : []),
   ...(page === 'share' ? [
+    subscribeSlice(s => s.app.role, render),
     subscribeSlice(s => s.share, render),
   ] : []),
   subscribeSlice(s => s.app.modal, renderModal),
@@ -455,23 +456,26 @@ renderUploads();
 renderDropOverlay();
 
 store.dispatch(actions.app.setNow(Date.now()));
-store.dispatch(thunks.loadRole()).then(async () => {
-  if (page === 'home') {
-    await store.dispatch(thunks.loadExplorer());
-  } else if (page === 'admin') {
-    if (store.getState().app.role === 'admin') {
-      await Promise.all([
-        store.dispatch(thunks.loadAdminStats()),
-        store.dispatch(thunks.loadNotifications()),
-      ]);
-      notificationPolling.start(store, thunks);
-    } else {
-      window.location.href = '/';
+if (page === 'share') {
+  store.dispatch(thunks.loadShare());
+  store.dispatch(thunks.loadRole());
+} else {
+  store.dispatch(thunks.loadRole()).then(async () => {
+    if (page === 'home') {
+      await store.dispatch(thunks.loadExplorer());
+    } else if (page === 'admin') {
+      if (store.getState().app.role === 'admin') {
+        await Promise.all([
+          store.dispatch(thunks.loadAdminStats()),
+          store.dispatch(thunks.loadNotifications()),
+        ]);
+        notificationPolling.start(store, thunks);
+      } else {
+        window.location.href = '/';
+      }
     }
-  } else if (page === 'share') {
-    await store.dispatch(thunks.loadShare());
-  }
-});
+  });
+}
 
 window.addEventListener('beforeunload', () => {
   cleanupAudioContext();
