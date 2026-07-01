@@ -1702,7 +1702,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
   flex: 0 0 auto;
   min-height: 0;
 }
@@ -3945,7 +3945,7 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .ov-webhook-page-desc {
@@ -3956,18 +3956,19 @@
 
 .ov-webhook-page-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .ov-webhook-stat-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: var(--panel-soft);
+  background: var(--panel);
 }
 
 .ov-webhook-stat-card-action {
@@ -3984,7 +3985,8 @@
   font-size: 22px;
   line-height: 1.1;
   color: var(--text);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .ov-webhook-stat-meta {
@@ -3994,7 +3996,7 @@
 
 .ov-webhook-page-grid {
   display: grid;
-  grid-template-columns: minmax(390px, 0.41fr) minmax(500px, 0.59fr);
+  grid-template-columns: minmax(360px, 0.42fr) minmax(520px, 0.58fr);
   gap: 14px;
   align-items: stretch;
   min-height: 0;
@@ -4230,6 +4232,65 @@
   color: var(--muted);
 }
 
+.ov-webhook-event-card-shell {
+  flex: 0 0 auto;
+}
+
+.ov-webhook-event-groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.ov-webhook-event-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.ov-webhook-event-group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ov-webhook-event-group-head span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ov-webhook-event-group-head small {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.ov-webhook-event-token-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ov-webhook-event-token {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(14, 116, 144, 0.14);
+  background: rgba(14, 116, 144, 0.06);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .ov-webhook-event-matrix {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4412,7 +4473,7 @@
 
 .ov-webhook-list-body {
   padding: 10px 14px;
-  min-height: 150px;
+  min-height: 220px;
   max-height: none;
   overflow: auto;
   flex: 1;
@@ -4437,6 +4498,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .ov-webhook-list-title {
@@ -4452,6 +4514,13 @@
   border-radius: 999px;
   background: var(--panel-soft);
   border: 1px solid var(--line);
+}
+
+.ov-webhook-list-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* ─── Webhook Rule Card ─── */
@@ -4533,6 +4602,121 @@
   justify-content: flex-end;
 }
 
+/* ─── Webhook Record Center ─── */
+.ov-webhook-record-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.035);
+  overflow: hidden;
+}
+
+.ov-webhook-record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.ov-webhook-record-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ov-webhook-record-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.ov-webhook-record-count {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.ov-webhook-record-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ov-webhook-record-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.ov-webhook-record-tab {
+  appearance: none;
+  border: 0;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.ov-webhook-record-tab span {
+  font-size: 10px;
+  color: inherit;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-webhook-record-tab:hover {
+  color: var(--text);
+}
+
+.ov-webhook-record-tab.is-active {
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.ov-webhook-record-panels {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ov-webhook-record-panel {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ov-webhook-record-panel.is-active {
+  display: flex;
+}
+
 /* ─── Webhook Delivery Card ─── */
 .ov-webhook-delivery-card {
   display: flex;
@@ -4573,9 +4757,10 @@
 
 .ov-webhook-delivery-body {
   padding: 10px 14px;
-  min-height: 110px;
-  max-height: 210px;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
+  flex: 1;
 }
 
 .ov-webhook-delivery-list {
@@ -4672,6 +4857,9 @@
 
 .ov-webhook-delivery-error {
   color: var(--danger);
+  font-size: 11px;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .ov-webhook-notif-card {
@@ -4715,7 +4903,7 @@
 .ov-webhook-notif-body {
   padding: 10px 14px 14px;
   overflow: auto;
-  min-height: 230px;
+  min-height: 0;
   max-height: none;
   flex: 1;
 }
@@ -4792,6 +4980,34 @@
   text-align: center;
 }
 
+.ov-webhook-soft-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 96px;
+  padding: 18px 14px;
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+  background: var(--panel-soft);
+  color: var(--muted);
+  text-align: center;
+}
+
+.ov-webhook-soft-empty span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ov-webhook-soft-empty small {
+  max-width: 260px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 @media (max-width: 1180px) {
   .ov-webhook-page-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4808,8 +5024,13 @@
 
 @media (max-width: 768px) {
   .ov-webhook-page-header {
+    flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
+  }
+
+  .ov-webhook-page-header .btn {
+    width: 100%;
   }
 
   .ov-webhook-page-stats,
@@ -4831,12 +5052,22 @@
 
   .ov-webhook-config-header,
   .ov-webhook-preview-empty,
+  .ov-webhook-record-header,
+  .ov-webhook-record-tools,
   .ov-webhook-rule-head,
   .ov-webhook-rule-meta,
   .ov-webhook-notif-item,
   .ov-webhook-delivery-top {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .ov-webhook-record-tabs {
+    width: 100%;
+  }
+
+  .ov-webhook-record-tab {
+    flex: 1;
   }
 
   .ov-webhook-rule-actions,

@@ -41,6 +41,7 @@ export const adminInitialState = {
   webhookDeliveries: [],
   webhookDeliveriesLoading: false,
   webhookRetryingId: 0,
+  webhookRecordTab: "deliveries",
   maintenance: null,
   maintenanceLoading: false,
   maintenanceError: "",
@@ -278,6 +279,12 @@ export function createAdminSlice(initialState) {
       },
       setWebhookRetryingId(state, action) {
         return { ...state, webhookRetryingId: Number(action.payload || 0) };
+      },
+      setWebhookRecordTab(state, action) {
+        return {
+          ...state,
+          webhookRecordTab: action.payload === "notifications" ? "notifications" : "deliveries",
+        };
       },
       setMaintenanceLoading(state, action) {
         return { ...state, maintenanceLoading: action.payload };

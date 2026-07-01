@@ -1238,9 +1238,21 @@ test('notification tab renders notification history and system tab does not dupl
     admin: { ...baseAdmin, activeTab: 'webhook' },
   });
   assert.match(notificationHtml, /通知中心/);
+  assert.match(notificationHtml, /未读通知/);
+  assert.match(notificationHtml, /失败投递/);
+  assert.match(notificationHtml, /Webhook 规则/);
+  assert.match(notificationHtml, /记录中心/);
+  assert.match(notificationHtml, /投递记录/);
   assert.match(notificationHtml, /通知历史/);
+  assert.match(notificationHtml, /data-action="set-webhook-record-tab"/);
   assert.match(notificationHtml, /data-action-change="set-notification-filter"/);
   assert.match(notificationHtml, /data-action="admin-mark-notif-read"/);
+
+  const notificationRecordHtml = pages.renderAdminPage({
+    app: { role: 'admin' },
+    admin: { ...baseAdmin, activeTab: 'webhook', webhookRecordTab: 'notifications' },
+  });
+  assert.match(notificationRecordHtml, /ov-webhook-record-tab is-active" type="button" data-action="set-webhook-record-tab" data-tab="notifications"/);
 
   const systemHtml = pages.renderAdminPage({
     app: { role: 'admin' },

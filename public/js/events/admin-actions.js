@@ -104,6 +104,11 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
+    if (action === "set-webhook-record-tab") {
+      store.dispatch(actions.admin.setWebhookRecordTab(actionNode.dataset.tab || "deliveries"));
+      return;
+    }
+
     if (action === "refresh-admin-webhook-deliveries") {
       store.dispatch(thunks.loadAdminWebhookDeliveries());
       return;
