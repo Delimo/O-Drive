@@ -289,24 +289,34 @@ export function createWebhookRenderer({
                   <div class="ov-webhook-notif-filters">
                     <label class="ov-webhook-notif-filter">
                       <span>级别</span>
-                      <select class="input" data-action-change="set-notification-filter" data-key="severity">
-                        ${[
-                          ["all", "全部"],
-                          ["info", "信息"],
-                          ["warning", "警告"],
-                          ["error", "错误"],
-                        ].map(([value, label]) => `<option value="${value}" ${notifFilter.severity === value ? "selected" : ""}>${label}</option>`).join("")}
-                      </select>
+                      ${components.renderCustomSelect({
+                        id: "notification-severity-filter",
+                        value: notifFilter.severity || "all",
+                        options: [
+                          { value: "all", label: "全部" },
+                          { value: "info", label: "信息" },
+                          { value: "warning", label: "警告" },
+                          { value: "error", label: "错误" },
+                        ],
+                        actionChange: "set-notification-filter",
+                        dataKey: "severity",
+                        className: "ov-webhook-notif-select",
+                      })}
                     </label>
                     <label class="ov-webhook-notif-filter">
                       <span>状态</span>
-                      <select class="input" data-action-change="set-notification-filter" data-key="read">
-                        ${[
-                          ["all", "全部"],
-                          ["unread", "未读"],
-                          ["read", "已读"],
-                        ].map(([value, label]) => `<option value="${value}" ${notifFilter.read === value ? "selected" : ""}>${label}</option>`).join("")}
-                      </select>
+                      ${components.renderCustomSelect({
+                        id: "notification-read-filter",
+                        value: notifFilter.read || "all",
+                        options: [
+                          { value: "all", label: "全部" },
+                          { value: "unread", label: "未读" },
+                          { value: "read", label: "已读" },
+                        ],
+                        actionChange: "set-notification-filter",
+                        dataKey: "read",
+                        className: "ov-webhook-notif-select",
+                      })}
                     </label>
                     <label class="ov-webhook-notif-filter ov-webhook-notif-filter-event">
                       <span>事件</span>

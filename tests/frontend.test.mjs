@@ -1245,6 +1245,8 @@ test('notification tab renders notification history and system tab does not dupl
   assert.match(notificationHtml, /投递记录/);
   assert.match(notificationHtml, /通知历史/);
   assert.match(notificationHtml, /data-action="set-webhook-record-tab"/);
+  assert.match(notificationHtml, /data-cselect="notification-severity-filter"/);
+  assert.match(notificationHtml, /data-cselect="notification-read-filter"/);
   assert.match(notificationHtml, /data-action-change="set-notification-filter"/);
   assert.match(notificationHtml, /data-action="admin-mark-notif-read"/);
 

@@ -4900,6 +4900,20 @@
   width: 100%;
 }
 
+.ov-webhook-notif-filter .cselect {
+  width: 100%;
+}
+
+.ov-webhook-notif-select .cselect-trigger {
+  min-height: 36px;
+  background: var(--panel);
+}
+
+.ov-webhook-notif-select .cselect-dropdown {
+  min-width: 100%;
+  z-index: 140;
+}
+
 .ov-webhook-notif-body {
   padding: 10px 14px 14px;
   overflow: auto;
@@ -5500,6 +5514,29 @@
 select.input {
   cursor: pointer;
   padding-right: 24px;
+}
+
+.webhook-modal-select-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.modal-cselect {
+  width: 100%;
+  min-height: 44px;
+}
+
+.modal-cselect .cselect-trigger {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-soft);
+  font-size: 14px;
+}
+
+.modal-cselect .cselect-dropdown {
+  z-index: 160;
 }
 
 /* ─── Custom Select ─── */

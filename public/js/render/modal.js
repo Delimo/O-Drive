@@ -15,6 +15,26 @@ export function createModalRenderers(deps) {
   const renderOptionalFormFeedback = (error, helperText, style = "") =>
     error || helperText ? renderFormFeedback(error, helperText, style) : "";
 
+  function renderModalCustomSelect({ id, inputName, value, options, className = "" }) {
+    const selected = options.find(option => option.value === value) || options[0];
+    return `
+      <input type="hidden" name="${escapeHtml(inputName)}" value="${escapeHtml(selected?.value || "")}">
+      <div class="cselect modal-cselect ${className}" data-cselect="${escapeHtml(id)}" data-input-name="${escapeHtml(inputName)}" data-value="${escapeHtml(selected?.value || "")}">
+        <button class="cselect-trigger" type="button" tabindex="0">
+          <span class="cselect-value">${escapeHtml(selected?.label || "")}</span>
+          <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="cselect-dropdown">
+          ${options.map(option => `
+            <div class="cselect-option ${option.value === selected?.value ? "cselect-active" : ""}" data-value="${escapeHtml(option.value)}">
+              ${escapeHtml(option.label)}
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
   function renderPreviewModalBody(modal) {
     if (modal.loading)
       return `<div class="empty-state"><div><div class="empty-orb">${icons.spinner}</div><h3 class="empty-title">正在准备预览</h3><p class="empty-copy">正在读取文件内容，请稍候。</p></div></div>`;
@@ -470,13 +490,21 @@ export function createModalRenderers(deps) {
             <form class="modal-form" data-form="${isEdit ? "edit" : "add"}-webhook">
               <input class="inline-input" name="name" placeholder="名称" value="${escapeHtml(modal.name || "")}" required>
               <input class="inline-input" name="url" placeholder="Webhook URL" value="${escapeHtml(modal.url || "")}" required>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <select class="inline-input" name="msgtype">
-                  ${["json", "text", "markdown"].map((t) => `<option value="${t}" ${modal.msgtype === t ? "selected" : ""}>${t}</option>`).join("")}
-                </select>
-                <select class="inline-input" name="method">
-                  ${["POST", "PUT", "PATCH", "GET", "DELETE"].map((m) => `<option value="${m}" ${modal.method === m ? "selected" : ""}>${m}</option>`).join("")}
-                </select>
+              <div class="webhook-modal-select-row">
+                ${renderModalCustomSelect({
+                  id: "webhook-msgtype",
+                  inputName: "msgtype",
+                  value: modal.msgtype || "json",
+                  options: ["json", "text", "markdown"].map(value => ({ value, label: value })),
+                  className: "webhook-modal-select",
+                })}
+                ${renderModalCustomSelect({
+                  id: "webhook-method",
+                  inputName: "method",
+                  value: modal.method || "POST",
+                  options: ["POST", "PUT", "PATCH", "GET", "DELETE"].map(value => ({ value, label: value })),
+                  className: "webhook-modal-select",
+                })}
               </div>
               <input class="inline-input" name="contentType" placeholder="Content-Type" value="${escapeHtml(modal.contentType || "application/json")}">
               <textarea class="inline-input" name="headers" placeholder="自定义 Headers (JSON)" rows="2" style="resize:vertical;">${escapeHtml(modal.headers || "")}</textarea>
@@ -623,7 +651,6 @@ export function createModalRenderers(deps) {
               <button class="btn btn-danger" type="button"
                 data-action="${isDelete ? "execute-batch-delete" : "execute-batch-paste"}"
                 ${modal.loading ? "disabled" : ""}>
-                ${icons.trash}
                 <span>${modal.loading ? "执行中..." : `确认${opLabel}（${estimate?.totalObjects ?? 0} 项）`}</span>
               </button>
               <button class="btn" type="button" data-action="close-modal" ${modal.loading ? "disabled" : ""}>取消</button>

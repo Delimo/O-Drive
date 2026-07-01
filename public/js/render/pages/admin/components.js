@@ -105,6 +105,14 @@ export function createAdminComponents({ escapeHtml }) {
           trigger.querySelector(".cselect-value").textContent = opt.textContent.trim();
           el.classList.remove("cselect-open");
           el.dataset.value = val;
+          const inputName = el.dataset.inputName;
+          if (inputName) {
+            const form = el.closest("form");
+            const scope = form || el.parentElement || root;
+            const hiddenInput = Array.from(scope.querySelectorAll('input[type="hidden"]'))
+              .find(input => input.name === inputName);
+            if (hiddenInput) hiddenInput.value = val;
+          }
 
           const actionChange = el.dataset.actionChange;
           const dataKey = el.dataset.key;

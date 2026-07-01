@@ -143,6 +143,11 @@ export function registerAppEvents(deps) {
         store.dispatch(actions.admin.setShareFilter(value));
         return;
       }
+      if (actionChange === "set-notification-filter") {
+        store.dispatch(actions.admin.setAdminNotifFilter({ [key || "severity"]: value }));
+        store.dispatch(thunks.loadAdminNotifications());
+        return;
+      }
     },
     opts,
   );
