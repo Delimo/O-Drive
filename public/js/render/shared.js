@@ -339,7 +339,6 @@ export function createSharedRenderers(deps) {
             : ""
         }
         <div class="item-actions">
-          ${isFolder && state.app.role === "admin" ? `<button class="item-action-btn" data-action="open-share-modal" data-key="${escapeHtml(key)}" title="分享文件夹">${icons.share}</button>` : ""}
           ${!isFolder && canPreview(item) ? `<button class="item-action-btn" data-action="preview" data-key="${escapeHtml(key)}" title="预览">${icons.eye}</button>` : ""}
           ${
             !isFolder

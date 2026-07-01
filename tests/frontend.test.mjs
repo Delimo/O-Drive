@@ -425,6 +425,21 @@ test('home shows empty state with no entries', () => {
   assert.match(html, /这个文件夹还是空的/);
 });
 
+test('home search filters use custom select for file kind', () => {
+  const html = home.renderHomePage(makeState({
+    explorer: {
+      query: 'foo',
+      showFilters: true,
+      filterKind: 'image',
+    },
+  }));
+
+  assert.match(html, /data-cselect="home-filter-kind"/);
+  assert.match(html, /data-action-change="set-filter-kind"/);
+  assert.match(html, /data-value="image"/);
+  assert.doesNotMatch(html, /<select\b/);
+});
+
 // ===== mock 设计预览数据 =====
 
 test('mock text content returns markdown for .md files', () => {
@@ -461,15 +476,15 @@ test('entry card renders search hit reason', () => {
   assert.match(html, /筛选：类型/);
 });
 
-test('folder entry card exposes share action for admins', () => {
+test('folder entry card keeps share action out of card actions', () => {
   const html = shared.renderEntryCard({
     name: 'docs',
     fullKey: 'docs',
     kind: 'folder',
   }, makeState({ app: { role: 'admin' } }), new Set());
 
-  assert.match(html, /title="分享文件夹"/);
-  assert.match(html, /data-action="open-share-modal"/);
+  assert.doesNotMatch(html, /title="分享文件夹"/);
+  assert.doesNotMatch(html, /data-action="open-share-modal"/);
   assert.match(html, /data-action="info"/);
 });
 
@@ -732,8 +747,41 @@ test('trash restore confirm modal shows conflict summary and strategy', () => {
   assert.match(html, /自动重命名/);
   assert.match(html, /跳过冲突/);
   assert.match(html, /覆盖已有/);
+  assert.match(html, /data-cselect="trash-restore-conflict-mode"/);
+  assert.match(html, /data-action-change="set-trash-restore-conflict-mode"/);
   assert.match(html, /data-action="execute-trash-restore"/);
   assert.match(html, /docs\/a\.txt/);
+  assert.doesNotMatch(html, /<select\b/);
+});
+
+test('upload confirm modal uses custom select for conflict strategy', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+    formatBytes,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'upload-confirm',
+        loading: false,
+        error: '',
+        conflictMode: 'overwrite',
+        files: [{ name: 'report.txt', size: 1024 }],
+      },
+    },
+  });
+
+  assert.match(html, /data-cselect="upload-conflict-mode"/);
+  assert.match(html, /data-action-change="set-upload-conflict-mode"/);
+  assert.match(html, /data-value="overwrite"/);
+  assert.match(html, /data-action="confirm-upload"/);
+  assert.doesNotMatch(html, /<select\b/);
 });
 
 test('add-protected-path modal renders form fields', () => {
