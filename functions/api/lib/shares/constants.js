@@ -1,0 +1,3 @@
+export const EXPIRED_SHARE_AUTO_DELETE_MS = 7 * 24 * 60 * 60 * 1000;
+export const SHARE_ACCESS_TTL_SECONDS = 12 * 60 * 60;
+export const SHARE_PASSWORD_ITERATIONS = 210000;

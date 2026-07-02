@@ -613,8 +613,9 @@
 }
 
 .preview-modal-body {
-  min-height: 0;
-  flex: 1;
+  height: min(72vh, 760px);
+  min-height: min(52vh, 420px);
+  flex: 0 1 min(72vh, 760px);
   overflow: auto;
   border-radius: var(--radius-md);
   background: var(--panel-soft);
@@ -622,7 +623,8 @@
 }
 
 .preview-media-shell {
-  min-height: min(72vh, 760px);
+  height: 100%;
+  min-height: 100%;
   display: grid;
   place-items: center;
   padding: 18px;
@@ -639,8 +641,14 @@
   border-radius: var(--radius-md);
 }
 
+.preview-media-shell iframe {
+  height: 100%;
+}
+
 .preview-text {
   margin: 0;
+  min-height: 100%;
+  box-sizing: border-box;
   padding: 20px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -651,10 +659,11 @@
 
 .preview-editor {
   width: 100%;
-  min-height: min(70vh, 720px);
+  height: 100%;
+  min-height: 100%;
   border: 0;
   outline: none;
-  resize: vertical;
+  resize: none;
   background: transparent;
   padding: 20px;
   line-height: 1.7;
@@ -905,12 +914,14 @@
 }
 
 .markdown-body {
+  min-height: 100%;
+  box-sizing: border-box;
   line-height: 1.7;
   color: var(--text);
   word-wrap: break-word;
   overflow-y: auto;
   max-height: 100%;
-  padding: 4px 2px;
+  padding: 20px;
 }
 
 .markdown-body h1,
