@@ -5938,20 +5938,21 @@ select.input {
   padding: 0 14px 14px;
 }
 
-.webhook-code-input {
-  height: 96px;
-  min-height: 96px;
+.webhook-code-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.webhook-modal-card textarea.webhook-code-input {
+  height: 88px;
+  min-height: 88px;
   padding: 10px 12px;
   resize: none;
   overflow: auto;
   line-height: 1.55;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 12.5px;
-}
-
-.webhook-body-input {
-  height: 120px;
-  min-height: 120px;
 }
 
 .webhook-token-row {
@@ -6004,6 +6005,7 @@ select.input {
   }
 
   .webhook-field-grid,
+  .webhook-code-grid,
   .webhook-event-mode-row,
   .webhook-event-grid {
     grid-template-columns: 1fr;

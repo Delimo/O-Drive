@@ -247,14 +247,16 @@ export function createAdminModalRenderers({
                   <span>Content-Type</span>
                   <input class="inline-input" name="contentType" placeholder="Content-Type" value="${escapeHtml(contentType)}">
                 </label>
-                <label class="webhook-field">
-                  <span>自定义 Headers</span>
-                  <textarea class="inline-input webhook-code-input" name="headers" placeholder='{"Authorization":"Bearer token"}' rows="4" spellcheck="false">${escapeHtml(modal.headers || "")}</textarea>
-                </label>
-                <label class="webhook-field">
-                  <span>请求体模板</span>
-                  <textarea class="inline-input webhook-code-input webhook-body-input" name="body" placeholder='{"text":"{{data.message}}"}' rows="5" spellcheck="false">${escapeHtml(modal.body || "")}</textarea>
-                </label>
+                <div class="webhook-code-grid">
+                  <label class="webhook-field">
+                    <span>自定义 Headers</span>
+                    <textarea class="inline-input webhook-code-input" name="headers" placeholder='{"Authorization":"Bearer token"}' rows="4" spellcheck="false" style="height:88px;min-height:88px;resize:none;overflow:auto;padding:10px 12px;line-height:1.55;">${escapeHtml(modal.headers || "")}</textarea>
+                  </label>
+                  <label class="webhook-field">
+                    <span>请求体模板</span>
+                    <textarea class="inline-input webhook-code-input webhook-body-input" name="body" placeholder='{"text":"{{data.message}}"}' rows="4" spellcheck="false" style="height:88px;min-height:88px;resize:none;overflow:auto;padding:10px 12px;line-height:1.55;">${escapeHtml(modal.body || "")}</textarea>
+                  </label>
+                </div>
                 <div class="webhook-token-row" aria-label="可用模板变量">
                   <span>{{event}}</span>
                   <span>{{timestamp}}</span>
