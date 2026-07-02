@@ -195,11 +195,13 @@ export function createAdminModalRenderers({
       </label>
     `;
     return `
-      <div class="modal-wrap" data-action="close-modal-backdrop">
+      <div class="modal-wrap webhook-modal-wrap" data-action="close-modal-backdrop">
         <div class="modal-card webhook-modal-card" role="dialog" aria-modal="true" aria-labelledby="webhook-modal-title" data-stop-close="true">
           <h3 id="webhook-modal-title" class="modal-title">${isEdit ? "编辑" : "添加"} Webhook</h3>
           <p class="modal-copy">配置事件通知的投递端点。</p>
           <form class="modal-form" data-form="${isEdit ? "edit" : "add"}-webhook">
+            <div class="webhook-modal-layout">
+              <div class="webhook-modal-main">
             <section class="webhook-modal-section">
               <div class="webhook-modal-section-head">
                 <span>基础配置</span>
@@ -250,11 +252,11 @@ export function createAdminModalRenderers({
                 <div class="webhook-code-grid">
                   <label class="webhook-field">
                     <span>自定义 Headers</span>
-                    <textarea class="inline-input webhook-code-input" name="headers" placeholder='{"Authorization":"Bearer token"}' rows="4" spellcheck="false" style="height:88px;min-height:88px;resize:none;overflow:auto;padding:10px 12px;line-height:1.55;">${escapeHtml(modal.headers || "")}</textarea>
+                    <textarea class="inline-input webhook-code-input" name="headers" placeholder='{"Authorization":"Bearer token"}' rows="8" spellcheck="false">${escapeHtml(modal.headers || "")}</textarea>
                   </label>
                   <label class="webhook-field">
                     <span>请求体模板</span>
-                    <textarea class="inline-input webhook-code-input webhook-body-input" name="body" placeholder='{"text":"{{data.message}}"}' rows="4" spellcheck="false" style="height:88px;min-height:88px;resize:none;overflow:auto;padding:10px 12px;line-height:1.55;">${escapeHtml(modal.body || "")}</textarea>
+                    <textarea class="inline-input webhook-code-input webhook-body-input" name="body" placeholder='{"text":"{{data.message}}"}' rows="8" spellcheck="false">${escapeHtml(modal.body || "")}</textarea>
                   </label>
                 </div>
                 <div class="webhook-token-row" aria-label="可用模板变量">
@@ -265,7 +267,9 @@ export function createAdminModalRenderers({
                 </div>
               </div>
             </details>
+              </div>
 
+              <div class="webhook-modal-side">
             <section class="webhook-modal-section">
               <div class="webhook-modal-section-head">
                 <span>触发事件</span>
@@ -311,6 +315,8 @@ export function createAdminModalRenderers({
                 ` : ""}
               </div>
             </section>
+              </div>
+            </div>
             ${renderFormFeedback(modal.error, "基础用法只需要填写名称、URL 和触发事件；Headers 与请求体模板可以留空。")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "保存中..." : isEdit ? "保存" : "添加"}</button>

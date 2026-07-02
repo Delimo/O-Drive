@@ -5631,19 +5631,49 @@ select.input {
   padding-right: 24px;
 }
 
+.webhook-modal-wrap {
+  z-index: 240;
+}
+
 .webhook-modal-card {
-  width: min(720px, calc(100vw - 32px));
-  max-height: min(88vh, 860px);
+  width: min(1120px, calc(100vw - 48px));
+  max-height: min(92vh, 920px);
   display: flex;
   flex-direction: column;
   padding: 24px;
 }
 
 .webhook-modal-card .modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
   margin-right: -4px;
+}
+
+.webhook-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(430px, 1.08fr) minmax(360px, 0.92fr);
+  gap: 12px;
+  align-items: start;
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+.webhook-modal-card .helper-text,
+.webhook-modal-card .error-text,
+.webhook-modal-card .btn-row {
+  flex-shrink: 0;
+}
+
+.webhook-modal-main,
+.webhook-modal-side {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
 }
 
 .webhook-modal-section,
@@ -5940,15 +5970,15 @@ select.input {
 
 .webhook-code-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
   gap: 10px;
 }
 
 .webhook-modal-card textarea.webhook-code-input {
-  height: 88px;
-  min-height: 88px;
+  height: 164px;
+  min-height: 164px;
   padding: 10px 12px;
-  resize: none;
+  resize: vertical;
   overflow: auto;
   line-height: 1.55;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -5995,6 +6025,16 @@ select.input {
 
 .modal-cselect .cselect-dropdown {
   z-index: 160;
+}
+
+@media (max-width: 980px) {
+  .webhook-modal-card {
+    width: min(760px, calc(100vw - 32px));
+  }
+
+  .webhook-modal-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
