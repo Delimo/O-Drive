@@ -64,7 +64,11 @@ import {
   retryFileTask,
   updateFileTask,
 } from "./tasks.js";
-import { notifyDownloadBurst, notifyWebhookWithLog } from "./webhooks.js";
+import {
+  createWebhookEventNotification,
+  notifyDownloadBurst,
+  notifyWebhookWithLog,
+} from "./webhooks.js";
 import {
   assertBodySize,
   jsonResponse,
@@ -92,7 +96,13 @@ async function notifyConfiguredWebhooks(env, context, notifyFn) {
 async function notifyConfiguredWebhookEvent(env, context, event, data) {
   try {
     const endpoints = await loadWebhookEndpoints(env);
-    waitForWebhook(context, notifyWebhookWithLog(env, endpoints, event, data));
+    await createWebhookEventNotification(env, event, data);
+    waitForWebhook(
+      context,
+      notifyWebhookWithLog(env, endpoints, event, data, {
+        skipNotification: true,
+      }),
+    );
   } catch (err) {
     await recordSystemWarning(
       env,

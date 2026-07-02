@@ -392,17 +392,28 @@ export async function notifyWebhook(envUrls, event, data = {}) {
   return results.map((result) => Boolean(result.ok));
 }
 
-export async function notifyWebhookWithLog(env, envUrls, event, data = {}) {
+export async function createWebhookEventNotification(env, event, data = {}) {
+  const msg = eventLabel(event) || event;
+  const path = data?.path || data?.paths?.[0] || "";
+  const eventMessage = path ? `${msg}: ${path}` : msg;
+  await createNotification(env, { event, message: eventMessage, path });
+  return { message: eventMessage, path };
+}
+
+export async function notifyWebhookWithLog(
+  env,
+  envUrls,
+  event,
+  data = {},
+  options = {},
+) {
   const endpoints = normalizeWebhookEndpoints(envUrls).filter(
     (endpoint) => endpoint.enabled && endpointMatchesEvent(endpoint, event),
   );
 
-  const msg = eventLabel(event) || event;
-  const path = data?.path || data?.paths?.[0] || "";
-  const eventMessage = path ? `${msg}: ${path}` : msg;
-  createNotification(env, { event, message: eventMessage, path }).catch(
-    () => {},
-  );
+  if (!options.skipNotification) {
+    await createWebhookEventNotification(env, event, data);
+  }
 
   if (!endpoints.length) return [];
 

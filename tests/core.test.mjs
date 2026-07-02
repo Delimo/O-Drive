@@ -980,6 +980,68 @@ test('route smoke: admin can login, upload, list, and search', async () => {
   assert.deepEqual(searchData.files.map(file => file.fullKey), ['route-smoke.txt']);
 });
 
+test('route batch delete writes audit log and notification history', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/delete-me.txt', body: 'bye', size: 3, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const waitUntilPromises = [];
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const deleted = await onRequest({
+    env,
+    request: new Request('https://example.com/api/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ paths: ['docs/delete-me.txt'] }),
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': loginData.csrf,
+      },
+    }),
+    waitUntil(promise) {
+      waitUntilPromises.push(promise);
+    },
+  });
+  const deleteData = await deleted.json();
+  assert.equal(deleted.status, 200);
+  assert.equal(deleteData.success, true);
+
+  const logRes = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/logs?page=1&size=20&q=delete-me', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const logData = await logRes.json();
+  assert.ok(logData.logs.some(log => log.action === 'DELETE' && log.path === 'docs/delete-me.txt'));
+
+  const notifRes = await onRequest({
+    env,
+    request: new Request('https://example.com/api/notifications?event=file.deleted', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const notifData = await notifRes.json();
+  assert.equal(notifData.items[0].event, 'file.deleted');
+  assert.equal(notifData.items[0].path, 'docs/delete-me.txt');
+
+  await Promise.all(waitUntilPromises);
+});
+
 test('route smoke: folder upload can target nested paths', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
