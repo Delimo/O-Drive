@@ -152,7 +152,7 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
           const summary = form.querySelector('[data-role="webhook-event-summary"]');
           form.querySelectorAll('input[name="events"]').forEach((input) => {
             input.disabled = useAll;
-            if (useAll) input.checked = true;
+            input.checked = useAll;
           });
           form.querySelector('[data-role="webhook-event-custom"]')?.classList.toggle("is-all-mode", useAll);
           form.querySelectorAll('input[name="eventMode"]').forEach((input) => {

@@ -753,6 +753,41 @@ test('webhook modal uses custom selects with hidden form values', () => {
   assert.doesNotMatch(html, /<select class="inline-input" name="method"/);
 });
 
+test('webhook custom event mode starts with empty selection', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'add-webhook',
+        loading: false,
+        error: '',
+        name: '',
+        url: '',
+        msgtype: 'json',
+        method: 'POST',
+        contentType: 'application/json',
+        headers: '',
+        body: '',
+        events: [],
+        eventMode: 'custom',
+        enabled: true,
+      },
+    },
+  });
+
+  assert.match(html, /<input type="radio" name="eventMode" value="custom"[^>]*checked/);
+  assert.match(html, /已选择 0 类事件/);
+  assert.doesNotMatch(html, /type="checkbox" name="events"[^>]*checked/);
+});
+
 test('trash restore confirm modal shows conflict summary and strategy', () => {
   const { renderModal } = createModalRenderers({
     icons,
