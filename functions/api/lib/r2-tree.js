@@ -18,11 +18,12 @@ import {
 
 export async function mapWithConcurrency(items, limit, worker) {
   const queue = [...items];
+  let nextIndex = 0;
   const workers = Array.from(
     { length: Math.min(limit, queue.length) },
     async () => {
-      while (queue.length) {
-        const item = queue.shift();
+      while (nextIndex < queue.length) {
+        const item = queue[nextIndex++];
         await worker(item);
       }
     },
@@ -112,32 +113,38 @@ export async function copyTree(env, sourceKey, targetKey, move = false) {
     if (item.key !== sourceKey) subtreeEntries.set(item.key, item);
   }
 
+  const failed = [];
   await mapWithConcurrency([...subtreeEntries.values()], 6, async (item) => {
     const logicalKey = item.path || item.key;
-    const nextKey = targetKey + logicalKey.slice(sourceKey.length);
-    const subLocation = await resolveExistingObjectLocation(env, logicalKey);
-    const subObj = await storageGet(env, "r2", subLocation.objectKey);
-    if (subObj) {
-      if (!move) {
-        await ensureSourceIndexed(env, logicalKey, subLocation, subObj);
-        await upsertFileIndex(env, nextKey, {
-          ...subObj,
-          storageId: "r2",
-          objectKey: subLocation.objectKey,
-        });
-      } else {
-        await storageCopy(env, "r2", subLocation.objectKey, "r2", nextKey);
-        const meta = await storageHead(env, "r2", nextKey);
-        await upsertFileIndex(env, nextKey, {
-          size: meta?.size,
-          httpMetadata: meta?.httpMetadata,
-          storageId: "r2",
-          objectKey: nextKey,
-        });
+    try {
+      const nextKey = targetKey + logicalKey.slice(sourceKey.length);
+      const subLocation = await resolveExistingObjectLocation(env, logicalKey);
+      const subObj = await storageGet(env, "r2", subLocation.objectKey);
+      if (subObj) {
+        if (!move) {
+          await ensureSourceIndexed(env, logicalKey, subLocation, subObj);
+          await upsertFileIndex(env, nextKey, {
+            ...subObj,
+            storageId: "r2",
+            objectKey: subLocation.objectKey,
+          });
+        } else {
+          await storageCopy(env, "r2", subLocation.objectKey, "r2", nextKey);
+          const meta = await storageHead(env, "r2", nextKey);
+          await upsertFileIndex(env, nextKey, {
+            size: meta?.size,
+            httpMetadata: meta?.httpMetadata,
+            storageId: "r2",
+            objectKey: nextKey,
+          });
+        }
+        if (move) {
+          await deletePathEntry(env, logicalKey, "r2", subLocation.objectKey);
+        }
       }
-      if (move) {
-        await deletePathEntry(env, logicalKey, "r2", subLocation.objectKey);
-      }
+    } catch (err) {
+      failed.push({ path: logicalKey, message: err?.message || "Failed" });
     }
   });
+  return { failed };
 }

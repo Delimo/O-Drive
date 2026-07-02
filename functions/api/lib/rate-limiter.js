@@ -60,6 +60,68 @@ export function checkRateLimit(key, maxRequests = 60, windowMs = 60000) {
   return { allowed: true, remaining: maxRequests - timestamps.length, retryAfter: 0 };
 }
 
+export async function checkRateLimitD1(
+  env,
+  key,
+  maxRequests = 60,
+  windowMs = 60000,
+) {
+  if (!env?.D1) return checkRateLimit(key, maxRequests, windowMs);
+
+  const now = Date.now();
+  try {
+    if (Math.random() < 0.01) {
+      await env.D1.prepare("DELETE FROM api_rate_limits WHERE window_start < ?")
+        .bind(now - windowMs)
+        .run();
+    }
+
+    const row = await env.D1.prepare(
+      "SELECT request_count, window_start FROM api_rate_limits WHERE key = ?",
+    )
+      .bind(key)
+      .first();
+
+    const windowStart = Number(row?.window_start || 0);
+    if (!row || windowStart < now - windowMs) {
+      await env.D1.prepare(
+        "INSERT OR REPLACE INTO api_rate_limits (key, request_count, window_start) VALUES (?, ?, ?)",
+      )
+        .bind(key, 1, now)
+        .run();
+      return {
+        allowed: true,
+        remaining: Math.max(0, maxRequests - 1),
+        retryAfter: 0,
+      };
+    }
+
+    const count = Number(row.request_count || 0);
+    if (count >= maxRequests) {
+      return {
+        allowed: false,
+        remaining: 0,
+        retryAfter: Math.max(1, Math.ceil((windowStart + windowMs - now) / 1000)),
+      };
+    }
+
+    const nextCount = count + 1;
+    await env.D1.prepare(
+      "UPDATE api_rate_limits SET request_count = ? WHERE key = ?",
+    )
+      .bind(nextCount, key)
+      .run();
+    return {
+      allowed: true,
+      remaining: Math.max(0, maxRequests - nextCount),
+      retryAfter: 0,
+    };
+  } catch (err) {
+    console.warn("[rate-limiter] D1 rate limit error:", err?.message || err);
+    return checkRateLimit(key, maxRequests, windowMs);
+  }
+}
+
 export function withRateLimit(handler, options = {}) {
   const { maxRequests = 60, windowMs = 60000, keyFn } = options;
   return async (request, env, ...args) => {

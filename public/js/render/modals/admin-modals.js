@@ -136,50 +136,177 @@ export function createAdminModalRenderers({
 
   function renderWebhookModal(modal) {
     const isEdit = modal.type === "edit-webhook";
-    const eventOptions = [
-      "file.uploaded",
-      "file.deleted",
-      "file.renamed",
-      "file.moved",
-      "file.copied",
-      "folder.created",
-      "trash.restored",
-      "admin.login_failure",
-      "download.burst",
-      "share.created",
-      "share.deleted",
+    const eventGroups = [
+      {
+        label: "文件变更",
+        desc: "上传、移动、复制、重命名和删除",
+        options: [
+          { key: "file.uploaded", label: "上传文件", desc: "文件写入完成" },
+          { key: "file.deleted", label: "移入回收站", desc: "文件被删除到回收站" },
+          { key: "file.purged", label: "彻底删除", desc: "回收站文件被永久清理" },
+          { key: "file.moved", label: "移动文件", desc: "文件路径位置变更" },
+          { key: "file.copied", label: "复制文件", desc: "生成文件副本" },
+          { key: "file.renamed", label: "重命名", desc: "文件或目录名称变更" },
+          { key: "folder.created", label: "新建文件夹", desc: "目录创建完成" },
+        ],
+      },
+      {
+        label: "风险提醒",
+        desc: "异常下载、登录异常和分享到期",
+        options: [
+          { key: "download.burst", label: "下载异常", desc: "短时间下载过多" },
+          { key: "login.burst", label: "登录异常", desc: "连续失败登录" },
+          { key: "share.expired", label: "分享到期", desc: "分享链接失效或耗尽" },
+        ],
+      },
     ];
+    const selectedEvents = Array.isArray(modal.events)
+      ? modal.events.map((event) => String(event || "").trim()).filter(Boolean)
+      : [];
+    const knownEvents = new Set(eventGroups.flatMap((group) => group.options.map((option) => option.key)));
+    const selectedSet = new Set(selectedEvents);
+    const legacyEvents = selectedEvents.filter((event) => !knownEvents.has(event));
+    const useAllEvents = selectedEvents.length === 0;
+    const eventCheckboxDisabled = useAllEvents ? "disabled" : "";
+    const msgtype = modal.msgtype || "json";
+    const method = modal.method || "POST";
+    const contentType = modal.contentType || "application/json";
+    const hasAdvancedValue = Boolean(
+      (modal.headers || "").trim()
+      || (modal.body || "").trim()
+      || msgtype !== "json"
+      || method !== "POST"
+      || contentType !== "application/json",
+    );
+    const eventCount = eventGroups.reduce((count, group) => count + group.options.length, 0);
+    const renderEventOption = (option) => `
+      <label class="webhook-event-option">
+        <input type="checkbox" name="events" value="${escapeHtml(option.key)}"
+               data-action-change="set-webhook-event"
+               ${selectedSet.has(option.key) ? "checked" : ""} ${eventCheckboxDisabled}>
+        <span>${escapeHtml(option.label)}</span>
+        <small>${escapeHtml(option.desc)}</small>
+      </label>
+    `;
+    const renderLegacyEvent = (event) => `
+      <label class="webhook-event-legacy">
+        <input type="checkbox" name="events" value="${escapeHtml(event)}" checked ${eventCheckboxDisabled}>
+        <span>${escapeHtml(event)}</span>
+      </label>
+    `;
     return `
       <div class="modal-wrap" data-action="close-modal-backdrop">
-        <div class="modal-card" role="dialog" aria-modal="true" data-stop-close="true" style="width:560px;">
-          <h3 class="modal-title">${isEdit ? "编辑" : "添加"} Webhook</h3>
+        <div class="modal-card webhook-modal-card" role="dialog" aria-modal="true" aria-labelledby="webhook-modal-title" data-stop-close="true">
+          <h3 id="webhook-modal-title" class="modal-title">${isEdit ? "编辑" : "添加"} Webhook</h3>
           <p class="modal-copy">配置事件通知的投递端点。</p>
           <form class="modal-form" data-form="${isEdit ? "edit" : "add"}-webhook">
-            <input class="inline-input" name="name" placeholder="名称" value="${escapeHtml(modal.name || "")}" required>
-            <input class="inline-input" name="url" placeholder="Webhook URL" value="${escapeHtml(modal.url || "")}" required>
-            <div class="webhook-modal-select-row">
-              ${renderModalCustomSelect({
-                id: "webhook-msgtype",
-                inputName: "msgtype",
-                value: modal.msgtype || "json",
-                options: ["json", "text", "markdown"].map((value) => ({ value, label: value })),
-                className: "webhook-modal-select",
-              })}
-              ${renderModalCustomSelect({
-                id: "webhook-method",
-                inputName: "method",
-                value: modal.method || "POST",
-                options: ["POST", "PUT", "PATCH", "GET", "DELETE"].map((value) => ({ value, label: value })),
-                className: "webhook-modal-select",
-              })}
-            </div>
-            <input class="inline-input" name="contentType" placeholder="Content-Type" value="${escapeHtml(modal.contentType || "application/json")}">
-            <textarea class="inline-input" name="headers" placeholder="自定义 Headers (JSON)" rows="2" style="resize:vertical;">${escapeHtml(modal.headers || "")}</textarea>
-            <textarea class="inline-input" name="body" placeholder="请求体模板（可选）" rows="2" style="resize:vertical;">${escapeHtml(modal.body || "")}</textarea>
-            <input class="inline-input" name="events" placeholder="事件类型（逗号分隔）" value="${escapeHtml((modal.events || []).join(", "))}">
-            <div style="font-size:12px;color:var(--muted);margin:-4px 0 8px;">可选事件：${eventOptions.join(", ")}</div>
-            <label class="check-row"><input type="checkbox" name="enabled" ${modal.enabled !== false ? "checked" : ""}>启用</label>
-            ${renderFormFeedback(modal.error, "支持事件变量：{{event}}、{{message}}、{{path}} 等。")}
+            <section class="webhook-modal-section">
+              <div class="webhook-modal-section-head">
+                <span>基础配置</span>
+                <small>名称、地址和启用状态</small>
+              </div>
+              <div class="webhook-field-grid">
+                <label class="webhook-field">
+                  <span>名称</span>
+                  <input class="inline-input" name="name" placeholder="例如：文件通知" value="${escapeHtml(modal.name || "")}" required>
+                </label>
+                <label class="webhook-enable-row">
+                  <input type="checkbox" name="enabled" ${modal.enabled !== false ? "checked" : ""}>
+                  <span>启用</span>
+                </label>
+                <label class="webhook-field webhook-field-url">
+                  <span>Webhook URL</span>
+                  <input class="inline-input" name="url" type="url" placeholder="https://example.com/webhook" value="${escapeHtml(modal.url || "")}" required>
+                </label>
+              </div>
+            </section>
+
+            <section class="webhook-modal-section">
+              <div class="webhook-modal-section-head">
+                <span>触发事件</span>
+                <small>${useAllEvents ? `当前接收全部 ${eventCount} 类事件` : `已选择 ${selectedEvents.length} 类事件`}</small>
+              </div>
+              <div class="webhook-event-mode-row">
+                <label class="webhook-event-mode ${useAllEvents ? "is-selected" : ""}">
+                  <input type="radio" name="eventMode" value="all" data-action-change="set-webhook-event-mode" ${useAllEvents ? "checked" : ""}>
+                  <span>全部事件</span>
+                  <small>后续新增事件也会自动接收</small>
+                </label>
+                <label class="webhook-event-mode ${!useAllEvents ? "is-selected" : ""}">
+                  <input type="radio" name="eventMode" value="custom" data-action-change="set-webhook-event-mode" ${!useAllEvents ? "checked" : ""}>
+                  <span>自定义事件</span>
+                  <small>只投递勾选的事件</small>
+                </label>
+              </div>
+              <div class="webhook-event-custom ${useAllEvents ? "is-disabled" : ""}" data-role="webhook-event-custom">
+                ${eventGroups.map((group) => `
+                  <div class="webhook-event-group">
+                    <div class="webhook-event-group-head">
+                      <span>${escapeHtml(group.label)}</span>
+                      <small>${escapeHtml(group.desc)}</small>
+                    </div>
+                    <div class="webhook-event-grid">
+                      ${group.options.map(renderEventOption).join("")}
+                    </div>
+                  </div>
+                `).join("")}
+                ${legacyEvents.length ? `
+                  <div class="webhook-event-group">
+                    <div class="webhook-event-group-head">
+                      <span>旧配置事件</span>
+                      <small>保留已有配置中的非推荐事件名</small>
+                    </div>
+                    <div class="webhook-event-legacy-row">
+                      ${legacyEvents.map(renderLegacyEvent).join("")}
+                    </div>
+                  </div>
+                ` : ""}
+              </div>
+            </section>
+
+            <details class="webhook-modal-advanced" ${hasAdvancedValue ? "open" : ""}>
+              <summary>
+                <span>高级选项</span>
+                <small>请求方式、Headers 和请求体模板</small>
+              </summary>
+              <div class="webhook-modal-advanced-body">
+                <div class="webhook-modal-select-row">
+                  ${renderModalCustomSelect({
+                    id: "webhook-msgtype",
+                    inputName: "msgtype",
+                    value: msgtype,
+                    options: ["json", "text", "markdown"].map((value) => ({ value, label: value })),
+                    className: "webhook-modal-select",
+                  })}
+                  ${renderModalCustomSelect({
+                    id: "webhook-method",
+                    inputName: "method",
+                    value: method,
+                    options: ["POST", "PUT", "PATCH", "GET", "DELETE"].map((value) => ({ value, label: value })),
+                    className: "webhook-modal-select",
+                  })}
+                </div>
+                <label class="webhook-field">
+                  <span>Content-Type</span>
+                  <input class="inline-input" name="contentType" placeholder="Content-Type" value="${escapeHtml(contentType)}">
+                </label>
+                <label class="webhook-field">
+                  <span>自定义 Headers</span>
+                  <textarea class="inline-input webhook-code-input" name="headers" placeholder='{"Authorization":"Bearer token"}' rows="4" spellcheck="false">${escapeHtml(modal.headers || "")}</textarea>
+                </label>
+                <label class="webhook-field">
+                  <span>请求体模板</span>
+                  <textarea class="inline-input webhook-code-input webhook-body-input" name="body" placeholder='{"text":"{{message}}"}' rows="5" spellcheck="false">${escapeHtml(modal.body || "")}</textarea>
+                </label>
+                <div class="webhook-token-row" aria-label="可用模板变量">
+                  <span>{{event}}</span>
+                  <span>{{message}}</span>
+                  <span>{{path}}</span>
+                  <span>{{timestamp}}</span>
+                </div>
+              </div>
+            </details>
+            ${renderFormFeedback(modal.error, "基础用法只需要填写名称、URL 和触发事件；Headers 与请求体模板可以留空。")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "保存中..." : isEdit ? "保存" : "添加"}</button>
               <button class="btn" type="button" data-action="close-modal">取消</button>

@@ -202,7 +202,10 @@ export async function handleMove(env, request, r2Key) {
     await softDeleteTree(env, destKey, null);
   }
 
-  await copyTree(env, r2Key, destKey, true);
+  const copyResult = await copyTree(env, r2Key, destKey, true);
+  if (copyResult.failed?.length) {
+    return new Response("Some items failed", { status: 409 });
+  }
   return new Response(null, { status: targetExists ? 204 : 201 });
 }
 
@@ -239,7 +242,10 @@ export async function handleCopy(env, request, r2Key) {
     await softDeleteTree(env, destKey, null);
   }
 
-  await copyTree(env, r2Key, destKey, false);
+  const copyResult = await copyTree(env, r2Key, destKey, false);
+  if (copyResult.failed?.length) {
+    return new Response("Some items failed", { status: 409 });
+  }
   return new Response(null, { status: targetExists ? 204 : 201 });
 }
 

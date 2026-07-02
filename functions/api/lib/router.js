@@ -186,50 +186,35 @@ async function handleBatchDeleteRoute({ env, request, context }) {
 }
 
 async function handleTrashDeleteRoute({ env, request, context }) {
-  const res = await handleTrashDelete(env, request);
-  const data = res.ok
-    ? await res
-        .clone()
-        .json()
-        .catch(() => null)
-    : null;
-  if (res.ok && data?.originalKey) {
+  const meta = {};
+  const res = await handleTrashDelete(env, request, meta);
+  if (res.ok && meta.webhook?.originalKey) {
     await notifyAfterOk(env, context, res, "file.purged", {
-      paths: [data.originalKey],
+      paths: [meta.webhook.originalKey],
     });
   }
   return res;
 }
 
 async function handleTrashClearRoute({ env, request, context }) {
-  const res = await handleTrashClear(env, request);
-  const data = res.ok
-    ? await res
-        .clone()
-        .json()
-        .catch(() => null)
-    : null;
-  if (res.ok && Number(data?.deleted || 0) > 0) {
+  const meta = {};
+  const res = await handleTrashClear(env, request, meta);
+  if (res.ok && Number(meta.webhook?.deleted || 0) > 0) {
     await notifyAfterOk(env, context, res, "file.purged", {
       path: "回收站",
-      deleted: data.deleted,
-      total: data.total,
+      deleted: meta.webhook.deleted,
+      total: meta.webhook.total,
     });
   }
   return res;
 }
 
 async function handleMkdirRoute({ env, request, r2Key, context }) {
-  const res = await handleMkdir(env, request, r2Key);
-  const data = res.ok
-    ? await res
-        .clone()
-        .json()
-        .catch(() => null)
-    : null;
-  if (res.ok && data?.path) {
+  const meta = {};
+  const res = await handleMkdir(env, request, r2Key, meta);
+  if (res.ok && meta.webhook?.path) {
     await notifyAfterOk(env, context, res, "folder.created", {
-      path: data.path,
+      path: meta.webhook.path,
     });
   }
   return res;
@@ -237,16 +222,11 @@ async function handleMkdirRoute({ env, request, r2Key, context }) {
 
 async function handleSingleUploadRoute({ env, request, r2Key, context }) {
   assertBodySize(request, true);
-  const res = await handleUpload(env, request, r2Key);
-  const data = res.ok
-    ? await res
-        .clone()
-        .json()
-        .catch(() => null)
-    : null;
-  if (res.ok && data?.key && !data?.skipped) {
+  const meta = {};
+  const res = await handleUpload(env, request, r2Key, meta);
+  if (res.ok && meta.webhook?.key) {
     await notifyAfterOk(env, context, res, "file.uploaded", {
-      path: "/" + data.key,
+      path: "/" + meta.webhook.key,
       uploader: "admin",
     });
   }

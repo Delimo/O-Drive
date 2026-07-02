@@ -66,7 +66,7 @@ async function cleanupReplacedObject(env, previous, nextStorageId, nextObjectKey
   await deleteStorageObjectRecord(env, previousStorageId, previousObjectKey);
 }
 
-export async function handleUpload(env, request, r2Key) {
+export async function handleUpload(env, request, r2Key, meta = {}) {
   const file = (await request.formData()).get("file");
   if (!file || typeof file.stream !== "function")
     return jsonResponse({ success: false, message: "Missing file" }, 400);
@@ -91,6 +91,7 @@ export async function handleUpload(env, request, r2Key) {
       resolved.conflict ? "UPLOAD_CONFLICT" : "UPLOAD",
       resolved.key,
     );
+    meta.webhook = { key: resolved.key };
     return jsonResponse({
       success: true,
       key: resolved.key,
@@ -162,6 +163,7 @@ export async function handleUpload(env, request, r2Key) {
     resolved.conflict ? "UPLOAD_CONFLICT" : "UPLOAD",
     resolved.key,
   );
+  meta.webhook = { key: resolved.key };
   return jsonResponse({
     success: true,
     key: resolved.key,

@@ -19,7 +19,12 @@ export async function handleRename(env, request, r2Key, body) {
   }
   if (r2Key === newKey) return jsonResponse({ success: true });
   if (r2Key !== newKey) await assertTargetAvailable(env, newKey);
-  await copyTree(env, r2Key, newKey, true);
+  const copyResult = await copyTree(env, r2Key, newKey, true);
+  if (copyResult.failed?.length) {
+    const err = new Error(copyResult.failed[0].message || "Rename partially failed");
+    err.status = 409;
+    throw err;
+  }
   await addLog(env, request, "RENAME", `${r2Key} -> ${cleanName}`);
   return jsonResponse({ success: true });
 }

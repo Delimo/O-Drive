@@ -58,8 +58,13 @@ export async function handlePaste(env, request, body) {
       if (!(await keyExists(env, task.srcKey)))
         throw new Error("File or folder not found");
       await assertTargetAvailable(env, task.destKey);
-      await copyTree(env, task.srcKey, task.destKey, action === "move");
-      return { ok: true };
+      const copyResult = await copyTree(
+        env,
+        task.srcKey,
+        task.destKey,
+        action === "move",
+      );
+      return { ok: true, failed: copyResult.failed || [] };
     } catch (e) {
       return { ok: false, message: e.message || "Failed" };
     }
@@ -94,6 +99,12 @@ export async function handlePaste(env, request, body) {
     const result = results[index];
     if (result?.ok) {
       if (!result.skipped) completed++;
+      for (const item of result.failed || []) {
+        failed.push({
+          path: item.path || normalizedPaths[index],
+          message: item.message || "Failed",
+        });
+      }
       continue;
     }
     failed.push({

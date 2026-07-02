@@ -145,6 +145,34 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         return;
       }
 
+      if (actionChange === "set-webhook-event-mode") {
+        const form = event.target.closest('form[data-form="add-webhook"], form[data-form="edit-webhook"]');
+        if (form) {
+          const useAll = event.target.value === "all" && event.target.checked;
+          form.querySelectorAll('input[name="events"]').forEach((input) => {
+            input.disabled = useAll;
+          });
+          form.querySelector('[data-role="webhook-event-custom"]')?.classList.toggle("is-disabled", useAll);
+          form.querySelectorAll('input[name="eventMode"]').forEach((input) => {
+            input.closest(".webhook-event-mode")?.classList.toggle("is-selected", input.checked);
+          });
+        }
+        return;
+      }
+
+      if (actionChange === "set-webhook-event") {
+        const form = event.target.closest('form[data-form="add-webhook"], form[data-form="edit-webhook"]');
+        if (form) {
+          const customMode = form.querySelector('input[name="eventMode"][value="custom"]');
+          if (customMode) customMode.checked = true;
+          form.querySelectorAll('input[name="eventMode"]').forEach((input) => {
+            input.closest(".webhook-event-mode")?.classList.toggle("is-selected", input.checked);
+          });
+          form.querySelector('[data-role="webhook-event-custom"]')?.classList.remove("is-disabled");
+        }
+        return;
+      }
+
       if (event.target.id === "upload-input" || event.target.id === "folder-upload-input") {
         return "upload";
       }
@@ -232,7 +260,14 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
           dispatchToast("error", "Headers 格式错误，需为有效 JSON");
           return;
         }
-        const events = String(data.get("events") || "").split(",").map((s) => s.trim()).filter(Boolean);
+        const eventMode = String(data.get("eventMode") || "all");
+        const events = eventMode === "all"
+          ? []
+          : [...new Set(data.getAll("events").map((s) => String(s || "").trim()).filter(Boolean))];
+        if (eventMode === "custom" && events.length === 0) {
+          dispatchToast("error", "请选择至少一个事件，或改为接收全部事件");
+          return;
+        }
         const webhook = { id: isEdit ? modal.id : `wh-${Date.now()}`, name: String(data.get("name") || "").trim(), msgtype: String(data.get("msgtype") || "json"), url: String(data.get("url") || "").trim(), method: String(data.get("method") || "POST"), contentType: String(data.get("contentType") || "application/json"), headers, body: String(data.get("body") || ""), events, enabled: data.get("enabled") === "on" };
         if (!webhook.name || !webhook.url) {
           dispatchToast("error", "名称和 URL 为必填项");

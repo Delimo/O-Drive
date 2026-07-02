@@ -11,15 +11,8 @@
 | `layout.md` | 页面布局、region、flex 链路和常见布局排查。 |
 | `admin-page.md` | 后台管理页 Tab、渲染器和事件约定。 |
 
-## 阶段性文档
-
-| 文档 | 用途 |
-| --- | --- |
-| `improvements.md` | 一次代码审阅后的改进建议清单，按优先级排期实施；条目完成后移除并合并结论到 `maintenance-handoff.md`。 |
-
 ## 治理状态
 
-- `improvements.md` 是阶段性改进清单，全部落地后应清空并删除，价值结论合并进 `maintenance-handoff.md`。
 - 当前目录没有保留已完成的一次性 mockup、临时交接稿或过期路线图。
 - `frontend-style.md` 和 `layout.md` 仍是长期设计/布局参考，不作为临时计划清理。
 - 后续如果出现 `*-review.md`、`*-plan.md`、`*-todo.md` 等阶段性文档，完成后优先合并到本索引、`maintenance-handoff.md`、`architecture.md` 或对应主题文档，再删除原文件。

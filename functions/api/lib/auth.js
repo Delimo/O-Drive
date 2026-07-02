@@ -20,6 +20,8 @@ const SESSION_TTL_SECONDS = 24 * 60 * 60;
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
 const LOGIN_ALERT_COOLDOWN_MS = 30 * 60 * 1000;
+const LOGIN_ACCOUNT_THROTTLE_ATTEMPTS = 20;
+const LOGIN_ACCOUNT_DELAY_MS = 750;
 
 function isSecureRequest(request) {
   return request && new URL(request.url).protocol === "https:";
@@ -92,12 +94,29 @@ async function checkLoginLocked(env, ip) {
   return { locked: false };
 }
 
-async function recordLoginFailure(env, ip) {
+function loginAccountKey(username) {
+  const normalized = String(username || "").trim().toLowerCase();
+  return normalized ? `user:${normalized.slice(0, 128)}` : "";
+}
+
+async function clearLoginAttempt(env, key) {
+  if (!key) return;
+  try {
+    await env.D1.prepare("DELETE FROM login_attempts WHERE ip = ?")
+      .bind(key)
+      .run();
+  } catch (e) {
+    console.warn("[auth] clear login attempts error:", e.message);
+  }
+}
+
+async function recordLoginAttempt(env, key) {
+  if (!key) return 0;
   try {
     const row = await env.D1.prepare(
       "INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET attempts = attempts + 1, last_attempt = excluded.last_attempt RETURNING attempts",
     )
-      .bind(ip, Date.now())
+      .bind(key, Date.now())
       .first();
     return Number(row?.attempts || 0);
   } catch (e) {
@@ -106,9 +125,57 @@ async function recordLoginFailure(env, ip) {
   return 0;
 }
 
+async function recordLoginFailure(env, ip, accountKey) {
+  const [ipAttempts, accountAttempts] = await Promise.all([
+    recordLoginAttempt(env, ip),
+    accountKey ? recordLoginAttempt(env, accountKey) : Promise.resolve(0),
+  ]);
+  return { ipAttempts, accountAttempts };
+}
+
 function positiveNumber(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function boundedPositiveNumber(value, fallback, max) {
+  return Math.min(positiveNumber(value, fallback), max);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function checkLoginAccountThrottled(env, accountKey) {
+  if (!accountKey) return { throttled: false, attempts: 0, delayMs: 0 };
+  const now = Date.now();
+  const threshold = positiveNumber(
+    env.LOGIN_ACCOUNT_THROTTLE_ATTEMPTS,
+    LOGIN_ACCOUNT_THROTTLE_ATTEMPTS,
+  );
+  const delayMs = boundedPositiveNumber(
+    env.LOGIN_ACCOUNT_DELAY_MS,
+    LOGIN_ACCOUNT_DELAY_MS,
+    3000,
+  );
+  try {
+    const row = await env.D1.prepare(
+      "SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?",
+    )
+      .bind(accountKey)
+      .first();
+    const attempts = Number(row?.attempts || 0);
+    const lastAttempt = Number(row?.last_attempt || 0);
+    if (attempts >= threshold && now - lastAttempt < LOGIN_LOCKOUT_MS) {
+      return { throttled: true, attempts, delayMs };
+    }
+    if (now - lastAttempt >= LOGIN_LOCKOUT_MS) {
+      await clearLoginAttempt(env, accountKey);
+    }
+  } catch (e) {
+    console.warn("[auth] checkLoginAccountThrottled error:", e.message);
+  }
+  return { throttled: false, attempts: 0, delayMs: 0 };
 }
 
 async function shouldSendLoginAlert(env, ip) {
@@ -165,20 +232,20 @@ export async function handleLogin(request, env, context = {}) {
   await ensureCoreTables(env);
   const { username, password } = await request.json().catch(() => ({}));
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const accountKey = loginAccountKey(username);
 
   const attemptResult = await checkLoginLocked(env, ip);
   if (attemptResult.locked) {
     return jsonResponse({ success: false, message: "Too many attempts" }, 429);
   }
 
+  const accountThrottle = await checkLoginAccountThrottled(env, accountKey);
+  if (accountThrottle.throttled) {
+    await sleep(accountThrottle.delayMs);
+  }
+
   if (username === env.ADMIN_USERNAME && await timingSafeEqual(password, env.ADMIN_PASSWORD)) {
-    try {
-      await env.D1.prepare("DELETE FROM login_attempts WHERE ip = ?")
-        .bind(ip)
-        .run();
-    } catch (e) {
-      console.warn("[auth] clear login attempts error:", e.message);
-    }
+    await Promise.all([clearLoginAttempt(env, ip), clearLoginAttempt(env, accountKey)]);
     const csrf = createCsrfToken();
     const now = Math.floor(Date.now() / 1000);
     const header = encodeBase64Url(
@@ -198,11 +265,11 @@ export async function handleLogin(request, env, context = {}) {
     });
   }
 
-  const attempts = await recordLoginFailure(env, ip);
-  if (attempts >= LOGIN_MAX_ATTEMPTS)
+  const { ipAttempts } = await recordLoginFailure(env, ip, accountKey);
+  if (ipAttempts >= LOGIN_MAX_ATTEMPTS)
     waitForWebhook(
       context,
-      notifyLoginFailureBurst(env, request, username, ip, attempts, context),
+      notifyLoginFailureBurst(env, request, username, ip, ipAttempts, context),
     );
   return jsonResponse({ success: false }, 401);
 }

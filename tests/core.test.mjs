@@ -836,6 +836,40 @@ test('admin login locks after repeated failed attempts and clears after success'
   }
 });
 
+test('admin login tracks account failures across IPs without hard locking the account', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+  env.LOGIN_ACCOUNT_THROTTLE_ATTEMPTS = '3';
+  env.LOGIN_ACCOUNT_DELAY_MS = '1';
+
+  for (let i = 0; i < 3; i++) {
+    const failed = await handleLogin(new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'bad' }),
+      headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': `203.0.113.${60 + i}` },
+    }), env);
+    assert.equal(failed.status, 401);
+  }
+
+  const accountRow = await env.D1.prepare('SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?')
+    .bind('user:admin')
+    .first();
+  assert.equal(accountRow.attempts, 3);
+
+  const success = await handleLogin(new Request('https://example.com/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'admin', password: 'pass' }),
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.99' },
+  }), env);
+  assert.equal(success.status, 200);
+
+  const clearedAccountRow = await env.D1.prepare('SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?')
+    .bind('user:admin')
+    .first();
+  assert.equal(clearedAccountRow, null);
+});
+
 test('admin login failure burst sends one webhook alert during cooldown', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -2158,6 +2192,36 @@ test('copy and move operations keep file index in sync', async () => {
   assert.deepEqual((await search.json()).files.map(file => file.fullKey), ['moved/nested/b.txt']);
   search = await handleSearch(env, new Request('https://example.com/api/search?q=b.txt&scope=/docs'), new URL('https://example.com/api/search?q=b.txt&scope=/docs'), [], { role: 'guest' }, []);
   assert.deepEqual((await search.json()).files.map(file => file.fullKey), []);
+});
+
+test('paste reports subtree failures without deleting failed move sources', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-01') },
+      { key: 'docs/b.txt', body: 'b', size: 1, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  const originalCopy = env.R2.copy;
+  env.R2.copy = async (sourceKey, destKey, options) => {
+    if (sourceKey === 'docs/b.txt') throw new Error('copy failed');
+    return originalCopy(sourceKey, destKey, options);
+  };
+
+  const res = await handlePaste(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'move', paths: ['docs'], targetDir: '/moved' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+
+  assert.equal(res.status, 200);
+  assert.equal(data.success, false);
+  assert.equal(data.completed, 1);
+  assert.deepEqual(data.failed, [{ path: 'docs/b.txt', message: 'copy failed' }]);
+  assert.equal(await env.R2.get('docs/a.txt'), null);
+  assert.ok(await env.R2.get('moved/docs/a.txt'));
+  assert.ok(await env.R2.get('docs/b.txt'));
+  assert.equal(await env.R2.get('moved/docs/b.txt'), null);
 });
 
 test('same-storage copy creates a logical alias without duplicating the object', async () => {
@@ -3668,7 +3732,7 @@ test('webhook delivery records are capped while showing the latest page', async 
         request: new Request('https://example.com/api/admin/settings/webhooks', {
           method: 'POST',
           body: JSON.stringify({ endpoint: { name: `receiver-${i}`, url: `https://example.com/webhook-${i}` } }),
-          headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+          headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf, 'cf-connecting-ip': `198.51.100.${i}` },
         }),
       });
       assert.equal(res.status, 200);

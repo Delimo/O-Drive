@@ -15,11 +15,21 @@ import {
   handleMove,
   handleCopy,
 } from "./lib/methods.js";
-import { checkRateLimit, getClientIp } from "../api/lib/rate-limiter.js";
+import { ensureCoreTables } from "../api/lib/common/index.js";
+import { checkRateLimitD1, getClientIp } from "../api/lib/rate-limiter.js";
 
 const ALLOW_METHODS = "OPTIONS, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, PROPFIND";
 const DAV_RATE_LIMIT = 30;
 const DAV_RATE_WINDOW = 60000;
+let coreTablesReady;
+
+function ensureCoreTablesOnce(env) {
+  coreTablesReady ||= ensureCoreTables(env).catch(err => {
+    coreTablesReady = null;
+    throw err;
+  });
+  return coreTablesReady;
+}
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -45,9 +55,11 @@ export async function onRequest(context) {
     });
   }
 
+  await ensureCoreTablesOnce(env);
+
   // Rate limit per IP before authentication
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`dav:${ip}`, DAV_RATE_LIMIT, DAV_RATE_WINDOW);
+  const rl = await checkRateLimitD1(env, `dav:${ip}`, DAV_RATE_LIMIT, DAV_RATE_WINDOW);
   if (!rl.allowed) {
     return new Response("Too Many Requests", {
       status: 429,

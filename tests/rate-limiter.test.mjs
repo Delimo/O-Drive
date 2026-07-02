@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkRateLimit, resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
+import { checkRateLimit, checkRateLimitD1, resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
+import { makeEnv } from './helpers/make-env.mjs';
 
 test('rate-limiter allows requests under limit', () => {
   resetRateLimiter();
@@ -36,4 +37,43 @@ test('rate-limiter handles different keys independently', () => {
   assert.equal(r3a.allowed, false);
   const r2b = checkRateLimit('key:b', max, 60000);
   assert.equal(r2b.allowed, true);
+});
+
+test('D1 rate-limiter blocks when limit exceeded', async () => {
+  const env = makeEnv();
+  const max = 3;
+  for (let i = 0; i < max; i++) {
+    const result = await checkRateLimitD1(env, 'd1:block', max, 60000);
+    assert.equal(result.allowed, true, `request ${i + 1} should be allowed`);
+  }
+  const blocked = await checkRateLimitD1(env, 'd1:block', max, 60000);
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.remaining, 0);
+  assert.ok(blocked.retryAfter > 0);
+});
+
+test('D1 rate-limiter handles different keys independently', async () => {
+  const env = makeEnv();
+  const max = 2;
+  assert.equal((await checkRateLimitD1(env, 'd1:a', max, 60000)).allowed, true);
+  assert.equal((await checkRateLimitD1(env, 'd1:b', max, 60000)).allowed, true);
+  assert.equal((await checkRateLimitD1(env, 'd1:a', max, 60000)).allowed, true);
+  assert.equal((await checkRateLimitD1(env, 'd1:a', max, 60000)).allowed, false);
+  assert.equal((await checkRateLimitD1(env, 'd1:b', max, 60000)).allowed, true);
+});
+
+test('D1 rate-limiter resets after window expires', async () => {
+  const env = makeEnv();
+  const originalNow = Date.now;
+  try {
+    Date.now = () => 100000;
+    assert.equal((await checkRateLimitD1(env, 'd1:reset', 1, 1000)).allowed, true);
+    assert.equal((await checkRateLimitD1(env, 'd1:reset', 1, 1000)).allowed, false);
+    Date.now = () => 101001;
+    const reset = await checkRateLimitD1(env, 'd1:reset', 1, 1000);
+    assert.equal(reset.allowed, true);
+    assert.equal(reset.remaining, 0);
+  } finally {
+    Date.now = originalNow;
+  }
 });

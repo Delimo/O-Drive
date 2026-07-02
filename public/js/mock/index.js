@@ -340,7 +340,7 @@ export const mockWebhooks = [
     contentType: "application/json",
     headers: {},
     body: '{"text":"{{message}}"}',
-    events: ["admin.login_failure", "download.burst"],
+    events: ["login.burst", "download.burst"],
     enabled: false,
   },
 ];
@@ -372,7 +372,7 @@ export const mockWebhookDeliveries = [
   },
   {
     id: 3,
-    event: "admin.login_failure",
+    event: "login.burst",
     endpoint: "管理告警",
     url: "https://chat.example.com/hooks/abc123",
     ok: 0,

@@ -5,6 +5,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const pathAttemptRows = [];
   const loginAttemptRows = [];
   const loginAlertRows = [];
+  const apiRateLimitRows = [];
   const downloadBurstRows = [];
   const webhookDeliveryRows = [];
   let webhookDeliveryNextId = 1;
@@ -457,6 +458,16 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               if (idx >= 0) loginAlertRows[idx] = row;
               else loginAlertRows.push(row);
             }
+            if (/INSERT OR REPLACE INTO api_rate_limits/i.test(sql)) {
+              const row = {
+                key: statement.bound?.[0],
+                request_count: statement.bound?.[1],
+                window_start: statement.bound?.[2],
+              };
+              const idx = apiRateLimitRows.findIndex(item => item.key === row.key);
+              if (idx >= 0) apiRateLimitRows[idx] = row;
+              else apiRateLimitRows.push(row);
+            }
             if (/INSERT OR REPLACE INTO download_bursts/i.test(sql)) {
               const row = {
                 key: statement.bound?.[0],
@@ -479,6 +490,11 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 row.blocked_until = statement.bound?.[2];
                 row.sample_paths = statement.bound?.[3];
               }
+            }
+            if (/UPDATE api_rate_limits SET request_count = \?/i.test(sql)) {
+              const key = statement.bound?.[1];
+              const row = apiRateLimitRows.find(item => item.key === key);
+              if (row) row.request_count = statement.bound?.[0];
             }
             if (/UPDATE file_index SET object_key = \?, updated_at = \? WHERE storage_id = \? AND COALESCE\(NULLIF\(object_key, ''\), path\) = \?/i.test(sql)) {
               const [nextObjectKey, updatedAt, storageId, oldObjectKey] = statement.bound || [];
@@ -683,6 +699,12 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 if (Number(row.window_start || 0) < windowCutoff && Number(row.last_alert || 0) < alertCutoff) { downloadBurstRows.splice(i, 1); changes++; }
               }
             }
+            if (/DELETE FROM api_rate_limits WHERE window_start < \?/i.test(sql)) {
+              const cutoff = Number(statement.bound?.[0] || 0);
+              for (let i = apiRateLimitRows.length - 1; i >= 0; i--) {
+                if (Number(apiRateLimitRows[i].window_start || 0) < cutoff) { apiRateLimitRows.splice(i, 1); changes++; }
+              }
+            }
             if (/DELETE FROM webhook_deliveries WHERE created_at < \?/i.test(sql)) {
               const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = webhookDeliveryRows.length - 1; i >= 0; i--) {
@@ -838,6 +860,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/SELECT last_alert FROM login_alerts WHERE key = \?/i.test(sql)) {
               return loginAlertRows.find(row => row.key === statement.bound?.[0]) || null;
+            }
+            if (/SELECT request_count, window_start FROM api_rate_limits WHERE key = \?/i.test(sql)) {
+              return apiRateLimitRows.find(row => row.key === statement.bound?.[0]) || null;
             }
             if (/SELECT attempts, last_attempt FROM path_access_attempts WHERE path = \? AND ip = \?/i.test(sql)) {
               const [path, ip] = statement.bound || [];

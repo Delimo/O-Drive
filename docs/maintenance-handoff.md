@@ -1,6 +1,6 @@
 # O-Drive 维护交接
 
-> 更新时间：2026-07-01。本文是接手入口，只记录当前代码库的实际状态。
+> 更新时间：2026-07-02。本文是接手入口，只记录当前代码库的实际状态。
 
 ## 项目现状
 
@@ -60,6 +60,10 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 - 后台失败或部分失败任务可从系统 Tab 重试；上传任务仍由浏览器侧上传队列重试。
 - 后台 ZIP 结果写入 `.system/zip-tasks/`，会按 `ZIP_TASK_RETENTION_DAYS` 自动清理，也可通过系统 Tab 的维护指令手动清理。
 - 容量告警和任务失败告警共用 `functions/api/lib/alert-rules.js` 的阈值判断 helper。
+- API 与 WebDAV 入口的全局限流已接入 D1 `api_rate_limits` 表；内存限流仍保留为无 D1 时的降级路径。
+- 管理员登录失败防护现在同时记录 IP 和账号维度；IP 维度仍会硬锁，账号维度只做软降速，成功登录会清理两类失败计数。
+- 目录复制/移动的 `copyTree` 会收集子树单项失败，批量粘贴会返回具体失败子路径，失败的 move 子项不会删除源对象。
+- Webhook 写操作通知不再依赖 `Response.clone().json()` 二次解析；相关 handler 通过可选 meta 向 router 传递通知数据。
 
 ## 后续维护提示
 

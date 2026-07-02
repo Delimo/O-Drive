@@ -5631,6 +5631,333 @@ select.input {
   padding-right: 24px;
 }
 
+.webhook-modal-card {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(88vh, 860px);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.webhook-modal-card .modal-form {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-right: -4px;
+}
+
+.webhook-modal-section,
+.webhook-modal-advanced {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.webhook-modal-section {
+  padding: 14px;
+}
+
+.webhook-modal-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.webhook-modal-section-head span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.webhook-modal-section-head small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.webhook-field-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.webhook-field-url {
+  grid-column: 1 / -1;
+}
+
+.webhook-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.webhook-field > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.webhook-enable-row {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.webhook-enable-row input {
+  width: 16px;
+  height: 16px;
+}
+
+.webhook-event-mode-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.webhook-event-mode {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  min-height: 60px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.webhook-event-mode input {
+  grid-row: 1 / span 2;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.webhook-event-mode span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.webhook-event-mode small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.webhook-event-mode.is-selected,
+.webhook-event-mode:has(input:checked) {
+  border-color: rgba(14, 116, 144, 0.36);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.06);
+}
+
+.webhook-event-custom {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  transition: opacity 0.15s;
+}
+
+.webhook-event-custom.is-disabled {
+  opacity: 0.56;
+}
+
+.webhook-event-group {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.webhook-event-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.webhook-event-group-head span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.webhook-event-group-head small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.webhook-event-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.webhook-event-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  min-height: 62px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.webhook-event-option input {
+  grid-row: 1 / span 2;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.webhook-event-option span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.webhook-event-option small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.webhook-event-option:has(input:checked) {
+  border-color: rgba(14, 116, 144, 0.34);
+  background: rgba(14, 116, 144, 0.07);
+}
+
+.webhook-event-option:has(input:disabled) {
+  cursor: default;
+}
+
+.webhook-event-legacy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.webhook-event-legacy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.webhook-modal-advanced {
+  overflow: hidden;
+}
+
+.webhook-modal-advanced summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.webhook-modal-advanced summary::-webkit-details-marker {
+  display: none;
+}
+
+.webhook-modal-advanced summary::marker {
+  content: "";
+}
+
+.webhook-modal-advanced summary:hover {
+  background: var(--panel-soft);
+  color: var(--accent);
+}
+
+.webhook-modal-advanced summary span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.webhook-modal-advanced summary small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.webhook-modal-advanced-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.webhook-code-input {
+  height: 96px;
+  min-height: 96px;
+  padding: 10px 12px;
+  resize: none;
+  overflow: auto;
+  line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12.5px;
+}
+
+.webhook-body-input {
+  height: 120px;
+  min-height: 120px;
+}
+
+.webhook-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.webhook-token-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
 .webhook-modal-select-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5655,6 +5982,36 @@ select.input {
 }
 
 @media (max-width: 640px) {
+  .webhook-modal-card {
+    width: min(100%, calc(100vw - 24px));
+    max-height: min(90vh, 820px);
+    padding: 20px;
+  }
+
+  .webhook-field-grid,
+  .webhook-event-mode-row,
+  .webhook-event-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .webhook-enable-row {
+    justify-content: flex-start;
+  }
+
+  .webhook-modal-section-head,
+  .webhook-event-group-head,
+  .webhook-modal-advanced summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .webhook-modal-section-head small,
+  .webhook-event-group-head small,
+  .webhook-modal-advanced summary small {
+    text-align: left;
+  }
+
   .webhook-modal-select-row {
     grid-template-columns: 1fr;
   }

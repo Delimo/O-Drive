@@ -6,7 +6,7 @@ import {
 } from "./helpers.js";
 import { ensureSettingsTable, ensureTrashTable } from "./schema.js";
 
-export async function handleTrashDelete(env, request) {
+export async function handleTrashDelete(env, request, meta = {}) {
   const { id } = await request.json().catch(() => ({}));
   if (!id)
     return jsonResponse(
@@ -23,10 +23,11 @@ export async function handleTrashDelete(env, request) {
       404,
     );
   await purgeTrashRecord(env, row, request);
+  meta.webhook = { originalKey: row.original_key };
   return jsonResponse({ success: true, originalKey: row.original_key });
 }
 
-export async function handleTrashClear(env, request) {
+export async function handleTrashClear(env, request, meta = {}) {
   const rows = await trashRows(env);
   let deleted = 0;
   const errors = [];
@@ -48,6 +49,7 @@ export async function handleTrashClear(env, request) {
       });
   });
   await addLog(env, request, "TRASH_CLEAR", `${deleted}/${rows.length} items`);
+  meta.webhook = { deleted, total: rows.length };
   return jsonResponse({
     success: true,
     deleted,
