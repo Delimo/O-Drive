@@ -1149,6 +1149,41 @@ test('admin protected paths section renders path list with delete buttons', () =
   assert.match(html, /内部敏感资料/);
 });
 
+test('admin storage access rule editor renders inline draft state', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false, activeTab: 'storage', stats: { files: { count: 1 }, trash: { count: 0 }, index: {} },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: null, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: null, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
+      webhooksLoading: false, webhooks: [], webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: [],
+      storageConfig: { r2: { name: 'bucket', usedFormatted: '0 B', quotaFormatted: '10 GB', usedPercent: 0 } }, storageConfigLoading: false, storageConfigError: '',
+      accessRuleDraft: {
+        path: '/secret',
+        hidden: true,
+        showName: false,
+        password: 'abcd',
+        note: 'private',
+      },
+      accessRuleSaving: true,
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /data-action="save-access-rule" disabled/);
+  assert.match(html, /保存中\.\.\./);
+  assert.match(html, /data-action-input="set-rule-path" value="\/secret"/);
+  assert.match(html, /data-action-change="toggle-rule-hide" checked/);
+  assert.doesNotMatch(html, /data-action-change="toggle-rule-show-name" checked/);
+  assert.match(html, /data-action-input="set-rule-password" value="abcd"/);
+  assert.match(html, /data-action-input="set-rule-note" value="private"/);
+});
+
 test('admin maintenance section renders snapshot and action buttons', () => {
   const state = {
     app: { role: 'admin' },

@@ -17,6 +17,21 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
         return;
       }
 
+      if (actionInput === "set-rule-path") {
+        store.dispatch(actions.admin.setAccessRuleDraft({ path: event.target.value }));
+        return;
+      }
+
+      if (actionInput === "set-rule-password") {
+        store.dispatch(actions.admin.setAccessRuleDraft({ password: event.target.value }));
+        return;
+      }
+
+      if (actionInput === "set-rule-note") {
+        store.dispatch(actions.admin.setAccessRuleDraft({ note: event.target.value }));
+        return;
+      }
+
       if (event.target.id === "preview-edit-area") {
         const modal = store.getState().app.modal;
         if (modal && modal.type === "preview" && modal.editing) {
@@ -110,6 +125,16 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
 
       if (actionChange === "set-shares-filter") {
         store.dispatch(actions.admin.setShareFilter(event.target.value));
+        return;
+      }
+
+      if (actionChange === "toggle-rule-hide") {
+        store.dispatch(actions.admin.setAccessRuleDraft({ hidden: event.target.checked }));
+        return;
+      }
+
+      if (actionChange === "toggle-rule-show-name") {
+        store.dispatch(actions.admin.setAccessRuleDraft({ showName: event.target.checked }));
         return;
       }
 

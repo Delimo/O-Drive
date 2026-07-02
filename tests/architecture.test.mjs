@@ -100,3 +100,51 @@ test('new renderer dropdowns use the optimized custom select by default', () => 
     'Use renderCustomSelect/cselect for new dropdowns, or add a deliberate exception here.',
   );
 });
+
+test('literal renderer actions stay wired to event handlers', () => {
+  const publicFiles = listProjectFiles('public').filter((file) => /\.(js|html)$/.test(file));
+  const eventSource = listProjectFiles('public/js/events')
+    .filter((file) => file.endsWith('.js'))
+    .map(readProjectFile)
+    .join('\n');
+
+  function collectLiteralAttributes(attribute) {
+    const values = new Map();
+    const pattern = new RegExp(`${attribute}=([\"'])([A-Za-z0-9_-]+)\\1`, 'g');
+    for (const file of publicFiles) {
+      const source = readProjectFile(file);
+      for (const match of source.matchAll(pattern)) {
+        if (!values.has(match[2])) values.set(match[2], new Set());
+        values.get(match[2]).add(file);
+      }
+    }
+    return values;
+  }
+
+  function collectHandled(comparisonName) {
+    return new Set(
+      [...eventSource.matchAll(new RegExp(`${comparisonName}\\s*===\\s*[\"']([^\"']+)[\"']`, 'g'))]
+        .map((match) => match[1]),
+    );
+  }
+
+  const actionIgnored = new Set([
+    // Custom date picker footer buttons are handled inside bindCustomDatePickers.
+    'clear',
+    'today',
+  ]);
+  const checks = [
+    ['data-action', collectHandled('action'), actionIgnored],
+    ['data-action-input', collectHandled('actionInput'), new Set()],
+    ['data-action-change', collectHandled('actionChange'), new Set()],
+  ];
+
+  for (const [attribute, handled, ignored] of checks) {
+    const missing = [...collectLiteralAttributes(attribute).entries()]
+      .filter(([value]) => !handled.has(value) && !ignored.has(value))
+      .map(([value, files]) => `${value}: ${[...files].join(', ')}`)
+      .sort();
+
+    assert.deepEqual(missing, [], `${attribute} values should be handled`);
+  }
+});

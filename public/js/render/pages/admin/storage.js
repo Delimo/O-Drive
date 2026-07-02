@@ -8,7 +8,8 @@ export function createStorageRenderer({
       trashRetention, trashRetentionLoading, trashCleanupBusy,
       trashPreviewItems = [], trashPreviewLoading, trashPreviewError,
       protectedPaths = [], protectedPathsLoading, protectedPathsError,
-      hiddenPaths = [], hiddenPathsLoading, hiddenPathsError
+      hiddenPaths = [], hiddenPathsLoading, hiddenPathsError,
+      accessRuleDraft = {}, accessRuleSaving = false
     } = admin;
 
     if (storageConfigError) {
@@ -27,6 +28,14 @@ export function createStorageRenderer({
     const hiddenRuleCount = (hiddenPaths || []).length;
     const protectedRuleCount = (protectedPaths || []).length;
     const accessRuleCount = hiddenRuleCount + protectedRuleCount;
+    const ruleDraft = {
+      path: "",
+      hidden: false,
+      showName: true,
+      password: "",
+      note: "",
+      ...(accessRuleDraft || {}),
+    };
 
     return `
       <div class="ov-storage">
@@ -137,25 +146,27 @@ export function createStorageRenderer({
             <div class="ov-rules-editor-header">
               <div class="ov-rules-editor-title-row">
                 <h3 class="ov-rules-editor-title">新建规则</h3>
-                <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule">保存规则</button>
+                <button class="btn btn-primary btn-sm" type="button" data-action="save-access-rule" ${accessRuleSaving ? "disabled" : ""}>
+                  ${accessRuleSaving ? "保存中..." : "保存规则"}
+                </button>
               </div>
               <p class="ov-rules-editor-desc">路径可以是目录，也可以是具体文件。</p>
             </div>
             <div class="ov-rules-editor-body">
               <div class="ov-rules-field">
                 <label class="ov-rules-label">路径</label>
-                <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path">
+                <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path" value="${escapeHtml(ruleDraft.path)}">
               </div>
               <div class="ov-rules-options">
                 <label class="ov-rules-checkbox">
-                  <input type="checkbox" data-action-change="toggle-rule-hide">
+                  <input type="checkbox" data-action-change="toggle-rule-hide" ${ruleDraft.hidden ? "checked" : ""}>
                   <span class="ov-rules-checkbox-label">
                     <span class="ov-rules-checkbox-title">隐藏路径</span>
                     <span class="ov-rules-checkbox-desc">从访客文件列表移除</span>
                   </span>
                 </label>
                 <label class="ov-rules-checkbox">
-                  <input type="checkbox" checked data-action-change="toggle-rule-show-name">
+                  <input type="checkbox" data-action-change="toggle-rule-show-name" ${ruleDraft.showName !== false ? "checked" : ""}>
                   <span class="ov-rules-checkbox-label">
                     <span class="ov-rules-checkbox-title">名称可见</span>
                     <span class="ov-rules-checkbox-desc">受密码保护时仍显示名称</span>
@@ -165,11 +176,11 @@ export function createStorageRenderer({
               <div class="ov-rules-inline-fields">
                 <div class="ov-rules-field">
                   <label class="ov-rules-label">访问密码</label>
-                  <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password">
+                  <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password" value="${escapeHtml(ruleDraft.password)}">
                 </div>
                 <div class="ov-rules-field">
                   <label class="ov-rules-label">备注</label>
-                  <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note">
+                  <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note" value="${escapeHtml(ruleDraft.note)}">
                 </div>
               </div>
             </div>

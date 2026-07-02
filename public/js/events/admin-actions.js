@@ -153,6 +153,11 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
 
+    if (action === "save-access-rule") {
+      store.dispatch(thunks.saveAccessRule());
+      return;
+    }
+
     if (action === "refresh-admin-notifications") {
       store.dispatch(thunks.loadAdminNotifications());
       return;
@@ -291,6 +296,19 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
     if (action === "set-share-filter" || action === "set-shares-filter") {
       const filter = actionNode.dataset.filter || event.target?.value || "all";
       store.dispatch(actions.admin.setShareFilter(filter));
+      return;
+    }
+
+    if (action === "filter-shares") {
+      store.dispatch(actions.admin.setSharePage(1));
+      return;
+    }
+
+    if (action === "reset-shares-filter") {
+      store.batchDispatch([
+        actions.admin.setShareSearch(""),
+        actions.admin.setShareFilter("all"),
+      ]);
       return;
     }
 

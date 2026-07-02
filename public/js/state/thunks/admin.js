@@ -400,6 +400,64 @@ export function createAdminThunks(deps, context) {
       }
     },
 
+    saveAccessRule: () => async (dispatch, getState) => {
+      if (mock) {
+        dispatchToast("error", "设计预览模式下不可操作");
+        return;
+      }
+
+      const draft = getState().admin.accessRuleDraft || {};
+      const targetPath = String(draft.path || "").trim();
+      const password = String(draft.password || "").trim();
+      const note = String(draft.note || "").trim();
+      const hidden = !!draft.hidden;
+      const showName = draft.showName !== false;
+
+      if (!targetPath) {
+        dispatchToast("error", "请填写规则路径");
+        return;
+      }
+
+      if (!hidden && !password) {
+        dispatchToast("error", "请选择隐藏路径或填写访问密码");
+        return;
+      }
+
+      dispatch(actions.admin.setAccessRuleSaving(true));
+      try {
+        const savedKinds = [];
+        if (hidden) {
+          const { response, data } = await adminApi.createHiddenPath(targetPath);
+          assertApiOk(response, data, "添加隐藏路径失败", humanError);
+          savedKinds.push("隐藏规则");
+        }
+        if (password) {
+          const { response, data } = await adminApi.createProtectedPath(
+            targetPath,
+            password,
+            note,
+            showName,
+          );
+          assertApiOk(response, data, "创建受保护路径失败", humanError);
+          savedKinds.push("密码规则");
+        }
+
+        dispatchToast(
+          "success",
+          savedKinds.length > 1 ? "访问控制规则已保存" : `${savedKinds[0]}已保存`,
+        );
+        dispatch(actions.admin.resetAccessRuleDraft());
+        await Promise.all([
+          hidden ? dispatch(getThunks().loadAdminHiddenPaths()) : Promise.resolve(),
+          password ? dispatch(getThunks().loadAdminProtectedPaths()) : Promise.resolve(),
+        ]);
+      } catch (error) {
+        dispatchToast("error", error.message || "保存访问控制规则失败");
+      } finally {
+        dispatch(actions.admin.setAccessRuleSaving(false));
+      }
+    },
+
     loadAdminStorageConfig: () => async (dispatch) => {
       dispatch(actions.admin.setStorageConfigLoading(true));
       if (mock) {
@@ -794,6 +852,10 @@ export function createAdminThunks(deps, context) {
             dispatch(t.loadTrashRetention());
           if (admin.trashPreviewItems.length === 0 && !admin.trashPreviewLoading)
             dispatch(t.loadAdminTrashPreview());
+          if (admin.protectedPaths.length === 0 && !admin.protectedPathsLoading)
+            dispatch(t.loadAdminProtectedPaths());
+          if (admin.hiddenPaths.length === 0 && !admin.hiddenPathsLoading)
+            dispatch(t.loadAdminHiddenPaths());
           break;
         case "maintenance":
           if (!admin.maintenance && !admin.maintenanceLoading)
