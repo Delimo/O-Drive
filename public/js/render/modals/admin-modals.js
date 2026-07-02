@@ -177,7 +177,7 @@ export function createAdminModalRenderers({
       <label class="webhook-event-option">
         <input type="checkbox" name="events" value="${escapeHtml(option.key)}"
                data-action-change="set-webhook-event"
-               ${selectedSet.has(option.key) ? "checked" : ""} ${eventCheckboxDisabled}>
+               ${useAllEvents || selectedSet.has(option.key) ? "checked" : ""} ${eventCheckboxDisabled}>
         <span>${escapeHtml(option.label)}</span>
         <small>${escapeHtml(option.desc)}</small>
       </label>
@@ -267,7 +267,7 @@ export function createAdminModalRenderers({
             <section class="webhook-modal-section">
               <div class="webhook-modal-section-head">
                 <span>触发事件</span>
-                <small>${useAllEvents ? `当前接收全部 ${eventCount} 类事件` : `已选择 ${selectedEvents.length} 类事件`}</small>
+                <small data-role="webhook-event-summary" data-event-count="${eventCount}">${useAllEvents ? `当前接收全部 ${eventCount} 类事件` : `已选择 ${selectedEvents.length} 类事件`}</small>
               </div>
               <div class="webhook-event-mode-row">
                 <label class="webhook-event-mode ${useAllEvents ? "is-selected" : ""}">
@@ -284,7 +284,7 @@ export function createAdminModalRenderers({
               <div class="webhook-event-all-note ${useAllEvents ? "" : "is-hidden"}" data-role="webhook-event-all-note">
                 当前会投递所有支持事件。需要限制范围时切换到自定义事件。
               </div>
-              <div class="webhook-event-custom ${useAllEvents ? "is-disabled" : ""}" data-role="webhook-event-custom">
+              <div class="webhook-event-custom ${useAllEvents ? "is-all-mode" : ""}" data-role="webhook-event-custom">
                 ${eventGroups.map((group) => `
                   <div class="webhook-event-group">
                     <div class="webhook-event-group-head">

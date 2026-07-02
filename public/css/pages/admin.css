@@ -5667,7 +5667,7 @@ select.input {
   display: grid;
   grid-template-columns: minmax(480px, 1.12fr) minmax(390px, 0.88fr);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
   flex-shrink: 0;
   min-height: 0;
 }
@@ -5681,9 +5681,17 @@ select.input {
 .webhook-modal-main,
 .webhook-modal-side {
   display: grid;
-  align-content: start;
+  align-content: stretch;
   gap: 12px;
   min-width: 0;
+}
+
+.webhook-modal-main {
+  grid-template-rows: auto 1fr;
+}
+
+.webhook-modal-side .webhook-modal-section {
+  height: 100%;
 }
 
 .webhook-modal-section,
@@ -5818,6 +5826,10 @@ select.input {
 
 .webhook-event-custom.is-disabled {
   display: none;
+}
+
+.webhook-event-custom.is-all-mode .webhook-event-option {
+  cursor: default;
 }
 
 .webhook-event-all-note {

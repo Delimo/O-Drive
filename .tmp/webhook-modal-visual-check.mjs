@@ -57,13 +57,20 @@ async function inspect(label, viewport) {
     if (advanced) advanced.open = true;
   });
   await page.waitForTimeout(260);
+  await page.locator('input[name="eventMode"][value="all"]').check({ force: true });
+  await page.waitForTimeout(120);
 
   const metrics = await page.evaluate(() => {
     const card = document.querySelector(".webhook-modal-card");
     const layout = document.querySelector(".webhook-modal-layout");
+    const main = document.querySelector(".webhook-modal-main");
+    const side = document.querySelector(".webhook-modal-side");
     const headers = document.querySelector('textarea[name="headers"]');
     const body = document.querySelector('textarea[name="body"]');
     const form = document.querySelector(".webhook-modal-card .modal-form");
+    const eventList = document.querySelector('[data-role="webhook-event-custom"]');
+    const eventInputs = Array.from(document.querySelectorAll('input[name="events"]'));
+    const eventSummary = document.querySelector('[data-role="webhook-event-summary"]');
     const blocks = Array.from(document.querySelectorAll(
       ".webhook-modal-section, .webhook-modal-advanced, .webhook-modal-card .helper-text, .webhook-modal-card .error-text, .webhook-modal-card .btn-row",
     ));
@@ -78,9 +85,18 @@ async function inspect(label, viewport) {
       headers: box(headers),
       body: box(body),
       form: box(form),
+      columnBottomGap: Math.abs(main.getBoundingClientRect().bottom - side.getBoundingClientRect().bottom),
       resize: {
         headers: getComputedStyle(headers).resize,
         body: getComputedStyle(body).resize,
+      },
+      events: {
+        count: eventInputs.length,
+        checked: eventInputs.filter((input) => input.checked).length,
+        disabled: eventInputs.filter((input) => input.disabled).length,
+        hidden: getComputedStyle(eventList).display === "none",
+        allModeClass: eventList.classList.contains("is-all-mode"),
+        summary: eventSummary?.textContent || "",
       },
       overflowX: document.documentElement.scrollWidth > viewportWidth + 1,
       overlappingBlocks: blocks.some((section, index) => {
@@ -105,6 +121,12 @@ async function inspect(label, viewport) {
   }
   if (metrics.resize.headers !== "none" || metrics.resize.body !== "none") {
     throw new Error(`${label}: textarea resize should be none, got ${metrics.resize.headers}/${metrics.resize.body}`);
+  }
+  if (expectedColumns > 1 && metrics.columnBottomGap > 1) {
+    throw new Error(`${label}: modal columns are not aligned, bottom gap ${metrics.columnBottomGap}`);
+  }
+  if (metrics.events.hidden || metrics.events.checked !== metrics.events.count || !metrics.events.allModeClass) {
+    throw new Error(`${label}: all-events view is not visibly selected: ${JSON.stringify(metrics.events)}`);
   }
   if (metrics.overflowX) {
     throw new Error(`${label}: page has horizontal overflow`);
