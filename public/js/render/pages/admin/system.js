@@ -40,7 +40,7 @@ export function createSystemRenderer({
     return `
       ${COMMON_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
       <details class="ov-maintenance-advanced">
-        <summary class="ov-maintenance-advanced-trigger">显示高级清理</summary>
+        <summary class="ov-maintenance-advanced-trigger">高级清理</summary>
         <div class="ov-maintenance-advanced-body">
           ${ADVANCED_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
         </div>

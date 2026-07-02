@@ -281,9 +281,6 @@ export function createAdminModalRenderers({
                   <small>只投递勾选的事件</small>
                 </label>
               </div>
-              <div class="webhook-event-all-note ${useAllEvents ? "" : "is-hidden"}" data-role="webhook-event-all-note">
-                当前会投递所有支持事件。需要限制范围时切换到自定义事件。
-              </div>
               <div class="webhook-event-custom ${useAllEvents ? "is-all-mode" : ""}" data-role="webhook-event-custom">
                 ${eventGroups.map((group) => `
                   <div class="webhook-event-group">

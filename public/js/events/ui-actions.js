@@ -155,7 +155,6 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
             if (useAll) input.checked = true;
           });
           form.querySelector('[data-role="webhook-event-custom"]')?.classList.toggle("is-all-mode", useAll);
-          form.querySelector('[data-role="webhook-event-all-note"]')?.classList.toggle("is-hidden", !useAll);
           form.querySelectorAll('input[name="eventMode"]').forEach((input) => {
             input.closest(".webhook-event-mode")?.classList.toggle("is-selected", input.checked);
           });
@@ -181,7 +180,6 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
           });
           form.querySelector('[data-role="webhook-event-custom"]')?.classList.remove("is-disabled");
           form.querySelector('[data-role="webhook-event-custom"]')?.classList.remove("is-all-mode");
-          form.querySelector('[data-role="webhook-event-all-note"]')?.classList.add("is-hidden");
           if (summary) {
             summary.textContent = `已选择 ${form.querySelectorAll('input[name="events"]:checked').length} 类事件`;
           }

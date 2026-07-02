@@ -746,6 +746,9 @@ test('webhook modal uses custom selects with hidden form values', () => {
   assert.match(html, /data-cselect="webhook-method"/);
   assert.match(html, /data-input-name="method"/);
   assert.match(html, /name="method" value="PATCH"/);
+  assert.match(html, /<input type="radio" name="eventMode" value="all"[^>]*checked/);
+  assert.doesNotMatch(html, /webhook-event-all-note/);
+  assert.doesNotMatch(html, /当前会投递所有支持事件/);
   assert.doesNotMatch(html, /<select class="inline-input" name="msgtype"/);
   assert.doesNotMatch(html, /<select class="inline-input" name="method"/);
 });
@@ -1244,7 +1247,8 @@ test('admin maintenance section renders snapshot and action buttons', () => {
   assert.match(html, /检查索引一致性/);
   assert.match(html, /同步元数据库索引/);
   assert.match(html, /同步清除废弃文件/);
-  assert.match(html, /显示高级清理/);
+  assert.match(html, /高级清理/);
+  assert.doesNotMatch(html, /显示高级清理/);
   assert.match(html, /清理缩略图缓存/);
   assert.match(html, /清理旧操作日志/);
   assert.match(html, /清理后台任务记录/);

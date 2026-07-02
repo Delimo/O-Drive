@@ -119,6 +119,10 @@
   overflow-y: auto;
 }
 
+.ap-maintenance-advanced:not([open]) > .ap-maintenance-advanced-body {
+  display: none;
+}
+
 /* ─── Stats Row ─── */
 .ap-ov-stats {
   display: grid;
@@ -3808,6 +3812,10 @@
   overflow-y: auto;
 }
 
+.ov-maintenance-advanced:not([open]) > .ov-maintenance-advanced-body {
+  display: none;
+}
+
 .ov-maintenance-item {
   display: flex;
   align-items: center;
@@ -5830,21 +5838,6 @@ select.input {
 
 .webhook-event-custom.is-all-mode .webhook-event-option {
   cursor: default;
-}
-
-.webhook-event-all-note {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px dashed var(--line);
-  background: var(--panel-soft);
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.webhook-event-all-note.is-hidden {
-  display: none;
 }
 
 .webhook-event-group {

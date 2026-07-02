@@ -4,11 +4,11 @@ export const COMMON_MAINTENANCE_ACTIONS = [
   { action: "purge-trash", label: "同步清除废弃文件", desc: "物理清除已过期回收站数据。", danger: true },
   { action: "cleanup-thumbnails", label: "清理缩略图缓存", desc: "删除 .thumbs 下的缩略图缓存对象。", danger: true },
   { action: "cleanup-logs", label: "清理旧操作日志", desc: "按 90 天/最近 2000 条保留策略清理审计日志。", danger: true },
-  { action: "cleanup-zip-task-results", label: "清理 ZIP 结果", desc: "删除 .system/zip-tasks 下的后台打包结果。", danger: true },
-  { action: "rebuild-storage-refs", label: "重建对象引用计数", desc: "重新计算 storage_objects.ref_count。", danger: false }
+  { action: "cleanup-zip-task-results", label: "清理 ZIP 结果", desc: "删除 .system/zip-tasks 下的后台打包结果。", danger: true }
 ];
 
 export const ADVANCED_MAINTENANCE_ACTIONS = [
+  { action: "rebuild-storage-refs", label: "重建对象引用计数", desc: "重新计算 storage_objects.ref_count。", danger: false },
   { action: "cleanup-tasks", label: "清理后台任务记录", desc: "删除已完成或失败的后台任务记录。", danger: true },
   { action: "cleanup-warnings", label: "清理系统提醒", desc: "标记已记录的系统提醒为已处理。", danger: true },
   { action: "cleanup-access-attempts", label: "清理访问失败记录", desc: "删除路径密码解锁失败记录。", danger: true },

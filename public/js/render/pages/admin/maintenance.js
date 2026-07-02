@@ -26,7 +26,7 @@ export function createMaintenanceRenderer({
     return `
       ${COMMON_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
       <details class="ap-maintenance-advanced">
-        <summary class="ap-maintenance-advanced-trigger">显示高级清理</summary>
+        <summary class="ap-maintenance-advanced-trigger">高级清理</summary>
         <div class="ap-maintenance-advanced-body">
           ${ADVANCED_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
         </div>
