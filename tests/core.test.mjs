@@ -3997,6 +3997,82 @@ test('admin can create folder share links and browse shared folders', async () =
   assert.equal(shareRows.items[0].downloadCount, 2);
 });
 
+test('admin can create bundle share links for mixed files and folders', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+      { key: 'docs/assets/logo.txt', body: 'logo', size: 4, uploaded: new Date('2026-01-02') },
+    ],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const create = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/shares', {
+      method: 'POST',
+      body: JSON.stringify({ paths: ['/docs/readme.txt', '/docs/assets'], expiresInDays: 7, maxDownloads: 5 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(create.status, 200);
+  const created = await create.json();
+  assert.equal(created.item.targetType, 'bundle');
+  assert.equal(created.item.itemCount, 2);
+  assert.deepEqual(created.item.items.map((item) => item.path), ['docs/readme.txt', 'docs/assets']);
+  const token = created.item?.token;
+  assert.ok(token);
+
+  const rootInfo = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info`),
+  });
+  assert.equal(rootInfo.status, 200);
+  const rootData = await rootInfo.json();
+  assert.equal(rootData.item.targetType, 'bundle');
+  assert.deepEqual(rootData.directory.folders.map((item) => item.name), ['assets']);
+  assert.deepEqual(rootData.directory.files.map((item) => item.name), ['readme.txt']);
+
+  const folderInfo = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/info?path=docs/assets`),
+  });
+  assert.equal(folderInfo.status, 200);
+  const folderData = await folderInfo.json();
+  assert.deepEqual(folderData.directory.files.map((item) => item.name), ['logo.txt']);
+
+  const filePreview = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/preview?path=docs/readme.txt`),
+  });
+  assert.equal(filePreview.status, 200);
+  assert.equal(await filePreview.text(), 'hello');
+
+  const zipDownload = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/download`),
+  });
+  assert.equal(zipDownload.status, 200);
+  assert.equal(zipDownload.headers.get('Content-Type'), 'application/zip');
+
+  const outsideBundle = await onRequest({
+    env,
+    request: new Request(`https://example.com/api/share/${token}/preview?path=other/file.txt`),
+  });
+  assert.equal(outsideBundle.status, 404);
+});
+
 test('password protected share links require unlock before access', async () => {
   const env = makeEnv({
     objects: [{ key: 'docs/secret.txt', body: 'hidden', size: 6, uploaded: new Date('2026-01-01') }],

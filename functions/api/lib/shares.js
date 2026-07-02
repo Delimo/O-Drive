@@ -139,6 +139,59 @@ function ttlToExpiresAt(body) {
   return Date.now() + Math.min(days, 3650) * 24 * 60 * 60 * 1000;
 }
 
+function parseShareItems(row = {}) {
+  if (row.target_type !== "bundle") return [];
+  try {
+    const items = JSON.parse(row.items_json || "[]");
+    if (!Array.isArray(items)) return [];
+    return items
+      .map((item) => ({
+        path: normalizeSharePath(item.path),
+        name: item.name || String(item.path || "").split("/").pop() || "",
+        targetType: item.targetType === "folder" ? "folder" : "file",
+        size: Number(item.size || 0),
+        sizeFormatted:
+          item.targetType === "folder" ? "" : formatBytes(Number(item.size || 0)),
+        contentType: item.contentType || "",
+      }))
+      .filter((item) => item.path);
+  } catch (_) {
+    return [];
+  }
+}
+
+function normalizeSharePathList(paths) {
+  if (!Array.isArray(paths) || paths.length === 0 || paths.length > 100) {
+    const err = new Error("Invalid paths");
+    err.status = 400;
+    throw err;
+  }
+  const seen = new Set();
+  const normalized = [];
+  for (const rawPath of paths) {
+    const path = normalizeSharePath(rawPath);
+    if (seen.has(path)) continue;
+    seen.add(path);
+    normalized.push(path);
+  }
+  if (!normalized.length) {
+    const err = new Error("Invalid paths");
+    err.status = 400;
+    throw err;
+  }
+  return normalized;
+}
+
+function mapShareItem(path, target) {
+  return {
+    path,
+    name: path.split("/").pop() || path,
+    targetType: target.targetType,
+    size: Number(target.size || 0),
+    contentType: target.contentType || "",
+  };
+}
+
 function mapShare(row) {
   const expiresAt = Number(row.expires_at || 0);
   const maxDownloads = Number(row.max_downloads || 0);
@@ -147,11 +200,14 @@ function mapShare(row) {
     expiresAt > 0 ? expiresAt + EXPIRED_SHARE_AUTO_DELETE_MS : 0;
   const expired = Boolean(expiresAt && expiresAt <= Date.now());
   const exhausted = Boolean(maxDownloads && downloadCount >= maxDownloads);
+  const items = parseShareItems(row);
   return {
     token: row.token,
     path: row.path,
     name: row.name,
     targetType: row.target_type || "file",
+    itemCount: row.target_type === "bundle" ? items.length : 1,
+    items,
     size: Number(row.size || 0),
     sizeFormatted: formatBytes(Number(row.size || 0)),
     contentType: row.content_type || "",
@@ -277,6 +333,33 @@ async function listShareDirectory(env, rootPath, subPath = "") {
   };
 }
 
+function bundleRootDirectory(item) {
+  const items = Array.isArray(item.items) ? item.items : [];
+  return {
+    path: "",
+    fullPath: "",
+    folders: items
+      .filter((entry) => entry.targetType === "folder")
+      .map((entry) => mapFolderEntry({ ...entry, fullKey: entry.path }, "folder"))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    files: items
+      .filter((entry) => entry.targetType !== "folder")
+      .map((entry) => mapFolderEntry({ ...entry, fullKey: entry.path }, "file"))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+function findBundleRootForPath(items, path) {
+  const clean = cleanShareSubPath(path);
+  return [...(items || [])]
+    .sort((a, b) => b.path.length - a.path.length)
+    .find((item) => {
+      if (item.targetType === "folder")
+        return clean === item.path || clean.startsWith(`${item.path}/`);
+      return clean === item.path;
+    });
+}
+
 function emptyStream() {
   return new ReadableStream({
     start(controller) {
@@ -298,7 +381,7 @@ function bodyStream(body) {
   });
 }
 
-async function folderZipResponse(env, rootPath, subPath = "", filename = "folder") {
+async function collectFolderZipEntries(env, rootPath, subPath = "", filename = "folder") {
   const dir = childPath(rootPath, subPath);
   const prefix = dir ? `${dir}/` : "";
   const listed = await storageList(env, "r2", { prefix });
@@ -347,6 +430,12 @@ async function folderZipResponse(env, rootPath, subPath = "", filename = "folder
       getStream: () => storageGet(env, "r2", obj.key).then((res) => bodyStream(res?.body)),
     });
   }
+  return entries;
+}
+
+async function folderZipResponse(env, rootPath, subPath = "", filename = "folder") {
+  const entries = await collectFolderZipEntries(env, rootPath, subPath, filename);
+  const baseName = filename || childPath(rootPath, subPath).split("/").pop() || "folder";
   if (!entries.length)
     return jsonResponse({ success: false, message: "No files to download" }, 404);
   return new Response(createZipStream(entries), {
@@ -354,6 +443,65 @@ async function folderZipResponse(env, rootPath, subPath = "", filename = "folder
     headers: {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(baseName + ".zip")}`,
+    },
+  });
+}
+
+function uniqueZipName(name, usedNames) {
+  if (!usedNames.has(name)) {
+    usedNames.add(name);
+    return name;
+  }
+  const slashIndex = name.lastIndexOf("/");
+  const dir = slashIndex >= 0 ? name.slice(0, slashIndex + 1) : "";
+  const base = slashIndex >= 0 ? name.slice(slashIndex + 1) : name;
+  const dot = base.lastIndexOf(".");
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const ext = dot > 0 ? base.slice(dot) : "";
+  let index = 2;
+  let candidate = "";
+  do {
+    candidate = `${dir}${stem} (${index})${ext}`;
+    index++;
+  } while (usedNames.has(candidate));
+  usedNames.add(candidate);
+  return candidate;
+}
+
+async function bundleZipResponse(env, item) {
+  const entries = [];
+  const usedNames = new Set();
+  for (const sharedItem of item.items || []) {
+    if (sharedItem.targetType === "folder") {
+      const folderEntries = await collectFolderZipEntries(
+        env,
+        sharedItem.path,
+        "",
+        sharedItem.name || sharedItem.path.split("/").pop() || "folder",
+      );
+      for (const entry of folderEntries) {
+        entries.push({ ...entry, name: uniqueZipName(entry.name, usedNames) });
+      }
+      continue;
+    }
+    const target = await detectShareTarget(env, sharedItem.path);
+    if (!target || target.targetType !== "file") continue;
+    entries.push({
+      name: uniqueZipName(sharedItem.name || sharedItem.path.split("/").pop() || "file", usedNames),
+      size: Number(target.size || sharedItem.size || 0),
+      getStream: () =>
+        storageGet(env, target.storageId, target.objectKey).then((res) =>
+          bodyStream(res?.body),
+        ),
+    });
+  }
+  if (!entries.length)
+    return jsonResponse({ success: false, message: "No files to download" }, 404);
+  return new Response(createZipStream(entries), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent((item.name || "shared-files") + ".zip")}`,
     },
   });
 }
@@ -443,8 +591,8 @@ async function insertShareLink(env, row) {
   const runInsert = () =>
     env.D1.prepare(
       `INSERT INTO share_links
-       (token, path, name, size, content_type, target_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, expired_notified_at, created_at, last_accessed_at, last_access_ip)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, ?, 0, '')`,
+       (token, path, name, size, content_type, target_type, allow_preview, allow_download, expires_at, max_downloads, download_count, password_salt, password_hash, items_json, expired_notified_at, created_at, last_accessed_at, last_access_ip)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 0, ?, 0, '')`,
     )
       .bind(
         row.token,
@@ -459,6 +607,7 @@ async function insertShareLink(env, row) {
         row.maxDownloads,
         row.passwordSalt || "",
         row.passwordHash || "",
+        row.itemsJson || "[]",
         row.createdAt,
       )
       .run();
@@ -501,8 +650,19 @@ async function reactivateExpiredShare(env, request, body) {
       410,
     );
 
-  const target = await detectShareTarget(env, row.path);
-  if (!target)
+  const existingItems = parseShareItems(row);
+  const isBundle = (row.target_type || "") === "bundle";
+  const refreshedItems = [];
+  if (isBundle) {
+    for (const sharedItem of existingItems) {
+      const target = await detectShareTarget(env, sharedItem.path);
+      if (!target)
+        return jsonResponse({ success: false, message: "File or folder not found" }, 404);
+      refreshedItems.push(mapShareItem(sharedItem.path, target));
+    }
+  }
+  const target = isBundle ? null : await detectShareTarget(env, row.path);
+  if (!isBundle && !target)
     return jsonResponse({ success: false, message: "File or folder not found" }, 404);
 
   const expiresAt = ttlToExpiresAt(body);
@@ -514,14 +674,17 @@ async function reactivateExpiredShare(env, request, body) {
 
   await env.D1.prepare(
     `UPDATE share_links
-     SET expires_at = ?, expired_notified_at = 0, size = ?, content_type = ?, target_type = ?
+     SET expires_at = ?, expired_notified_at = 0, size = ?, content_type = ?, target_type = ?, items_json = ?
      WHERE token = ?`,
   )
     .bind(
       expiresAt,
-      Number(target.size || 0),
-      target.contentType || "",
-      target.targetType || row.target_type || "file",
+      isBundle
+        ? refreshedItems.reduce((sum, item) => sum + Number(item.size || 0), 0)
+        : Number(target.size || 0),
+      isBundle ? "application/vnd.o-drive.bundle+json" : target.contentType || "",
+      isBundle ? "bundle" : target.targetType || row.target_type || "file",
+      isBundle ? JSON.stringify(refreshedItems) : row.items_json || "[]",
       token,
     )
     .run();
@@ -534,9 +697,12 @@ async function reactivateExpiredShare(env, request, body) {
       ...row,
       expires_at: expiresAt,
       expired_notified_at: 0,
-      size: Number(target.size || 0),
-      content_type: target.contentType || "",
-      target_type: target.targetType || row.target_type || "file",
+      size: isBundle
+        ? refreshedItems.reduce((sum, item) => sum + Number(item.size || 0), 0)
+        : Number(target.size || 0),
+      content_type: isBundle ? "application/vnd.o-drive.bundle+json" : target.contentType || "",
+      target_type: isBundle ? "bundle" : target.targetType || row.target_type || "file",
+      items_json: isBundle ? JSON.stringify(refreshedItems) : row.items_json || "[]",
     }),
   });
 }
@@ -602,10 +768,24 @@ export async function handleAdminShares(env, request, method, url) {
       return reactivateExpiredShare(env, request, body);
     }
 
-    const path = normalizeSharePath(body.path);
-    const target = await detectShareTarget(env, path);
-    if (!target)
-      return jsonResponse({ success: false, message: "File or folder not found" }, 404);
+    const paths = Array.isArray(body.paths)
+      ? normalizeSharePathList(body.paths)
+      : [normalizeSharePath(body.path)];
+    const targets = [];
+    for (const path of paths) {
+      const target = await detectShareTarget(env, path);
+      if (!target)
+        return jsonResponse({
+          success: false,
+          message: "File or folder not found",
+          path,
+        }, 404);
+      targets.push(target);
+    }
+    const isBundle = paths.length > 1;
+    const items = paths.map((path, index) => mapShareItem(path, targets[index]));
+    const path = paths[0];
+    const target = targets[0];
 
     const token = shareToken();
     const expiresAt = ttlToExpiresAt(body);
@@ -625,28 +805,37 @@ export async function handleAdminShares(env, request, method, url) {
     const passwordHash = password
       ? await hashSharePassword(password, passwordSalt)
       : "";
-    const name = path.split("/").pop() || path;
-    const contentType = target.contentType || "";
+    const name = isBundle
+      ? `${items.length} 项内容`
+      : path.split("/").pop() || path;
+    const contentType = isBundle
+      ? "application/vnd.o-drive.bundle+json"
+      : target.contentType || "";
+    const targetType = isBundle ? "bundle" : target.targetType;
+    const size = isBundle
+      ? items.reduce((sum, item) => sum + Number(item.size || 0), 0)
+      : Number(target.size || 0);
     const createdAt = Date.now();
     await insertShareLink(env, {
       token,
       path,
       name,
-      size: Number(target.size || 0),
+      size,
       contentType,
-      targetType: target.targetType,
+      targetType,
       allowPreview,
       allowDownload,
       expiresAt,
       maxDownloads,
       passwordSalt,
       passwordHash,
+      itemsJson: isBundle ? JSON.stringify(items) : "[]",
       createdAt,
     });
     await addLog(env, request, "SHARE_CREATE", {
-      details: path,
+      details: isBundle ? paths.join(", ") : path,
       targetPath: path,
-      metadata: { token, targetType: target.targetType },
+      metadata: { token, targetType, paths },
     });
     return jsonResponse({
       success: true,
@@ -654,15 +843,16 @@ export async function handleAdminShares(env, request, method, url) {
         token,
         path,
         name,
-        size: Number(target.size || 0),
+        size,
         content_type: contentType,
-        target_type: target.targetType,
+        target_type: targetType,
         allow_preview: allowPreview,
         allow_download: allowDownload,
         expires_at: expiresAt,
         max_downloads: maxDownloads,
         download_count: 0,
         password_hash: passwordHash,
+        items_json: isBundle ? JSON.stringify(items) : "[]",
         created_at: createdAt,
         last_accessed_at: 0,
         last_access_ip: "",
@@ -736,10 +926,22 @@ export async function handlePublicShare(env, request, path) {
   const url = new URL(request.url);
   const subPath = cleanShareSubPath(url.searchParams.get("path") || "");
   const isFolderShare = item.targetType === "folder";
-  if (!isFolderShare && subPath)
+  const isBundleShare = item.targetType === "bundle";
+  if (!isFolderShare && !isBundleShare && subPath)
     return jsonResponse({ success: false, message: "Invalid share path" }, 404);
 
   if (action === "info") {
+    if (isBundleShare) {
+      if (!subPath)
+        return jsonResponse({ success: true, item, directory: bundleRootDirectory(item) });
+      const sharedRoot = findBundleRootForPath(item.items, subPath);
+      if (!sharedRoot || sharedRoot.targetType !== "folder")
+        return jsonResponse({ success: false, message: "Share path not found" }, 404);
+      const relativePath =
+        subPath === sharedRoot.path ? "" : subPath.slice(sharedRoot.path.length + 1);
+      const directory = await listShareDirectory(env, sharedRoot.path, relativePath);
+      return jsonResponse({ success: true, item, directory });
+    }
     if (!isFolderShare) return jsonResponse({ success: true, item });
     const directory = await listShareDirectory(env, item.path, subPath);
     return jsonResponse({ success: true, item, directory });
@@ -748,6 +950,51 @@ export async function handlePublicShare(env, request, path) {
     return jsonResponse({ success: false, message: "Preview disabled" }, 403);
   if (action === "download" && !item.allowDownload)
     return jsonResponse({ success: false, message: "Download disabled" }, 403);
+  if (isBundleShare) {
+    if (action === "download" && !subPath) {
+      const res = await bundleZipResponse(env, item);
+      if (res.ok) {
+        await env.D1.prepare(
+          "UPDATE share_links SET download_count = download_count + 1, last_accessed_at = ?, last_access_ip = ? WHERE token = ?",
+        )
+          .bind(Date.now(), accessIp, token)
+          .run();
+      }
+      return res;
+    }
+    const sharedRoot = findBundleRootForPath(item.items, subPath);
+    if (!sharedRoot)
+      return jsonResponse({ success: false, message: "Share path not found" }, 404);
+    const target = await detectShareTarget(env, subPath);
+    if (!target)
+      return jsonResponse({ success: false, message: "Share path not found" }, 404);
+    if (action === "preview" && target.targetType !== "file")
+      return jsonResponse({ success: false, message: "Folder preview disabled" }, 403);
+    const res =
+      action === "download" && target.targetType === "folder"
+        ? await folderZipResponse(
+            env,
+            sharedRoot.path,
+            subPath === sharedRoot.path ? "" : subPath.slice(sharedRoot.path.length + 1),
+            subPath.split("/").pop() || sharedRoot.name,
+          )
+        : await handleDownloadOrPreview(
+            env,
+            request,
+            action === "download"
+              ? `/api/download/${subPath}`
+              : `/api/preview/${subPath}`,
+            subPath,
+          );
+    if (res.ok && action === "download") {
+      await env.D1.prepare(
+        "UPDATE share_links SET download_count = download_count + 1, last_accessed_at = ?, last_access_ip = ? WHERE token = ?",
+      )
+        .bind(Date.now(), accessIp, token)
+        .run();
+    }
+    return res;
+  }
   const targetPath = isFolderShare ? childPath(item.path, subPath) : item.path;
   const target = isFolderShare ? await detectShareTarget(env, targetPath) : null;
   if (isFolderShare && subPath && !target)

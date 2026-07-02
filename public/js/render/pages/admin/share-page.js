@@ -9,6 +9,7 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
     arrow: '<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>',
     refresh: '<path d="M20 5v5h-5"/><path d="M4 19v-5h5"/><path d="M19 10a7 7 0 0 0-12.13-4.74L4 8"/><path d="M5 14a7 7 0 0 0 12.13 4.74L20 16"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    bundle: '<path d="M12 2 3 7l9 5 9-5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>',
     file: '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>',
     image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
     video: '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>',
@@ -324,6 +325,16 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
       if (root && fullKey.startsWith(`${root}/`)) return fullKey.slice(root.length + 1);
       return fullKey;
     };
+    const canPreviewFile = (file) => {
+      const type = String(file?.contentType || "");
+      return item.allowPreview && (
+        type.startsWith("image/") ||
+        type.startsWith("video/") ||
+        type.startsWith("audio/") ||
+        type === "application/pdf" ||
+        type.startsWith("text/")
+      );
+    };
 
     if (item.targetType === "folder") {
       const folders = directory?.folders || [];
@@ -338,16 +349,6 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
           path: parts.slice(0, index + 1).join("/"),
         })),
       ];
-      const canPreviewFile = (file) => {
-        const type = String(file?.contentType || "");
-        return item.allowPreview && (
-          type.startsWith("image/") ||
-          type.startsWith("video/") ||
-          type.startsWith("audio/") ||
-          type === "application/pdf" ||
-          type.startsWith("text/")
-        );
-      };
       const renderFolderRow = (folder) => {
         const path = relativeEntryPath(folder);
         return `
@@ -413,6 +414,96 @@ export function createSharePageRenderer({ safeText, escapeHtml, formatTime, form
             <div class="share-bottom">
               <div class="share-actions">
                 ${item.allowDownload ? `<a class="share-btn share-btn-primary" href="${escapeHtml(shareActionUrl("download", currentSharePath))}" target="_blank">${svg("download", 16)}下载当前目录</a>` : ""}
+                <button class="share-btn share-btn-ghost" type="button" data-action="copy-current-url">复制链接</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    if (item.targetType === "bundle") {
+      const folders = directory?.folders || [];
+      const files = directory?.files || [];
+      const entriesCount = currentSharePath ? folders.length + files.length : Number(item.itemCount || folders.length + files.length);
+      const facts = getShareFacts(item, entriesCount);
+      const parts = currentSharePath.split("/").filter(Boolean);
+      const crumbItems = [
+        { label: "共享集合", path: "" },
+        ...parts.map((part, index) => ({
+          label: part,
+          path: parts.slice(0, index + 1).join("/"),
+        })),
+      ];
+      const entryPath = (entry) => String(entry?.fullKey || entry?.path || "").replace(/^\/+|\/+$/g, "");
+      const renderFolderRow = (folder) => {
+        const path = entryPath(folder);
+        return `
+          <div class="share-dir-row">
+            <span class="share-dir-icon share-dir-icon-folder">${svg("folder", 18)}</span>
+            <span class="share-dir-name">${safeText(folder.name, "未命名文件夹")}</span>
+            <span class="share-dir-meta">文件夹</span>
+            <span class="share-dir-actions">
+              <a class="share-dir-action" href="${escapeHtml(sharePageUrl(path))}">打开</a>
+              ${item.allowDownload ? `<a class="share-dir-action" href="${escapeHtml(shareActionUrl("download", path))}" target="_blank">下载 ZIP</a>` : ""}
+            </span>
+          </div>
+        `;
+      };
+      const renderFileRow = (file) => {
+        const path = entryPath(file);
+        return `
+          <div class="share-dir-row">
+            <span class="share-dir-icon">${svg("file", 18)}</span>
+            <span class="share-dir-name">${safeText(file.name, "未命名文件")}</span>
+            <span class="share-dir-meta">${escapeHtml(file.sizeFormatted || formatBytes(file.size || 0))}</span>
+            <span class="share-dir-actions">
+              ${canPreviewFile(file) ? `<a class="share-dir-action" href="${escapeHtml(shareActionUrl("preview", path))}" target="_blank">预览</a>` : ""}
+              ${item.allowDownload ? `<a class="share-dir-action" href="${escapeHtml(shareActionUrl("download", path))}" target="_blank">下载</a>` : ""}
+            </span>
+          </div>
+        `;
+      };
+
+      return `
+        <div class="share-page">
+          <div class="share-shell share-shell-folder">
+            <div class="share-top">
+              ${renderBrand()}
+              ${renderStatus("share-status-active", "有效分享", true)}
+            </div>
+
+            <div class="share-mid share-mid-folder">
+              <div class="share-folder-head">
+                <div class="share-preview-icon share-preview-folder">
+                  ${svg("bundle", 48, 1.5)}
+                </div>
+                <div class="share-resource-copy">
+                  <span class="share-kicker">${currentSharePath ? "集合内文件夹" : "共享集合"}</span>
+                  <h1 class="share-file-name">${safeText(currentSharePath ? parts.at(-1) : item.name, "批量分享")}</h1>
+                  <div class="share-file-meta">${facts.chips}</div>
+                </div>
+              </div>
+              <div class="share-folder-access">
+                ${renderDetailRow("有效期", facts.expiresText)}
+                ${renderDetailRow("下载次数", facts.downloadsText)}
+                <div class="share-permission-strip">
+                  ${renderPermission("允许下载", item.allowDownload)}
+                  ${renderPermission("允许预览", item.allowPreview)}
+                </div>
+              </div>
+              <div class="share-dir-panel">
+                <div class="share-dir-crumbs">
+                  ${crumbItems.map((crumb, index) => `${index > 0 ? `<span class="share-dir-sep">/</span>` : ""}<a class="share-dir-crumb${index === crumbItems.length - 1 ? " is-current" : ""}" href="${escapeHtml(sharePageUrl(crumb.path))}">${escapeHtml(crumb.label)}</a>`).join("")}
+                </div>
+                <div class="share-dir-list">
+                  ${folders.length + files.length === 0 ? `<div class="share-dir-empty">当前集合为空</div>` : `${folders.map(renderFolderRow).join("")}${files.map(renderFileRow).join("")}`}
+                </div>
+              </div>
+            </div>
+
+            <div class="share-bottom">
+              <div class="share-actions">
+                ${item.allowDownload ? `<a class="share-btn share-btn-primary" href="${escapeHtml(shareActionUrl("download", currentSharePath))}" target="_blank">${svg("download", 16)}${currentSharePath ? "下载当前文件夹" : "下载全部 ZIP"}</a>` : ""}
                 <button class="share-btn share-btn-ghost" type="button" data-action="copy-current-url">复制链接</button>
               </div>
             </div>

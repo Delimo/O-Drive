@@ -363,6 +363,10 @@ test('uploads panel shows multipart resume and failure diagnostics', () => {
 test('batch bar disables actions while busy', () => {
   const idle = shared.renderBatchBar(makeState(), [{}, {}]);
   assert.match(idle, /已选中 2 项/);
+  assert.match(idle, /data-action="download-selected"/);
+  assert.match(idle, />下载<\/button>/);
+  assert.doesNotMatch(idle, /批量下载/);
+  assert.match(idle, /data-action="open-share-selected"/);
   assert.doesNotMatch(idle, /disabled/);
 
   const busy = shared.renderBatchBar(makeState({ explorer: { batchBusy: true } }), [{}, {}]);
@@ -1094,6 +1098,40 @@ test('share modal labels folder shares explicitly', () => {
   assert.match(html, /data-form="share"/);
 });
 
+test('share modal labels bundle shares explicitly', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'share',
+        loading: false,
+        error: '',
+        targetType: 'bundle',
+        entry: { name: 'readme.txt', fullKey: 'docs/readme.txt', kind: 'text' },
+        entries: [
+          { name: 'readme.txt', fullKey: 'docs/readme.txt', kind: 'text' },
+          { name: 'assets', fullKey: 'docs/assets', kind: 'folder' },
+        ],
+        values: { expiresInDays: '7', maxDownloads: '0', allowPreview: true, allowDownload: true },
+      },
+    },
+  });
+
+  assert.match(html, /批量分享/);
+  assert.match(html, /2 个项目/);
+  assert.match(html, /允许浏览文件夹与预览单个文件/);
+  assert.match(html, /允许下载集合 ZIP 和单项文件/);
+  assert.match(html, /data-form="share"/);
+});
+
 test('admin quota section renders storage usage', () => {
   const state = {
     app: { role: 'admin' },
@@ -1583,6 +1621,50 @@ test('share page renders folder directory entries and action urls', () => {
   assert.match(html, /\/api\/share\/share-token\/preview\?path=nested%2Fdeep\.txt/);
   assert.match(html, /\/api\/share\/share-token\/download\?path=nested%2Fdeep\.txt/);
   assert.match(html, /\/api\/share\/share-token\/download\?path=nested/);
+});
+
+test('share page renders bundle directory entries and action urls', () => {
+  const html = pages.renderSharePage({
+    share: {
+      loading: false,
+      error: '',
+      requiresPassword: false,
+      password: '',
+      token: 'bundle-token',
+      path: '',
+      item: {
+        token: 'bundle-token',
+        path: 'docs/readme.txt',
+        name: '2 项内容',
+        targetType: 'bundle',
+        itemCount: 2,
+        allowPreview: true,
+        allowDownload: true,
+        expiresAt: 0,
+        maxDownloads: 0,
+        downloadCount: 0,
+      },
+      directory: {
+        path: '',
+        folders: [{ name: 'assets', fullKey: 'docs/assets' }],
+        files: [{
+          name: 'readme.txt',
+          fullKey: 'docs/readme.txt',
+          size: 5,
+          sizeFormatted: '5 B',
+          contentType: 'text/plain',
+        }],
+      },
+    },
+  });
+
+  assert.match(html, /共享集合/);
+  assert.match(html, /assets/);
+  assert.match(html, /readme\.txt/);
+  assert.match(html, /share\.html\?token=bundle-token&amp;path=docs%2Fassets/);
+  assert.match(html, /\/api\/share\/bundle-token\/preview\?path=docs%2Freadme\.txt/);
+  assert.match(html, /\/api\/share\/bundle-token\/download\?path=docs%2Fassets/);
+  assert.match(html, /下载全部 ZIP/);
 });
 
 test('share page renders missing data state with retry action', () => {

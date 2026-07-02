@@ -338,6 +338,8 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/INSERT INTO share_links/i.test(sql)) {
               const hasTargetType = /target_type/i.test(sql);
+              const hasItemsJson = /items_json/i.test(sql);
+              const offset = hasTargetType && hasItemsJson ? 1 : 0;
               const row = {
                 token: statement.bound?.[0],
                 path: statement.bound?.[1],
@@ -352,8 +354,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 download_count: 0,
                 password_salt: statement.bound?.[hasTargetType ? 10 : 9] || '',
                 password_hash: statement.bound?.[hasTargetType ? 11 : 10] || '',
+                items_json: hasItemsJson ? statement.bound?.[12] || '[]' : '[]',
                 expired_notified_at: 0,
-                created_at: statement.bound?.[hasTargetType ? 12 : 11] ?? statement.bound?.[hasTargetType ? 11 : 10] ?? statement.bound?.[hasTargetType ? 9 : 8],
+                created_at: statement.bound?.[hasTargetType ? 12 + offset : 11] ?? statement.bound?.[hasTargetType ? 11 : 10] ?? statement.bound?.[hasTargetType ? 9 : 8],
                 last_accessed_at: 0,
                 last_access_ip: '',
               };
@@ -616,14 +619,16 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) row.expired_notified_at = statement.bound?.[0];
             }
-            if (/UPDATE share_links\s+SET expires_at = \?, expired_notified_at = 0, size = \?, content_type = \?, target_type = \?\s+WHERE token = \?/i.test(sql)) {
-              const row = shareRows.find(item => item.token === statement.bound?.[4]);
+            if (/UPDATE share_links\s+SET expires_at = \?, expired_notified_at = 0, size = \?, content_type = \?, target_type = \?(?:, items_json = \?)?\s+WHERE token = \?/i.test(sql)) {
+              const hasItemsJson = /items_json/i.test(sql);
+              const row = shareRows.find(item => item.token === statement.bound?.[hasItemsJson ? 5 : 4]);
               if (row) {
                 row.expires_at = statement.bound?.[0];
                 row.expired_notified_at = 0;
                 row.size = statement.bound?.[1];
                 row.content_type = statement.bound?.[2] || '';
                 row.target_type = statement.bound?.[3] || row.target_type || 'file';
+                if (hasItemsJson) row.items_json = statement.bound?.[4] || '[]';
               }
             }
             if (/UPDATE share_links SET download_count = download_count \+ 1/i.test(sql)) {

@@ -131,16 +131,33 @@ export function createModalRenderers(deps) {
 
     if (modal.type === "share") {
       const values = modal.values || {};
+      const entries = Array.isArray(modal.entries) && modal.entries.length
+        ? modal.entries
+        : modal.entry
+          ? [modal.entry]
+          : [];
+      const isBundleShare = modal.targetType === "bundle" || entries.length > 1;
       const isFolderShare =
-        modal.targetType === "folder" || modal.entry?.kind === "folder";
-      const targetLabel = isFolderShare ? "文件夹" : "文件";
-      const downloadLabel = isFolderShare ? "允许下载文件夹 ZIP" : "允许下载文件";
-      const previewLabel = isFolderShare ? "允许浏览文件夹内容" : "允许在线预览";
+        !isBundleShare && (modal.targetType === "folder" || modal.entry?.kind === "folder");
+      const targetLabel = isBundleShare ? `${entries.length} 项内容` : isFolderShare ? "文件夹" : "文件";
+      const titleLabel = isBundleShare ? "批量分享" : `分享${targetLabel}`;
+      const downloadLabel = isBundleShare
+        ? "允许下载集合 ZIP 和单项文件"
+        : isFolderShare ? "允许下载文件夹 ZIP" : "允许下载文件";
+      const previewLabel = isBundleShare
+        ? "允许浏览文件夹与预览单个文件"
+        : isFolderShare ? "允许浏览文件夹内容" : "允许在线预览";
+      const entryNames = entries.slice(0, 4).map((entry) => entry?.name || getEntryPath(entry)).filter(Boolean);
+      const extraCount = Math.max(0, entries.length - entryNames.length);
+      const targetCopy = isBundleShare
+        ? `你正在为 ${entries.length} 个项目生成一个对外分享地址，包含文件和文件夹时会以集合方式展示。`
+        : `你正在为${targetLabel}「${escapeHtml(modal.entry?.name || `当前${targetLabel}`)}」生成对外分享地址，可控制有效期、下载次数与访问密码。`;
       return `
         <div class="modal-wrap" data-action="close-modal-backdrop">
           <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="share-title" data-stop-close="true">
-            <h3 id="share-title" class="modal-title">分享${targetLabel}</h3>
-            <p class="modal-copy">你正在为${targetLabel}「${escapeHtml(modal.entry?.name || `当前${targetLabel}`)}」生成对外分享地址，可控制有效期、下载次数与访问密码。</p>
+            <h3 id="share-title" class="modal-title">${escapeHtml(titleLabel)}</h3>
+            <p class="modal-copy">${targetCopy}</p>
+            ${isBundleShare ? `<div class="helper-text">已选：${entryNames.map((name) => escapeHtml(name)).join("、")}${extraCount ? ` 等 ${entries.length} 项` : ""}</div>` : ""}
             <form class="modal-form" data-form="share">
               <div class="form-grid">
                 <input class="inline-input" name="expiresInDays" type="number" min="0" max="3650" placeholder="有效期天数" value="${escapeHtml(values.expiresInDays || "7")}">

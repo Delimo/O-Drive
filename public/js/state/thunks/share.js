@@ -47,15 +47,20 @@ export function createShareThunks(deps, context) {
       }
     },
 
-    createShare: (entry) => async (dispatch) => {
-      if (!entry || !getEntryPath(entry)) return;
-      const targetType = entry.kind === "folder" ? "folder" : "file";
+    createShare: (entryOrEntries) => async (dispatch) => {
+      const entries = (Array.isArray(entryOrEntries) ? entryOrEntries : [entryOrEntries])
+        .filter((entry) => entry && getEntryPath(entry));
+      if (!entries.length) return;
+      const entry = entries[0];
+      const targetType =
+        entries.length > 1 ? "bundle" : entry.kind === "folder" ? "folder" : "file";
       dispatch(
         actions.app.setModal({
           type: "share",
           loading: false,
           error: "",
           entry,
+          entries,
           targetType,
           values: {
             expiresInDays: "7",
@@ -75,13 +80,18 @@ export function createShareThunks(deps, context) {
       }
       const modal = getState().app.modal;
       const entry = modal?.entry;
-      const path = entry ? getEntryPath(entry) : "";
-      if (!path) return;
+      const entries = Array.isArray(modal?.entries) && modal.entries.length
+        ? modal.entries
+        : entry
+          ? [entry]
+          : [];
+      const paths = entries.map((item) => getEntryPath(item)).filter(Boolean);
+      if (!paths.length) return;
 
       try {
         const payload = {
-          path,
-          targetType: modal?.targetType || entry.kind || "file",
+          ...(paths.length > 1 ? { paths } : { path: paths[0] }),
+          targetType: paths.length > 1 ? "bundle" : modal?.targetType || entry.kind || "file",
           expiresInDays: Number(values.expiresInDays || 0),
           maxDownloads: Number(values.maxDownloads || 0),
           password: String(values.password || "").trim(),

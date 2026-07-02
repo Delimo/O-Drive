@@ -174,11 +174,12 @@ export function createSharedRenderers(deps) {
       <div class="batch-bar">
         <div class="status-main">
           <span class="status-dot"></span>
-          <span>${busy ? "正在处理批量操作，请稍候…" : `已选中 ${selectedEntries.length} 项，可以批量复制、移动或删除。`}</span>
+          <span>${busy ? "正在处理批量操作，请稍候…" : `已选中 ${selectedEntries.length} 项，可以下载、分享、复制、移动或删除。`}</span>
         </div>
         <div class="btn-row">
           ${singleKey ? `<button class="btn" data-action="open-rename-modal" data-key="${escapeHtml(singleKey)}" ${disabled}>重命名</button>` : ""}
-          ${selectedEntries.length > 1 ? `<button class="btn" data-action="zip-download" ${disabled}>批量下载</button>` : ""}
+          <button class="btn" data-action="download-selected" ${disabled}>下载</button>
+          ${state.app.role === "admin" ? `<button class="btn" data-action="open-share-selected" ${disabled}>分享</button>` : ""}
           <button class="btn" data-action="copy-selected" ${disabled}>复制</button>
           <button class="btn" data-action="move-selected" ${disabled}>移动</button>
           ${state.app.role === "admin" ? `<button class="btn btn-danger" data-action="delete-selected" ${disabled}>删除</button>` : ""}

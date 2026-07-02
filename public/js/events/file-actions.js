@@ -145,10 +145,34 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       return;
     }
 
-    if (action === "zip-download") {
+    if (action === "zip-download" || action === "download-selected") {
       if (state.explorer.trashMode) return;
-      const paths = collectSelectedPaths(state);
+      const entries = state.explorer.selectedKeys
+        .map((id) => findEntryByKey(id))
+        .filter(Boolean);
+      if (action === "download-selected" && entries.length === 1) {
+        const entry = entries[0];
+        const kind = entry.kind || inferKind(entry);
+        if (kind !== "folder") {
+          if (requiresProtectedUnlock(entry)) {
+            openProtectedUnlockModal(getEntryPath(entry), createDeferredAction("download", { path: getEntryPath(entry) }));
+            return;
+          }
+          openDownload(entry);
+          return;
+        }
+      }
+      const paths = entries.map((entry) => getEntryPath(entry)).filter(Boolean);
       store.dispatch(thunks.batchDownloadZip(paths));
+      return;
+    }
+
+    if (action === "open-share-selected") {
+      if (state.explorer.trashMode) return;
+      const entries = state.explorer.selectedKeys
+        .map((id) => findEntryByKey(id))
+        .filter(Boolean);
+      if (entries.length) store.dispatch(thunks.createShare(entries));
       return;
     }
 
