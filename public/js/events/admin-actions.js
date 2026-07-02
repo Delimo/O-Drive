@@ -200,7 +200,7 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
     }
 
     if (action === "show-add-webhook") {
-      store.dispatch(actions.app.setModal({ type: "add-webhook", loading: false, error: "", name: "", url: "", msgtype: "json", method: "POST", contentType: "application/json", headers: "", body: "", events: [], enabled: true }));
+      store.dispatch(actions.app.setModal({ type: "add-webhook", loading: false, error: "", name: "", url: "", msgtype: "json", method: "POST", contentType: "application/json", headers: "", body: "", events: [], eventMode: "custom", enabled: true }));
       return;
     }
 

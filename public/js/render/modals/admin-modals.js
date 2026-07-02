@@ -166,18 +166,12 @@ export function createAdminModalRenderers({
     const knownEvents = new Set(eventGroups.flatMap((group) => group.options.map((option) => option.key)));
     const selectedSet = new Set(selectedEvents);
     const legacyEvents = selectedEvents.filter((event) => !knownEvents.has(event));
-    const useAllEvents = selectedEvents.length === 0;
+    const initialEventMode = modal.eventMode === "custom" || modal.eventMode === "all" ? modal.eventMode : "";
+    const useAllEvents = initialEventMode ? initialEventMode === "all" : selectedEvents.length === 0;
     const eventCheckboxDisabled = useAllEvents ? "disabled" : "";
     const msgtype = modal.msgtype || "json";
     const method = modal.method || "POST";
     const contentType = modal.contentType || "application/json";
-    const hasAdvancedValue = Boolean(
-      (modal.headers || "").trim()
-      || (modal.body || "").trim()
-      || msgtype !== "json"
-      || method !== "POST"
-      || contentType !== "application/json",
-    );
     const eventCount = eventGroups.reduce((count, group) => count + group.options.length, 0);
     const renderEventOption = (option) => `
       <label class="webhook-event-option">
@@ -223,11 +217,11 @@ export function createAdminModalRenderers({
               </div>
             </section>
 
-            <details class="webhook-modal-advanced" ${hasAdvancedValue ? "open" : ""}>
-              <summary>
+            <section class="webhook-modal-advanced">
+              <div class="webhook-modal-advanced-head">
                 <span>Headers 与请求体模板</span>
                 <small>选填，请求方式也在这里</small>
-              </summary>
+              </div>
               <div class="webhook-modal-advanced-body">
                 <div class="webhook-modal-select-row">
                   ${renderModalCustomSelect({
@@ -266,7 +260,7 @@ export function createAdminModalRenderers({
                   <span>{{data.message}}</span>
                 </div>
               </div>
-            </details>
+            </section>
               </div>
 
               <div class="webhook-modal-side">

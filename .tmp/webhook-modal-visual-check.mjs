@@ -78,6 +78,10 @@ async function inspect(label, viewport) {
       headers: box(headers),
       body: box(body),
       form: box(form),
+      resize: {
+        headers: getComputedStyle(headers).resize,
+        body: getComputedStyle(body).resize,
+      },
       overflowX: document.documentElement.scrollWidth > viewportWidth + 1,
       overlappingBlocks: blocks.some((section, index) => {
         const a = section.getBoundingClientRect();
@@ -99,6 +103,9 @@ async function inspect(label, viewport) {
   if (metrics.headers.height < 150 || metrics.body.height < 150) {
     throw new Error(`${label}: textarea height too small: ${metrics.headers.height}/${metrics.body.height}`);
   }
+  if (metrics.resize.headers !== "none" || metrics.resize.body !== "none") {
+    throw new Error(`${label}: textarea resize should be none, got ${metrics.resize.headers}/${metrics.resize.body}`);
+  }
   if (metrics.overflowX) {
     throw new Error(`${label}: page has horizontal overflow`);
   }
@@ -110,6 +117,19 @@ async function inspect(label, viewport) {
     throw new Error(`${label}: console errors: ${severeErrors.join(" | ")}`);
   }
   await page.screenshot({ path: `.tmp/webhook-modal-${label}.png`, fullPage: true });
+  const bottom = await page.evaluate(() => {
+    const form = document.querySelector(".webhook-modal-card .modal-form");
+    const card = document.querySelector(".webhook-modal-card").getBoundingClientRect();
+    form.scrollTop = form.scrollHeight;
+    const btn = document.querySelector(".webhook-modal-card .btn-row").getBoundingClientRect();
+    return {
+      btnVisible: btn.top >= card.top && btn.bottom <= card.bottom,
+      scrollTop: form.scrollTop,
+    };
+  });
+  if (!bottom.btnVisible) {
+    throw new Error(`${label}: bottom buttons are not reachable after scrolling`);
+  }
   checks.push({ label, ...metrics });
   await page.close();
 }
