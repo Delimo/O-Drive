@@ -672,6 +672,40 @@ test('confirm-clear-trash modal shows loading state', () => {
   assert.match(html, /disabled/);
 });
 
+test('operation estimate modal blocks truncated delete requests', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'operation-estimate',
+        loading: false,
+        error: '',
+        operation: 'delete',
+        paths: ['docs'],
+        estimate: {
+          success: true,
+          truncated: true,
+          shouldBatch: true,
+          recommendedBatchSize: 1000,
+          totalObjects: 1001,
+          items: [{ path: 'docs', exists: true, kind: 'folder', objectCount: 1001, truncated: true }],
+        },
+      },
+    },
+  });
+
+  assert.match(html, /目录规模超过同步删除上限/);
+  assert.match(html, /data-action="execute-batch-delete"[\s\S]*disabled/);
+});
+
 test('webhook modal uses custom selects with hidden form values', () => {
   const { renderModal } = createModalRenderers({
     icons,

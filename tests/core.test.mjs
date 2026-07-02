@@ -1927,6 +1927,7 @@ test('batch delete reports oversized folders instead of silently truncating', as
   const data = await res.json();
   assert.equal(res.status, 400);
   assert.equal(data.success, false);
+  assert.match(data.message, /too large/);
   assert.match(data.failed[0].message, /too large/);
 });
 
@@ -2073,6 +2074,33 @@ test('deleting original and alias paths only removes the backing object after th
   }));
   assert.equal(purgeAlias.status, 200);
   assert.equal(await env.R2.get(copiedIndex.object_key), null);
+});
+
+test('operation estimate counts logical alias paths from file index', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/source.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+
+  await handlePaste(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'copy', paths: ['docs/source.txt'], targetDir: '/copies' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+
+  const res = await handleOperationEstimate(env, new Request('https://example.com/api/operation-estimate', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['copies/source.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await res.json();
+
+  assert.equal(data.success, true);
+  assert.equal(data.totalObjects, 1);
+  assert.equal(data.items[0].exists, true);
+  assert.equal(data.items[0].kind, 'file');
+  assert.equal(data.items[0].objectCount, 1);
 });
 
 test('paste preserves conflict behavior when multiple sources target the same destination name', async () => {

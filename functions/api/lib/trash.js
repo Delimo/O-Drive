@@ -287,7 +287,22 @@ export async function softDeleteTree(env, sourceKey, request) {
       storageId: sourceLocation.storageId,
       objectKey: sourceLocation.objectKey,
     });
-  for (const row of await listFileIndexPrefix(env, sourceKey)) {
+  const indexedRows = await listFileIndexPrefix(env, sourceKey);
+  if (
+    sourceLocation.indexed &&
+    !indexedRows.find((row) => row.path === sourceKey)
+  ) {
+    const entry = sourceLocation.indexed;
+    entries.set(sourceKey, {
+      key: sourceKey,
+      size: Number(entry.size || 0),
+      contentType: entry.content_type || "",
+      indexed: true,
+      storageId: entry.storage_id || storageId,
+      objectKey: entry.object_key || sourceKey,
+    });
+  }
+  for (const row of indexedRows) {
     entries.set(row.path, {
       key: row.path,
       size: Number(row.size || 0),

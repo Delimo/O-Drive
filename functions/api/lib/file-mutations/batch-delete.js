@@ -1,5 +1,11 @@
 import { jsonResponse, addLog } from "../common/index.js";
-import { resolveExistingStorageId, storageHead, storageList } from "../storage.js";
+import { listFileIndexPrefix } from "../file-index/index.js";
+import {
+  resolveExistingObjectLocation,
+  resolveExistingStorageId,
+  storageHead,
+  storageList,
+} from "../storage.js";
 import { softDeleteTree } from "../trash.js";
 import { assertUserKey, assertPathList, mapPathResults } from "./helpers.js";
 
@@ -73,9 +79,15 @@ export async function handleBatchDelete(env, request, body) {
           : normalizedPaths.join(", "),
     },
   );
+  const allFailed = failed.length && !completed;
   return jsonResponse(
-    { success: failed.length === 0, completed, failed },
-    failed.length && !completed ? 400 : 200,
+    {
+      success: failed.length === 0,
+      completed,
+      failed,
+      ...(allFailed ? { message: failed[0]?.message || "Delete failed" } : {}),
+    },
+    allFailed ? 400 : 200,
   );
 }
 
@@ -89,18 +101,29 @@ export async function handleOperationEstimate(env, request) {
 
   for (const key of normalizedPaths) {
     assertUserKey(key);
-    const storageId = await resolveExistingStorageId(env, key);
-    const exact = await storageHead(env, storageId, key);
+    const location = await resolveExistingObjectLocation(env, key);
+    const storageId =
+      location.storageId || (await resolveExistingStorageId(env, key));
+    const exact = await storageHead(env, location.storageId, location.objectKey);
+    const indexedRows = await listFileIndexPrefix(env, key);
     const listed = await storageList(
       env,
       storageId,
       { prefix: key + "/" },
       { maxObjects: 1001 },
     );
-    const childCount = (listed.objects || []).length;
+    const objectPaths = new Set();
+    if (exact || location.indexed) objectPaths.add(key);
+    for (const row of indexedRows || []) {
+      if (row?.path) objectPaths.add(row.path);
+    }
+    for (const item of listed.objects || []) {
+      if (item?.key) objectPaths.add(item.key);
+    }
+    const childCount = [...objectPaths].filter((path) => path !== key).length;
     const isFolder = childCount > 0;
-    const exists = Boolean(exact || isFolder);
-    const objectCount = (exact ? 1 : 0) + childCount;
+    const exists = objectPaths.size > 0;
+    const objectCount = objectPaths.size;
     totalObjects += objectCount;
     truncated = truncated || Boolean(listed.truncated);
     items.push({
