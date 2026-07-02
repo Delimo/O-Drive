@@ -270,8 +270,25 @@ export async function storageDelete(env, storageId, key) {
   return env.R2.delete(key);
 }
 
-export async function storageCopy(env, sourceStorageId, sourceKey, destStorageId, destKey, options = {}) {
-  await env.R2.copy(sourceKey, destKey, options);
+export async function storageCopy(
+  env,
+  sourceStorageId,
+  sourceKey,
+  destStorageId,
+  destKey,
+  options = {},
+) {
+  if (typeof env.R2.copy === "function") {
+    await env.R2.copy(sourceKey, destKey, options);
+    return true;
+  }
+  const source = await storageGet(env, sourceStorageId, sourceKey);
+  if (!source) return false;
+  await storagePut(env, destStorageId, destKey, source.body, {
+    ...options,
+    httpMetadata: options.httpMetadata || source.httpMetadata,
+    customMetadata: options.customMetadata || source.customMetadata,
+  });
   return true;
 }
 

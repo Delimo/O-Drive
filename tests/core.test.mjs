@@ -1793,6 +1793,30 @@ test('batch delete moves files into trash and restore returns them', async () =>
   assert.equal(trashDelete.status, 404);
 });
 
+test('batch delete works when R2 binding has no native copy method', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/readme.txt', body: 'hello', size: 5, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  delete env.R2.copy;
+
+  const batchDelete = await handleBatchDelete(env, new Request('https://example.com/api/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ paths: ['docs/readme.txt'] }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const batchData = await batchDelete.json();
+
+  assert.equal(batchDelete.status, 200);
+  assert.equal(batchData.success, true);
+  assert.equal(await env.R2.get('docs/readme.txt'), null);
+
+  const trashData = await (await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'))).json();
+  assert.equal(trashData.items.length, 1);
+  assert.ok(await env.R2.get(`${trashData.items[0].trash_key}`));
+});
+
 test('trash restore previews conflicts and can skip or auto rename', async () => {
   const env = makeEnv({
     objects: [
