@@ -58,6 +58,10 @@
   flex-direction: column;
 }
 
+.ap-maintenance-card {
+  position: relative;
+}
+
 .ap-card-head {
   display: flex;
   align-items: center;
@@ -68,6 +72,51 @@
 
 .ap-card-body {
   padding: 12px 14px;
+}
+
+.ap-maintenance-advanced {
+  border-top: 1px solid var(--line);
+}
+
+.ap-maintenance-advanced-trigger {
+  position: absolute;
+  top: 9px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.ap-maintenance-advanced-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.ap-maintenance-advanced-trigger::marker {
+  content: "";
+}
+
+.ap-maintenance-advanced[open] .ap-maintenance-advanced-trigger {
+  border-color: rgba(14, 116, 144, 0.28);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ap-maintenance-advanced-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 /* ─── Stats Row ─── */
@@ -3664,6 +3713,10 @@
   min-height: 0;
 }
 
+.ov-maintenance-has-advanced {
+  position: relative;
+}
+
 .ov-maintenance-header,
 .ov-tasks-header {
   display: flex;
@@ -3707,6 +3760,54 @@
   grid-column: 1 / -1;
 }
 
+.ov-maintenance-advanced {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.ov-maintenance-advanced-trigger {
+  position: absolute;
+  top: 9px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.ov-maintenance-advanced-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.ov-maintenance-advanced-trigger::marker {
+  content: "";
+}
+
+.ov-maintenance-advanced[open] .ov-maintenance-advanced-trigger {
+  border-color: rgba(14, 116, 144, 0.28);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ov-maintenance-advanced-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 230px;
+  overflow-y: auto;
+}
+
 .ov-maintenance-item {
   display: flex;
   align-items: center;
@@ -3743,6 +3844,10 @@
 
 @media (max-width: 768px) {
   .ov-maintenance-body {
+    grid-template-columns: 1fr;
+  }
+
+  .ov-maintenance-advanced-body {
     grid-template-columns: 1fr;
   }
 }

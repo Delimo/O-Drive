@@ -39,9 +39,9 @@ export function createSystemRenderer({
   function renderMaintenanceActions() {
     return `
       ${COMMON_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
-      <details class="ov-maintenance-advanced" style="border-top:1px solid var(--line);padding-top:8px;">
-        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);padding:4px 0;">显示高级清理</summary>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+      <details class="ov-maintenance-advanced">
+        <summary class="ov-maintenance-advanced-trigger">显示高级清理</summary>
+        <div class="ov-maintenance-advanced-body">
           ${ADVANCED_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
         </div>
       </details>
@@ -250,7 +250,7 @@ export function createSystemRenderer({
             </div>
           ` : ""}
 
-          <div class="ov-maintenance">
+          <div class="ov-maintenance ov-maintenance-has-advanced">
             <div class="ov-maintenance-header">
               <span class="ov-maintenance-title">运维指令</span>
             </div>

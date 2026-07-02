@@ -31,6 +31,14 @@ export const adminInitialState = {
   hiddenPaths: [],
   hiddenPathsLoading: false,
   hiddenPathsError: "",
+  accessRuleDraft: {
+    path: "",
+    hidden: false,
+    showName: true,
+    password: "",
+    note: "",
+  },
+  accessRuleSaving: false,
   storageConfig: null,
   storageConfigLoading: false,
   storageConfigError: "",
@@ -223,6 +231,30 @@ export function createAdminSlice(initialState) {
           hiddenPathsError: action.payload,
           hiddenPaths: [],
         };
+      },
+      setAccessRuleDraft(state, action) {
+        return {
+          ...state,
+          accessRuleDraft: {
+            ...state.accessRuleDraft,
+            ...(action.payload || {}),
+          },
+        };
+      },
+      resetAccessRuleDraft(state) {
+        return {
+          ...state,
+          accessRuleDraft: {
+            path: "",
+            hidden: false,
+            showName: true,
+            password: "",
+            note: "",
+          },
+        };
+      },
+      setAccessRuleSaving(state, action) {
+        return { ...state, accessRuleSaving: !!action.payload };
       },
       setStorageConfigLoading(state, action) {
         return { ...state, storageConfigLoading: action.payload };

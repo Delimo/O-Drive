@@ -25,9 +25,9 @@ export function createMaintenanceRenderer({
   function renderMaintenanceActions() {
     return `
       ${COMMON_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
-      <details class="ap-maintenance-advanced" style="border-top:1px solid var(--line);">
-        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);padding:10px 14px;">显示高级清理</summary>
-        <div class="ap-list">
+      <details class="ap-maintenance-advanced">
+        <summary class="ap-maintenance-advanced-trigger">显示高级清理</summary>
+        <div class="ap-maintenance-advanced-body">
           ${ADVANCED_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
         </div>
       </details>
@@ -68,7 +68,7 @@ export function createMaintenanceRenderer({
         </div>
 
         <div class="ap-grid">
-          <div class="ap-card ap-col-7">
+          <div class="ap-card ap-col-7 ap-maintenance-card">
             <div class="ap-card-head">
               <span class="ap-lbl" style="margin:0;">运维指令</span>
             </div>

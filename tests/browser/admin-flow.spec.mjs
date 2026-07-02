@@ -15,7 +15,7 @@ test('admin maintenance panel groups common and advanced actions in mock mode', 
   await expect(maintSection.locator('[data-maintenance-action="cleanup-logs"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-zip-task-results"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="rebuild-storage-refs"]')).toBeVisible();
-  await expect(maintSection.locator('[data-maintenance-action="cleanup-thumbnails"]')).toBeHidden();
+  await expect(maintSection.locator('[data-maintenance-action="cleanup-thumbnails"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-tasks"]')).toBeHidden();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-warnings"]')).toBeHidden();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-access-attempts"]')).toBeHidden();
