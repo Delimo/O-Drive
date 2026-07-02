@@ -153,6 +153,7 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
             input.disabled = useAll;
           });
           form.querySelector('[data-role="webhook-event-custom"]')?.classList.toggle("is-disabled", useAll);
+          form.querySelector('[data-role="webhook-event-all-note"]')?.classList.toggle("is-hidden", !useAll);
           form.querySelectorAll('input[name="eventMode"]').forEach((input) => {
             input.closest(".webhook-event-mode")?.classList.toggle("is-selected", input.checked);
           });
@@ -169,6 +170,7 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
             input.closest(".webhook-event-mode")?.classList.toggle("is-selected", input.checked);
           });
           form.querySelector('[data-role="webhook-event-custom"]')?.classList.remove("is-disabled");
+          form.querySelector('[data-role="webhook-event-all-note"]')?.classList.add("is-hidden");
         }
         return;
       }

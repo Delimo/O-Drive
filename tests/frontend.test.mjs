@@ -1241,6 +1241,7 @@ test('admin maintenance section renders snapshot and action buttons', () => {
     },
   };
   const html = pages.renderAdminPage(state);
+  assert.match(html, /检查索引一致性/);
   assert.match(html, /同步元数据库索引/);
   assert.match(html, /同步清除废弃文件/);
   assert.match(html, /显示高级清理/);
@@ -1252,6 +1253,7 @@ test('admin maintenance section renders snapshot and action buttons', () => {
   assert.match(html, /清理登录失败记录/);
   assert.match(html, /清理下载异常记录/);
   assert.match(html, /data-action="confirm-maintenance-action"/);
+  assert.match(html, /data-maintenance-action="scan-index-consistency"/);
   assert.match(html, /data-maintenance-action="rebuild-index"/);
   assert.match(html, /data-maintenance-action="purge-trash"/);
   assert.match(html, /data-maintenance-action="cleanup-thumbnails"/);

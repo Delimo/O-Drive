@@ -1,4 +1,5 @@
 export const COMMON_MAINTENANCE_ACTIONS = [
+  { action: "scan-index-consistency", label: "检查索引一致性", desc: "只读扫描 file_index、storage_objects、回收站和 R2 引用。", danger: false },
   { action: "rebuild-index", label: "同步元数据库索引", desc: "对齐元数据库数据状态。", danger: false },
   { action: "purge-trash", label: "同步清除废弃文件", desc: "物理清除已过期回收站数据。", danger: true },
   { action: "cleanup-thumbnails", label: "清理缩略图缓存", desc: "删除 .thumbs 下的缩略图缓存对象。", danger: true },

@@ -527,6 +527,16 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 row.updated_at = Number(updatedAt || row.updated_at || 0);
               }
             }
+            if (/UPDATE storage_objects SET ref_count = \?, updated_at = \? WHERE storage_id = \? AND object_key = \?/i.test(sql)) {
+              const [refCount, updatedAt, storageId, objectKey] = statement.bound || [];
+              const row = storageObjectRows.find(item =>
+                item.storage_id === storageId && item.object_key === objectKey
+              );
+              if (row) {
+                row.ref_count = Number(refCount || 0);
+                row.updated_at = Number(updatedAt || row.updated_at || 0);
+              }
+            }
             if (/UPDATE trash_entries SET object_key = \? WHERE storage_id = \? AND object_key = \?/i.test(sql)) {
               const [nextObjectKey, storageId, oldObjectKey] = statement.bound || [];
               for (const row of trashEntryRows) {
@@ -979,6 +989,12 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
               return {
                 results: trashEntryRows
                   .filter(row => row.trash_id === trashId)
+                  .sort((a, b) => String(a.path).localeCompare(String(b.path))),
+              };
+            }
+            if (/SELECT \* FROM trash_entries ORDER BY path ASC/i.test(sql)) {
+              return {
+                results: [...trashEntryRows]
                   .sort((a, b) => String(a.path).localeCompare(String(b.path))),
               };
             }

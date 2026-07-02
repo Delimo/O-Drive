@@ -3002,6 +3002,74 @@ test('admin maintenance reports counts and runs cleanup actions', async () => {
   assert.equal((await trashList.json()).items.length, 0);
 });
 
+test('admin maintenance scans index consistency without mutating data', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/a.txt', body: 'a', size: 1, uploaded: new Date('2026-01-02') },
+      { key: 'docs/orphan.txt', body: 'orphan', size: 6, uploaded: new Date('2026-01-02') },
+    ],
+  });
+  const { csrf, cookie } = await loginAsAdmin(env);
+  const now = Date.now();
+
+  await env.D1.prepare(
+    'INSERT INTO file_index (path, storage_id, object_key, name, parent, kind, size, content_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+    .bind('docs/a.txt', 'r2', 'docs/a.txt', 'a.txt', 'docs', 'text', 1, 'text/plain', now, now)
+    .run();
+  await env.D1.prepare(
+    'INSERT INTO file_index (path, storage_id, object_key, name, parent, kind, size, content_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+    .bind('docs/missing.txt', 'r2', 'docs/missing.txt', 'missing.txt', 'docs', 'text', 1, 'text/plain', now, now)
+    .run();
+  await env.D1.prepare(
+    'INSERT INTO file_index (path, storage_id, object_key, name, parent, kind, size, content_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+    .bind('docs/empty.txt', 'r2', '', 'empty.txt', 'docs', 'text', 1, 'text/plain', now, now)
+    .run();
+  await env.D1.prepare(
+    'INSERT INTO file_index (path, storage_id, object_key, name, parent, kind, size, content_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+    .bind('.system/leak.txt', 'r2', 'docs/a.txt', 'leak.txt', '.system', 'text', 1, 'text/plain', now, now)
+    .run();
+  await env.D1.prepare(
+    'INSERT INTO storage_objects (id, storage_id, object_key, sha256, size, content_type, ref_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+    .bind('r2:docs-a', 'r2', 'docs/a.txt', 'docs-a', 1, 'text/plain', 0, now, now)
+    .run();
+  await env.D1.prepare(
+    'INSERT INTO storage_objects (id, storage_id, object_key, sha256, size, content_type, ref_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+    .bind('r2:missing-storage', 'r2', 'objects/sha256/missing', 'missing-storage', 1, 'text/plain', 0, now, now)
+    .run();
+
+  const scan = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/maintenance', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'scan-index-consistency' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+    }),
+  });
+  const data = await scan.json();
+  const report = data.indexConsistency;
+
+  assert.equal(scan.status, 200);
+  assert.equal(data.success, true);
+  assert.equal(report.status, 'warning');
+  assert.equal(report.categories.brokenFileIndexRefs.count, 1);
+  assert.equal(report.categories.invalidFileIndexObjectKeys.count, 1);
+  assert.equal(report.categories.reservedFileIndexPaths.count, 1);
+  assert.equal(report.categories.storageRefMismatches.count, 1);
+  assert.equal(report.categories.zeroRefStorageObjects.count, 1);
+  assert.equal(report.categories.missingStorageObjectRefs.count, 1);
+  assert.equal(report.categories.unreferencedR2Objects.count, 1);
+  assert.equal(report.scanned.fileIndexRows, 4);
+
+  const rowsAfter = await env.D1.prepare('SELECT * FROM file_index ORDER BY path ASC').all();
+  assert.equal(rowsAfter.results.length, 4);
+});
+
 test('operation logs can be manually cleaned with retention policy', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';

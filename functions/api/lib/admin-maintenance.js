@@ -13,6 +13,7 @@ import {
   rebuildFileIndex,
 } from "./file-index/index.js";
 import { ensureStorageObjectsTable } from "./storage-objects.js";
+import { scanIndexConsistency } from "./index-consistency.js";
 import { mapWithConcurrency } from "./r2-tree.js";
 import { storageDelete } from "./storage.js";
 import { cleanupFileTasks } from "./tasks.js";
@@ -121,6 +122,21 @@ export async function handleAdminMaintenanceAction(env, request) {
       `重建文件索引，同步 ${result.synced || 0} 个文件${result.truncated ? "，已达扫描上限" : ""}`,
     );
     return jsonResponse({ success: true, action, ...result });
+  }
+  if (action === "scan-index-consistency") {
+    const result = await scanIndexConsistency(env);
+    await addLog(
+      env,
+      request,
+      "MAINTENANCE",
+      `索引一致性检查完成，发现 ${result.issueCount || 0} 个问题${result.truncated ? "，扫描已达上限" : ""}`,
+    );
+    return jsonResponse({
+      success: true,
+      action,
+      message: `索引一致性检查完成：发现 ${result.issueCount || 0} 个问题`,
+      indexConsistency: result,
+    });
   }
   if (action === "cleanup-access-attempts") {
     let deleted = 0;

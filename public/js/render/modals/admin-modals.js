@@ -221,53 +221,10 @@ export function createAdminModalRenderers({
               </div>
             </section>
 
-            <section class="webhook-modal-section">
-              <div class="webhook-modal-section-head">
-                <span>触发事件</span>
-                <small>${useAllEvents ? `当前接收全部 ${eventCount} 类事件` : `已选择 ${selectedEvents.length} 类事件`}</small>
-              </div>
-              <div class="webhook-event-mode-row">
-                <label class="webhook-event-mode ${useAllEvents ? "is-selected" : ""}">
-                  <input type="radio" name="eventMode" value="all" data-action-change="set-webhook-event-mode" ${useAllEvents ? "checked" : ""}>
-                  <span>全部事件</span>
-                  <small>后续新增事件也会自动接收</small>
-                </label>
-                <label class="webhook-event-mode ${!useAllEvents ? "is-selected" : ""}">
-                  <input type="radio" name="eventMode" value="custom" data-action-change="set-webhook-event-mode" ${!useAllEvents ? "checked" : ""}>
-                  <span>自定义事件</span>
-                  <small>只投递勾选的事件</small>
-                </label>
-              </div>
-              <div class="webhook-event-custom ${useAllEvents ? "is-disabled" : ""}" data-role="webhook-event-custom">
-                ${eventGroups.map((group) => `
-                  <div class="webhook-event-group">
-                    <div class="webhook-event-group-head">
-                      <span>${escapeHtml(group.label)}</span>
-                      <small>${escapeHtml(group.desc)}</small>
-                    </div>
-                    <div class="webhook-event-grid">
-                      ${group.options.map(renderEventOption).join("")}
-                    </div>
-                  </div>
-                `).join("")}
-                ${legacyEvents.length ? `
-                  <div class="webhook-event-group">
-                    <div class="webhook-event-group-head">
-                      <span>旧配置事件</span>
-                      <small>保留已有配置中的非推荐事件名</small>
-                    </div>
-                    <div class="webhook-event-legacy-row">
-                      ${legacyEvents.map(renderLegacyEvent).join("")}
-                    </div>
-                  </div>
-                ` : ""}
-              </div>
-            </section>
-
             <details class="webhook-modal-advanced" ${hasAdvancedValue ? "open" : ""}>
               <summary>
-                <span>高级选项</span>
-                <small>请求方式、Headers 和请求体模板</small>
+                <span>Headers 与请求体模板</span>
+                <small>选填，请求方式也在这里</small>
               </summary>
               <div class="webhook-modal-advanced-body">
                 <div class="webhook-modal-select-row">
@@ -296,16 +253,62 @@ export function createAdminModalRenderers({
                 </label>
                 <label class="webhook-field">
                   <span>请求体模板</span>
-                  <textarea class="inline-input webhook-code-input webhook-body-input" name="body" placeholder='{"text":"{{message}}"}' rows="5" spellcheck="false">${escapeHtml(modal.body || "")}</textarea>
+                  <textarea class="inline-input webhook-code-input webhook-body-input" name="body" placeholder='{"text":"{{data.message}}"}' rows="5" spellcheck="false">${escapeHtml(modal.body || "")}</textarea>
                 </label>
                 <div class="webhook-token-row" aria-label="可用模板变量">
                   <span>{{event}}</span>
-                  <span>{{message}}</span>
-                  <span>{{path}}</span>
                   <span>{{timestamp}}</span>
+                  <span>{{data.path}}</span>
+                  <span>{{data.message}}</span>
                 </div>
               </div>
             </details>
+
+            <section class="webhook-modal-section">
+              <div class="webhook-modal-section-head">
+                <span>触发事件</span>
+                <small>${useAllEvents ? `当前接收全部 ${eventCount} 类事件` : `已选择 ${selectedEvents.length} 类事件`}</small>
+              </div>
+              <div class="webhook-event-mode-row">
+                <label class="webhook-event-mode ${useAllEvents ? "is-selected" : ""}">
+                  <input type="radio" name="eventMode" value="all" data-action-change="set-webhook-event-mode" ${useAllEvents ? "checked" : ""}>
+                  <span>全部事件</span>
+                  <small>后续新增事件也会自动接收</small>
+                </label>
+                <label class="webhook-event-mode ${!useAllEvents ? "is-selected" : ""}">
+                  <input type="radio" name="eventMode" value="custom" data-action-change="set-webhook-event-mode" ${!useAllEvents ? "checked" : ""}>
+                  <span>自定义事件</span>
+                  <small>只投递勾选的事件</small>
+                </label>
+              </div>
+              <div class="webhook-event-all-note ${useAllEvents ? "" : "is-hidden"}" data-role="webhook-event-all-note">
+                当前会投递所有支持事件。需要限制范围时切换到自定义事件。
+              </div>
+              <div class="webhook-event-custom ${useAllEvents ? "is-disabled" : ""}" data-role="webhook-event-custom">
+                ${eventGroups.map((group) => `
+                  <div class="webhook-event-group">
+                    <div class="webhook-event-group-head">
+                      <span>${escapeHtml(group.label)}</span>
+                      <small>${escapeHtml(group.desc)}</small>
+                    </div>
+                    <div class="webhook-event-grid">
+                      ${group.options.map(renderEventOption).join("")}
+                    </div>
+                  </div>
+                `).join("")}
+                ${legacyEvents.length ? `
+                  <div class="webhook-event-group">
+                    <div class="webhook-event-group-head">
+                      <span>旧配置事件</span>
+                      <small>保留已有配置中的非推荐事件名</small>
+                    </div>
+                    <div class="webhook-event-legacy-row">
+                      ${legacyEvents.map(renderLegacyEvent).join("")}
+                    </div>
+                  </div>
+                ` : ""}
+              </div>
+            </section>
             ${renderFormFeedback(modal.error, "基础用法只需要填写名称、URL 和触发事件；Headers 与请求体模板可以留空。")}
             <div class="btn-row" style="margin-top:6px;">
               <button class="btn btn-primary" type="submit" ${modal.loading ? "disabled" : ""}>${modal.loading ? "保存中..." : isEdit ? "保存" : "添加"}</button>

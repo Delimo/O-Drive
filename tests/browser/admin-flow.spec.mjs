@@ -9,7 +9,8 @@ test('admin maintenance panel groups common and advanced actions in mock mode', 
   await page.locator('[data-tab="system"]').click();
   const maintSection = page.locator('.ov-maintenance');
   await expect(maintSection).toBeVisible({ timeout: 10000 });
-  await expect(maintSection.locator('[data-maintenance-action]')).toHaveCount(12);
+  await expect(maintSection.locator('[data-maintenance-action]')).toHaveCount(13);
+  await expect(maintSection.locator('[data-maintenance-action="scan-index-consistency"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="rebuild-index"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="purge-trash"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-logs"]')).toBeVisible();

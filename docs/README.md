@@ -10,6 +10,7 @@
 | `frontend-style.md` | 前端视觉风格指南，记录颜色、排版、组件、页面密度和重做页面时的设计检查清单。 |
 | `layout.md` | 页面布局、region、flex 链路和常见布局排查。 |
 | `admin-page.md` | 后台管理页 Tab、渲染器和事件约定。 |
+| `project-roadmap.md` | 后续功能与代码优化建议，覆盖大目录任务化、索引修复、WebDAV、可观测性、分享和测试基础设施。 |
 
 ## 治理状态
 
