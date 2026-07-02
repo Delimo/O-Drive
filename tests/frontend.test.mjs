@@ -1134,9 +1134,11 @@ test('admin maintenance section renders snapshot and action buttons', () => {
   assert.match(html, /同步元数据库索引/);
   assert.match(html, /清理缓存数据库/);
   assert.match(html, /同步清除废弃文件/);
+  assert.match(html, /清理旧操作日志/);
   assert.match(html, /data-action="confirm-maintenance-action"/);
   assert.match(html, /data-maintenance-action="rebuild-index"/);
   assert.match(html, /data-maintenance-action="purge-trash"/);
+  assert.match(html, /data-maintenance-action="cleanup-logs"/);
 });
 
 test('admin maintenance section shows loading state', () => {

@@ -2,6 +2,7 @@ export const MAINTENANCE_ACTIONS = [
   { action: "rebuild-index", label: "同步元数据库索引", desc: "对齐元数据库数据状态。", danger: false },
   { action: "clear-cache", label: "清理缓存数据库", desc: "强制刷洗 Redis 本地暂存层。", danger: false },
   { action: "purge-trash", label: "同步清除废弃文件", desc: "物理清除已过期回收站数据。", danger: true },
+  { action: "cleanup-logs", label: "清理旧操作日志", desc: "按 90 天/最近 2000 条保留策略清理审计日志。", danger: true },
   { action: "cleanup-zip-task-results", label: "清理 ZIP 结果", desc: "删除 .system/zip-tasks 下的后台打包结果。", danger: true },
   { action: "rebuild-storage-refs", label: "重建对象引用计数", desc: "重新计算 storage_objects.ref_count。", danger: false },
   { action: "cleanup-orphan-storage-objects", label: "清理孤儿存储对象", desc: "删除引用计数为 0 的 storage_objects。", danger: true }
