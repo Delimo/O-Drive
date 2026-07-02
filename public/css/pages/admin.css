@@ -115,8 +115,6 @@
 .ap-maintenance-advanced-body {
   display: flex;
   flex-direction: column;
-  max-height: 260px;
-  overflow-y: auto;
 }
 
 .ap-maintenance-advanced:not([open]) > .ap-maintenance-advanced-body {
@@ -3808,8 +3806,6 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  max-height: 230px;
-  overflow-y: auto;
 }
 
 .ov-maintenance-advanced:not([open]) > .ov-maintenance-advanced-body {
