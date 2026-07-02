@@ -1042,6 +1042,83 @@ test('route batch delete writes audit log and notification history', async () =>
   await Promise.all(waitUntilPromises);
 });
 
+test('route trash clear writes audit log and notification history', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'docs/clear-me.txt', body: 'bye', size: 3, uploaded: new Date('2026-01-01') },
+    ],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  const waitUntilPromises = [];
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const deleted = await onRequest({
+    env,
+    request: new Request('https://example.com/api/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ paths: ['docs/clear-me.txt'] }),
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': loginData.csrf,
+      },
+    }),
+    waitUntil(promise) {
+      waitUntilPromises.push(promise);
+    },
+  });
+  assert.equal(deleted.status, 200);
+
+  const cleared = await onRequest({
+    env,
+    request: new Request('https://example.com/api/trash/clear', {
+      method: 'DELETE',
+      headers: {
+        Cookie: cookie,
+        'X-CSRF-Token': loginData.csrf,
+      },
+    }),
+    waitUntil(promise) {
+      waitUntilPromises.push(promise);
+    },
+  });
+  const clearData = await cleared.json();
+  assert.equal(cleared.status, 200);
+  assert.equal(clearData.deleted, 1);
+
+  const logRes = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/logs?page=1&size=20&action=TRASH_CLEAR', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const logData = await logRes.json();
+  assert.ok(logData.logs.some(log => log.action === 'TRASH_CLEAR' && log.details === '1/1 items'));
+
+  const notifRes = await onRequest({
+    env,
+    request: new Request('https://example.com/api/notifications?event=file.purged', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const notifData = await notifRes.json();
+  assert.equal(notifData.items[0].event, 'file.purged');
+  assert.equal(notifData.items[0].path, '回收站');
+
+  await Promise.all(waitUntilPromises);
+});
+
 test('route smoke: folder upload can target nested paths', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';

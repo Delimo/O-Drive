@@ -201,6 +201,24 @@ async function handleTrashDeleteRoute({ env, request, context }) {
   return res;
 }
 
+async function handleTrashClearRoute({ env, request, context }) {
+  const res = await handleTrashClear(env, request);
+  const data = res.ok
+    ? await res
+        .clone()
+        .json()
+        .catch(() => null)
+    : null;
+  if (res.ok && Number(data?.deleted || 0) > 0) {
+    await notifyAfterOk(env, context, res, "file.purged", {
+      path: "回收站",
+      deleted: data.deleted,
+      total: data.total,
+    });
+  }
+  return res;
+}
+
 async function handleMkdirRoute({ env, request, r2Key, context }) {
   const res = await handleMkdir(env, request, r2Key);
   const data = res.ok
@@ -303,7 +321,7 @@ export const ADMIN_ROUTE_DISPATCHERS = [
   { path: "/api/trash/restore-preview", methods: ["POST"], handler: ({ env, request }) => handleTrashRestorePreview(env, request) },
   { path: "/api/trash/restore-batch", methods: ["POST"], handler: ({ env, request }) => handleTrashBatchRestore(env, request) },
   { path: "/api/trash/restore", methods: ["POST"], handler: ({ env, request }) => handleTrashRestore(env, request) },
-  { path: "/api/trash/clear", methods: ["DELETE"], handler: ({ env, request }) => handleTrashClear(env, request) },
+  { path: "/api/trash/clear", methods: ["DELETE"], handler: handleTrashClearRoute },
   { path: "/api/trash/cleanup", methods: ["POST"], handler: ({ env, request }) => handleTrashCleanup(env, request) },
   { path: "/api/upload/check", methods: ["POST"], handler: ({ env, request }) => handleUploadCheck(env, request) },
   { path: "/api/upload-multipart/create", methods: ["POST"], handler: ({ env, request }) => handleMultipartCreate(env, request) },
