@@ -16,6 +16,7 @@ import { ensureStorageObjectsTable } from "./storage-objects.js";
 import { mapWithConcurrency } from "./r2-tree.js";
 import { storageDelete } from "./storage.js";
 import { cleanupFileTasks } from "./tasks.js";
+import { handleTrashCleanup } from "./trash.js";
 import { cleanupZipTaskResults } from "./zip-download.js";
 
 const ALLOWED_COUNT_TABLES = new Set([
@@ -166,6 +167,9 @@ export async function handleAdminMaintenanceAction(env, request) {
       `清理缩略图缓存 ${result.deleted || 0} 项${result.truncated ? "，已达扫描上限" : ""}`,
     );
     return jsonResponse({ success: true, action, ...result });
+  }
+  if (action === "purge-trash") {
+    return handleTrashCleanup(env, request);
   }
   if (action === "cleanup-logs") {
     const deleted = await cleanupLogs(env);

@@ -1,3 +1,5 @@
+import { MAINTENANCE_ACTIONS } from "./utils.js";
+
 export function createOverviewRenderer({
   safeText, escapeHtml, formatRelative
 }) {
@@ -142,6 +144,31 @@ export function createOverviewRenderer({
       dominant: visibleItems[0] || null,
       gradient,
     };
+  }
+
+  function maintenanceActionLabel(action) {
+    return MAINTENANCE_ACTIONS.find((item) => item.action === action)?.label || "处理";
+  }
+
+  function renderAttentionAction(item = {}) {
+    const actionArg = Array.isArray(item.actionArgs) ? item.actionArgs[0] : "";
+    if (item.action === "maintenance-action" && actionArg) {
+      const label = maintenanceActionLabel(actionArg);
+      return `
+        <button class="btn btn-sm" type="button"
+                data-action="confirm-maintenance-action"
+                data-maintenance-action="${escapeHtml(actionArg)}"
+                data-maintenance-label="${escapeHtml(label)}">处理</button>
+      `;
+    }
+    if (item.tab && item.tab !== "overview") {
+      return `
+        <button class="btn btn-sm" type="button"
+                data-action="set-admin-tab"
+                data-tab="${escapeHtml(item.tab)}">查看</button>
+      `;
+    }
+    return "";
   }
 
   function renderAdminStatsGrid(stats) {
@@ -289,6 +316,19 @@ export function createOverviewRenderer({
                     <span class="ov-maint-tag">项完成</span>
                   </div>
                 </div>
+                ${warnings.length > 0 ? `
+                  <div class="ov-attention-list" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+                    ${warnings.map(item => `
+                      <div class="ov-maint-item" style="align-items:flex-start;">
+                        <div class="ov-maint-info">
+                          <span class="ov-maint-label">${escapeHtml(item.title || "需要处理")}</span>
+                          <span class="ov-maint-count">${escapeHtml(item.body || item.message || "")}</span>
+                        </div>
+                        ${renderAttentionAction(item)}
+                      </div>
+                    `).join("")}
+                  </div>
+                ` : ""}
               </div>
             </div>
           </div>

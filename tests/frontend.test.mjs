@@ -12,7 +12,7 @@ import { createUiComponents } from '../public/js/render/components.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
-import { mockTextContent, mockReadme, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications, mockTrashItems } from '../public/js/mock/index.js';
+import { mockTextContent, mockReadme, mockAdminStats, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications, mockTrashItems } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
 import { createPageRenderers } from '../public/js/render/pages/index.js';
 import { createHeaderRenderer } from '../public/js/render/header.js';
@@ -884,6 +884,43 @@ test('admin health section renders health components', () => {
   assert.match(html, /R2 连接正常/);
 });
 
+test('admin overview renders attention maintenance actions', () => {
+  const state = {
+    app: { role: 'admin' },
+    admin: {
+      loading: false,
+      activeTab: 'overview',
+      stats: {
+        ...mockAdminStats,
+        attention: [
+          {
+            level: 'warning',
+            title: '系统提醒待处理',
+            body: '当前记录了 3 条系统异常。',
+            action: 'maintenance-action',
+            actionArgs: ['cleanup-warnings'],
+          },
+        ],
+      },
+      shares: [], sharesLoading: false, sharesError: '',
+      shareBusyToken: '', shareFilter: 'all', error: '',
+      healthLoading: false, health: mockAdminHealth, healthError: '',
+      logsLoading: false, logs: [], logsError: '', logsPage: 1, logsTotalPages: 0, logsFilter: { q: '', action: '', from: '', to: '' },
+      quotaLoading: false, quota: mockAdminQuota, quotaError: '',
+      protectedPathsLoading: false, protectedPaths: mockProtectedPaths, protectedPathsError: '',
+      hiddenPathsLoading: false, hiddenPaths: mockHiddenPaths, hiddenPathsError: '',
+      webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
+      webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
+      storageConfig: null, storageConfigLoading: false, storageConfigError: '',
+    },
+  };
+  const html = pages.renderAdminPage(state);
+  assert.match(html, /系统提醒待处理/);
+  assert.match(html, /data-action="confirm-maintenance-action"/);
+  assert.match(html, /data-maintenance-action="cleanup-warnings"/);
+  assert.match(html, /data-maintenance-label="清理系统提醒"/);
+});
+
 test('admin logs section renders log entries with pagination', () => {
   const logs = mockAdminLogs(1);
   const state = {
@@ -1132,13 +1169,26 @@ test('admin maintenance section renders snapshot and action buttons', () => {
   };
   const html = pages.renderAdminPage(state);
   assert.match(html, /同步元数据库索引/);
-  assert.match(html, /清理缓存数据库/);
   assert.match(html, /同步清除废弃文件/);
+  assert.match(html, /显示高级清理/);
+  assert.match(html, /清理缩略图缓存/);
   assert.match(html, /清理旧操作日志/);
+  assert.match(html, /清理后台任务记录/);
+  assert.match(html, /清理系统提醒/);
+  assert.match(html, /清理访问失败记录/);
+  assert.match(html, /清理登录失败记录/);
+  assert.match(html, /清理下载异常记录/);
   assert.match(html, /data-action="confirm-maintenance-action"/);
   assert.match(html, /data-maintenance-action="rebuild-index"/);
   assert.match(html, /data-maintenance-action="purge-trash"/);
+  assert.match(html, /data-maintenance-action="cleanup-thumbnails"/);
   assert.match(html, /data-maintenance-action="cleanup-logs"/);
+  assert.match(html, /data-maintenance-action="cleanup-tasks"/);
+  assert.match(html, /data-maintenance-action="cleanup-warnings"/);
+  assert.match(html, /data-maintenance-action="cleanup-access-attempts"/);
+  assert.match(html, /data-maintenance-action="cleanup-login-attempts"/);
+  assert.match(html, /data-maintenance-action="cleanup-download-bursts"/);
+  assert.doesNotMatch(html, /data-maintenance-action="clear-cache"/);
 });
 
 test('admin maintenance section shows loading state', () => {

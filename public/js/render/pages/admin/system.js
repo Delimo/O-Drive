@@ -1,4 +1,7 @@
-import { MAINTENANCE_ACTIONS } from "./utils.js";
+import {
+  ADVANCED_MAINTENANCE_ACTIONS,
+  COMMON_MAINTENANCE_ACTIONS,
+} from "./utils.js";
 
 export function createSystemRenderer({
   safeText, escapeHtml, renderEmptyState, renderEmptyStateCompact, formatTime, formatRelative, formatBytes, components
@@ -16,6 +19,33 @@ export function createSystemRenderer({
     if (status === "partial") return "部分失败";
     if (status === "pending") return "等待中";
     return status || "挂起";
+  }
+
+  function renderMaintenanceItem(act) {
+    return `
+      <div class="ov-maintenance-item">
+        <div class="ov-maintenance-info">
+          <span class="ov-maintenance-name" style="color:${act.danger ? 'var(--danger)' : 'var(--text)'};">${escapeHtml(act.label)}</span>
+          <span class="ov-maintenance-desc">${escapeHtml(act.desc)}</span>
+        </div>
+        <button class="btn ${act.danger ? 'btn-danger' : ''} btn-sm" type="button"
+                data-action="confirm-maintenance-action"
+                data-maintenance-action="${escapeHtml(act.action)}"
+                data-maintenance-label="${escapeHtml(act.label)}">执行</button>
+      </div>
+    `;
+  }
+
+  function renderMaintenanceActions() {
+    return `
+      ${COMMON_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
+      <details class="ov-maintenance-advanced" style="border-top:1px solid var(--line);padding-top:8px;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);padding:4px 0;">显示高级清理</summary>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+          ${ADVANCED_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
+        </div>
+      </details>
+    `;
   }
 
   function taskStatusClass(status) {
@@ -229,18 +259,7 @@ export function createSystemRenderer({
                 ? `<div class="ov-empty-inline">载入中...</div>`
                 : maintenanceError
                   ? `<div class="ov-empty-inline" style="color:var(--danger);">${escapeHtml(maintenanceError)}</div>`
-                  : MAINTENANCE_ACTIONS.map(act => `
-                    <div class="ov-maintenance-item">
-                      <div class="ov-maintenance-info">
-                        <span class="ov-maintenance-name" style="color:${act.danger ? 'var(--danger)' : 'var(--text)'};">${escapeHtml(act.label)}</span>
-                        <span class="ov-maintenance-desc">${escapeHtml(act.desc)}</span>
-                      </div>
-                      <button class="btn ${act.danger ? 'btn-danger' : ''} btn-sm" type="button"
-                              data-action="confirm-maintenance-action"
-                              data-maintenance-action="${escapeHtml(act.action)}"
-                              data-maintenance-label="${escapeHtml(act.label)}">执行</button>
-                    </div>
-                  `).join("")}
+                  : renderMaintenanceActions()}
             </div>
           </div>
 

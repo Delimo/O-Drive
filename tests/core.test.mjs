@@ -2896,6 +2896,46 @@ test('admin maintenance reports counts and runs cleanup actions', async () => {
   const statusData = await status.json();
   assert.equal(statusData.indexCount, 1);
   assert.equal(statusData.thumbnailsPresent, false);
+
+  const setRetention = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/trash-retention', {
+      method: 'PUT',
+      body: JSON.stringify({ days: 1 }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(setRetention.status, 200);
+
+  const realNow = Date.now;
+  try {
+    Date.now = () => realNow() - 2 * 24 * 60 * 60 * 1000;
+    const deleted = await onRequest({
+      env,
+      request: new Request('https://example.com/api/batch-delete', {
+        method: 'POST',
+        body: JSON.stringify({ paths: ['docs/a.txt'] }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(deleted.status, 200);
+  } finally {
+    Date.now = realNow;
+  }
+
+  const purgeTrash = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/maintenance', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'purge-trash' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  const purgeData = await purgeTrash.json();
+  assert.equal(purgeTrash.status, 200);
+  assert.equal(purgeData.deleted, 1);
+  const trashList = await handleTrashList(env, new URL('https://example.com/api/trash?page=1&size=20'));
+  assert.equal((await trashList.json()).items.length, 0);
 });
 
 test('operation logs can be manually cleaned with retention policy', async () => {

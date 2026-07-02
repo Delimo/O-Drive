@@ -1,8 +1,38 @@
-import { MAINTENANCE_ACTIONS } from "./utils.js";
+import {
+  ADVANCED_MAINTENANCE_ACTIONS,
+  COMMON_MAINTENANCE_ACTIONS,
+} from "./utils.js";
 
 export function createMaintenanceRenderer({
   safeText, escapeHtml, renderEmptyStateCompact, formatTime, components
 }) {
+
+  function renderMaintenanceItem(act) {
+    return `
+      <div class="ap-list-row" style="padding:12px 14px;">
+        <div class="ap-list-row-main" style="flex:1;min-width:0;">
+          <span class="ap-list-row-name" style="color:${act.danger ? 'var(--danger)' : 'var(--text)'};">${escapeHtml(act.label)}</span>
+          <span class="ap-desc-text" style="margin:2px 0 0;display:block;">${escapeHtml(act.desc)}</span>
+        </div>
+        <button class="ap-btn ap-btn-sm ${act.danger ? 'ap-btn-danger' : 'ap-btn-ghost'}" type="button"
+                data-action="confirm-maintenance-action"
+                data-maintenance-action="${escapeHtml(act.action)}"
+                data-maintenance-label="${escapeHtml(act.label)}">执行</button>
+      </div>
+    `;
+  }
+
+  function renderMaintenanceActions() {
+    return `
+      ${COMMON_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
+      <details class="ap-maintenance-advanced" style="border-top:1px solid var(--line);">
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);padding:10px 14px;">显示高级清理</summary>
+        <div class="ap-list">
+          ${ADVANCED_MAINTENANCE_ACTIONS.map(renderMaintenanceItem).join("")}
+        </div>
+      </details>
+    `;
+  }
 
   function renderAdminMaintenanceSection(admin) {
     const {
@@ -44,18 +74,7 @@ export function createMaintenanceRenderer({
             </div>
             <div class="ap-card-body" style="padding:0;">
               <div class="ap-list">
-                ${MAINTENANCE_ACTIONS.map(act => `
-                  <div class="ap-list-row" style="padding:12px 14px;">
-                    <div class="ap-list-row-main" style="flex:1;min-width:0;">
-                      <span class="ap-list-row-name" style="color:${act.danger ? 'var(--danger)' : 'var(--text)'};">${escapeHtml(act.label)}</span>
-                      <span class="ap-desc-text" style="margin:2px 0 0;display:block;">${escapeHtml(act.desc)}</span>
-                    </div>
-                    <button class="ap-btn ap-btn-sm ${act.danger ? 'ap-btn-danger' : 'ap-btn-ghost'}" type="button"
-                            data-action="confirm-maintenance-action"
-                            data-maintenance-action="${escapeHtml(act.action)}"
-                            data-maintenance-label="${escapeHtml(act.label)}">执行</button>
-                  </div>
-                `).join("")}
+                ${renderMaintenanceActions()}
               </div>
             </div>
             <div style="border-top:1px solid var(--line);padding:10px 14px;">
@@ -130,6 +149,7 @@ export function createMaintenanceRenderer({
 
   return {
     renderAdminMaintenanceSection,
-    MAINTENANCE_ACTIONS
+    COMMON_MAINTENANCE_ACTIONS,
+    ADVANCED_MAINTENANCE_ACTIONS
   };
 }
