@@ -3345,6 +3345,103 @@ test('webhook endpoints can subscribe to selected events only', async () => {
   }
 });
 
+test('webhook allowlist rejects unapproved hosts when configured', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  env.WEBHOOK_ALLOWED_HOSTS = 'hooks.example.test,*.trusted.example';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const rejected = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/webhooks', {
+      method: 'PUT',
+      body: JSON.stringify({ items: [{ name: 'evil', url: 'https://evil.example.test/hook' }] }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(rejected.status, 403);
+  const rejectedData = await rejected.json();
+  assert.match(rejectedData.message, /not in allowlist/);
+  assert.equal(rejectedData.policy.mode, 'allowlist');
+
+  const allowed = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/webhooks', {
+      method: 'PUT',
+      body: JSON.stringify({ items: [{ name: 'notify', url: 'https://hooks.example.test/notify' }] }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+  assert.equal(allowed.status, 200);
+  const allowedData = await allowed.json();
+  assert.equal(allowedData.policy.mode, 'allowlist');
+  assert.deepEqual(allowedData.policy.allowedHosts, ['hooks.example.test', '*.trusted.example']);
+});
+
+test('webhook allowlist blocks legacy stored endpoints during delivery', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  env.WEBHOOK_ALLOWED_HOSTS = 'hooks.example.test';
+  await env.D1.prepare("INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)")
+    .bind('webhooks', JSON.stringify([{ name: 'legacy', url: 'https://evil.example.test/hook', events: ['folder.created'] }]))
+    .run();
+
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: init?.body || '' });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'blocked-webhook' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls.length, 0);
+    const deliveries = await env.D1.prepare("SELECT * FROM webhook_deliveries ORDER BY created_at DESC, id DESC LIMIT 20").all();
+    assert.equal(deliveries.results.length, 1);
+    assert.equal(deliveries.results[0].ok, 0);
+    assert.match(deliveries.results[0].error, /not in allowlist/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('single-file upload webhook uses the final uploaded file path', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -4009,7 +4106,11 @@ test('clearing webhook settings removes persisted endpoint data', async () => {
     }),
   });
   assert.equal(clear.status, 200);
-  assert.deepEqual(await clear.json(), { success: true, items: [], urls: [] });
+  const clearData = await clear.json();
+  assert.equal(clearData.success, true);
+  assert.deepEqual(clearData.items, []);
+  assert.deepEqual(clearData.urls, []);
+  assert.equal(clearData.policy.mode, 'compat');
 
   const listed = await onRequest({
     env,
@@ -4017,7 +4118,10 @@ test('clearing webhook settings removes persisted endpoint data', async () => {
       headers: { Cookie: cookie },
     }),
   });
-  assert.deepEqual(await listed.json(), { items: [], urls: [] });
+  const listedData = await listed.json();
+  assert.deepEqual(listedData.items, []);
+  assert.deepEqual(listedData.urls, []);
+  assert.equal(listedData.policy.mode, 'compat');
 });
 
 test('admin can create public share links and expired shares are deleted', async () => {
@@ -4672,7 +4776,10 @@ test('webhook notifications ignore legacy env settings', async () => {
         headers: { Cookie: cookie },
       }),
     });
-    assert.deepEqual(await listed.json(), { items: [], urls: [] });
+    const listedData = await listed.json();
+    assert.deepEqual(listedData.items, []);
+    assert.deepEqual(listedData.urls, []);
+    assert.equal(listedData.policy.mode, 'compat');
 
     const mkdir = await onRequest({
       env,

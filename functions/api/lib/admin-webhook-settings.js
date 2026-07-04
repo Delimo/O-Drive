@@ -1,9 +1,11 @@
 import { addLog, jsonResponse, recordSystemWarning } from "./common/index.js";
 import {
+  getWebhookPolicy,
   loadWebhookEndpoints,
   normalizeWebhookEndpoints,
   retryWebhookDelivery,
   testWebhookEndpoint,
+  validateWebhookEndpointsPolicy,
 } from "./webhooks.js";
 
 export async function handleAdminWebhooks(env, request, method) {
@@ -25,11 +27,23 @@ export async function handleAdminWebhooks(env, request, method) {
     return jsonResponse({
       items: endpoints,
       urls: endpoints.map((endpoint) => endpoint.url),
+      policy: getWebhookPolicy(env),
     });
   }
   if (method === "PUT") {
     const body = await request.json().catch(() => ({}));
     const endpoints = normalizeWebhookEndpoints(body.items || []);
+    const policyResult = validateWebhookEndpointsPolicy(env, endpoints);
+    if (!policyResult.ok) {
+      return jsonResponse(
+        {
+          success: false,
+          message: policyResult.message,
+          policy: policyResult.policy,
+        },
+        policyResult.status || 400,
+      );
+    }
     if (endpoints.length) {
       await env.D1.prepare(
         "INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)",
@@ -51,6 +65,7 @@ export async function handleAdminWebhooks(env, request, method) {
       success: true,
       items: endpoints,
       urls: endpoints.map((endpoint) => endpoint.url),
+      policy: policyResult.policy,
     });
   }
   if (method === "POST") {
@@ -63,7 +78,7 @@ export async function handleAdminWebhooks(env, request, method) {
       "WEBHOOK_TEST",
       `${result.success ? "测试成功" : "测试失败"}：${endpoint.name || endpoint.url || "Webhook"}`,
     );
-    return jsonResponse(result, result.success ? 200 : 502);
+    return jsonResponse(result, result.success ? 200 : result.status || 502);
   }
   return jsonResponse({ message: "Method Not Allowed" }, 405);
 }

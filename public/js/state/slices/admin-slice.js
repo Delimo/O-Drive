@@ -44,6 +44,7 @@ export const adminInitialState = {
   storageConfigError: "",
   storageConfigSaving: false,
   webhooks: [],
+  webhookPolicy: { mode: "compat", allowlistEnabled: false, allowedHosts: [] },
   webhooksLoading: false,
   webhooksError: "",
   webhookDeliveries: [],
@@ -289,6 +290,12 @@ export function createAdminSlice(initialState) {
           webhooksLoading: false,
           webhooksError: "",
           webhooks: action.payload || [],
+        };
+      },
+      setWebhookPolicy(state, action) {
+        return {
+          ...state,
+          webhookPolicy: action.payload || { mode: "compat", allowlistEnabled: false, allowedHosts: [] },
         };
       },
       setWebhooksError(state, action) {

@@ -135,6 +135,7 @@ Pages Functions 会自动读取 `functions` 目录。
 | `DOWNLOAD_BURST_WINDOW_SECONDS` | 否 | `300` | 下载异常统计窗口 |
 | `DOWNLOAD_BURST_COOLDOWN_SECONDS` | 否 | `1800` | 下载异常提醒冷却时间 |
 | `DOWNLOAD_BURST_BLOCK_SECONDS` | 否 | `600` | 异常下载临时阻断时长，`0` 表示只告警不阻断 |
+| `WEBHOOK_ALLOWED_HOSTS` | 推荐 | `hooks.example.com,*.notify.example` | Webhook 目标主机白名单；配置后保存、测试、重试和实际投递都会拒绝非白名单主机 |
 
 `TOKEN_SECRET` 是系统用来给登录状态、分享访问和路径解锁 Cookie 做签名的随机密钥。它不是管理员密码，不需要自己记住，也不要填固定的简单文字。
 
@@ -486,6 +487,14 @@ Webhook 可配置：
 ```
 
 Webhook 页面会显示最近发送记录，包括事件、目标、HTTP 状态、耗时和成功/失败状态。
+
+### 目标白名单
+
+未配置 `WEBHOOK_ALLOWED_HOSTS` 时，Webhook 处于兼容模式：系统仍会阻断私网/本地 IP 字面量和跳转到私网地址的 URL。
+
+生产环境建议配置 `WEBHOOK_ALLOWED_HOSTS`，用逗号分隔允许的主机名，支持 `*.example.com` 形式的子域名通配。配置后，后台保存、测试、失败重试和实际事件投递都会拒绝非白名单主机。
+
+也可以使用等价变量 `WEBHOOK_HOST_ALLOWLIST` 或 `WEBHOOK_ALLOWLIST`；如需强制白名单模式，可设置 `WEBHOOK_REQUIRE_ALLOWLIST=true` 或 `WEBHOOK_STRICT_ALLOWLIST=true`。
 
 如果目标平台要求签名或特殊字段，建议准备一个中转服务：O-Drive 发送通用 JSON 到中转服务，再由中转服务转换成目标平台要求的格式。
 

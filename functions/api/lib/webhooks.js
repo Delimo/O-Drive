@@ -240,6 +240,115 @@ export function normalizeWebhookEndpoints(input) {
 }
 
 const WEBHOOK_MAX_REDIRECTS = 3;
+const WEBHOOK_ALLOWLIST_KEYS = [
+  "WEBHOOK_ALLOWED_HOSTS",
+  "WEBHOOK_HOST_ALLOWLIST",
+  "WEBHOOK_ALLOWLIST",
+];
+
+function isTruthyEnv(value) {
+  return ["1", "true", "yes", "on", "strict"].includes(
+    String(value || "").trim().toLowerCase(),
+  );
+}
+
+function normalizeAllowlistHost(value) {
+  let host = String(value || "").trim().toLowerCase();
+  if (!host) return "";
+  try {
+    host = new URL(host).hostname;
+  } catch (_) {
+    host = host.split("/")[0].split(":")[0];
+  }
+  return host.replace(/\.$/, "");
+}
+
+function parseWebhookAllowlist(env) {
+  const raw = WEBHOOK_ALLOWLIST_KEYS
+    .map((key) => env?.[key])
+    .filter(Boolean)
+    .join(",");
+  return [
+    ...new Set(
+      raw
+        .split(/[\s,;]+/)
+        .map(normalizeAllowlistHost)
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function hostMatchesAllowlist(hostname, allowedHosts) {
+  const host = normalizeAllowlistHost(hostname);
+  return allowedHosts.some((rule) => {
+    if (rule === "*") return true;
+    if (rule.startsWith("*.")) {
+      const suffix = rule.slice(1);
+      return host.endsWith(suffix) && host.length > suffix.length;
+    }
+    return host === rule;
+  });
+}
+
+export function getWebhookPolicy(env) {
+  const allowedHosts = parseWebhookAllowlist(env);
+  const strict =
+    allowedHosts.length > 0 ||
+    isTruthyEnv(env?.WEBHOOK_REQUIRE_ALLOWLIST) ||
+    isTruthyEnv(env?.WEBHOOK_STRICT_ALLOWLIST);
+  return {
+    mode: strict ? "allowlist" : "compat",
+    allowlistEnabled: strict,
+    allowedHosts,
+  };
+}
+
+export function validateWebhookEndpointPolicy(env, endpoint) {
+  const policy = getWebhookPolicy(env);
+  let parsed;
+  try {
+    parsed = new URL(String(endpoint?.url || endpoint || ""));
+  } catch (_) {
+    return { ok: false, status: 400, message: "Invalid webhook URL", policy };
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return { ok: false, status: 400, message: "Webhook URL scheme not allowed", policy };
+  }
+  if (isBlockedWebhookHost(parsed.hostname)) {
+    return {
+      ok: false,
+      status: 400,
+      message: "Webhook URL points to private IP range",
+      policy,
+    };
+  }
+  if (!policy.allowlistEnabled) return { ok: true, status: 200, policy };
+  if (!policy.allowedHosts.length) {
+    return {
+      ok: false,
+      status: 403,
+      message: "Webhook allowlist is enabled but WEBHOOK_ALLOWED_HOSTS is empty",
+      policy,
+    };
+  }
+  if (!hostMatchesAllowlist(parsed.hostname, policy.allowedHosts)) {
+    return {
+      ok: false,
+      status: 403,
+      message: `Webhook host ${parsed.hostname} is not in allowlist`,
+      policy,
+    };
+  }
+  return { ok: true, status: 200, policy };
+}
+
+export function validateWebhookEndpointsPolicy(env, endpoints = []) {
+  for (const endpoint of endpoints) {
+    const result = validateWebhookEndpointPolicy(env, endpoint);
+    if (!result.ok) return result;
+  }
+  return { ok: true, status: 200, policy: getWebhookPolicy(env) };
+}
 
 /**
  * Parse a hostname into a normalized IPv4 dotted string if it encodes an IPv4
@@ -343,8 +452,17 @@ async function guardedFetch(url, init) {
   throw err;
 }
 
-async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
+async function sendOne(endpoint, payload, retries = MAX_RETRIES, env = null) {
   const started = Date.now();
+  const policyResult = validateWebhookEndpointPolicy(env, endpoint);
+  if (!policyResult.ok) {
+    return {
+      ok: false,
+      status: policyResult.status || 0,
+      error: policyResult.message || "Webhook URL is not allowed",
+      durationMs: Date.now() - started,
+    };
+  }
   let lastStatus = 0;
   let lastError = "";
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -515,7 +633,7 @@ export async function notifyWebhookWithLog(
 
   const results = await Promise.all(
     endpoints.map((endpoint) =>
-      sendOne(endpoint, payload)
+      sendOne(endpoint, payload, MAX_RETRIES, env)
         .then(async (result) => {
           await recordDelivery(env, endpoint, event, result, payload);
           return result;
@@ -546,7 +664,7 @@ export async function testWebhookEndpoint(endpoint, env = null) {
       message: `这是一条来自 O-Drive 的 ${endpointLabel(normalized)} 测试通知。`,
     },
   };
-  const result = await sendOne(normalized, payload, 0);
+  const result = await sendOne(normalized, payload, 0, env);
   await recordDelivery(env, normalized, "webhook.test", result, payload);
   return {
     success: result.ok,
@@ -554,7 +672,7 @@ export async function testWebhookEndpoint(endpoint, env = null) {
     durationMs: result.durationMs,
     msgtype: normalized.msgtype,
     name: endpointLabel(normalized),
-    message: result.ok ? "测试发送成功" : "测试发送失败",
+    message: result.ok ? "测试发送成功" : result.error || "测试发送失败",
   };
 }
 
@@ -601,7 +719,7 @@ export async function retryWebhookDelivery(env, deliveryId) {
         originalDeliveryId: id,
       },
     };
-  const result = await sendOne(normalized, payload, 0);
+  const result = await sendOne(normalized, payload, 0, env);
   await recordDelivery(env, normalized, payload.event || row.event, result, payload, id);
   return {
     success: result.ok,

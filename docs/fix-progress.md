@@ -8,11 +8,11 @@
 1. 读「任务状态总表」，找到第一个非 ✅ 的任务。
 2. 看该任务的「当前结论」和「下一步」。
 3. 完成任一批改动后运行 `npm run check`（= lint + test + build）。
-4. 若继续处理 #1，需要先决定 Webhook 目标策略：接受 DNS rebinding 剩余风险，或改为 allowlist/更严格目标限制。
+4. 完成任一批改动后同步更新本文档与来源文档中的状态。
 
 ## 批次状态
 
-- **批次一 安全**：#1 #2 #3 —— ⚠️ 部分完成（#2/#3 完成；#1 仅剩 DNS rebinding 策略风险）。
+- **批次一 安全**：#1 #2 #3 —— ✅ 完成。
 - **批次二 后端并发正确性**：#4 #5 #6 #7 #8 —— ✅ 完成。
 - **批次三 前端正确性**：#9 #10 #11 #12 —— ✅ 完成。
 - **批次四 Webhook 可观测**：#13 —— ✅ 完成。
@@ -25,7 +25,7 @@
 > 复核时间：2026-07-04。
 
 - `node --test --test-name-pattern "admin can create public share links and expired shares are deleted|admin shares section formats millisecond expiry timestamps" tests/core.test.mjs tests/frontend.test.mjs`：✅ 通过，2/2。
-- `npm test`：✅ 通过，254/254。
+- `npm test`：✅ 通过，256/256。
 - `npm run lint`：✅ 通过，JS syntax check passed，170 files。
 - `npm run check`：✅ 通过，lint + test + build 全部成功；构建期间仅出现 Browserslist/caniuse-lite 过期提示，不影响产物。
 
@@ -33,7 +33,7 @@
 
 | # | 任务 | 来源 | 状态 | 改动文件 |
 | --- | --- | --- | --- | --- |
-| 1 | 修复 Webhook SSRF (CRITICAL) | audit S1 | ⚠️ 部分完成 | `functions/api/lib/webhooks.js` |
+| 1 | 修复 Webhook SSRF (CRITICAL) | audit S1 | ✅ 完成当前验收范围 | `functions/api/lib/webhooks.js`, `functions/api/lib/admin-webhook-settings.js`, `public/js/render/pages/admin/webhook.js`, `tests/core.test.mjs`, `tests/frontend.test.mjs` |
 | 2 | 路径密码锁定 x-forwarded-for 绕过 (HIGH) | audit A1 | ✅ 完成 | `functions/api/lib/protected-paths.js` |
 | 3 | 下载次数 TOCTOU (MEDIUM) | audit S2/M1 | ✅ 完成 | `functions/api/lib/shares/expiry.js`, `functions/api/lib/shares/public.js`, `tests/helpers/make-env.mjs` |
 | 4 | 配额并发绕过 (HIGH) | audit U1 | ✅ 完成 | `functions/api/lib/storage.js`, `functions/api/lib/file-index/stats.js`, `functions/api/lib/file-mutations/upload.js`, `functions/api/lib/file-mutations/upload-check.js`, `functions/api/lib/file-mutations/multipart.js`, `functions/api/dav/lib/methods.js` |
@@ -56,11 +56,12 @@
 
 ## 复核结论与剩余风险
 
-### #1 Webhook SSRF —— ⚠️ 部分完成
+### #1 Webhook SSRF —— ✅ 完成当前验收范围
 
 - 已完成：`guardedFetch()` 使用 `redirect: "manual"`，逐跳校验 URL；支持多种 IPv4 字面量编码、IPv6 loopback/link-local/ULA 和 `localhost` 拦截。
-- 剩余风险：Cloudflare Workers 没有通用 DNS 解析后校验 API，无法可靠阻断「公网域名解析到私网 IP」或 DNS rebinding。
-- 下一步：产品策略上二选一：记录并接受该剩余风险；或改成 Webhook 目标 allowlist / 禁止任意普通域名投递。
+- 已完成：新增 Webhook 目标白名单策略。配置 `WEBHOOK_ALLOWED_HOSTS`、`WEBHOOK_HOST_ALLOWLIST` 或 `WEBHOOK_ALLOWLIST` 后进入白名单模式；也可用 `WEBHOOK_REQUIRE_ALLOWLIST=true` / `WEBHOOK_STRICT_ALLOWLIST=true` 强制要求白名单。
+- 已完成：保存配置、测试投递、失败重试和实际事件投递都会执行同一策略；旧配置中不在白名单的 URL 不会出网，会写入失败投递记录。
+- 默认行为：未配置白名单时保持兼容模式，继续依赖字面量 IP/跳转防护；生产部署建议配置白名单来关闭 DNS rebinding 类剩余风险。
 
 ### #3 下载次数 TOCTOU —— ✅ 完成
 
@@ -106,11 +107,11 @@
 
 - `make-env.mjs` 已补 `api_rate_limits` 原子 upsert、`storage_quota_counter`、分享下载槽位、访问日志、访问次数自增等 SQL mock。
 - 本轮没有做大规模拆分 `make-env` 或 SQL handler registry；该方向风险较高，适合后续随新功能逐步抽离。
-- 当前全量测试已恢复到 254/254 通过。
+- 当前全量测试已恢复到 256/256 通过。
 
 ## 已知后续增强
 
-- #1 Webhook SSRF：若要完全关闭 DNS rebinding 类风险，需要产品层面收紧 webhook 目标策略。
+- #1 Webhook SSRF：生产部署建议配置 `WEBHOOK_ALLOWED_HOSTS`，例如 `hooks.example.com,*.notify.example`。
 - #15：继续把清空回收站、大目录恢复、任务断点恢复和失败项重试做得更完整。
 - #18：补 `max_bytes`、二维码、公开上传收件箱、分享备注/标签和分享访问通知。
 - #19：随着 D1 mock 继续增长，逐步拆分 `make-env.mjs`，抽出 SQL handler registry 和 fixture 工厂。

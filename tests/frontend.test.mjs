@@ -12,7 +12,7 @@ import { createUiComponents } from '../public/js/render/components.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
-import { mockTextContent, mockReadme, mockAdminStats, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications, mockTrashItems } from '../public/js/mock/index.js';
+import { mockTextContent, mockReadme, mockAdminStats, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookPolicy, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications, mockTrashItems } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
 import { createPageRenderers } from '../public/js/render/pages/index.js';
 import { createHeaderRenderer } from '../public/js/render/header.js';
@@ -1534,7 +1534,7 @@ test('notification tab renders notification history and system tab does not dupl
     quotaLoading: false, quota: mockAdminQuota, quotaError: '',
     protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
     hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
-    webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
+    webhooksLoading: false, webhooks: mockWebhooks, webhookPolicy: mockWebhookPolicy, webhooksError: '',
     webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
     storageConfig: null, storageConfigLoading: false, storageConfigError: '',
     maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
@@ -1550,6 +1550,8 @@ test('notification tab renders notification history and system tab does not dupl
   assert.match(notificationHtml, /通知中心/);
   assert.match(notificationHtml, /未读通知/);
   assert.match(notificationHtml, /失败投递/);
+  assert.match(notificationHtml, /目标策略/);
+  assert.match(notificationHtml, /白名单/);
   assert.match(notificationHtml, /Webhook 规则/);
   assert.match(notificationHtml, /记录中心/);
   assert.match(notificationHtml, /投递记录/);
