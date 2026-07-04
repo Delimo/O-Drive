@@ -19,6 +19,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const fileIndexRows = [];
   const storageUsageRows = [];
   const storageObjectRows = [];
+  const storageQuotaCounterRows = [];
   const shareRows = [];
   const trashEntryRows = [];
   const logs = [];
@@ -566,6 +567,31 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/INSERT OR REPLACE INTO kv_config/i.test(sql)) {
               kvRows.set(statement.bound?.[0], statement.bound?.[1]);
             }
+            if (/INSERT\s+OR\s+IGNORE\s+INTO\s+storage_quota_counter/i.test(sql)) {
+              const storageId = statement.bound?.[0];
+              if (!storageQuotaCounterRows.find(r => r.storage_id === storageId)) {
+                storageQuotaCounterRows.push({ storage_id: storageId, reserved_bytes: 0 });
+              }
+            }
+            if (/UPDATE\s+storage_quota_counter\s+SET\s+reserved_bytes\s*=\s*reserved_bytes\s*\+\s*\?\s+WHERE\s+storage_id\s*=\s*\?\s+AND\s*\(reserved_bytes\s*\+\s*\?\s*<=\s*\?\)/is.test(sql)) {
+              const [incomingBytes, storageId] = statement.bound || [];
+              const row = storageQuotaCounterRows.find(r => r.storage_id === storageId);
+              if (row) {
+                const quota = Number(statement.bound?.[3] || 0);
+                if ((row.reserved_bytes + Number(incomingBytes)) <= quota) {
+                  row.reserved_bytes += Number(incomingBytes);
+                  return { meta: { changes: 1 } };
+                }
+              }
+              return { meta: { changes: 0 } };
+            }
+            if (/UPDATE\s+storage_quota_counter\s+SET\s+reserved_bytes\s*=\s*CASE\s+WHEN\s+reserved_bytes\s*>=\s*\?\s+THEN\s+reserved_bytes\s*-\s*\?\s+ELSE\s+0\s+END\s+WHERE\s+storage_id\s*=\s*\?/is.test(sql)) {
+              const [incomingBytes, , storageId] = statement.bound || [];
+              const row = storageQuotaCounterRows.find(r => r.storage_id === storageId);
+              if (row) {
+                row.reserved_bytes = Math.max(0, row.reserved_bytes - Number(incomingBytes));
+              }
+            }
             if (/INSERT OR IGNORE INTO settings/i.test(sql)) {
               settingsRows.set(statement.bound?.[0], 'hidden');
             }
@@ -852,6 +878,24 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/SELECT COUNT\(\*\) as count FROM file_index/i.test(sql)) return { count: fileIndexRows.length };
             if (/SELECT COUNT\(\*\) as count FROM path_access_attempts/i.test(sql)) return { count: pathAttemptRows.length };
+            if (/INSERT INTO api_rate_limits\b[\s\S]*ON CONFLICT[\s\S]*RETURNING/i.test(sql)) {
+              const key = statement.bound?.[0];
+              const now = Number(statement.bound?.[1]);
+              const windowMs = now - Number(statement.bound?.[2]);
+              const existing = apiRateLimitRows.find(item => item.key === key);
+              if (existing) {
+                if (existing.window_start >= now - windowMs) {
+                  existing.request_count = Number(existing.request_count || 0) + 1;
+                } else {
+                  existing.request_count = 1;
+                  existing.window_start = now;
+                }
+                return { request_count: existing.request_count, window_start: existing.window_start };
+              }
+              const row = { key, request_count: 1, window_start: now };
+              apiRateLimitRows.push(row);
+              return { request_count: 1, window_start: now };
+            }
             if (/INSERT INTO login_attempts.*RETURNING\s+attempts/i.test(sql)) {
               const ip = statement.bound?.[0];
               const ts = statement.bound?.[1];
@@ -911,6 +955,14 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT COUNT\(\*\) as count FROM logs/i.test(sql)) return { count: filteredLogs(sql, statement.bound || []).length };
             if (/SELECT COUNT\(\*\) as count FROM webhook_deliveries WHERE ok = 0/i.test(sql)) {
               return { count: webhookDeliveryRows.filter(row => Number(row.ok || 0) === 0).length };
+            }
+            if (/SELECT COUNT\(\*\) as count FROM notifications WHERE severity = 'error' AND created_at >= \?/i.test(sql)) {
+              const since = Number(statement.bound?.[0] || 0);
+              return {
+                count: notificationRows.filter(row =>
+                  row.severity === 'error' && Number(row.created_at || row.createdAt || 0) >= since
+                ).length,
+              };
             }
             if (/SELECT COUNT\(\*\) as count FROM system_warnings WHERE acknowledged_at = 0/i.test(sql)) {
               return { count: systemWarningRows.filter(row => !Number(row.acknowledged_at || 0)).length };
@@ -1101,6 +1153,44 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 results: [...webhookDeliveryRows]
                   .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0))
                   .slice(0, 20)
+              };
+            }
+            if (/SELECT key, request_count, window_start FROM api_rate_limits WHERE window_start >= \?/i.test(sql)) {
+              const since = Number(statement.bound?.[0] || 0);
+              return {
+                results: [...apiRateLimitRows]
+                  .filter(row => Number(row.window_start || 0) >= since)
+                  .sort((a, b) => Number(b.request_count || 0) - Number(a.request_count || 0))
+                  .slice(0, 20),
+              };
+            }
+            if (/SELECT ip, attempts, last_attempt FROM login_attempts WHERE last_attempt >= \?/i.test(sql)) {
+              const since = Number(statement.bound?.[0] || 0);
+              return {
+                results: [...loginAttemptRows]
+                  .filter(row => Number(row.last_attempt || 0) >= since)
+                  .sort((a, b) => Number(b.attempts || 0) - Number(a.attempts || 0))
+                  .slice(0, 5),
+              };
+            }
+            if (/SELECT \* FROM file_tasks WHERE \(status = 'failed' OR status = 'partial' OR failed > 0\)/i.test(sql)) {
+              const [finishedSince = 0, updatedSince = finishedSince] = statement.bound || [];
+              return {
+                results: [...taskRows]
+                  .filter(row => (row.status === 'failed' || row.status === 'partial' || Number(row.failed || 0) > 0)
+                    && (Number(row.finished_at || row.finishedAt || 0) >= Number(finishedSince || 0)
+                      || Number(row.updated_at || row.updatedAt || 0) >= Number(updatedSince || 0)))
+                  .sort((a, b) => Number(b.updated_at || b.updatedAt || 0) - Number(a.updated_at || a.updatedAt || 0))
+                  .slice(0, 5),
+              };
+            }
+            if (/SELECT \* FROM webhook_deliveries WHERE ok = 0 AND created_at >= \?/i.test(sql)) {
+              const since = Number(statement.bound?.[0] || 0);
+              return {
+                results: [...webhookDeliveryRows]
+                  .filter(row => Number(row.ok || 0) === 0 && Number(row.created_at || 0) >= since)
+                  .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0))
+                  .slice(0, 5),
               };
             }
             if (/SELECT \* FROM file_tasks ORDER BY created_at DESC LIMIT \?/i.test(sql)) {

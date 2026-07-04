@@ -14,7 +14,8 @@ export const ADVANCED_MAINTENANCE_ACTIONS = [
   { action: "cleanup-access-attempts", label: "清理访问失败记录", desc: "删除路径密码解锁失败记录。", danger: true },
   { action: "cleanup-login-attempts", label: "清理登录失败记录", desc: "删除登录失败和限制记录。", danger: true },
   { action: "cleanup-download-bursts", label: "清理下载异常记录", desc: "删除异常下载检测与临时限制记录。", danger: true },
-  { action: "cleanup-orphan-storage-objects", label: "清理孤儿存储对象", desc: "删除引用计数为 0 的 storage_objects。", danger: true }
+  { action: "cleanup-orphan-storage-objects", label: "清理孤儿存储对象", desc: "删除引用计数为 0 的 storage_objects。", danger: true },
+  { action: "cleanup-orphan-multipart", label: "清理孤儿 Multipart 上传", desc: "中止超过 24 小时未完成的分片上传。", danger: true }
 ];
 
 export const MAINTENANCE_ACTIONS = [

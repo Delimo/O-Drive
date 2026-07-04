@@ -7,7 +7,7 @@ export function assertApiOk(
 ) {
   const acceptedPartial = allowCompleted && data?.completed;
   const acceptedBusinessFailure = allowSuccessFalse || data?.success !== false;
-  if (acceptedPartial || (response.ok && acceptedBusinessFailure && isValid(data)))
+  if (response.ok && (acceptedPartial || (acceptedBusinessFailure && isValid(data))))
     return;
 
   const message =

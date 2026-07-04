@@ -13,11 +13,16 @@ import {
   rebuildFileIndex,
 } from "./file-index/index.js";
 import { ensureStorageObjectsTable } from "./storage-objects.js";
-import { scanIndexConsistency } from "./index-consistency.js";
+import {
+  loadLatestIndexConsistencyReport,
+  saveLatestIndexConsistencyReport,
+  scanIndexConsistency,
+} from "./index-consistency.js";
 import { mapWithConcurrency } from "./r2-tree.js";
 import { storageDelete } from "./storage.js";
 import { cleanupFileTasks } from "./tasks.js";
 import { handleTrashCleanup } from "./trash.js";
+import { cleanupOrphanMultipartUploads } from "./file-mutations/multipart.js";
 import { cleanupZipTaskResults } from "./zip-download.js";
 
 const ALLOWED_COUNT_TABLES = new Set([
@@ -67,6 +72,7 @@ export async function getMaintenanceSnapshot(env) {
     taskCount,
     thumbs,
     r2Sample,
+    indexConsistencyLatest,
   ] = await Promise.all([
     fileIndexStatus(env),
     countRows(env, "path_access_attempts"),
@@ -80,6 +86,7 @@ export async function getMaintenanceSnapshot(env) {
       objects: [],
       truncated: false,
     })),
+    loadLatestIndexConsistencyReport(env),
   ]);
   const visibleSampleCount = (r2Sample.objects || []).filter(
     (obj) => !isReservedKey(obj.key) && !obj.key.endsWith("/.folder"),
@@ -103,6 +110,7 @@ export async function getMaintenanceSnapshot(env) {
     thumbnailsPresent: Boolean(
       (thumbs.objects || []).length || thumbs.truncated,
     ),
+    indexConsistencyLatest,
   };
 }
 
@@ -124,7 +132,10 @@ export async function handleAdminMaintenanceAction(env, request) {
     return jsonResponse({ success: true, action, ...result });
   }
   if (action === "scan-index-consistency") {
-    const result = await scanIndexConsistency(env);
+    const result = await saveLatestIndexConsistencyReport(
+      env,
+      await scanIndexConsistency(env),
+    );
     await addLog(
       env,
       request,
@@ -262,6 +273,11 @@ export async function handleAdminMaintenanceAction(env, request) {
     }
     await addLog(env, request, "MAINTENANCE", `清理孤儿 storage_objects ${deleted} 条`);
     return jsonResponse({ success: true, action, deleted });
+  }
+  if (action === "cleanup-orphan-multipart") {
+    const result = await cleanupOrphanMultipartUploads(env);
+    await addLog(env, request, "MAINTENANCE", `清理孤儿 multipart 上传 ${result.aborted} 个`);
+    return jsonResponse({ success: true, action, ...result });
   }
   return jsonResponse(
     { success: false, message: "Invalid maintenance action" },

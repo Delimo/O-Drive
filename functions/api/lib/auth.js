@@ -8,7 +8,7 @@ import {
   timingSafeEqual,
 } from "./common/index.js";
 import { signHmac, verifyHmac } from "./secrets.js";
-import { loadWebhookEndpoints, notifyLoginBurst } from "./webhooks.js";
+import { loadWebhookEndpoints, notifyWebhookWithLog } from "./webhooks.js";
 
 function createCsrfToken() {
   const bytes = new Uint8Array(24);
@@ -217,15 +217,17 @@ async function notifyLoginFailureBurst(
   const alert = await shouldSendLoginAlert(env, ip);
   if (!alert.ok) return;
   const endpoints = await loadWebhookEndpoints(env);
-  await notifyLoginBurst(endpoints, {
-    ip,
-    username: String(username || ""),
-    attempts,
-    threshold: LOGIN_MAX_ATTEMPTS,
-    lockoutSeconds: Math.round(LOGIN_LOCKOUT_MS / 1000),
-    cooldownSeconds: alert.cooldownSeconds,
-    userAgent: request.headers.get("user-agent") || "",
-  });
+  context.waitUntil(
+    notifyWebhookWithLog(env, endpoints, "login.burst", {
+      ip,
+      username: String(username || ""),
+      attempts,
+      threshold: LOGIN_MAX_ATTEMPTS,
+      lockoutSeconds: Math.round(LOGIN_LOCKOUT_MS / 1000),
+      cooldownSeconds: alert.cooldownSeconds,
+      userAgent: request.headers.get("user-agent") || "",
+    }),
+  );
 }
 
 export async function handleLogin(request, env, context = {}) {

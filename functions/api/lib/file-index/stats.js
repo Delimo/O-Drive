@@ -2,16 +2,11 @@ import { formatBytes } from "../common/index.js";
 import { ensureFileIndexTable, ensureStorageUsageTable } from "./ensure.js";
 import { indexedFileCount } from "./helpers.js";
 
-const STORAGE_USED_CACHE_TTL = 30000;
-const storageUsedCache = {};
-
 export function clearStorageUsedCache() {
-  for (const k of Object.keys(storageUsedCache)) delete storageUsedCache[k];
+  /* 缓存已移除，保留为空函数以兼容调用方 */
 }
 
 export async function getIndexedStorageUsed(env, storageId = "r2") {
-  const cached = storageUsedCache[storageId];
-  if (cached && Date.now() - cached.ts < STORAGE_USED_CACHE_TTL) return cached.value;
   if (!(await ensureFileIndexTable(env))) return 0;
   let result = 0;
   try {
@@ -30,7 +25,6 @@ export async function getIndexedStorageUsed(env, storageId = "r2") {
       result = Number(r?.total || 0);
     }
   } catch (_) { result = 0; }
-  storageUsedCache[storageId] = { value: result, ts: Date.now() };
   return result;
 }
 

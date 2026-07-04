@@ -1,4 +1,5 @@
 import {
+  ensureCoreTables,
   isReservedKey,
   listR2Objects,
 } from "./common/index.js";
@@ -12,6 +13,7 @@ import { ensureTrashTable } from "./trash/schema.js";
 const SAMPLE_LIMIT = 5;
 const R2_SCAN_LIMIT = 5000;
 const R2_HEAD_LIMIT = 1000;
+const INDEX_CONSISTENCY_REPORT_KEY = "index_consistency_latest";
 
 function makeCategory(label, recommendation) {
   return { label, recommendation, count: 0, samples: [] };
@@ -212,4 +214,35 @@ export async function scanIndexConsistency(env, options = {}) {
     },
     categories,
   };
+}
+
+export async function loadLatestIndexConsistencyReport(env) {
+  if (!env?.D1) return null;
+  await ensureCoreTables(env);
+  try {
+    const row = await env.D1.prepare(
+      "SELECT value FROM kv_config WHERE key = ?",
+    )
+      .bind(INDEX_CONSISTENCY_REPORT_KEY)
+      .first();
+    if (!row?.value) return null;
+    return JSON.parse(row.value);
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function saveLatestIndexConsistencyReport(env, report) {
+  if (!env?.D1 || !report) return report;
+  await ensureCoreTables(env);
+  const compact = {
+    ...report,
+    savedAt: Date.now(),
+  };
+  await env.D1.prepare(
+    "INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)",
+  )
+    .bind(INDEX_CONSISTENCY_REPORT_KEY, JSON.stringify(compact))
+    .run();
+  return compact;
 }

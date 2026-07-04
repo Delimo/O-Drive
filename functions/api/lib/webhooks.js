@@ -166,7 +166,14 @@ function buildRequestInit(endpoint, payload, controller) {
     ...(endpoint.contentType ? { "Content-Type": endpoint.contentType } : {}),
     ...parseHeaders(endpoint.headers),
   };
-  const init = { method, headers, signal: controller.signal };
+  const init = {
+    method,
+    headers,
+    signal: controller.signal,
+    // Do not follow redirects automatically: a public URL could 3xx to an
+    // internal address (cloud metadata, RFC1918) and bypass the SSRF guard.
+    redirect: "manual",
+  };
   if (!["GET", "HEAD"].includes(method))
     init.body = formatBody(endpoint, payload);
   return init;
@@ -232,13 +239,110 @@ export function normalizeWebhookEndpoints(input) {
     .filter(Boolean);
 }
 
+const WEBHOOK_MAX_REDIRECTS = 3;
+
 /**
- * Send a webhook notification to a single URL.
- * @param {string} url
- * @param {WebhookPayload} payload
- * @param {number} [retries]
- * @returns {Promise<boolean>}
+ * Parse a hostname into a normalized IPv4 dotted string if it encodes an IPv4
+ * address in any common form (dotted decimal, dotted hex/octal, or a single
+ * 32-bit decimal/hex/octal integer). Returns null when the host is not an IPv4
+ * literal (e.g. a real domain name).
  */
+function parseIpv4(host) {
+  const clean = String(host || "").trim();
+  if (!clean) return null;
+  const parseOctet = (part) => {
+    if (/^0x[0-9a-f]+$/i.test(part)) return parseInt(part, 16);
+    if (/^0[0-7]+$/.test(part)) return parseInt(part, 8);
+    if (/^\d+$/.test(part)) return parseInt(part, 10);
+    return NaN;
+  };
+  const parts = clean.split(".");
+  if (parts.length === 1) {
+    // Single integer form, e.g. 2130706433 or 0x7f000001
+    const n = parseOctet(parts[0]);
+    if (!Number.isInteger(n) || n < 0 || n > 0xffffffff) return null;
+    return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
+  }
+  if (parts.length !== 4) return null;
+  const octets = parts.map(parseOctet);
+  if (octets.some((o) => !Number.isInteger(o) || o < 0 || o > 255)) return null;
+  return octets.join(".");
+}
+
+function ipv4IsPrivate(dotted) {
+  const [a, b] = dotted.split(".").map(Number);
+  if (a === 0 || a === 10 || a === 127) return true; // this-host, private, loopback
+  if (a === 169 && b === 254) return true; // link-local incl. cloud metadata
+  if (a === 172 && b >= 16 && b <= 31) return true; // private
+  if (a === 192 && b === 168) return true; // private
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT 100.64/10
+  return false;
+}
+
+function ipv6IsBlocked(host) {
+  let h = String(host || "").toLowerCase();
+  if (h.startsWith("[") && h.endsWith("]")) h = h.slice(1, -1);
+  if (!h.includes(":")) return false;
+  if (h === "::1" || h === "::") return true; // loopback / unspecified
+  // IPv4-mapped / -compatible: ::ffff:127.0.0.1, ::ffff:a.b.c.d
+  const tail = h.split(":").pop();
+  if (tail && tail.includes(".")) {
+    const dotted = parseIpv4(tail);
+    if (dotted && ipv4IsPrivate(dotted)) return true;
+  }
+  const first = h.split(":")[0];
+  if (/^f[cd]/.test(first)) return true; // fc00::/7 unique local
+  if (first.startsWith("fe8") || first.startsWith("fe9") || first.startsWith("fea") || first.startsWith("feb")) return true; // fe80::/10 link-local
+  return false;
+}
+
+/**
+ * Block webhook targets that resolve to loopback/private/link-local ranges,
+ * regardless of the encoding used to express them. Note: DNS rebinding (a
+ * public name resolving to a private IP) cannot be caught here because Workers
+ * expose no DNS resolution API; this guard covers literal-IP SSRF and is
+ * re-applied to every redirect hop.
+ */
+function isBlockedWebhookHost(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
+  if (!host) return true;
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  if (host === "0.0.0.0") return true;
+  const dotted = parseIpv4(host);
+  if (dotted) return ipv4IsPrivate(dotted);
+  if (host.includes(":") || host.startsWith("[")) return ipv6IsBlocked(host);
+  return false;
+}
+
+/**
+ * Fetch that validates the target host of every hop, following redirects
+ * manually so a public URL cannot 30x-bounce into a private address.
+ */
+async function guardedFetch(url, init) {
+  let current = url;
+  for (let hop = 0; hop <= WEBHOOK_MAX_REDIRECTS; hop++) {
+    const parsed = new URL(current);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      const err = new Error("Webhook URL scheme not allowed");
+      err.blocked = true;
+      throw err;
+    }
+    if (isBlockedWebhookHost(parsed.hostname)) {
+      const err = new Error("Webhook URL points to private IP range");
+      err.blocked = true;
+      throw err;
+    }
+    const res = await fetch(current, { ...init, redirect: "manual" });
+    if (res.status < 300 || res.status >= 400) return res;
+    const location = res.headers.get("location");
+    if (!location) return res;
+    current = new URL(location, current).toString();
+  }
+  const err = new Error("Webhook URL exceeded redirect limit");
+  err.blocked = true;
+  throw err;
+}
+
 async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
   const started = Date.now();
   let lastStatus = 0;
@@ -247,29 +351,15 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
-      const url = endpoint.url;
-      const parsed = new URL(url);
-      const hostname = parsed.hostname.toLowerCase();
-      if (
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname === "0.0.0.0" ||
-        hostname === "[::1]" ||
-        hostname.startsWith("10.") ||
-        hostname.startsWith("172.") && (Number(hostname.split(".")[1]) >= 16 && Number(hostname.split(".")[1]) <= 31) ||
-        hostname.startsWith("192.168.") ||
-        hostname === "169.254.169.254"
-      ) {
-        return {
-          ok: false, status: 0, error: "Webhook URL points to private IP range",
-          durationMs: Date.now() - started,
-        };
+      let res;
+      try {
+        res = await guardedFetch(
+          endpoint.url,
+          buildRequestInit(endpoint, payload, controller),
+        );
+      } finally {
+        clearTimeout(timer);
       }
-      const res = await fetch(
-        url,
-        buildRequestInit(endpoint, payload, controller),
-      );
-      clearTimeout(timer);
       lastStatus = res.status;
       if (res.ok)
         return {

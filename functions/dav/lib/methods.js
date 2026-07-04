@@ -5,11 +5,12 @@
 import { isReservedKey } from "../../api/lib/common/index.js";
 import { upsertFileIndex } from "../../api/lib/file-index/index.js";
 import {
+  releaseReservedQuota,
   resolveExistingObjectLocation,
   storageGet,
   storageHead,
   storagePut,
-  checkStorageQuota,
+  tryReserveStorageQuota,
 } from "../../api/lib/storage.js";
 import { copyTree } from "../../api/lib/r2-tree.js";
 import { softDeleteTree } from "../../api/lib/trash.js";
@@ -90,15 +91,6 @@ export async function handlePut(env, request, r2Key) {
     return new Response("Reserved system path", { status: 403 });
   }
 
-  // Check storage quota
-  const contentLength = Number(request.headers.get("Content-Length") || 0);
-  if (contentLength > 0) {
-    const quota = await checkStorageQuota(env, "r2", contentLength);
-    if (!quota.allowed) {
-      return new Response("Storage quota exceeded", { status: 507 });
-    }
-  }
-
   // Normalize the filename segment
   const parts = r2Key.split("/");
   const rawName = parts.pop();
@@ -108,23 +100,37 @@ export async function handlePut(env, request, r2Key) {
     return new Response("Invalid filename", { status: 400 });
   }
 
+  // Check storage quota (atomic reservation)
+  const contentLength = Number(request.headers.get("Content-Length") || 0);
+  let reserved = false;
+  if (contentLength > 0) {
+    if (!(await tryReserveStorageQuota(env, "r2", contentLength))) {
+      return new Response("Storage quota exceeded", { status: 507 });
+    }
+    reserved = true;
+  }
+
   // Check if file exists before writing (for correct 201 vs 204 status)
   const existed = await keyExists(env, r2Key);
 
   const body = request.body;
   const contentType = request.headers.get("Content-Type") || "application/octet-stream";
 
-  await storagePut(env, "r2", r2Key, body, {
-    httpMetadata: { contentType },
-  });
+  try {
+    await storagePut(env, "r2", r2Key, body, {
+      httpMetadata: { contentType },
+    });
 
-  // Update file index
-  await upsertFileIndex(env, r2Key, {
-    size: contentLength,
-    httpMetadata: { contentType },
-    storageId: "r2",
-    objectKey: r2Key,
-  });
+    // Update file index
+    await upsertFileIndex(env, r2Key, {
+      size: contentLength,
+      httpMetadata: { contentType },
+      storageId: "r2",
+      objectKey: r2Key,
+    });
+  } finally {
+    if (reserved) await releaseReservedQuota(env, "r2", contentLength);
+  }
 
   return new Response(null, { status: existed ? 204 : 201 });
 }
@@ -132,7 +138,7 @@ export async function handlePut(env, request, r2Key) {
 /**
  * Handle DELETE request — soft-delete a file or folder (moves to trash).
  */
-export async function handleDelete(env, r2Key) {
+export async function handleDelete(env, r2Key, request) {
   if (!r2Key) {
     return new Response("Cannot delete root", { status: 400 });
   }
@@ -144,7 +150,7 @@ export async function handleDelete(env, r2Key) {
   const exists = await keyExists(env, r2Key);
   if (!exists) return new Response("Not Found", { status: 404 });
 
-  await softDeleteTree(env, r2Key, null);
+  await softDeleteTree(env, r2Key, request);
   return new Response(null, { status: 204 });
 }
 
@@ -199,7 +205,7 @@ export async function handleMove(env, request, r2Key) {
     return new Response("Already exists", { status: 412 });
   }
   if (targetExists && overwrite) {
-    await softDeleteTree(env, destKey, null);
+    await softDeleteTree(env, destKey, request);
   }
 
   const copyResult = await copyTree(env, r2Key, destKey, true);
@@ -239,7 +245,7 @@ export async function handleCopy(env, request, r2Key) {
     return new Response("Already exists", { status: 412 });
   }
   if (targetExists && overwrite) {
-    await softDeleteTree(env, destKey, null);
+    await softDeleteTree(env, destKey, request);
   }
 
   const copyResult = await copyTree(env, r2Key, destKey, false);

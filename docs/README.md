@@ -10,6 +10,8 @@
 | `frontend-style.md` | 前端视觉风格指南，记录颜色、排版、组件、页面密度和重做页面时的设计检查清单。 |
 | `layout.md` | 页面布局、region、flex 链路和常见布局排查。 |
 | `admin-page.md` | 后台管理页 Tab、渲染器和事件约定。 |
+| `audit-findings.md` | 安全、并发、前端状态和 Webhook 等代码审计发现。 |
+| `fix-progress.md` | 审计发现和路线图任务的修复进度、复核结果和接续入口。 |
 | `project-roadmap.md` | 后续功能与代码优化建议，覆盖大目录任务化、索引修复、WebDAV、可观测性、分享和测试基础设施。 |
 
 ## 治理状态

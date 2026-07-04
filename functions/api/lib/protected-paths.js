@@ -96,11 +96,10 @@ async function makeAccessCookie(paths, env) {
 }
 
 function clientIp(request) {
-  return (
-    request.headers.get("cf-connecting-ip") ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "unknown"
-  );
+  // Only trust cf-connecting-ip. x-forwarded-for is client-controllable and
+  // would let an attacker rotate the header to reset the unlock lockout, so it
+  // is intentionally excluded here (matches auth.js and rate-limiter.js).
+  return request.headers.get("cf-connecting-ip") || "unknown";
 }
 
 async function checkUnlockAttempts(env, request, path) {

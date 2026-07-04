@@ -36,8 +36,8 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
         actions.explorer.setFilterMaxSize(""),
         actions.explorer.setFilterDateFrom(""),
         actions.explorer.setFilterDateTo(""),
-        thunks.loadExplorer(),
       ]);
+      store.dispatch(thunks.loadExplorer());
       return;
     }
 
@@ -80,8 +80,8 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
         actions.explorer.setSelectedKeys([]),
         actions.explorer.setTrashSelectedKeys([]),
         actions.explorer.setClipboard(next ? null : state.explorer.clipboard),
-        thunks.loadExplorer(),
       ]);
+      store.dispatch(thunks.loadExplorer());
       return;
     }
 
@@ -203,10 +203,8 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     if (action === "execute-batch-paste") {
       const modal = state.app.modal;
       if (!modal) return;
-      store.batchDispatch([
-        actions.app.setModal(null),
-        thunks.pasteClipboard(),
-      ]);
+      store.dispatch(actions.app.setModal(null));
+      store.dispatch(thunks.pasteClipboard());
       return;
     }
 
@@ -221,10 +219,8 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
     if (action === "execute-batch-delete") {
       const modal = state.app.modal;
       if (!modal || !modal.paths?.length) return;
-      store.batchDispatch([
-        actions.app.setModal(null),
-        thunks.batchDelete(modal.paths),
-      ]);
+      store.dispatch(actions.app.setModal(null));
+      store.dispatch(thunks.batchDelete(modal.paths));
       return;
     }
 

@@ -66,7 +66,6 @@ import {
 } from "./tasks.js";
 import {
   createWebhookEventNotification,
-  notifyDownloadBurst,
   notifyWebhookWithLog,
 } from "./webhooks.js";
 import {
@@ -79,19 +78,6 @@ import {
   checkDownloadBlocked,
   recordDownloadBurst,
 } from "./download-bursts.js";
-
-async function notifyConfiguredWebhooks(env, context, notifyFn) {
-  try {
-    const endpoints = await loadWebhookEndpoints(env);
-    waitForWebhook(context, notifyFn(endpoints));
-  } catch (err) {
-    await recordSystemWarning(
-      env,
-      "webhooks.notify",
-      err?.message || "Webhook notification setup failed",
-    );
-  }
-}
 
 async function notifyConfiguredWebhookEvent(env, context, event, data) {
   try {

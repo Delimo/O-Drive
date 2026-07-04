@@ -76,44 +76,32 @@ export async function checkRateLimitD1(
         .run();
     }
 
-    const row = await env.D1.prepare(
-      "SELECT request_count, window_start FROM api_rate_limits WHERE key = ?",
-    )
-      .bind(key)
+    // Atomic upsert: insert or increment request_count in one statement.
+    // When the window has expired, reset to 1 and update window_start.
+    // RETURNING provides the post-mutation row so no follow-up SELECT is needed.
+    const row = await env.D1.prepare(`
+      INSERT INTO api_rate_limits (key, request_count, window_start)
+      VALUES (?, 1, ?)
+      ON CONFLICT(key) DO UPDATE SET
+        request_count = CASE WHEN window_start >= ? THEN request_count + 1 ELSE 1 END,
+        window_start = CASE WHEN window_start >= ? THEN window_start ELSE ? END
+      RETURNING request_count, window_start
+    `)
+      .bind(key, now, now - windowMs, now - windowMs, now)
       .first();
 
-    const windowStart = Number(row?.window_start || 0);
-    if (!row || windowStart < now - windowMs) {
-      await env.D1.prepare(
-        "INSERT OR REPLACE INTO api_rate_limits (key, request_count, window_start) VALUES (?, ?, ?)",
-      )
-        .bind(key, 1, now)
-        .run();
-      return {
-        allowed: true,
-        remaining: Math.max(0, maxRequests - 1),
-        retryAfter: 0,
-      };
-    }
-
-    const count = Number(row.request_count || 0);
-    if (count >= maxRequests) {
+    const count = Number(row?.request_count || 0);
+    const ws = Number(row?.window_start || 0);
+    if (count > maxRequests) {
       return {
         allowed: false,
         remaining: 0,
-        retryAfter: Math.max(1, Math.ceil((windowStart + windowMs - now) / 1000)),
+        retryAfter: Math.max(1, Math.ceil((ws + windowMs - now) / 1000)),
       };
     }
-
-    const nextCount = count + 1;
-    await env.D1.prepare(
-      "UPDATE api_rate_limits SET request_count = ? WHERE key = ?",
-    )
-      .bind(nextCount, key)
-      .run();
     return {
       allowed: true,
-      remaining: Math.max(0, maxRequests - nextCount),
+      remaining: Math.max(0, maxRequests - count),
       retryAfter: 0,
     };
   } catch (err) {

@@ -25,6 +25,9 @@ export function createExplorerThunks(deps, context) {
   return {
     loadExplorer: () => async (dispatch, getState) => {
       const state = getState();
+      dispatch(actions.explorer.incrementLoadSeq());
+      const seq = getState().explorer.loadSeq;
+      function isStale() { return getState().explorer.loadSeq !== seq; }
       dispatch(actions.explorer.setLoading(true));
       dispatch(actions.explorer.setSelection(""));
       const path = normalizeKey(state.explorer.path);
@@ -57,7 +60,7 @@ export function createExplorerThunks(deps, context) {
         if (state.explorer.trashMode) {
           const { response, data } = await trashApi.list(query);
           assertApiOk(response, data, "回收站加载失败", humanError);
-          dispatch(actions.explorer.setData({ trashItems: data.items || [] }));
+          if (!isStale()) dispatch(actions.explorer.setData({ trashItems: data.items || [] }));
           return;
         }
 
@@ -78,32 +81,36 @@ export function createExplorerThunks(deps, context) {
             modifiedBefore: filterDateTo || "",
           });
           assertApiOk(response, data, "搜索失败", humanError);
-          dispatch(
-            actions.explorer.setSearchData({
-              files: data.files || [],
-              cursor: data.nextCursor || "",
-              hasMore: Boolean(data.nextCursor),
-              scanned: data.scanned || 0,
-              scanLimitReached: Boolean(data.scanLimitReached),
-            }),
-          );
+          if (!isStale()) {
+            dispatch(
+              actions.explorer.setSearchData({
+                files: data.files || [],
+                cursor: data.nextCursor || "",
+                hasMore: Boolean(data.nextCursor),
+                scanned: data.scanned || 0,
+                scanLimitReached: Boolean(data.scanLimitReached),
+              }),
+            );
+          }
           return;
         }
 
         const { response, data } = await fileApi.list(path);
         assertApiOk(response, data, "目录加载失败", humanError);
-        dispatch(
-          actions.explorer.setData({
-            folders: data.folders || [],
-            files: data.files || [],
-            storageId: data.storageId || "r2",
-          }),
-        );
-        syncHomeUrl(path, query);
+        if (!isStale()) {
+          dispatch(
+            actions.explorer.setData({
+              folders: data.folders || [],
+              files: data.files || [],
+              storageId: data.storageId || "r2",
+            }),
+          );
+          syncHomeUrl(path, query);
+        }
       } catch (error) {
-        dispatch(actions.explorer.setError(error.message || "加载失败"));
+        if (!isStale()) dispatch(actions.explorer.setError(error.message || "加载失败"));
       } finally {
-        dispatch(actions.explorer.setSearching(false));
+        if (!isStale()) dispatch(actions.explorer.setSearching(false));
       }
     },
 
@@ -121,6 +128,9 @@ export function createExplorerThunks(deps, context) {
         filterDateFrom,
         filterDateTo,
       } = state.explorer;
+      dispatch(actions.explorer.incrementLoadSeq());
+      const seq = getState().explorer.loadSeq;
+      function isStale() { return getState().explorer.loadSeq !== seq; }
       dispatch(actions.explorer.setLoading(true));
       try {
         const { response, data } = await fileApi.search(query, scope, cursor, {
@@ -131,18 +141,22 @@ export function createExplorerThunks(deps, context) {
           modifiedBefore: filterDateTo || "",
         });
         assertApiOk(response, data, "搜索失败", humanError);
-        dispatch(
-          actions.explorer.appendSearchResults({
-            files: data.files || [],
-            cursor: data.nextCursor || "",
-            hasMore: Boolean(data.nextCursor),
-            scanned: data.scanned || 0,
-            scanLimitReached: Boolean(data.scanLimitReached),
-          }),
-        );
+        if (!isStale()) {
+          dispatch(
+            actions.explorer.appendSearchResults({
+              files: data.files || [],
+              cursor: data.nextCursor || "",
+              hasMore: Boolean(data.nextCursor),
+              scanned: data.scanned || 0,
+              scanLimitReached: Boolean(data.scanLimitReached),
+            }),
+          );
+        }
       } catch (error) {
-        dispatchToast("error", error.message || "加载更多结果失败");
-        dispatch(actions.explorer.setLoading(false));
+        if (!isStale()) {
+          dispatchToast("error", error.message || "加载更多结果失败");
+          dispatch(actions.explorer.setLoading(false));
+        }
       }
     },
 

@@ -31,6 +31,46 @@ export async function deleteShare(env, token) {
     .run();
 }
 
+/**
+ * Atomically reserve one download slot for a max-limited share.
+ *
+ * The increment is guarded by `download_count < max_downloads` in the same
+ * statement, so N concurrent downloads can never push the count past the limit
+ * (the classic check-then-act TOCTOU). Unlimited shares (max_downloads = 0)
+ * still bump the counter for stats but are never rejected.
+ *
+ * Returns true when a slot was granted. When it returns false the caller must
+ * treat the share as exhausted and must NOT serve the download.
+ */
+export async function reserveDownloadSlot(env, token) {
+  await ensureShareTable(env);
+  const res = await env.D1.prepare(
+    `UPDATE share_links
+     SET download_count = download_count + 1,
+         last_accessed_at = ?
+     WHERE token = ?
+       AND (max_downloads = 0 OR download_count < max_downloads)`,
+  )
+    .bind(Date.now(), token)
+    .run();
+  return Number(res?.meta?.changes ?? res?.changes ?? 0) > 0;
+}
+
+/**
+ * Release a previously reserved slot when the download itself failed, so a
+ * transient R2/stream error does not permanently consume a download.
+ */
+export async function releaseDownloadSlot(env, token) {
+  await ensureShareTable(env);
+  await env.D1.prepare(
+    `UPDATE share_links
+     SET download_count = CASE WHEN download_count > 0 THEN download_count - 1 ELSE 0 END
+     WHERE token = ?`,
+  )
+    .bind(token)
+    .run();
+}
+
 export async function notifyShareExpiredOnce(env, row, reason = "expired") {
   if (!row || Number(row.expired_notified_at || 0) > 0) return false;
   const item = mapShare(row);

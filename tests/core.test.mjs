@@ -3065,6 +3065,69 @@ test('admin maintenance scans index consistency without mutating data', async ()
   assert.equal(report.categories.missingStorageObjectRefs.count, 1);
   assert.equal(report.categories.unreferencedR2Objects.count, 1);
   assert.equal(report.scanned.fileIndexRows, 4);
+  assert.ok(report.savedAt >= report.scannedAt);
+
+  const maintenance = await onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/maintenance', {
+      headers: { Cookie: cookie },
+    }),
+  });
+  const maintenanceData = await maintenance.json();
+
+  assert.equal(maintenance.status, 200);
+  assert.equal(maintenanceData.indexConsistencyLatest.status, 'warning');
+  assert.equal(maintenanceData.indexConsistencyLatest.issueCount, report.issueCount);
+  assert.equal(maintenanceData.indexConsistencyLatest.categories.brokenFileIndexRefs.count, 1);
+
+  await env.D1.prepare("INSERT OR REPLACE INTO api_rate_limits (key, request_count, window_start) VALUES (?, ?, ?)")
+    .bind('api:/api/files:127.0.0.1', 2, now)
+    .run();
+  await env.D1.prepare("INSERT OR REPLACE INTO api_rate_limits (key, request_count, window_start) VALUES (?, ?, ?)")
+    .bind('dav:PUT:/dav/docs/a.txt:127.0.0.1', 1, now)
+    .run();
+  for (let i = 0; i < 3; i += 1) {
+    await env.D1.prepare("INSERT INTO login_attempts (ip, attempts, last_attempt) VALUES (?, 1, ?)")
+      .bind('203.0.113.10', now)
+      .run();
+  }
+  const taskCreate = await createFileTask(env, new Request('https://example.com/api/tasks', {
+    method: 'POST',
+    body: JSON.stringify({ type: 'upload', payload: { files: ['failed.bin'] } }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const taskId = (await taskCreate.json()).item.id;
+  await updateFileTask(
+    env,
+    new Request('https://example.com/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ status: 'failed', total: 1, completed: 0, failed: 1, error: 'upload failed', finishedAt: now }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+    new URL(`https://example.com/api/tasks?id=${taskId}`),
+  );
+  await env.D1.prepare("INSERT INTO webhook_deliveries (event, endpoint, url, ok, status, error, duration_ms, payload, endpoint_config, retry_of, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .bind('file.uploaded', 'demo', 'https://hooks.example.test', 0, 500, 'HTTP 500', 12, '{}', '{}', 0, now)
+    .run();
+  await recordSystemWarning(env, 'test.observability', 'warning row', 'warning');
+  await createNotification(env, { event: 'task.failed', message: 'task failed', severity: 'error' });
+
+  const stats = await handleAdminStats(env);
+  const statsData = await stats.json();
+
+  assert.equal(stats.status, 200);
+  assert.equal(statsData.observability.status, 'warning');
+  assert.ok(statsData.observability.counters.apiRateLimitHits >= 2);
+  assert.equal(statsData.observability.counters.webdavRateLimitHits, 1);
+  assert.equal(statsData.observability.counters.loginFailures, 3);
+  assert.equal(statsData.observability.counters.failedTasks, 1);
+  assert.equal(statsData.observability.counters.webhookFailures, 1);
+  assert.equal(statsData.observability.counters.systemWarnings, 1);
+  assert.equal(statsData.observability.counters.errorNotifications, 1);
+  assert.equal(statsData.observability.counters.indexIssues, report.issueCount);
+  assert.equal(statsData.observability.indexConsistency.issueCount, report.issueCount);
+  assert.equal(statsData.observability.failedTasks[0].id, taskId);
+  assert.equal(statsData.observability.webhookFailures[0].event, 'file.uploaded');
 
   const rowsAfter = await env.D1.prepare('SELECT * FROM file_index ORDER BY path ASC').all();
   assert.equal(rowsAfter.results.length, 4);

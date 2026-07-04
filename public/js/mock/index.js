@@ -112,6 +112,26 @@ export const mockAdminStats = {
     { key: "banner.png", sizeFormatted: "1.8 MB", uploaded: now - 8 * hour },
     { key: "宣传视频.mp4", sizeFormatted: "50 MB", uploaded: now - day },
   ],
+  observability: {
+    generatedAt: now,
+    windowHours: 24,
+    status: "warning",
+    counters: {
+      apiRateLimitHits: 0,
+      webdavRateLimitHits: 0,
+      loginFailures: 3,
+      failedTasks: 1,
+      webhookFailures: 1,
+      systemWarnings: 0,
+      errorNotifications: 0,
+      indexIssues: 2,
+    },
+    topLoginFailures: [{ key: "203.0.113.10", attempts: 3, lastAttempt: now - hour }],
+    failedTasks: [{ id: "task-zip-001", type: "zip_download", status: "failed", failed: 1, error: "ZIP 结果过期", updatedAt: now - 2 * hour }],
+    webhookFailures: [{ id: 9, event: "file.uploaded", endpoint: "外部通知", status: 500, error: "HTTP 500", createdAt: now - 3 * hour }],
+    warnings: [],
+    indexConsistency: { status: "warning", issueCount: 2, scannedAt: now - 4 * hour, savedAt: now - 4 * hour, truncated: false },
+  },
   attention: [
     {
       level: "ok",
@@ -448,6 +468,34 @@ export const mockMaintenanceSnapshot = {
   logsCount: 142,
   taskCount: 0,
   thumbnailsPresent: true,
+  indexConsistencyLatest: {
+    scannedAt: now - 4 * hour,
+    savedAt: now - 4 * hour,
+    status: "warning",
+    issueCount: 2,
+    truncated: false,
+    scanned: {
+      fileIndexRows: 128,
+      trashEntries: 6,
+      storageObjects: 92,
+      r2Objects: 132,
+      r2HeadChecks: 128,
+    },
+    categories: {
+      brokenFileIndexRefs: {
+        label: "文件索引断链",
+        recommendation: "确认 R2 对象是否存在；若是历史迁移问题，可重新上传或重建索引。",
+        count: 1,
+        samples: [{ path: "archive/missing.pdf", objectKey: "archive/missing.pdf" }],
+      },
+      storageRefMismatches: {
+        label: "对象引用计数不一致",
+        recommendation: "运行“重建对象引用计数”以按 file_index 和 trash_entries 重新计算。",
+        count: 1,
+        samples: [{ objectKey: "objects/sha256/demo", recorded: 0, expected: 1 }],
+      },
+    },
+  },
 };
 
 export const mockTasks = [

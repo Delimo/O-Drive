@@ -48,6 +48,83 @@ export function createSystemRenderer({
     `;
   }
 
+  function renderIndexConsistencyCard(maintenance) {
+    const report = maintenance?.indexConsistencyLatest || null;
+    const categories = report?.categories || {};
+    const categoryItems = Object.entries(categories)
+      .filter(([, item]) => Number(item?.count || 0) > 0)
+      .sort((a, b) => Number(b[1]?.count || 0) - Number(a[1]?.count || 0));
+    const status = !report
+      ? "unknown"
+      : report.status === "ok" && !report.issueCount
+        ? "ok"
+        : "warning";
+    const statusLabel =
+      status === "ok" ? "正常" : status === "warning" ? "需要处理" : "未扫描";
+    const scannedAt = report?.scannedAt || report?.savedAt || 0;
+    const sampleHtml = categoryItems.slice(0, 4).map(([key, item]) => {
+      const samples = item.samples || [];
+      const first = samples[0] || {};
+      const sampleText = first.path || first.objectKey || first.key || "";
+      return `
+        <div class="ov-index-issue">
+          <div class="ov-index-issue-main">
+            <span class="ov-index-issue-title">${escapeHtml(item.label || key)}</span>
+            <span class="ov-index-issue-desc">${escapeHtml(item.recommendation || "")}</span>
+            ${sampleText ? `<code class="ov-index-sample">${escapeHtml(sampleText)}</code>` : ""}
+          </div>
+          <strong>${safeText(item.count, "0")}</strong>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="ov-index-card">
+        <div class="ov-index-head">
+          <div>
+            <span class="ov-index-title">索引一致性</span>
+            <p class="ov-index-desc">对照 file_index、storage_objects、回收站和 R2 引用</p>
+          </div>
+          <div class="ov-index-actions">
+            <span class="ov-index-state ov-index-state-${status}">${statusLabel}</span>
+            <button class="btn btn-sm" type="button"
+                    data-action="confirm-maintenance-action"
+                    data-maintenance-action="scan-index-consistency"
+                    data-maintenance-label="检查索引一致性">扫描</button>
+          </div>
+        </div>
+        ${report ? `
+          <div class="ov-index-summary">
+            <div>
+              <span>问题总数</span>
+              <strong>${safeText(report.issueCount, "0")}</strong>
+            </div>
+            <div>
+              <span>扫描文件索引</span>
+              <strong>${safeText(report.scanned?.fileIndexRows, "0")}</strong>
+            </div>
+            <div>
+              <span>R2 样例</span>
+              <strong>${safeText(report.scanned?.r2Objects, "0")}</strong>
+            </div>
+            <div>
+              <span>最近扫描</span>
+              <strong>${scannedAt ? formatRelative(scannedAt) : "未知"}</strong>
+            </div>
+          </div>
+          ${report.truncated ? `<div class="ov-index-note">扫描已达到上限，结果为保守样例。</div>` : ""}
+          ${categoryItems.length
+            ? `<div class="ov-index-issues">${sampleHtml}</div>`
+            : `<div class="ov-index-empty">未发现索引一致性问题。</div>`}
+        ` : `
+          <div class="ov-index-empty">
+            尚无扫描报告。运行一次只读扫描后，这里会保留最近结果。
+          </div>
+        `}
+      </div>
+    `;
+  }
+
   function taskStatusClass(status) {
     if (status === "completed") return "ov-task-state-ok";
     if (status === "failed") return "ov-task-state-error";
@@ -94,7 +171,8 @@ export function createSystemRenderer({
       maintenanceLoading, maintenanceError,
       tasks = [], tasksLoading, taskRetryingId = "",
       taskAlertConfig = null, taskAlertConfigSaving = false,
-      quota = null
+      quota = null,
+      maintenance = null
     } = admin;
 
     const healthData = admin.health || {};
@@ -249,6 +327,8 @@ export function createSystemRenderer({
               `).join("")}
             </div>
           ` : ""}
+
+          ${renderIndexConsistencyCard(maintenance)}
 
           <div class="ov-maintenance ov-maintenance-has-advanced">
             <div class="ov-maintenance-header">

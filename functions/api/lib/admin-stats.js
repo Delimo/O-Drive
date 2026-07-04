@@ -17,6 +17,7 @@ import { checkStorageQuota, listConfiguredStorages } from "./storage.js";
 import { createNotification } from "./notifications.js";
 import { thresholdAlert } from "./alert-rules.js";
 import { getTaskFailureAlertState } from "./tasks.js";
+import { loadLatestIndexConsistencyReport } from "./index-consistency.js";
 
 const STORAGE_ALERT_STATE_PREFIX = "storage_quota_alert:";
 const STORAGE_ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -43,6 +44,7 @@ async function buildStatsResponse(env, context) {
     ...indexed,
     ...dbStats,
     index,
+    observability: await buildObservabilitySummary(env),
     attention: await overviewAttention(env, indexed, dbStats, index),
   });
 }
@@ -117,6 +119,157 @@ async function adminDbStats(env) {
   const shares = { total: Number(shareRow?.count || 0) };
 
   return { trash, logs, tasks, shares };
+}
+
+async function safeAll(env, sql, ...binds) {
+  try {
+    const stmt = env.D1.prepare(sql);
+    const result = binds.length ? await stmt.bind(...binds).all() : await stmt.all();
+    return result.results || [];
+  } catch (_) {
+    return [];
+  }
+}
+
+async function safeFirst(env, sql, ...binds) {
+  try {
+    const stmt = env.D1.prepare(sql);
+    return binds.length ? await stmt.bind(...binds).first() : await stmt.first();
+  } catch (_) {
+    return null;
+  }
+}
+
+function countRateLimitHits(rows) {
+  return rows.reduce((sum, row) => sum + Number(row.request_count || row.count || 1), 0);
+}
+
+async function buildObservabilitySummary(env, now = Date.now()) {
+  await ensureCoreTables(env);
+  const windowHours = 24;
+  const since = now - windowHours * 60 * 60 * 1000;
+  const [
+    rateRows,
+    loginRows,
+    failedTasks,
+    webhookFailures,
+    warnings,
+    errorNotifications,
+    indexConsistency,
+  ] = await Promise.all([
+    safeAll(
+      env,
+      "SELECT key, request_count, window_start FROM api_rate_limits WHERE window_start >= ? ORDER BY request_count DESC LIMIT 20",
+      since,
+    ),
+    safeAll(
+      env,
+      "SELECT ip, attempts, last_attempt FROM login_attempts WHERE last_attempt >= ? ORDER BY attempts DESC LIMIT 5",
+      since,
+    ),
+    safeAll(
+      env,
+      "SELECT * FROM file_tasks WHERE (status = 'failed' OR status = 'partial' OR failed > 0) AND (finished_at >= ? OR updated_at >= ?) ORDER BY updated_at DESC LIMIT 5",
+      since,
+      since,
+    ),
+    safeAll(
+      env,
+      "SELECT * FROM webhook_deliveries WHERE ok = 0 AND created_at >= ? ORDER BY created_at DESC LIMIT 5",
+      since,
+    ),
+    safeAll(
+      env,
+      "SELECT * FROM system_warnings WHERE acknowledged_at = 0 ORDER BY created_at DESC LIMIT 5",
+    ),
+    safeFirst(
+      env,
+      "SELECT COUNT(*) as count FROM notifications WHERE severity = 'error' AND created_at >= ?",
+      since,
+    ),
+    loadLatestIndexConsistencyReport(env),
+  ]);
+
+  const apiRateRows = rateRows.filter((row) => !String(row.key || "").startsWith("dav:"));
+  const davRateRows = rateRows.filter((row) => String(row.key || "").startsWith("dav:"));
+  const systemWarningCount = warnings.length;
+  const webhookFailureCount = webhookFailures.length;
+  const failedTaskCount = failedTasks.length;
+  const loginFailureCount = loginRows.reduce((sum, row) => sum + Number(row.attempts || 0), 0);
+  const apiRateLimitHits = countRateLimitHits(apiRateRows);
+  const webdavRateLimitHits = countRateLimitHits(davRateRows);
+  const errorNotificationCount = Number(errorNotifications?.count || 0);
+  const issueCount = Number(indexConsistency?.issueCount || 0);
+  const severity =
+    issueCount > 0 ||
+    apiRateLimitHits > 0 ||
+    webdavRateLimitHits > 0 ||
+    webhookFailureCount > 0 ||
+    failedTaskCount > 0 ||
+    systemWarningCount > 0 ||
+    loginFailureCount > 0 ||
+    errorNotificationCount > 0
+      ? "warning"
+      : "ok";
+
+  return {
+    generatedAt: now,
+    windowHours,
+    status: severity,
+    counters: {
+      apiRateLimitHits,
+      webdavRateLimitHits,
+      loginFailures: loginFailureCount,
+      failedTasks: failedTaskCount,
+      webhookFailures: webhookFailureCount,
+      systemWarnings: systemWarningCount,
+      errorNotifications: errorNotificationCount,
+      indexIssues: issueCount,
+    },
+    topRateLimits: rateRows.slice(0, 5).map((row) => ({
+      key: row.key,
+      count: Number(row.request_count || 0),
+      windowStart: Number(row.window_start || 0),
+    })),
+    topLoginFailures: loginRows.map((row) => ({
+      key: row.ip,
+      attempts: Number(row.attempts || 0),
+      lastAttempt: Number(row.last_attempt || 0),
+    })),
+    failedTasks: failedTasks.map((row) => ({
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      failed: Number(row.failed || 0),
+      error: row.error || "",
+      updatedAt: Number(row.updated_at || row.updatedAt || 0),
+      finishedAt: Number(row.finished_at || row.finishedAt || 0),
+    })),
+    webhookFailures: webhookFailures.map((row) => ({
+      id: Number(row.id || 0),
+      event: row.event || "",
+      endpoint: row.endpoint || "",
+      status: Number(row.status || 0),
+      error: row.error || "",
+      createdAt: Number(row.created_at || 0),
+    })),
+    warnings: warnings.map((row) => ({
+      id: Number(row.id || 0),
+      source: row.source || "",
+      level: row.level || "warning",
+      message: row.message || "",
+      createdAt: Number(row.created_at || 0),
+    })),
+    indexConsistency: indexConsistency
+      ? {
+          status: indexConsistency.status || "unknown",
+          issueCount,
+          scannedAt: Number(indexConsistency.scannedAt || 0),
+          savedAt: Number(indexConsistency.savedAt || 0),
+          truncated: Boolean(indexConsistency.truncated),
+        }
+      : null,
+  };
 }
 
 async function overviewIndexStatus(env, listed = null) {

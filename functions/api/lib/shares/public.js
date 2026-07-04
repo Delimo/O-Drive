@@ -11,6 +11,8 @@ import {
   exhaustedResponse,
   expiredResponse,
   getShare,
+  releaseDownloadSlot,
+  reserveDownloadSlot,
 } from "./expiry.js";
 import { mapShare } from "./mapping.js";
 import {
@@ -107,13 +109,17 @@ export async function handlePublicShare(env, request, path) {
     return jsonResponse({ success: false, message: "Download disabled" }, 403);
   if (isBundleShare) {
     if (action === "download" && !subPath) {
+      if (!(await reserveDownloadSlot(env, token)))
+        return exhaustedResponse(env, token, row);
       const res = await bundleZipResponse(env, item);
       if (res.ok) {
         await env.D1.prepare(
-          "UPDATE share_links SET download_count = download_count + 1, last_accessed_at = ?, last_access_ip = ? WHERE token = ?",
+          "UPDATE share_links SET last_access_ip = ? WHERE token = ?",
         )
-          .bind(Date.now(), accessIp, token)
+          .bind(accessIp, token)
           .run();
+      } else {
+        await releaseDownloadSlot(env, token);
       }
       return res;
     }
@@ -125,6 +131,8 @@ export async function handlePublicShare(env, request, path) {
       return jsonResponse({ success: false, message: "Share path not found" }, 404);
     if (action === "preview" && target.targetType !== "file")
       return jsonResponse({ success: false, message: "Folder preview disabled" }, 403);
+    if (action === "download" && !(await reserveDownloadSlot(env, token)))
+      return exhaustedResponse(env, token, row);
     const res =
       action === "download" && target.targetType === "folder"
         ? await folderZipResponse(
@@ -141,12 +149,16 @@ export async function handlePublicShare(env, request, path) {
               : `/api/preview/${subPath}`,
             subPath,
           );
-    if (res.ok && action === "download") {
-      await env.D1.prepare(
-        "UPDATE share_links SET download_count = download_count + 1, last_accessed_at = ?, last_access_ip = ? WHERE token = ?",
-      )
-        .bind(Date.now(), accessIp, token)
-        .run();
+    if (action === "download") {
+      if (res.ok) {
+        await env.D1.prepare(
+          "UPDATE share_links SET last_access_ip = ? WHERE token = ?",
+        )
+          .bind(accessIp, token)
+          .run();
+      } else {
+        await releaseDownloadSlot(env, token);
+      }
     }
     return res;
   }
@@ -156,6 +168,8 @@ export async function handlePublicShare(env, request, path) {
     return jsonResponse({ success: false, message: "Share path not found" }, 404);
   if (isFolderShare && action === "preview" && target?.targetType !== "file")
     return jsonResponse({ success: false, message: "Folder preview disabled" }, 403);
+  if (action === "download" && !(await reserveDownloadSlot(env, token)))
+    return exhaustedResponse(env, token, row);
   const res =
     isFolderShare && (!target || target.targetType === "folder")
       ? await folderZipResponse(env, item.path, subPath, targetPath.split("/").pop() || item.name)
@@ -167,12 +181,16 @@ export async function handlePublicShare(env, request, path) {
             : `/api/preview/${targetPath}`,
           targetPath,
         );
-  if (res.ok && action === "download") {
-    await env.D1.prepare(
-      "UPDATE share_links SET download_count = download_count + 1, last_accessed_at = ?, last_access_ip = ? WHERE token = ?",
-    )
-      .bind(Date.now(), accessIp, token)
-      .run();
+  if (action === "download") {
+    if (res.ok) {
+      await env.D1.prepare(
+        "UPDATE share_links SET last_access_ip = ? WHERE token = ?",
+      )
+        .bind(accessIp, token)
+        .run();
+    } else {
+      await releaseDownloadSlot(env, token);
+    }
   }
   return res;
 }

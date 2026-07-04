@@ -150,6 +150,72 @@ export function createOverviewRenderer({
     return MAINTENANCE_ACTIONS.find((item) => item.action === action)?.label || "处理";
   }
 
+  function renderObservabilityPanel(observability = null) {
+    if (!observability) return "";
+    const counters = observability.counters || {};
+    const status = observability.status === "ok" ? "ok" : "warning";
+    const statusLabel = status === "ok" ? "运行正常" : "需要关注";
+    const index = observability.indexConsistency || null;
+    const metricItems = [
+      ["API 限流", counters.apiRateLimitHits || 0],
+      ["WebDAV 限流", counters.webdavRateLimitHits || 0],
+      ["登录失败", counters.loginFailures || 0],
+      ["失败任务", counters.failedTasks || 0],
+      ["Webhook 失败", counters.webhookFailures || 0],
+      ["系统警告", counters.systemWarnings || 0],
+      ["错误通知", counters.errorNotifications || 0],
+      ["索引问题", counters.indexIssues || 0],
+    ];
+    const hasLists =
+      observability.topLoginFailures?.length ||
+      observability.failedTasks?.length ||
+      observability.webhookFailures?.length ||
+      observability.warnings?.length;
+
+    return `
+      <div class="ov-observe">
+        <div class="ov-observe-head">
+          <div>
+            <span class="ov-section-title">运维可观测</span>
+            <p class="ov-observe-desc">近 ${safeText(observability.windowHours || 24)} 小时关键异常摘要</p>
+          </div>
+          <span class="ov-observe-state ov-observe-state-${status}">${statusLabel}</span>
+        </div>
+        <div class="ov-observe-metrics">
+          ${metricItems.map(([label, value]) => `
+            <div class="ov-observe-metric ${Number(value) > 0 ? "ov-observe-metric-hot" : ""}">
+              <span>${escapeHtml(label)}</span>
+              <strong>${safeText(value, "0")}</strong>
+            </div>
+          `).join("")}
+        </div>
+        <div class="ov-observe-foot">
+          <div class="ov-observe-index ${index?.issueCount ? "ov-observe-index-warn" : ""}">
+            <span>索引健康</span>
+            <strong>${index ? (index.issueCount ? `${safeText(index.issueCount, "0")} 个问题` : "正常") : "未扫描"}</strong>
+            <em>${index?.scannedAt ? `最近扫描 ${formatRelative(index.scannedAt)}` : "可在系统页运行扫描"}</em>
+          </div>
+          ${hasLists ? `
+            <div class="ov-observe-lists">
+              ${(observability.topLoginFailures || []).slice(0, 2).map(item => `
+                <span class="ov-observe-chip">登录 ${escapeHtml(item.key || "")}: ${safeText(item.attempts, "0")}</span>
+              `).join("")}
+              ${(observability.webhookFailures || []).slice(0, 2).map(item => `
+                <span class="ov-observe-chip">Webhook ${escapeHtml(item.endpoint || item.event || "")}</span>
+              `).join("")}
+              ${(observability.failedTasks || []).slice(0, 2).map(item => `
+                <span class="ov-observe-chip">任务 ${escapeHtml(item.type || item.status || "")}</span>
+              `).join("")}
+              ${(observability.warnings || []).slice(0, 2).map(item => `
+                <span class="ov-observe-chip">${escapeHtml(item.source || "系统警告")}</span>
+              `).join("")}
+            </div>
+          ` : `<span class="ov-observe-clear">暂无异常明细</span>`}
+        </div>
+      </div>
+    `;
+  }
+
   function renderAttentionAction(item = {}) {
     const actionArg = Array.isArray(item.actionArgs) ? item.actionArgs[0] : "";
     if (item.action === "maintenance-action" && actionArg) {
@@ -173,7 +239,7 @@ export function createOverviewRenderer({
 
   function renderAdminStatsGrid(stats) {
     if (!stats) return ``;
-    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {}, attention = [], logs = {}, tasks = {}, thumbnailsPresent = false } = stats;
+    const { files = {}, trash = {}, index = {}, shares = {}, latest = [], breakdown = {}, attention = [], logs = {}, tasks = {}, thumbnailsPresent = false, observability = null } = stats;
     const warnings = attention.filter(i => i.level === "warning");
     const anomalies = { total: warnings.length, items: warnings };
     const recentFiles = latest.slice(0, 6);
@@ -234,6 +300,8 @@ export function createOverviewRenderer({
             </div>
           </div>
         </div>
+
+        ${renderObservabilityPanel(observability)}
 
         <div class="ov-overview-grid">
           <div class="ov-overview-left">

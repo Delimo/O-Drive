@@ -6,7 +6,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const AUTO_REMOVE_DELAY = 3000;
 const AUTO_CLOSE_DELAY = 3000;
 let autoRemoveTimers = [];
-let autoCloseTimer = null;
+let autoCloseTimers = [];
 
 function buildResumeDiagnostic(info) {
   if (!info?.totalChunks) return "";
@@ -42,10 +42,8 @@ function buildUploadFailureDiagnostic(error, item) {
 export function clearUploadAutoTimers() {
   autoRemoveTimers.forEach(clearTimeout);
   autoRemoveTimers = [];
-  if (autoCloseTimer) {
-    clearTimeout(autoCloseTimer);
-    autoCloseTimer = null;
-  }
+  autoCloseTimers.forEach(clearTimeout);
+  autoCloseTimers = [];
 }
 
 export function createUploadThunks(deps, context) {

@@ -1,10 +1,10 @@
-import { formatBytes as formatQuotaBytes, jsonResponse, normalizeName, addLog } from "../common/index.js";
+import { jsonResponse, normalizeName, addLog } from "../common/index.js";
 import {
   countFileIndexObjectRefs,
   getFileIndexEntry,
   upsertFileIndex,
 } from "../file-index/index.js";
-import { checkStorageQuota, storageDelete, storagePut } from "../storage.js";
+import { releaseReservedQuota, storageDelete, storagePut, tryReserveStorageQuota } from "../storage.js";
 import {
   createStorageObject,
   deleteStorageObjectRecord,
@@ -16,33 +16,32 @@ import {
 import { assertUserKey, normalizeUserKey, resolveUploadConflict } from "./helpers.js";
 
 async function putLegacyUpload(env, file, resolved, storageId) {
-  const quota = await checkStorageQuota(
-    env,
-    storageId,
-    Number(file.size || 0),
-  );
-  if (!quota.allowed) {
-    return {
-      response: jsonResponse(
-        {
-          success: false,
-          code: "QUOTA_EXCEEDED",
-          storageId,
-          message: `${quota.storageName} 空间配额不足。已使用 ${formatQuotaBytes(quota.used)} / ${formatQuotaBytes(quota.quota)}，本次需要 ${formatQuotaBytes(file.size || 0)}。`,
-        },
-        507,
-      ),
-    };
+  const size = Number(file.size || 0);
+  let reserved = false;
+  if (size > 0) {
+    if (!(await tryReserveStorageQuota(env, storageId, size))) {
+      return {
+        response: jsonResponse(
+          { success: false, code: "QUOTA_EXCEEDED", storageId, message: "存储配额不足。" },
+          507,
+        ),
+      };
+    }
+    reserved = true;
   }
-  await storagePut(env, storageId, resolved.key, file.stream(), {
-    httpMetadata: { contentType: file.type },
-  });
-  await upsertFileIndex(env, resolved.key, {
-    size: file.size,
-    contentType: file.type,
-    uploaded: Date.now(),
-    storageId,
-  });
+  try {
+    await storagePut(env, storageId, resolved.key, file.stream(), {
+      httpMetadata: { contentType: file.type },
+    });
+    await upsertFileIndex(env, resolved.key, {
+      size,
+      contentType: file.type,
+      uploaded: Date.now(),
+      storageId,
+    });
+  } finally {
+    if (reserved) await releaseReservedQuota(env, storageId, size);
+  }
   return { response: null };
 }
 
@@ -113,49 +112,56 @@ export async function handleUpload(env, request, r2Key, meta = {}) {
   );
   const skippedUpload = Boolean(storageObject);
 
+  let reserved = false;
   if (!storageObject) {
-    const quota = await checkStorageQuota(env, storageId, size);
-    if (!quota.allowed) {
+    if (!(await tryReserveStorageQuota(env, storageId, size))) {
       return jsonResponse(
-        {
-          success: false,
-          code: "QUOTA_EXCEEDED",
-          storageId,
-          message: `${quota.storageName} 空间配额不足。已使用 ${formatQuotaBytes(quota.used)} / ${formatQuotaBytes(quota.quota)}，本次需要 ${formatQuotaBytes(size)}。`,
-        },
+        { success: false, code: "QUOTA_EXCEEDED", storageId, message: "存储配额不足。" },
         507,
       );
     }
-    const objectKey = storageObjectKeyForSha256(sha256);
-    await storagePut(env, storageId, objectKey, buffer, {
-      httpMetadata: { contentType },
-    });
-    storageObject = await createStorageObject(env, {
-      storageId,
-      sha256,
-      size,
-      contentType,
-    });
+    reserved = true;
+    try {
+      const objectKey = storageObjectKeyForSha256(sha256);
+      await storagePut(env, storageId, objectKey, buffer, {
+        httpMetadata: { contentType },
+      });
+      storageObject = await createStorageObject(env, {
+        storageId,
+        sha256,
+        size,
+        contentType,
+      });
+    } finally {
+      if (!storageObject) {
+        await releaseReservedQuota(env, storageId, size);
+        reserved = false;
+      }
+    }
   }
 
   if (!storageObject) {
     const legacy = await putLegacyUpload(env, file, resolved, storageId);
     if (legacy.response) return legacy.response;
   } else {
-    const indexed = await upsertFileIndex(env, resolved.key, {
-      size,
-      contentType,
-      uploaded: Date.now(),
-      storageId,
-      objectKey: storageObject.object_key,
-    });
-    if (indexed)
-      await cleanupReplacedObject(
-        env,
-        previous,
+    try {
+      const indexed = await upsertFileIndex(env, resolved.key, {
+        size,
+        contentType,
+        uploaded: Date.now(),
         storageId,
-        storageObject.object_key,
-      );
+        objectKey: storageObject.object_key,
+      });
+      if (indexed)
+        await cleanupReplacedObject(
+          env,
+          previous,
+          storageId,
+          storageObject.object_key,
+        );
+    } finally {
+      if (reserved) await releaseReservedQuota(env, storageId, size);
+    }
   }
   await addLog(
     env,

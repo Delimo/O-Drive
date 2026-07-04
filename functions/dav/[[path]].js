@@ -90,7 +90,7 @@ export async function onRequest(context) {
         return await handlePut(env, request, r2Key);
 
       case "DELETE":
-        return await handleDelete(env, r2Key);
+        return await handleDelete(env, r2Key, request);
 
       case "MKCOL":
         return await handleMkcol(env, r2Key);

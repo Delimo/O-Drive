@@ -536,7 +536,7 @@ test('assertApiOk accepts success, rejects failures, and preserves completed par
     assertApiOk({ ok: true }, { success: true }, '失败', human),
   );
   assert.doesNotThrow(() =>
-    assertApiOk({ ok: false }, { success: false, completed: 2 }, '失败', human, { allowCompleted: true }),
+    assertApiOk({ ok: true }, { success: false, completed: 2 }, '失败', human, { allowCompleted: true }),
   );
   assert.doesNotThrow(() =>
     assertApiOk({ ok: true }, { success: false, message: '业务失败' }, '失败', human, { allowSuccessFalse: true }),
@@ -957,6 +957,11 @@ test('admin overview renders attention maintenance actions', () => {
     },
   };
   const html = pages.renderAdminPage(state);
+  assert.match(html, /运维可观测/);
+  assert.match(html, /近 24 小时关键异常摘要/);
+  assert.match(html, /Webhook 失败/);
+  assert.match(html, /索引问题/);
+  assert.match(html, /索引健康/);
   assert.match(html, /系统提醒待处理/);
   assert.match(html, /data-action="confirm-maintenance-action"/);
   assert.match(html, /data-maintenance-action="cleanup-warnings"/);
@@ -1279,6 +1284,11 @@ test('admin maintenance section renders snapshot and action buttons', () => {
     },
   };
   const html = pages.renderAdminPage(state);
+  assert.match(html, /索引一致性/);
+  assert.match(html, /问题总数/);
+  assert.match(html, /文件索引断链/);
+  assert.match(html, /对象引用计数不一致/);
+  assert.match(html, /archive\/missing\.pdf/);
   assert.match(html, /检查索引一致性/);
   assert.match(html, /同步元数据库索引/);
   assert.match(html, /同步清除废弃文件/);

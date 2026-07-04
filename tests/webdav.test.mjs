@@ -191,8 +191,7 @@ test('webdav PUT rejects reserved paths', async () => {
   assert.equal(response.status, 403);
 });
 
-test('webdav DELETE moves file to trash', { skip: true }, async () => {
-  // Skipped: requires full storage module integration
+test('webdav DELETE moves file to trash', async () => {
   const env = makeEnv({
     objects: [{ key: 'delete-me.txt', size: 5, body: 'trash' }],
     prefixes: ['/'],
@@ -208,6 +207,10 @@ test('webdav DELETE moves file to trash', { skip: true }, async () => {
     env,
   });
   assert.equal(response.status, 204);
+
+  // Verify object moved to trash (no longer in R2)
+  const head = await env.R2.head('delete-me.txt');
+  assert.equal(head, null);
 });
 
 test('webdav DELETE returns 404 for missing file', async () => {
@@ -337,6 +340,134 @@ test('webdav COPY creates copy of file', async () => {
     env,
   });
   assert.equal(response.status, 201);
+});
+
+test('webdav MOVE directory with files', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'src/.folder', size: 0, body: '' },
+      { key: 'src/main.js', size: 8, body: 'content' },
+      { key: 'src/lib/util.js', size: 6, body: 'helper' },
+    ],
+    prefixes: ['/'],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+  // Pre-populate file_index so keyExists recognizes the directory
+  await env.D1.prepare("INSERT INTO file_index (path, parent, name, kind, size) VALUES (?, ?, ?, ?, ?)").bind('src', '', 'src', 'folder', 0).run();
+  await env.D1.prepare("INSERT INTO file_index (path, parent, name, kind, size) VALUES (?, ?, ?, ?, ?)").bind('src/main.js', 'src', 'main.js', 'file', 8).run();
+  await env.D1.prepare("INSERT INTO file_index (path, parent, name, kind, size) VALUES (?, ?, ?, ?, ?)").bind('src/lib/util.js', 'src/lib', 'util.js', 'file', 6).run();
+
+  const response = await onRequest({
+    request: new Request('https://example.com/dav/src', {
+      method: 'MOVE',
+      headers: {
+        Authorization: makeBasicAuth('admin', 'pass'),
+        Destination: '/dav/dst',
+      },
+    }),
+    env,
+  });
+  assert.equal(response.status, 201);
+
+  // Verify source objects gone
+  assert.equal(await env.R2.head('src/.folder'), null);
+  assert.equal(await env.R2.head('src/main.js'), null);
+  // Verify target objects exist
+  assert.ok(await env.R2.head('dst/.folder'));
+  assert.ok(await env.R2.head('dst/main.js'));
+  assert.ok(await env.R2.head('dst/lib/util.js'));
+});
+
+test('webdav COPY directory with files', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'src/.folder', size: 0, body: '' },
+      { key: 'src/main.js', size: 8, body: 'content' },
+    ],
+    prefixes: ['/'],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+  // Pre-populate file_index so keyExists recognizes the directory
+  await env.D1.prepare("INSERT INTO file_index (path, parent, name, kind, size) VALUES (?, ?, ?, ?, ?)").bind('src', '', 'src', 'folder', 0).run();
+  await env.D1.prepare("INSERT INTO file_index (path, parent, name, kind, size) VALUES (?, ?, ?, ?, ?)").bind('src/main.js', 'src', 'main.js', 'file', 8).run();
+
+  const response = await onRequest({
+    request: new Request('https://example.com/dav/src', {
+      method: 'COPY',
+      headers: {
+        Authorization: makeBasicAuth('admin', 'pass'),
+        Destination: '/dav/copy',
+      },
+    }),
+    env,
+  });
+  assert.equal(response.status, 201);
+
+  // Verify source R2 objects still exist
+  assert.ok(await env.R2.head('src/.folder'));
+  assert.ok(await env.R2.head('src/main.js'));
+  // COPY is copy-on-write: creates file_index entries referencing source R2 objects
+  // (.folder sentinels are excluded from file_index by design)
+  const cm = await env.D1.prepare("SELECT * FROM file_index WHERE path = ?").bind('copy/main.js').first();
+  assert.ok(cm, 'copy/main.js should exist in file_index');
+  assert.equal(cm.object_key, 'src/main.js');
+});
+
+test('webdav MOVE overwrites existing target with Overwrite:T header', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'source.txt', size: 6, body: 'source' },
+      { key: 'existing.txt', size: 8, body: 'existing' },
+    ],
+    prefixes: ['/'],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+
+  const response = await onRequest({
+    request: new Request('https://example.com/dav/source.txt', {
+      method: 'MOVE',
+      headers: {
+        Authorization: makeBasicAuth('admin', 'pass'),
+        Destination: '/dav/existing.txt',
+        Overwrite: 'T',
+      },
+    }),
+    env,
+  });
+  assert.equal(response.status, 204);
+  assert.equal(await env.R2.head('source.txt'), null);
+  const moved = await env.R2.head('existing.txt');
+  assert.ok(moved);
+});
+
+test('webdav COPY overwrites existing target with Overwrite:T header', async () => {
+  const env = makeEnv({
+    objects: [
+      { key: 'source.txt', size: 6, body: 'source' },
+      { key: 'existing.txt', size: 8, body: 'existing' },
+    ],
+    prefixes: ['/'],
+  });
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'pass';
+
+  const response = await onRequest({
+    request: new Request('https://example.com/dav/source.txt', {
+      method: 'COPY',
+      headers: {
+        Authorization: makeBasicAuth('admin', 'pass'),
+        Destination: '/dav/existing.txt',
+        Overwrite: 'T',
+      },
+    }),
+    env,
+  });
+  assert.equal(response.status, 204);
+  // Source must still exist
+  assert.ok(await env.R2.head('source.txt'));
 });
 
 test('webdav returns 405 for unsupported methods', async () => {

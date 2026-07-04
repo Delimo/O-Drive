@@ -38,6 +38,7 @@ export const explorerInitialState = {
   folderStats: {},
   folderStatsLoadingKey: "",
   folderStatsErrors: {},
+  loadSeq: 0,
 };
 
 export function createExplorerSlice(initialState) {
@@ -215,6 +216,9 @@ export function createExplorerSlice(initialState) {
       },
       setError(state, action) {
         return { ...state, loading: false, error: action.payload };
+      },
+      incrementLoadSeq(state, action) {
+        return { ...state, loadSeq: state.loadSeq + 1 };
       },
     },
   });

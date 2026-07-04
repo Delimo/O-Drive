@@ -1,5 +1,5 @@
 import { jsonResponse, addLog, normalizeName } from "../common/index.js";
-import { checkStorageQuota } from "../storage.js";
+import { releaseReservedQuota, tryReserveStorageQuota } from "../storage.js";
 import {
   getStorageObjectByHash,
   ensureStorageObjectsTable,
@@ -34,22 +34,25 @@ export async function handleUploadCheck(env, request) {
   if (!storageObject) {
     return jsonResponse({ success: true, exists: false });
   }
-  const quota = await checkStorageQuota(env, storageId, Number(size || 0));
-  if (!quota.allowed) {
-    return jsonResponse({
-      success: false,
-      exists: true,
-      code: "QUOTA_EXCEEDED",
-      message: "存储配额不足",
-    }, 507);
+  const sizeNum = Number(size || 0);
+  let reserved = false;
+  if (sizeNum > 0) {
+    if (!(await tryReserveStorageQuota(env, storageId, sizeNum))) {
+      return jsonResponse({ success: false, exists: true, code: "QUOTA_EXCEEDED", message: "存储配额不足" }, 507);
+    }
+    reserved = true;
   }
-  await upsertFileIndex(env, resolved.key, {
-    size: Number(size || 0),
-    contentType: "",
-    uploaded: Date.now(),
-    storageId,
-    objectKey: storageObject.object_key,
-  });
+  try {
+    await upsertFileIndex(env, resolved.key, {
+      size: sizeNum,
+      contentType: "",
+      uploaded: Date.now(),
+      storageId,
+      objectKey: storageObject.object_key,
+    });
+  } finally {
+    if (reserved) await releaseReservedQuota(env, storageId, sizeNum);
+  }
   await addLog(env, request, resolved.conflict ? "UPLOAD_CONFLICT" : "UPLOAD", resolved.key);
   return jsonResponse({
     success: true,

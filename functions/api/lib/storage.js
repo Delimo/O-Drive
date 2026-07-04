@@ -186,6 +186,60 @@ export async function checkStorageQuota(
   };
 }
 
+// ── 原子配额预留 ──────────────────────────────────────────────
+
+let _quotaCounterReady;
+
+async function ensureQuotaCounterTable(env) {
+  if (_quotaCounterReady) return;
+  try {
+    await env.D1.prepare(
+      `CREATE TABLE IF NOT EXISTS storage_quota_counter (
+        storage_id TEXT PRIMARY KEY,
+        reserved_bytes INTEGER NOT NULL DEFAULT 0
+      )`,
+    ).run();
+    _quotaCounterReady = true;
+  } catch (_) {}
+}
+
+/**
+ * 原子预留存储配额字节数。
+ * 只在当前已用 + 预留 + 本次未超过配额时成功。
+ * 返回 true 表示预留成功，false 表示配额不足。
+ */
+export async function tryReserveStorageQuota(env, storageId = "r2", incomingBytes = 0) {
+  if (!incomingBytes) return true;
+  const config = await loadStorageConfig(env);
+  const quotaBytes = config.r2QuotaBytes || 0;
+  if (!quotaBytes) return true;
+  await ensureQuotaCounterTable(env);
+  await env.D1.prepare(
+    "INSERT OR IGNORE INTO storage_quota_counter (storage_id, reserved_bytes) VALUES (?, 0)",
+  ).bind(storageId).run();
+  const res = await env.D1.prepare(
+    `UPDATE storage_quota_counter
+     SET reserved_bytes = reserved_bytes + ?
+     WHERE storage_id = ?
+       AND (reserved_bytes + ? <= ?)`,
+  ).bind(incomingBytes, storageId, incomingBytes, quotaBytes).run();
+  return Number(res?.meta?.changes ?? res?.changes ?? 0) > 0;
+}
+
+/**
+ * 释放先前预留的配额字节数。
+ * 上传完成后调用，让预留的字节数反映实际 usage 表的变化。
+ */
+export async function releaseReservedQuota(env, storageId = "r2", incomingBytes = 0) {
+  if (!incomingBytes) return;
+  await ensureQuotaCounterTable(env);
+  await env.D1.prepare(
+    `UPDATE storage_quota_counter
+     SET reserved_bytes = CASE WHEN reserved_bytes >= ? THEN reserved_bytes - ? ELSE 0 END
+     WHERE storage_id = ?`,
+  ).bind(incomingBytes, incomingBytes, storageId).run();
+}
+
 export async function resolveStorageIdForPath(env, key) {
   return "r2";
 }

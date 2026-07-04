@@ -99,6 +99,30 @@ export async function softDeleteTree(env, sourceKey, request) {
   const trashId = createTrashId();
   const trashKey = `.trash/${trashId}/${sourceKey}`;
 
+  const kind =
+    exact && listed.objects.length === 0 && entryList.length === 1
+      ? "file"
+      : "folder";
+  const size = exact?.size || 0;
+
+  // Insert the trash DB row FIRST so orphaned .trash/ objects never exist
+  // without a corresponding database record.
+  await ensureTrashTable(env);
+  await env.D1.prepare(
+    "INSERT INTO trash (id, original_key, trash_key, name, kind, size, storage_id, trashed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  )
+    .bind(
+      trashId,
+      sourceKey,
+      trashKey,
+      sourceKey.split("/").pop() || sourceKey,
+      kind,
+      size,
+      storageId,
+      Date.now(),
+    )
+    .run();
+
   await mapWithConcurrency(entryList, 6, async (entry) => {
     const source = entry.key;
     const objectKey = entry.objectKey || source;
@@ -134,28 +158,6 @@ export async function softDeleteTree(env, sourceKey, request) {
   ) {
     await storagePut(env, storageId, `${trashKey}/.folder`, new Uint8Array(0));
   }
-
-  const kind =
-    exact && listed.objects.length === 0 && entryList.length === 1
-      ? "file"
-      : "folder";
-  const size = exact?.size || 0;
-
-  await ensureTrashTable(env);
-  await env.D1.prepare(
-    "INSERT INTO trash (id, original_key, trash_key, name, kind, size, storage_id, trashed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-  )
-    .bind(
-      trashId,
-      sourceKey,
-      trashKey,
-      sourceKey.split("/").pop() || sourceKey,
-      kind,
-      size,
-      storageId,
-      Date.now(),
-    )
-    .run();
 
   await addLog(env, request, "TRASH", sourceKey);
   return { id: trashId, originalKey: sourceKey, trashKey, kind };
