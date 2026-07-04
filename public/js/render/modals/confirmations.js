@@ -107,7 +107,8 @@ export function createConfirmationModalRenderers({
     const items = estimate?.items || [];
     const allMissing =
       items.length > 0 && items.every((item) => item.exists === false);
-    const blocked = isDelete && (Boolean(estimate?.truncated) || allMissing);
+    const backgroundTask = Boolean(estimate?.shouldBatch);
+    const blocked = allMissing;
     const itemList = items.slice(0, 30).map((item) => `
       <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;border-bottom:1px solid var(--line);">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.path)}</span>
@@ -150,15 +151,15 @@ export function createConfirmationModalRenderers({
 
           ${estimate?.truncated ? `
             <div class="attention-item" data-level="warning" style="margin:12px 0;">
-              <h3 class="attention-title">目录规模超过同步删除上限</h3>
-              <div class="attention-copy">请进入子目录分批处理。</div>
+              <h3 class="attention-title">目录规模超过同步处理上限</h3>
+              <div class="attention-copy">确认后将创建后台任务，当前页面不会等待整个目录处理完成。</div>
             </div>
           ` : ""}
 
           ${estimate?.shouldBatch ? `
             <div class="attention-item" data-level="warning" style="margin:12px 0;">
               <h3 class="attention-title">操作规模较大</h3>
-              <div class="attention-copy">影响对象超过 ${estimate?.recommendedBatchSize || 1000} 个，系统建议分批执行。可继续执行，但可能耗时较长。</div>
+              <div class="attention-copy">影响对象超过 ${estimate?.recommendedBatchSize || 1000} 个，确认后会转入后台任务，可在系统页查看进度。</div>
             </div>
           ` : ""}
 
@@ -175,7 +176,7 @@ export function createConfirmationModalRenderers({
             <button class="btn btn-danger" type="button"
               data-action="${isDelete ? "execute-batch-delete" : "execute-batch-paste"}"
               ${modal.loading || blocked ? "disabled" : ""}>
-              <span>${modal.loading ? "执行中..." : `确认${opLabel}（${estimate?.totalObjects ?? 0} 项）`}</span>
+              <span>${modal.loading ? "执行中..." : `${backgroundTask ? "创建后台任务" : `确认${opLabel}`}（${estimate?.totalObjects ?? 0} 项）`}</span>
             </button>
             <button class="btn" type="button" data-action="close-modal" ${modal.loading ? "disabled" : ""}>取消</button>
           </div>

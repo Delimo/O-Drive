@@ -38,7 +38,7 @@ export async function handleUploadCheck(env, request) {
   let reserved = false;
   if (sizeNum > 0) {
     if (!(await tryReserveStorageQuota(env, storageId, sizeNum))) {
-      return jsonResponse({ success: false, exists: true, code: "QUOTA_EXCEEDED", message: "存储配额不足" }, 507);
+      return jsonResponse({ success: false, exists: true, code: "QUOTA_EXCEEDED", message: "Cloudflare R2 空间配额不足" }, 507);
     }
     reserved = true;
   }

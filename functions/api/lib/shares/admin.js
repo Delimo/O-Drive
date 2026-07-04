@@ -23,6 +23,7 @@ import {
   normalizeSharePathList,
   ttlToExpiresAt,
 } from "./paths.js";
+import { loadRecentShareAccessLogs } from "./access-log.js";
 
 function shareToken() {
   const bytes = new Uint8Array(18);
@@ -30,20 +31,29 @@ function shareToken() {
   return encodeBase64Url(String.fromCharCode(...bytes));
 }
 
-export async function handleAdminShares(env, request, method, url) {
+export async function handleAdminShares(env, request, method, url, context = {}) {
   await ensureShareTable(env);
   if (method === "GET") {
-    await cleanupExpiredShares(env);
+    await cleanupExpiredShares(env, { context });
     const rows = await env.D1.prepare(
       "SELECT * FROM share_links ORDER BY created_at DESC",
     ).all();
-    return jsonResponse({ items: (rows.results || []).map(mapShare) });
+    const rawRows = rows.results || [];
+    const logsByToken = await loadRecentShareAccessLogs(
+      env,
+      rawRows.map((row) => row.token),
+    );
+    return jsonResponse({
+      items: rawRows.map((row) =>
+        mapShare({ ...row, accessLogs: logsByToken.get(row.token) || [] }),
+      ),
+    });
   }
 
   if (method === "POST") {
     const body = await request.json().catch(() => ({}));
     if (body.action === "cleanup-expired") {
-      const deleted = await cleanupExpiredShares(env, { manual: true });
+      const deleted = await cleanupExpiredShares(env, { manual: true, context });
       await addLog(env, request, "SHARE_CLEANUP", `清理过期分享 ${deleted} 条`);
       return jsonResponse({ success: true, deleted });
     }

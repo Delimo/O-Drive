@@ -177,6 +177,7 @@ export const SHARE_TABLE_SQL = `
     expires_at INTEGER NOT NULL DEFAULT 0,
     max_downloads INTEGER NOT NULL DEFAULT 0,
     download_count INTEGER NOT NULL DEFAULT 0,
+    visit_count INTEGER NOT NULL DEFAULT 0,
     password_salt TEXT DEFAULT '',
     password_hash TEXT DEFAULT '',
     items_json TEXT NOT NULL DEFAULT '[]',
@@ -184,6 +185,21 @@ export const SHARE_TABLE_SQL = `
     created_at INTEGER NOT NULL,
     last_accessed_at INTEGER NOT NULL DEFAULT 0,
     last_access_ip TEXT DEFAULT ''
+  )
+`;
+
+export const SHARE_ACCESS_LOG_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS share_access_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL,
+    action TEXT NOT NULL,
+    path TEXT NOT NULL DEFAULT '',
+    ip TEXT DEFAULT '',
+    user_agent TEXT DEFAULT '',
+    success INTEGER NOT NULL DEFAULT 0,
+    status INTEGER NOT NULL DEFAULT 0,
+    bytes INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
   )
 `;
 
@@ -197,6 +213,7 @@ export const SHARE_MIGRATION_SQL = [
   `ALTER TABLE share_links ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE share_links ADD COLUMN max_downloads INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE share_links ADD COLUMN download_count INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE share_links ADD COLUMN visit_count INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE share_links ADD COLUMN password_salt TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN password_hash TEXT DEFAULT ''`,
   `ALTER TABLE share_links ADD COLUMN items_json TEXT NOT NULL DEFAULT '[]'`,
@@ -207,6 +224,8 @@ export const SHARE_MIGRATION_SQL = [
   `CREATE INDEX IF NOT EXISTS idx_share_links_created_at ON share_links(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_share_links_expires_at ON share_links(expires_at)`,
   `CREATE INDEX IF NOT EXISTS idx_share_links_path ON share_links(path)`,
+  `CREATE INDEX IF NOT EXISTS idx_share_access_logs_token_created_at ON share_access_logs(token, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_share_access_logs_created_at ON share_access_logs(created_at)`,
 ];
 
 export const PROTECTED_PATH_TABLE_SQL = `
@@ -255,7 +274,7 @@ export async function ensureCoreTables(env) {
 
 export async function ensureShareTable(env, { force = false } = {}) {
   if (!env?.D1 || (!force && initializedShareTable.has(env))) return;
-  await runSchemaStatements(env, [SHARE_TABLE_SQL], SHARE_MIGRATION_SQL);
+  await runSchemaStatements(env, [SHARE_TABLE_SQL, SHARE_ACCESS_LOG_TABLE_SQL], SHARE_MIGRATION_SQL);
   initializedShareTable.add(env);
 }
 

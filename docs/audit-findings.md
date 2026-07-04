@@ -27,6 +27,8 @@
 
 ### U1 配额可绕过 (TOCTOU + cache 30s)｜HIGH
 
+> 修复状态（2026-07-04）：✅ 已完成。当前上传、秒传、分片完成和 WebDAV PUT 走 `tryReserveStorageQuota()` 原子预留；预留判断已纳入 D1 当前已用量和并发 reserved bytes。
+
 - 位置：`functions/api/lib/storage.js:167`、`stats.js:5,13-14,33`、`multipart.js:37-51`
 - 问题：`checkStorageQuota` 读取的 `used` 来自 `getIndexedStorageUsed`，该值缓存 30000ms。检查与随后的 `upsertFileIndex`/`addStorageUsage` 不原子，缓存只在写后失效。客户端并发跑 4+ 文件 × 4 分片（`upload.js:260`、`upload.js:168`），全部读到同一个陈旧 `used`，各自通过 `incoming <= remaining`，总和远超配额。
 - 补充：大文件分片只在 create 时按 `totalSize` 检查一次（`multipart.js:37-51`），parts 和 complete 完全不再校验；`completeAndDeduplicate` 的 dedup 拷贝写入真实字节，无配额门。
@@ -121,6 +123,8 @@
 
 ### S1 Webhook SSRF（CRITICAL）
 
+> 修复状态（2026-07-04）：⚠️ 部分完成。已阻断跳转绕过、IP 字面量编码、IPv6 私网/本地地址和 `localhost`；DNS rebinding/公网域名解析到私网 IP 仍需通过产品策略（如 allowlist）收紧或明确接受剩余风险。
+
 - 位置：`functions/api/lib/webhooks.js:250-267,268`
 - 问题：私有 IP 拦截只做**主机名字符串匹配**，而 `fetch()` 用默认 `redirect: "follow"`。绕过方式：
   - (a) 公网 URL 302 跳转到 `http://169.254.169.254/…` 或 `10.x`，跳转目标不再过检查；
@@ -132,17 +136,23 @@
 
 ### S2 下载次数超限 (TOCTOU)｜MEDIUM
 
+> 修复状态（2026-07-04）：✅ 已完成。下载前使用条件 `UPDATE` 预留下载槽位，失败下载会回滚计数；对应分享测试已恢复通过。
+
 - 位置：`functions/api/lib/shares/public.js:50-53,113,146,172`
 - 问题：`item.exhausted` 检查在请求开始读的行上做，`download_count = download_count + 1` 的自增在很后面。自增语句本身原子，但检查-then-act 跨整个请求，无 `WHERE download_count < max_downloads` 守卫。N 个并发请求全部通过 exhausted 检查、全部下载、全部自增，最终超限至多 N-1。expiry 同理。
 - 修复方向：自增改条件 UPDATE（`WHERE download_count < max_downloads`）并检查 affected rows，0 行即拒绝。
 
 ### S3 Webhook 投递阻塞主请求｜HIGH
 
+> 修复状态（2026-07-04）：✅ 已完成。分享过期/耗尽通知已通过 `context.waitUntil` 调度，文件操作和登录失败通知也走异步投递。
+
 - 位置：`functions/api/lib/shares/expiry.js:55-87,225,241`、`admin.js:36`、`webhooks.js:242-308,426-444`
 - 问题：`cleanupExpiredShares` 在 `handleAdminShares` GET 内被同步 await，内部调用 `notifyShareExpiredOnce` → `notifyWebhookWithLog`，await 带重试 + 5s 超时的 `Promise.all(sendOne)`。最坏约 15s（2 重试 × 5s + 退避）每端点加到 admin 请求上。`expiredResponse`/`exhaustedResponse` 的公开分享路径同样。这些调用点没有 `waitUntil` 包裹。
 - 修复方向：用 `context.waitUntil`（项目里的 `waitForWebhook`）包裹这些通知，脱离主请求关键路径。
 
 ### S4 投递记录不全｜HIGH
+
+> 修复状态（2026-07-04）：✅ 已完成。文件操作、登录失败 burst、分享过期/耗尽通知均使用 `notifyWebhookWithLog()`，后台保留 delivery 记录并支持失败重试。
 
 - 位置：`functions/api/lib/webhooks.js:344,374,430,440,489,530-575`
 - 问题：`recordDelivery` 只被 `notifyWebhookWithLog` 调用。所有便捷通知器（`notifyFileUploaded/Deleted/Moved/…`）用不记录的 `notifyWebhook`。因此投递日志只捕获 `share.expired`——文件操作 webhook 无审计、不可重试。
@@ -186,6 +196,8 @@
 - 修复方向：把异步 thunk 移出 batch 原语；batch 只用于同步的多 action 合并。
 
 ### F3 上传定时器模块级全局，跨批次污染｜MED
+
+> 修复状态（2026-07-04）：✅ 已完成。自动清理定时器改为数组管理，上传完成收尾使用 `autoCloseTimers.push(setTimeout(...))`，统一清理全部定时器。
 
 - 位置：`public/js/state/thunks/upload.js:8-9,312-314,313`
 - 问题：`autoRemoveTimers`/`autoCloseTimer` 是模块作用域。每次 `uploadFiles` 重新赋值 `autoCloseTimer` 不清旧的；3s 窗口内启动第二批上传时，陈旧 `autoCloseTimer` 触发 `uploads.clearAll()` 会清掉第二批的 item 列表。

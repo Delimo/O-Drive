@@ -72,7 +72,10 @@ export function createSharesRenderer({
         ? formatRelative(share.lastAccessedAt)
         : "暂无记录";
       const downloadsText = `${share.downloadCount || 0}/${share.maxDownloads || "∞"}`;
+      const visitsText = String(share.visitCount || 0);
       const expiresText = expiresAt ? formatTime(Math.floor(expiresAt / 1000)) : "无限期";
+      const accessLogs = Array.isArray(share.accessLogs) ? share.accessLogs.slice(0, 3) : [];
+      const actionLabels = { info: "访问", preview: "预览", download: "下载", unlock: "解锁" };
 
       return `
         <div class="ov-share-item${itemStateClass}">
@@ -97,6 +100,10 @@ export function createSharesRenderer({
               <strong class="ov-share-meta-value">${escapeHtml(lastAccessText)}</strong>
             </span>
             <span class="ov-share-meta-item">
+              <span class="ov-share-meta-label">访问</span>
+              <strong class="ov-share-meta-value">${escapeHtml(visitsText)}</strong>
+            </span>
+            <span class="ov-share-meta-item">
               <span class="ov-share-meta-label">下载</span>
               <strong class="ov-share-meta-value">${escapeHtml(downloadsText)}</strong>
             </span>
@@ -105,6 +112,17 @@ export function createSharesRenderer({
               <strong class="ov-share-meta-value">${escapeHtml(expiresText)}</strong>
             </span>
           </div>
+          ${accessLogs.length ? `
+            <div class="ov-share-access-log">
+              ${accessLogs.map((log) => `
+                <span class="ov-share-access-chip">
+                  ${escapeHtml(actionLabels[log.action] || log.action || "访问")}
+                  ${log.ip ? ` · ${escapeHtml(log.ip)}` : ""}
+                  ${log.createdAt ? ` · ${escapeHtml(formatRelative(log.createdAt))}` : ""}
+                </span>
+              `).join("")}
+            </div>
+          ` : ""}
           <div class="ov-share-actions">
             <button class="btn btn-sm" type="button"
                     data-action="copy-share-link" data-key="${escapeHtml(share.token)}"

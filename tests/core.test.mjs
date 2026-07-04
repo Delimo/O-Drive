@@ -4074,6 +4074,11 @@ test('admin can create public share links and expired shares are deleted', async
   });
   const shareRows = await shares.json();
   assert.equal(shareRows.items[0].lastAccessIp, '203.0.113.9');
+  assert.equal(shareRows.items[0].visitCount, 2);
+  assert.equal(shareRows.items[0].accessLogs.length, 2);
+  assert.equal(shareRows.items[0].accessLogs[0].action, 'download');
+  assert.equal(shareRows.items[0].accessLogs[0].ip, '203.0.113.9');
+  assert.equal(shareRows.items[0].accessLogs[1].action, 'info');
 
   const exhausted = await onRequest({
     env,
@@ -4547,6 +4552,52 @@ test('expired share access sends one webhook notification', async () => {
     assert.equal(calls.length, 1);
     assert.equal(calls[0].body.event, 'share.expired');
     assert.equal(calls[0].body.data.token, token);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('expired share webhook uses waitUntil when available', async () => {
+  const env = makeEnv({
+    objects: [{ key: 'docs/wait-until-expired.txt', body: 'old', size: 3, uploaded: new Date('2026-01-01') }],
+  });
+  const { csrf, cookie } = await loginAsAdmin(env);
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response('ok', { status: 200 });
+  };
+
+  try {
+    await env.D1.prepare('INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)')
+      .bind('webhooks', JSON.stringify([{ name: 'share-expired', url: 'https://hooks.example.test/share', events: ['share.expired'] }]))
+      .run();
+
+    const create = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/shares', {
+        method: 'POST',
+        body: JSON.stringify({ path: 'docs/wait-until-expired.txt', expiresAt: Date.now() - 1000 }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+      }),
+    });
+    const token = (await create.json()).item.token;
+
+    const expired = await onRequest({
+      env,
+      request: new Request(`https://example.com/api/share/${token}/info`),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+
+    assert.equal(expired.status, 410);
+    assert.equal(waitUntilPromises.length, 1);
+    await Promise.all(waitUntilPromises);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.event, 'share.expired');
   } finally {
     globalThis.fetch = originalFetch;
   }

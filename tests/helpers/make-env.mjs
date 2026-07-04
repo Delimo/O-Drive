@@ -21,6 +21,8 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const storageObjectRows = [];
   const storageQuotaCounterRows = [];
   const shareRows = [];
+  const shareAccessLogRows = [];
+  let shareAccessLogNextId = 1;
   const trashEntryRows = [];
   const logs = [];
   let logNextId = 1;
@@ -354,6 +356,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 expires_at: hasTargetType ? statement.bound?.[8] : statement.bound?.[7],
                 max_downloads: hasTargetType ? statement.bound?.[9] : statement.bound?.[8],
                 download_count: 0,
+                visit_count: 0,
                 password_salt: statement.bound?.[hasTargetType ? 10 : 9] || '',
                 password_hash: statement.bound?.[hasTargetType ? 11 : 10] || '',
                 items_json: hasItemsJson ? statement.bound?.[12] || '[]' : '[]',
@@ -381,6 +384,20 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 endpoint_config: hasRetryContext ? statement.bound?.[8] : '{}',
                 retry_of: hasRetryContext ? statement.bound?.[9] : 0,
                 created_at: hasRetryContext ? statement.bound?.[10] : statement.bound?.[7],
+              });
+            }
+            if (/INSERT INTO share_access_logs/i.test(sql)) {
+              shareAccessLogRows.push({
+                id: shareAccessLogNextId++,
+                token: statement.bound?.[0],
+                action: statement.bound?.[1],
+                path: statement.bound?.[2],
+                ip: statement.bound?.[3] || '',
+                user_agent: statement.bound?.[4] || '',
+                success: Number(statement.bound?.[5] || 0),
+                status: Number(statement.bound?.[6] || 0),
+                bytes: Number(statement.bound?.[7] || 0),
+                created_at: Number(statement.bound?.[8] || 0),
               });
             }
             if (/INSERT INTO system_warnings/i.test(sql)) {
@@ -656,6 +673,24 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 if (tokens.has(String(shareRows[i].token))) { shareRows.splice(i, 1); changes++; }
               }
             }
+            if (/DELETE FROM share_access_logs WHERE created_at < \?/i.test(sql)) {
+              const cutoff = Number(statement.bound?.[0] || 0);
+              for (let i = shareAccessLogRows.length - 1; i >= 0; i--) {
+                if (Number(shareAccessLogRows[i].created_at || 0) < cutoff) {
+                  shareAccessLogRows.splice(i, 1);
+                  changes++;
+                }
+              }
+            }
+            if (/UPDATE share_links SET visit_count = visit_count \+ 1, last_accessed_at = \?, last_access_ip = \? WHERE token = \?/i.test(sql)) {
+              const row = shareRows.find(item => item.token === statement.bound?.[2]);
+              if (row) {
+                row.visit_count = Number(row.visit_count || 0) + 1;
+                row.last_accessed_at = statement.bound?.[0];
+                row.last_access_ip = statement.bound?.[1] || '';
+                changes++;
+              }
+            }
             if (/UPDATE share_links SET last_accessed_at = \? WHERE token = \?/i.test(sql)) {
               const row = shareRows.find(item => item.token === statement.bound?.[1]);
               if (row) row.last_accessed_at = statement.bound?.[0];
@@ -683,12 +718,25 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 if (hasItemsJson) row.items_json = statement.bound?.[4] || '[]';
               }
             }
-            if (/UPDATE share_links SET download_count = download_count \+ 1/i.test(sql)) {
-              const row = shareRows.find(item => item.token === (statement.bound?.[2] ?? statement.bound?.[1]));
+            if (/UPDATE share_links\s+SET\s+download_count\s*=\s*download_count\s*\+\s*1/i.test(sql)) {
+              const token = statement.bound?.[2] ?? statement.bound?.[1];
+              const row = shareRows.find(item => item.token === token);
               if (row) {
-                row.download_count = Number(row.download_count || 0) + 1;
-                row.last_accessed_at = statement.bound?.[0];
-                if (statement.bound?.length >= 3) row.last_access_ip = statement.bound?.[1] || '';
+                const maxDownloads = Number(row.max_downloads || 0);
+                const downloadCount = Number(row.download_count || 0);
+                if (!maxDownloads || downloadCount < maxDownloads) {
+                  row.download_count = downloadCount + 1;
+                  row.last_accessed_at = statement.bound?.[0];
+                  if (statement.bound?.length >= 3) row.last_access_ip = statement.bound?.[1] || '';
+                  changes++;
+                }
+              }
+            }
+            if (/UPDATE share_links\s+SET download_count = CASE WHEN download_count > 0 THEN download_count - 1 ELSE 0 END\s+WHERE token = \?/i.test(sql)) {
+              const row = shareRows.find(item => item.token === statement.bound?.[0]);
+              if (row) {
+                row.download_count = Math.max(0, Number(row.download_count || 0) - 1);
+                changes++;
               }
             }
             if (/DELETE FROM file_index WHERE path = \? OR path LIKE \?/i.test(sql)) {
@@ -1147,6 +1195,17 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             }
             if (/SELECT \* FROM share_links ORDER BY created_at DESC/i.test(sql)) {
               return { results: [...shareRows].sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)) };
+            }
+            if (/SELECT \* FROM share_access_logs\s+WHERE token IN/i.test(sql)) {
+              const bound = statement.bound || [];
+              const limit = Number(bound.at(-1) || bound.length || 20);
+              const tokens = new Set(bound.slice(0, -1).map(String));
+              return {
+                results: shareAccessLogRows
+                  .filter(row => tokens.has(String(row.token)))
+                  .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0))
+                  .slice(0, limit),
+              };
             }
             if (/SELECT \* FROM webhook_deliveries ORDER BY created_at DESC/i.test(sql)) {
               return {

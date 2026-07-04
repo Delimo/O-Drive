@@ -71,11 +71,21 @@ export async function releaseDownloadSlot(env, token) {
     .run();
 }
 
-export async function notifyShareExpiredOnce(env, row, reason = "expired") {
+function scheduleShareNotification(context, promise) {
+  const guarded = promise.catch((err) => {
+    console.error("[share.notify]", err?.message || err);
+  });
+  if (typeof context?.waitUntil === "function") {
+    context.waitUntil(guarded);
+    return null;
+  }
+  return guarded;
+}
+
+export async function notifyShareExpiredOnce(env, row, reason = "expired", context = {}) {
   if (!row || Number(row.expired_notified_at || 0) > 0) return false;
   const item = mapShare(row);
-  const endpoints = await loadWebhookEndpoints(env);
-  await notifyWebhookWithLog(env, endpoints, "share.expired", {
+  const payload = {
     token: item.token,
     path: item.path,
     name: item.name,
@@ -83,18 +93,24 @@ export async function notifyShareExpiredOnce(env, row, reason = "expired") {
     maxDownloads: item.maxDownloads,
     downloadCount: item.downloadCount,
     reason,
-  });
+  };
   await env.D1.prepare(
     "UPDATE share_links SET expired_notified_at = ? WHERE token = ?",
   )
     .bind(Date.now(), row.token)
     .run();
+  const notification = (async () => {
+    const endpoints = await loadWebhookEndpoints(env);
+    await notifyWebhookWithLog(env, endpoints, "share.expired", payload);
+  })();
+  const awaited = scheduleShareNotification(context, notification);
+  if (awaited) await awaited;
   return true;
 }
 
 export async function cleanupExpiredShares(
   env,
-  { now = Date.now(), manual = false } = {},
+  { now = Date.now(), manual = false, context = {} } = {},
 ) {
   await ensureShareTable(env);
   const expiryCutoff = manual ? now : now - EXPIRED_SHARE_AUTO_DELETE_MS;
@@ -113,6 +129,7 @@ export async function cleanupExpiredShares(
         Number(row.download_count || 0) >= Number(row.max_downloads || 0)
         ? "exhausted"
         : "expired",
+      context,
     );
   }
   if (expiredRows.length) {
@@ -256,13 +273,14 @@ export async function expiredResponse(
   token,
   message = "Share link expired",
   row,
+  context = {},
 ) {
   row = row || (await getShare(env, token));
   const autoDeleteAt = row
     ? Number(row.expires_at || 0) + EXPIRED_SHARE_AUTO_DELETE_MS
     : 0;
   const shouldDelete = row ? canAutoDeleteExpiredShare(row) : true;
-  if (row) await notifyShareExpiredOnce(env, row, "expired");
+  if (row) await notifyShareExpiredOnce(env, row, "expired", context);
   if (shouldDelete) await deleteShare(env, token);
   return jsonResponse(
     {
@@ -276,9 +294,9 @@ export async function expiredResponse(
   );
 }
 
-export async function exhaustedResponse(env, token, row) {
+export async function exhaustedResponse(env, token, row, context = {}) {
   row = row || (await getShare(env, token));
-  if (row) await notifyShareExpiredOnce(env, row, "exhausted");
+  if (row) await notifyShareExpiredOnce(env, row, "exhausted", context);
   await deleteShare(env, token);
   return jsonResponse(
     {

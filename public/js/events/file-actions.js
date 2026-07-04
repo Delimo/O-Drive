@@ -204,7 +204,10 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       const modal = state.app.modal;
       if (!modal) return;
       store.dispatch(actions.app.setModal(null));
-      store.dispatch(thunks.pasteClipboard());
+      store.dispatch(thunks.pasteClipboard({
+        background: Boolean(modal.estimate?.shouldBatch),
+        estimate: modal.estimate || null,
+      }));
       return;
     }
 
@@ -220,7 +223,10 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       const modal = state.app.modal;
       if (!modal || !modal.paths?.length) return;
       store.dispatch(actions.app.setModal(null));
-      store.dispatch(thunks.batchDelete(modal.paths));
+      store.dispatch(thunks.batchDelete(modal.paths, {
+        background: Boolean(modal.estimate?.shouldBatch),
+        estimate: modal.estimate || null,
+      }));
       return;
     }
 

@@ -22,7 +22,7 @@ async function putLegacyUpload(env, file, resolved, storageId) {
     if (!(await tryReserveStorageQuota(env, storageId, size))) {
       return {
         response: jsonResponse(
-          { success: false, code: "QUOTA_EXCEEDED", storageId, message: "存储配额不足。" },
+          { success: false, code: "QUOTA_EXCEEDED", storageId, message: "Cloudflare R2 空间配额不足。" },
           507,
         ),
       };
@@ -116,7 +116,7 @@ export async function handleUpload(env, request, r2Key, meta = {}) {
   if (!storageObject) {
     if (!(await tryReserveStorageQuota(env, storageId, size))) {
       return jsonResponse(
-        { success: false, code: "QUOTA_EXCEEDED", storageId, message: "存储配额不足。" },
+        { success: false, code: "QUOTA_EXCEEDED", storageId, message: "Cloudflare R2 空间配额不足。" },
         507,
       );
     }

@@ -5,6 +5,7 @@ export function createExplorerThunks(deps, context) {
     actions,
     fileApi,
     trashApi,
+    taskApi,
     normalizeKey,
     syncHomeUrl,
     previewService,
@@ -21,6 +22,17 @@ export function createExplorerThunks(deps, context) {
   } = deps;
 
   const { mock, getThunks } = context;
+
+  async function createBackgroundFileTask(dispatch, type, payload, message) {
+    const { response, data } = await taskApi.create(type, payload);
+    assertApiOk(response, data, "创建后台任务失败", humanError, {
+      isValid: (result) => result?.success === true && result?.item?.id,
+    });
+    dispatchToast("success", message);
+    await dispatch(getThunks().loadTasks());
+    await dispatch(getThunks().loadNotifications());
+    return data.item;
+  }
 
   return {
     loadExplorer: () => async (dispatch, getState) => {
@@ -348,7 +360,7 @@ export function createExplorerThunks(deps, context) {
       }
     },
 
-    batchDelete: (paths) => async (dispatch) => {
+    batchDelete: (paths, options = {}) => async (dispatch) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");
         return;
@@ -357,6 +369,16 @@ export function createExplorerThunks(deps, context) {
 
       dispatch(actions.explorer.setBatchBusy(true));
       try {
+        if (options.background) {
+          await createBackgroundFileTask(
+            dispatch,
+            "delete",
+            { paths },
+            "操作规模较大，已转入后台删除任务",
+          );
+          dispatch(actions.explorer.setSelectedKeys([]));
+          return;
+        }
         const { response, data } = await fileApi.batchDelete(paths);
         assertApiOk(response, data, "删除失败", humanError, {
           allowCompleted: true,
@@ -399,7 +421,7 @@ export function createExplorerThunks(deps, context) {
       }
     },
 
-    pasteClipboard: () => async (dispatch, getState) => {
+    pasteClipboard: (options = {}) => async (dispatch, getState) => {
       if (mock) {
         dispatchToast("error", "设计预览模式下不可操作");
         return;
@@ -409,11 +431,30 @@ export function createExplorerThunks(deps, context) {
 
       dispatch(actions.explorer.setBatchBusy(true));
       try {
+        const targetDir =
+          `/${normalizeKey(getState().explorer.path)}`.replace(/\/$/, "") ||
+          "/";
+        if (options.background) {
+          await createBackgroundFileTask(
+            dispatch,
+            "paste",
+            {
+              action: clipboard.action,
+              paths: clipboard.paths,
+              targetDir,
+            },
+            clipboard.action === "move"
+              ? "操作规模较大，已转入后台移动任务"
+              : "操作规模较大，已转入后台复制任务",
+          );
+          dispatch(actions.explorer.setClipboard(null));
+          dispatch(actions.explorer.setSelectedKeys([]));
+          return;
+        }
         const { response, data } = await fileApi.paste(
           clipboard.action,
           clipboard.paths,
-          `/${normalizeKey(getState().explorer.path)}`.replace(/\/$/, "") ||
-            "/",
+          targetDir,
         );
         assertApiOk(response, data, "粘贴失败", humanError, {
           allowCompleted: true,

@@ -181,7 +181,7 @@ async function completeAndDeduplicate(env, request, body, storageId, key) {
     if (size > 0) {
       if (!(await tryReserveStorageQuota(env, storageId, size))) {
         await storageAbortMultipartUpload(env, storageId, key, uploadId);
-        return jsonResponse({ success: false, code: "QUOTA_EXCEEDED", message: "存储配额不足" }, 507);
+        return jsonResponse({ success: false, code: "QUOTA_EXCEEDED", message: "Cloudflare R2 空间配额不足" }, 507);
       }
     }
     try {

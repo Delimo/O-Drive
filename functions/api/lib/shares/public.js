@@ -31,8 +31,9 @@ import {
   bundleZipResponse,
   folderZipResponse,
 } from "./zip.js";
+import { recordShareAccess } from "./access-log.js";
 
-export async function handlePublicShare(env, request, path) {
+export async function handlePublicShare(env, request, path, context = {}) {
   const match = path.match(
     /^\/api\/share\/([^/]+)\/(info|preview|download|unlock)$/,
   );
@@ -51,8 +52,8 @@ export async function handlePublicShare(env, request, path) {
 
   const item = mapShare(row);
   if (item.expired)
-    return expiredResponse(env, token, "Share link expired", row);
-  if (item.exhausted) return exhaustedResponse(env, token, row);
+    return expiredResponse(env, token, "Share link expired", row, context);
+  if (item.exhausted) return exhaustedResponse(env, token, row, context);
   if (action === "unlock") {
     if (!item.hasPassword) return jsonResponse({ success: true });
     const body = await request.json().catch(() => ({}));
@@ -68,18 +69,20 @@ export async function handlePublicShare(env, request, path) {
       "Set-Cookie": `${shareAccessCookieName(token)}=${signed}; ${cookieAttributes(request)}`,
     });
   }
-  if (!(await hasShareAccess(env, request, token, row)))
+  if (!(await hasShareAccess(env, request, token, row))) {
+    await recordShareAccess(env, request, token, {
+      action,
+      success: false,
+      status: 403,
+      countVisit: false,
+    });
     return sharePasswordRequiredResponse({ token, hasPassword: true });
+  }
 
   const accessIp =
     request.headers.get("cf-connecting-ip") ||
     request.headers.get("x-forwarded-for") ||
     "";
-  await env.D1.prepare(
-    "UPDATE share_links SET last_accessed_at = ?, last_access_ip = ? WHERE token = ?",
-  )
-    .bind(Date.now(), accessIp, token)
-    .run();
   const url = new URL(request.url);
   const subPath = cleanShareSubPath(url.searchParams.get("path") || "");
   const isFolderShare = item.targetType === "folder";
@@ -89,18 +92,25 @@ export async function handlePublicShare(env, request, path) {
 
   if (action === "info") {
     if (isBundleShare) {
-      if (!subPath)
+      if (!subPath) {
+        await recordShareAccess(env, request, token, { action, path: item.path });
         return jsonResponse({ success: true, item, directory: bundleRootDirectory(item) });
+      }
       const sharedRoot = findBundleRootForPath(item.items, subPath);
       if (!sharedRoot || sharedRoot.targetType !== "folder")
         return jsonResponse({ success: false, message: "Share path not found" }, 404);
       const relativePath =
         subPath === sharedRoot.path ? "" : subPath.slice(sharedRoot.path.length + 1);
       const directory = await listShareDirectory(env, sharedRoot.path, relativePath);
+      await recordShareAccess(env, request, token, { action, path: subPath });
       return jsonResponse({ success: true, item, directory });
     }
-    if (!isFolderShare) return jsonResponse({ success: true, item });
+    if (!isFolderShare) {
+      await recordShareAccess(env, request, token, { action, path: item.path });
+      return jsonResponse({ success: true, item });
+    }
     const directory = await listShareDirectory(env, item.path, subPath);
+    await recordShareAccess(env, request, token, { action, path: subPath || item.path });
     return jsonResponse({ success: true, item, directory });
   }
   if (action === "preview" && !item.allowPreview)
@@ -110,7 +120,7 @@ export async function handlePublicShare(env, request, path) {
   if (isBundleShare) {
     if (action === "download" && !subPath) {
       if (!(await reserveDownloadSlot(env, token)))
-        return exhaustedResponse(env, token, row);
+        return exhaustedResponse(env, token, row, context);
       const res = await bundleZipResponse(env, item);
       if (res.ok) {
         await env.D1.prepare(
@@ -121,6 +131,13 @@ export async function handlePublicShare(env, request, path) {
       } else {
         await releaseDownloadSlot(env, token);
       }
+      await recordShareAccess(env, request, token, {
+        action,
+        path: item.path,
+        success: res.ok,
+        status: res.status,
+        bytes: Number(res.headers.get("Content-Length") || 0),
+      });
       return res;
     }
     const sharedRoot = findBundleRootForPath(item.items, subPath);
@@ -132,7 +149,7 @@ export async function handlePublicShare(env, request, path) {
     if (action === "preview" && target.targetType !== "file")
       return jsonResponse({ success: false, message: "Folder preview disabled" }, 403);
     if (action === "download" && !(await reserveDownloadSlot(env, token)))
-      return exhaustedResponse(env, token, row);
+      return exhaustedResponse(env, token, row, context);
     const res =
       action === "download" && target.targetType === "folder"
         ? await folderZipResponse(
@@ -160,6 +177,13 @@ export async function handlePublicShare(env, request, path) {
         await releaseDownloadSlot(env, token);
       }
     }
+    await recordShareAccess(env, request, token, {
+      action,
+      path: subPath,
+      success: res.ok,
+      status: res.status,
+      bytes: Number(res.headers.get("Content-Length") || 0),
+    });
     return res;
   }
   const targetPath = isFolderShare ? childPath(item.path, subPath) : item.path;
@@ -169,7 +193,7 @@ export async function handlePublicShare(env, request, path) {
   if (isFolderShare && action === "preview" && target?.targetType !== "file")
     return jsonResponse({ success: false, message: "Folder preview disabled" }, 403);
   if (action === "download" && !(await reserveDownloadSlot(env, token)))
-    return exhaustedResponse(env, token, row);
+    return exhaustedResponse(env, token, row, context);
   const res =
     isFolderShare && (!target || target.targetType === "folder")
       ? await folderZipResponse(env, item.path, subPath, targetPath.split("/").pop() || item.name)
@@ -192,5 +216,12 @@ export async function handlePublicShare(env, request, path) {
       await releaseDownloadSlot(env, token);
     }
   }
+  await recordShareAccess(env, request, token, {
+    action,
+    path: targetPath,
+    success: res.ok,
+    status: res.status,
+    bytes: Number(res.headers.get("Content-Length") || 0),
+  });
   return res;
 }

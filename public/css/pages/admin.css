@@ -2798,8 +2798,10 @@
 }
 
 .ov-share-meta-strip {
+  grid-column: 2;
+  grid-row: 1;
   display: grid;
-  grid-template-columns: minmax(88px, 1fr) minmax(58px, 0.62fr) minmax(110px, 1.1fr);
+  grid-template-columns: minmax(88px, 1fr) minmax(52px, 0.5fr) minmax(58px, 0.62fr) minmax(110px, 1.1fr);
   align-items: center;
   gap: 0;
   min-width: 0;
@@ -2837,6 +2839,32 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.ov-share-access-log {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ov-share-access-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ov-share-pill {
@@ -2880,6 +2908,8 @@
 }
 
 .ov-share-actions {
+  grid-column: 3;
+  grid-row: 1 / span 2;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -2927,7 +2957,13 @@
 
   .ov-share-meta-strip {
     grid-column: 1 / -1;
+    grid-row: auto;
     padding-top: 2px;
+  }
+
+  .ov-share-access-log {
+    grid-column: 1 / -1;
+    grid-row: auto;
   }
 
   .ov-share-actions {
@@ -2951,6 +2987,10 @@
     grid-column: auto;
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .ov-share-access-log {
+    grid-column: auto;
   }
 
   .ov-share-meta-item,

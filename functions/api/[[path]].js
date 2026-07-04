@@ -64,7 +64,7 @@ export async function onRequest(context) {
     if (routePolicy.preAuth === 'login') return await handleLogin(request, env, context);
     if (routePolicy.preAuth === 'logout') return handleLogout(request);
     if (routePolicy.preAuth === 'publicShare') {
-      const shareResult = await handlePublicShare(env, request, path);
+      const shareResult = await handlePublicShare(env, request, path, context);
       if (shareResult) return shareResult;
     }
 

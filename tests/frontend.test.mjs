@@ -676,7 +676,7 @@ test('confirm-clear-trash modal shows loading state', () => {
   assert.match(html, /disabled/);
 });
 
-test('operation estimate modal blocks truncated delete requests', () => {
+test('operation estimate modal sends large requests to background tasks', () => {
   const { renderModal } = createModalRenderers({
     icons,
     escapeHtml,
@@ -706,8 +706,9 @@ test('operation estimate modal blocks truncated delete requests', () => {
     },
   });
 
-  assert.match(html, /目录规模超过同步删除上限/);
-  assert.match(html, /data-action="execute-batch-delete"[\s\S]*disabled/);
+  assert.match(html, /目录规模超过同步处理上限/);
+  assert.match(html, /创建后台任务/);
+  assert.doesNotMatch(html, /data-action="execute-batch-delete"[\s\S]*disabled/);
 });
 
 test('webhook modal uses custom selects with hidden form values', () => {
@@ -1039,7 +1040,13 @@ test('admin shares section formats millisecond expiry timestamps', () => {
         expiresAt: Date.UTC(2026, 0, 2, 3, 4),
         maxDownloads: 5,
         downloadCount: 0,
+        visitCount: 3,
         lastAccessedAt: Date.now() - 2 * 60 * 60 * 1000,
+        accessLogs: [{
+          action: 'download',
+          ip: '203.0.113.9',
+          createdAt: Date.now() - 60 * 60 * 1000,
+        }],
       }],
       sharesLoading: false,
       sharesError: '',
@@ -1051,6 +1058,9 @@ test('admin shares section formats millisecond expiry timestamps', () => {
   assert.match(html, /demo\.txt/);
   assert.match(html, /2026/);
   assert.match(html, /2 小时前/);
+  assert.match(html, /访问/);
+  assert.match(html, />3</);
+  assert.match(html, /203\.0\.113\.9/);
   assert.doesNotMatch(html, /58454/);
 });
 

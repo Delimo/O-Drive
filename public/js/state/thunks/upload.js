@@ -307,9 +307,11 @@ export function createUploadThunks(deps, context) {
         dispatchToast("error", `成功 ${uploaded} 个，失败 ${failed} 个`);
       }
 
-      autoCloseTimer = setTimeout(() => {
-        dispatch(actions.uploads.clearAll());
-      }, AUTO_CLOSE_DELAY);
+      autoCloseTimers.push(
+        setTimeout(() => {
+          dispatch(actions.uploads.clearAll());
+        }, AUTO_CLOSE_DELAY),
+      );
 
       await dispatch(getThunks().loadExplorer());
     },

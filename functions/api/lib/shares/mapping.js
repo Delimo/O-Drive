@@ -62,6 +62,8 @@ export function mapShare(row) {
     canReactivate: Boolean(expired && !exhausted && autoDeleteAt > Date.now()),
     maxDownloads,
     downloadCount,
+    visitCount: Number(row.visit_count || 0),
+    accessLogs: Array.isArray(row.accessLogs) ? row.accessLogs : [],
     exhausted,
     createdAt: Number(row.created_at || 0),
     lastAccessedAt: Number(row.last_accessed_at || 0),

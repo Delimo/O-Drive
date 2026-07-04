@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createStore, combineReducers } from '../public/js/state/create-slice.js';
+import { createStore, combineReducers, createSlice } from '../public/js/state/create-slice.js';
 import { adminInitialState, createAdminSlice } from '../public/js/state/slices/admin-slice.js';
 import { appInitialState, createAppSlice } from '../public/js/state/slices/app-slice.js';
 import { createAdminThunks } from '../public/js/state/thunks/admin.js';
+import { createExplorerThunks } from '../public/js/state/thunks/explorer.js';
 import { createMaintenanceThunks } from '../public/js/state/thunks/maintenance.js';
 
 function createThunkHarness(extraDeps = {}, extraContext = {}) {
@@ -40,6 +41,99 @@ function createThunkHarness(extraDeps = {}, extraContext = {}) {
   };
 
   return { store, deps, context };
+}
+
+function createExplorerThunkHarness(extraDeps = {}, extraContext = {}) {
+  const admin = createAdminSlice(adminInitialState);
+  const app = createAppSlice(appInitialState);
+  const explorerInitial = {
+    path: 'target',
+    selectedKeys: ['docs'],
+    clipboard: { action: 'copy', paths: ['docs'] },
+    batchBusy: false,
+  };
+  const explorer = createSlice({
+    name: 'explorer',
+    initialState: explorerInitial,
+    reducers: {
+      setBatchBusy(state, action) {
+        return { ...state, batchBusy: action.payload };
+      },
+      setSelectedKeys(state, action) {
+        return { ...state, selectedKeys: action.payload };
+      },
+      setClipboard(state, action) {
+        return { ...state, clipboard: action.payload };
+      },
+    },
+  });
+  const store = createStore(
+    combineReducers({
+      admin: admin.reducer,
+      app: app.reducer,
+      explorer: explorer.reducer,
+    }),
+    {
+      admin: adminInitialState,
+      app: { ...appInitialState, page: 'home' },
+      explorer: explorerInitial,
+    },
+  );
+
+  const calls = [];
+  const deps = {
+    actions: {
+      admin: admin.actions,
+      app: app.actions,
+      explorer: explorer.actions,
+    },
+    fileApi: {
+      async batchDelete() {
+        calls.push(['sync-delete']);
+        return { response: { ok: true, status: 200 }, data: { success: true, completed: 1 } };
+      },
+      async paste() {
+        calls.push(['sync-paste']);
+        return { response: { ok: true, status: 200 }, data: { success: true, completed: 1 } };
+      },
+    },
+    taskApi: {
+      async create(type, payload) {
+        calls.push(['task-create', type, payload]);
+        return { response: { ok: true, status: 202 }, data: { success: true, item: { id: 'task-1', type } } };
+      },
+    },
+    normalizeKey(value = '') {
+      return String(value || '').replace(/^\/+|\/+$/g, '');
+    },
+    dispatchToast(type, message) {
+      calls.push(['toast', type, message]);
+    },
+    humanError(_response, data, fallback) {
+      return data?.message || fallback;
+    },
+    ...extraDeps,
+  };
+  const context = {
+    mock: false,
+    getThunks: () => ({
+      loadTasks: () => {
+        calls.push(['load-tasks']);
+        return { type: 'noop/load-tasks' };
+      },
+      loadNotifications: () => {
+        calls.push(['load-notifications']);
+        return { type: 'noop/load-notifications' };
+      },
+      loadExplorer: () => {
+        calls.push(['load-explorer']);
+        return { type: 'noop/load-explorer' };
+      },
+    }),
+    ...extraContext,
+  };
+
+  return { store, deps, context, calls };
 }
 
 test('admin thunk stores API failure messages from unified assertions', async () => {
@@ -234,4 +328,37 @@ test('maintenance thunk reports unified API errors and clears busy action', asyn
 
   assert.equal(store.getState().admin.maintenanceBusyAction, '');
   assert.deepEqual(toasts, [{ type: 'error', message: '维护执行失败' }]);
+});
+
+test('large batch delete is created as a background task', async () => {
+  const { store, deps, context, calls } = createExplorerThunkHarness();
+  const thunks = createExplorerThunks(deps, context);
+
+  await store.dispatch(thunks.batchDelete(['docs'], { background: true }));
+
+  assert.deepEqual(calls, [
+    ['task-create', 'delete', { paths: ['docs'] }],
+    ['toast', 'success', '操作规模较大，已转入后台删除任务'],
+    ['load-tasks'],
+    ['load-notifications'],
+  ]);
+  assert.deepEqual(store.getState().explorer.selectedKeys, []);
+  assert.equal(store.getState().explorer.batchBusy, false);
+});
+
+test('large paste is created as a background task', async () => {
+  const { store, deps, context, calls } = createExplorerThunkHarness();
+  const thunks = createExplorerThunks(deps, context);
+
+  await store.dispatch(thunks.pasteClipboard({ background: true }));
+
+  assert.deepEqual(calls, [
+    ['task-create', 'paste', { action: 'copy', paths: ['docs'], targetDir: '/target' }],
+    ['toast', 'success', '操作规模较大，已转入后台复制任务'],
+    ['load-tasks'],
+    ['load-notifications'],
+  ]);
+  assert.equal(store.getState().explorer.clipboard, null);
+  assert.deepEqual(store.getState().explorer.selectedKeys, []);
+  assert.equal(store.getState().explorer.batchBusy, false);
 });

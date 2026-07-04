@@ -213,6 +213,9 @@ export async function tryReserveStorageQuota(env, storageId = "r2", incomingByte
   const config = await loadStorageConfig(env);
   const quotaBytes = config.r2QuotaBytes || 0;
   if (!quotaBytes) return true;
+  const usedBytes = await getIndexedStorageUsed(env, storageId);
+  const availableBytes = quotaBytes - usedBytes;
+  if (availableBytes < Number(incomingBytes || 0)) return false;
   await ensureQuotaCounterTable(env);
   await env.D1.prepare(
     "INSERT OR IGNORE INTO storage_quota_counter (storage_id, reserved_bytes) VALUES (?, 0)",
@@ -222,7 +225,7 @@ export async function tryReserveStorageQuota(env, storageId = "r2", incomingByte
      SET reserved_bytes = reserved_bytes + ?
      WHERE storage_id = ?
        AND (reserved_bytes + ? <= ?)`,
-  ).bind(incomingBytes, storageId, incomingBytes, quotaBytes).run();
+  ).bind(incomingBytes, storageId, incomingBytes, availableBytes).run();
   return Number(res?.meta?.changes ?? res?.changes ?? 0) > 0;
 }
 
