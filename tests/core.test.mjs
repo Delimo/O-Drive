@@ -3345,6 +3345,98 @@ test('webhook endpoints can subscribe to selected events only', async () => {
   }
 });
 
+test('webhook settings reject insecure or IP literal URLs by default', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+
+  const login = await onRequest({
+    env,
+    request: new Request('https://example.com/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+  const loginData = await login.json();
+  const cookie = login.headers.get('Set-Cookie');
+
+  const save = (url) => onRequest({
+    env,
+    request: new Request('https://example.com/api/admin/settings/webhooks', {
+      method: 'PUT',
+      body: JSON.stringify({ items: [{ name: 'notify', url }] }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+    }),
+  });
+
+  const insecure = await save('http://hooks.example.test/notify');
+  assert.equal(insecure.status, 400);
+  assert.match((await insecure.json()).message, /HTTPS/);
+
+  const ipLiteral = await save('https://203.0.113.10/notify');
+  assert.equal(ipLiteral.status, 400);
+  assert.match((await ipLiteral.json()).message, /domain name/);
+
+  const safe = await save('https://hooks.example.test/notify');
+  assert.equal(safe.status, 200);
+});
+
+test('webhook delivery blocks redirects to a different host', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  await env.D1.prepare("INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)")
+    .bind('webhooks', JSON.stringify([{ name: 'redirect', url: 'https://hooks.example.test/start', events: ['folder.created'] }]))
+    .run();
+
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response('', {
+      status: 302,
+      headers: { Location: 'https://evil.example.test/hook' },
+    });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'redirect-webhook' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    assert.equal(calls.length, 1);
+    const deliveries = await env.D1.prepare("SELECT * FROM webhook_deliveries ORDER BY created_at DESC, id DESC LIMIT 20").all();
+    assert.equal(deliveries.results.length, 1);
+    assert.equal(deliveries.results[0].ok, 0);
+    assert.match(deliveries.results[0].error, /redirect changed host/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('webhook allowlist rejects unapproved hosts when configured', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';

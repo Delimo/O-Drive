@@ -135,7 +135,6 @@ Pages Functions 会自动读取 `functions` 目录。
 | `DOWNLOAD_BURST_WINDOW_SECONDS` | 否 | `300` | 下载异常统计窗口 |
 | `DOWNLOAD_BURST_COOLDOWN_SECONDS` | 否 | `1800` | 下载异常提醒冷却时间 |
 | `DOWNLOAD_BURST_BLOCK_SECONDS` | 否 | `600` | 异常下载临时阻断时长，`0` 表示只告警不阻断 |
-| `WEBHOOK_ALLOWED_HOSTS` | 推荐 | `hooks.example.com,*.notify.example` | Webhook 目标主机白名单；配置后保存、测试、重试和实际投递都会拒绝非白名单主机 |
 
 `TOKEN_SECRET` 是系统用来给登录状态、分享访问和路径解锁 Cookie 做签名的随机密钥。它不是管理员密码，不需要自己记住，也不要填固定的简单文字。
 
@@ -488,11 +487,11 @@ Webhook 可配置：
 
 Webhook 页面会显示最近发送记录，包括事件、目标、HTTP 状态、耗时和成功/失败状态。
 
-### 目标白名单
+### 高级安全配置
 
-未配置 `WEBHOOK_ALLOWED_HOSTS` 时，Webhook 处于兼容模式：系统仍会阻断私网/本地 IP 字面量和跳转到私网地址的 URL。
+默认情况下，Webhook 不需要额外环境变量即可使用。系统会要求 URL 使用 HTTPS、拒绝 IP 地址形式的目标，并阻断私网/本地地址以及跨主机跳转。
 
-生产环境建议配置 `WEBHOOK_ALLOWED_HOSTS`，用逗号分隔允许的主机名，支持 `*.example.com` 形式的子域名通配。配置后，后台保存、测试、失败重试和实际事件投递都会拒绝非白名单主机。
+如果部署在更严格的生产环境，可以额外配置 `WEBHOOK_ALLOWED_HOSTS`，用逗号分隔允许的主机名，支持 `*.example.com` 形式的子域名通配。配置后，后台保存、测试、失败重试和实际事件投递都会拒绝非白名单主机。
 
 也可以使用等价变量 `WEBHOOK_HOST_ALLOWLIST` 或 `WEBHOOK_ALLOWLIST`；如需强制白名单模式，可设置 `WEBHOOK_REQUIRE_ALLOWLIST=true` 或 `WEBHOOK_STRICT_ALLOWLIST=true`。
 

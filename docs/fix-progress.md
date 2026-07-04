@@ -24,6 +24,7 @@
 
 > 复核时间：2026-07-04。
 
+- #16/#17 前端展示复核：✅ 已从大面积运维面板调整为轻量摘要。概览页仅在标题区显示运行状态和少量异常摘要；系统页将索引一致性合并进「运维指令」，问题详情默认折叠，避免挤占原后台页面的一屏核心内容。
 - `node --test --test-name-pattern "admin can create public share links and expired shares are deleted|admin shares section formats millisecond expiry timestamps" tests/core.test.mjs tests/frontend.test.mjs`：✅ 通过，2/2。
 - `npm test`：✅ 通过，256/256。
 - `npm run lint`：✅ 通过，JS syntax check passed，170 files。
@@ -33,7 +34,7 @@
 
 | # | 任务 | 来源 | 状态 | 改动文件 |
 | --- | --- | --- | --- | --- |
-| 1 | 修复 Webhook SSRF (CRITICAL) | audit S1 | ✅ 完成当前验收范围 | `functions/api/lib/webhooks.js`, `functions/api/lib/admin-webhook-settings.js`, `public/js/render/pages/admin/webhook.js`, `tests/core.test.mjs`, `tests/frontend.test.mjs` |
+| 1 | 修复 Webhook SSRF (CRITICAL) | audit S1 | ✅ 完成当前验收范围 | `functions/api/lib/webhooks.js`, `functions/api/lib/admin-webhook-settings.js`, `tests/core.test.mjs` |
 | 2 | 路径密码锁定 x-forwarded-for 绕过 (HIGH) | audit A1 | ✅ 完成 | `functions/api/lib/protected-paths.js` |
 | 3 | 下载次数 TOCTOU (MEDIUM) | audit S2/M1 | ✅ 完成 | `functions/api/lib/shares/expiry.js`, `functions/api/lib/shares/public.js`, `tests/helpers/make-env.mjs` |
 | 4 | 配额并发绕过 (HIGH) | audit U1 | ✅ 完成 | `functions/api/lib/storage.js`, `functions/api/lib/file-index/stats.js`, `functions/api/lib/file-mutations/upload.js`, `functions/api/lib/file-mutations/upload-check.js`, `functions/api/lib/file-mutations/multipart.js`, `functions/api/dav/lib/methods.js` |
@@ -59,9 +60,10 @@
 ### #1 Webhook SSRF —— ✅ 完成当前验收范围
 
 - 已完成：`guardedFetch()` 使用 `redirect: "manual"`，逐跳校验 URL；支持多种 IPv4 字面量编码、IPv6 loopback/link-local/ULA 和 `localhost` 拦截。
-- 已完成：新增 Webhook 目标白名单策略。配置 `WEBHOOK_ALLOWED_HOSTS`、`WEBHOOK_HOST_ALLOWLIST` 或 `WEBHOOK_ALLOWLIST` 后进入白名单模式；也可用 `WEBHOOK_REQUIRE_ALLOWLIST=true` / `WEBHOOK_STRICT_ALLOWLIST=true` 强制要求白名单。
+- 已完成：默认 Webhook URL 必须使用 HTTPS，禁止 IP 地址形式目标，且重定向不能切换 host。
+- 已完成：保留高级 Webhook 目标白名单策略。配置 `WEBHOOK_ALLOWED_HOSTS`、`WEBHOOK_HOST_ALLOWLIST` 或 `WEBHOOK_ALLOWLIST` 后进入白名单模式；也可用 `WEBHOOK_REQUIRE_ALLOWLIST=true` / `WEBHOOK_STRICT_ALLOWLIST=true` 强制要求白名单。
 - 已完成：保存配置、测试投递、失败重试和实际事件投递都会执行同一策略；旧配置中不在白名单的 URL 不会出网，会写入失败投递记录。
-- 默认行为：未配置白名单时保持兼容模式，继续依赖字面量 IP/跳转防护；生产部署建议配置白名单来关闭 DNS rebinding 类剩余风险。
+- 默认行为：普通用户无需配置白名单即可使用 Webhook；白名单作为高级安全配置保留给更严格的生产环境。
 
 ### #3 下载次数 TOCTOU —— ✅ 完成
 
@@ -94,6 +96,18 @@
 - 测试覆盖「大操作弹窗转后台任务」和 thunk 创建 `delete`/`paste` 后台任务。
 - 未纳入本轮：清空回收站、回收站大恢复、任务分片进度恢复，这些仍可作为后续增强。
 
+### #16 索引一致性前端展示 —— ✅ 完成当前验收范围
+
+- 已完成：索引一致性扫描和最近结果仍保留在系统页。
+- 已调整：不再作为跨整行大卡片抢占系统页空间；现在合并到「运维指令」顶部，以一行状态展示最近扫描结果。
+- 已调整：异常分类和样例路径默认折叠在「查看问题详情」中；管理员需要排障时再展开。
+
+### #17 后台可观测性增强 —— ✅ 完成当前验收范围
+
+- 已完成：后台统计接口继续返回限流、登录失败、后台任务、Webhook、系统提醒和索引问题摘要。
+- 已调整：概览页不再渲染完整运维指标面板；现在仅在标题区显示「运行状态」、异常类别数和少量关键 chip。
+- 设计原则：正常状态保持安静，异常状态提示可见，但不挤占「最近上传」「类型分布」「维护中心」等原本核心内容。
+
 ### #18 分享功能产品化 —— ✅ 完成当前验收范围
 
 - 数据模型新增 `share_links.visit_count` 和 `share_access_logs`，访问日志保留 90 天并有懒清理。
@@ -111,7 +125,7 @@
 
 ## 已知后续增强
 
-- #1 Webhook SSRF：生产部署建议配置 `WEBHOOK_ALLOWED_HOSTS`，例如 `hooks.example.com,*.notify.example`。
+- #1 Webhook SSRF：更严格生产环境可配置 `WEBHOOK_ALLOWED_HOSTS`，例如 `hooks.example.com,*.notify.example`。
 - #15：继续把清空回收站、大目录恢复、任务断点恢复和失败项重试做得更完整。
 - #18：补 `max_bytes`、二维码、公开上传收件箱、分享备注/标签和分享访问通知。
 - #19：随着 D1 mock 继续增长，逐步拆分 `make-env.mjs`，抽出 SQL handler registry 和 fixture 工厂。

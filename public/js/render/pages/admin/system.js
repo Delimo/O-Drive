@@ -48,7 +48,7 @@ export function createSystemRenderer({
     `;
   }
 
-  function renderIndexConsistencyCard(maintenance) {
+  function renderIndexConsistencySummary(maintenance) {
     const report = maintenance?.indexConsistencyLatest || null;
     const categories = report?.categories || {};
     const categoryItems = Object.entries(categories)
@@ -77,49 +77,32 @@ export function createSystemRenderer({
         </div>
       `;
     }).join("");
+    const scannedText = scannedAt ? `最近扫描 ${formatRelative(scannedAt)}` : "尚无扫描记录";
+    const issueText = report
+      ? (Number(report.issueCount || 0) > 0 ? `${safeText(report.issueCount, "0")} 个问题` : "未发现问题")
+      : "运行扫描后保留最近结果";
 
     return `
-      <div class="ov-index-card">
+      <div class="ov-index-compact">
         <div class="ov-index-head">
           <div>
             <span class="ov-index-title">索引一致性</span>
-            <p class="ov-index-desc">对照 file_index、storage_objects、回收站和 R2 引用</p>
+            <p class="ov-index-desc">${issueText} · ${scannedText}</p>
           </div>
           <div class="ov-index-actions">
             <span class="ov-index-state ov-index-state-${status}">${statusLabel}</span>
-            <button class="btn btn-sm" type="button"
-                    data-action="confirm-maintenance-action"
-                    data-maintenance-action="scan-index-consistency"
-                    data-maintenance-label="检查索引一致性">扫描</button>
           </div>
         </div>
         ${report ? `
-          <div class="ov-index-summary">
-            <div>
-              <span>问题总数</span>
-              <strong>${safeText(report.issueCount, "0")}</strong>
-            </div>
-            <div>
-              <span>扫描文件索引</span>
-              <strong>${safeText(report.scanned?.fileIndexRows, "0")}</strong>
-            </div>
-            <div>
-              <span>R2 样例</span>
-              <strong>${safeText(report.scanned?.r2Objects, "0")}</strong>
-            </div>
-            <div>
-              <span>最近扫描</span>
-              <strong>${scannedAt ? formatRelative(scannedAt) : "未知"}</strong>
-            </div>
-          </div>
           ${report.truncated ? `<div class="ov-index-note">扫描已达到上限，结果为保守样例。</div>` : ""}
           ${categoryItems.length
-            ? `<div class="ov-index-issues">${sampleHtml}</div>`
-            : `<div class="ov-index-empty">未发现索引一致性问题。</div>`}
+            ? `<details class="ov-index-details">
+                <summary class="ov-index-details-trigger">查看问题详情</summary>
+                <div class="ov-index-issues">${sampleHtml}</div>
+              </details>`
+            : ""}
         ` : `
-          <div class="ov-index-empty">
-            尚无扫描报告。运行一次只读扫描后，这里会保留最近结果。
-          </div>
+          <span class="ov-index-empty">下方执行“检查索引一致性”即可生成报告。</span>
         `}
       </div>
     `;
@@ -328,8 +311,6 @@ export function createSystemRenderer({
             </div>
           ` : ""}
 
-          ${renderIndexConsistencyCard(maintenance)}
-
           <div class="ov-maintenance ov-maintenance-has-advanced">
             <div class="ov-maintenance-header">
               <span class="ov-maintenance-title">运维指令</span>
@@ -339,7 +320,7 @@ export function createSystemRenderer({
                 ? `<div class="ov-empty-inline">载入中...</div>`
                 : maintenanceError
                   ? `<div class="ov-empty-inline" style="color:var(--danger);">${escapeHtml(maintenanceError)}</div>`
-                  : renderMaintenanceActions()}
+                  : `${renderIndexConsistencySummary(maintenance)}${renderMaintenanceActions()}`}
             </div>
           </div>
 

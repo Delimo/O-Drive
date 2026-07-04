@@ -123,7 +123,7 @@
 
 ### S1 Webhook SSRF（CRITICAL）
 
-> 修复状态（2026-07-04）：✅ 已完成当前验收范围。已阻断跳转绕过、IP 字面量编码、IPv6 私网/本地地址和 `localhost`；同时新增 Webhook 目标白名单策略，配置 `WEBHOOK_ALLOWED_HOSTS` / `WEBHOOK_HOST_ALLOWLIST` / `WEBHOOK_ALLOWLIST` 后，保存、测试、重试和实际投递都会拒绝非白名单主机，从产品策略上收口 DNS rebinding 类剩余风险。未配置白名单时保留兼容模式。
+> 修复状态（2026-07-04）：✅ 已完成当前验收范围。默认要求 Webhook 使用 HTTPS，禁止 IP 地址形式目标，阻断 IPv4/IPv6 私网/本地地址和 `localhost`，并禁止重定向切换 host；同时保留高级目标白名单策略，配置 `WEBHOOK_ALLOWED_HOSTS` / `WEBHOOK_HOST_ALLOWLIST` / `WEBHOOK_ALLOWLIST` 后，保存、测试、重试和实际投递都会拒绝非白名单主机。
 
 - 位置：`functions/api/lib/webhooks.js:250-267,268`
 - 问题：私有 IP 拦截只做**主机名字符串匹配**，而 `fetch()` 用默认 `redirect: "follow"`。绕过方式：

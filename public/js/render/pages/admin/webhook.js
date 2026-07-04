@@ -38,7 +38,6 @@ export function createWebhookRenderer({
     const {
       webhooksLoading, webhooks = [],
       webhookDeliveriesLoading, webhookDeliveries = [],
-      webhookPolicy = { mode: "compat", allowlistEnabled: false, allowedHosts: [] },
       webhookRetryingId = 0,
       notificationsUnread = 0,
       adminNotifHistory = [], adminNotifHistoryLoading = false,
@@ -50,8 +49,6 @@ export function createWebhookRenderer({
     const unreadCount = Number(notificationsUnread || 0) || adminNotifHistory.filter(item => !item.read).length;
     const failedDeliveryCount = webhookDeliveries.filter(del => !del.ok).length;
     const enabledWebhookCount = webhooks.filter(hook => hook.enabled !== false).length;
-    const allowedHosts = Array.isArray(webhookPolicy.allowedHosts) ? webhookPolicy.allowedHosts : [];
-    const policyStrict = webhookPolicy.allowlistEnabled || webhookPolicy.mode === "allowlist";
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const deliveryTimes = webhookDeliveries.map(del => normalizeTimestamp(del.created_at || del.createdAt)).filter(Boolean);
@@ -229,11 +226,6 @@ export function createWebhookRenderer({
             <span class="ov-webhook-stat-label">今日投递</span>
             <strong class="ov-webhook-stat-value">${todayDeliveryCount}</strong>
             <span class="ov-webhook-stat-meta">${latestDeliveryTime ? `最近 ${formatRelative(latestDeliveryTime)}` : "暂无投递"}</span>
-          </div>
-          <div class="ov-webhook-stat-card">
-            <span class="ov-webhook-stat-label">目标策略</span>
-            <strong class="ov-webhook-stat-value">${policyStrict ? "白名单" : "兼容"}</strong>
-            <span class="ov-webhook-stat-meta">${policyStrict ? `${allowedHosts.length} 个允许域名` : "兼容公网域名"}</span>
           </div>
         </div>
 

@@ -12,7 +12,7 @@ import { createUiComponents } from '../public/js/render/components.js';
 import { createHomeRenderers } from '../public/js/render/home.js';
 import { createModalRenderers } from '../public/js/render/modal.js';
 import { createUploadsRenderer } from '../public/js/render/uploads.js';
-import { mockTextContent, mockReadme, mockAdminStats, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookPolicy, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications, mockTrashItems } from '../public/js/mock/index.js';
+import { mockTextContent, mockReadme, mockAdminStats, mockAdminHealth, mockAdminLogs, mockAdminQuota, mockProtectedPaths, mockHiddenPaths, mockWebhooks, mockWebhookDeliveries, mockMaintenanceSnapshot, mockTasks, mockTaskAlertConfig, mockNotifications, mockTrashItems } from '../public/js/mock/index.js';
 import { createDeferredAction, openDownload } from '../public/js/utils/helpers.js';
 import { createPageRenderers } from '../public/js/render/pages/index.js';
 import { createHeaderRenderer } from '../public/js/render/header.js';
@@ -958,11 +958,11 @@ test('admin overview renders attention maintenance actions', () => {
     },
   };
   const html = pages.renderAdminPage(state);
-  assert.match(html, /运维可观测/);
-  assert.match(html, /近 24 小时关键异常摘要/);
+  assert.match(html, /运行状态/);
+  assert.match(html, /近 24 小时 4 类异常/);
   assert.match(html, /Webhook 失败/);
-  assert.match(html, /索引问题/);
-  assert.match(html, /索引健康/);
+  assert.match(html, /索引 2 个问题/);
+  assert.doesNotMatch(html, /ov-observe-metrics/);
   assert.match(html, /系统提醒待处理/);
   assert.match(html, /data-action="confirm-maintenance-action"/);
   assert.match(html, /data-maintenance-action="cleanup-warnings"/);
@@ -1295,10 +1295,13 @@ test('admin maintenance section renders snapshot and action buttons', () => {
   };
   const html = pages.renderAdminPage(state);
   assert.match(html, /索引一致性/);
-  assert.match(html, /问题总数/);
+  assert.match(html, /2 个问题/);
+  assert.match(html, /查看问题详情/);
   assert.match(html, /文件索引断链/);
   assert.match(html, /对象引用计数不一致/);
   assert.match(html, /archive\/missing\.pdf/);
+  assert.match(html, /ov-index-compact/);
+  assert.doesNotMatch(html, /ov-index-card/);
   assert.match(html, /检查索引一致性/);
   assert.match(html, /同步元数据库索引/);
   assert.match(html, /同步清除废弃文件/);
@@ -1534,7 +1537,7 @@ test('notification tab renders notification history and system tab does not dupl
     quotaLoading: false, quota: mockAdminQuota, quotaError: '',
     protectedPathsLoading: false, protectedPaths: [], protectedPathsError: '',
     hiddenPathsLoading: false, hiddenPaths: [], hiddenPathsError: '',
-    webhooksLoading: false, webhooks: mockWebhooks, webhookPolicy: mockWebhookPolicy, webhooksError: '',
+    webhooksLoading: false, webhooks: mockWebhooks, webhooksError: '',
     webhookDeliveriesLoading: false, webhookDeliveries: mockWebhookDeliveries,
     storageConfig: null, storageConfigLoading: false, storageConfigError: '',
     maintenance: mockMaintenanceSnapshot, maintenanceLoading: false, maintenanceError: '', maintenanceBusyAction: '',
@@ -1550,8 +1553,6 @@ test('notification tab renders notification history and system tab does not dupl
   assert.match(notificationHtml, /通知中心/);
   assert.match(notificationHtml, /未读通知/);
   assert.match(notificationHtml, /失败投递/);
-  assert.match(notificationHtml, /目标策略/);
-  assert.match(notificationHtml, /白名单/);
   assert.match(notificationHtml, /Webhook 规则/);
   assert.match(notificationHtml, /记录中心/);
   assert.match(notificationHtml, /投递记录/);

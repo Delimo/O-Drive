@@ -14,14 +14,12 @@ export function createAdminWebhookThunks({
       dispatch(actions.admin.setWebhooksLoading(true));
       if (mock) {
         const m = await getMockModule();
-        dispatch(actions.admin.setWebhookPolicy(m.mockWebhookPolicy));
         dispatch(actions.admin.setWebhooks(m.mockWebhooks));
         return;
       }
       try {
         const { response, data } = await adminApi.webhooks();
         assertApiOk(response, data, "Webhook 配置加载失败", humanError);
-        dispatch(actions.admin.setWebhookPolicy(data.policy));
         dispatch(actions.admin.setWebhooks(data.items || []));
       } catch (error) {
         dispatch(
@@ -41,7 +39,6 @@ export function createAdminWebhookThunks({
         const { response, data } = await adminApi.saveWebhooks(items);
         assertApiOk(response, data, "保存 Webhook 配置失败", humanError);
         dispatchToast("success", "Webhook 配置已更新");
-        dispatch(actions.admin.setWebhookPolicy(data.policy));
         dispatch(actions.admin.setWebhooks(data.items || []));
       } catch (error) {
         dispatchToast("error", error.message || "保存 Webhook 配置失败");

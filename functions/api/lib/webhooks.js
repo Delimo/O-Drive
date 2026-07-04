@@ -290,6 +290,13 @@ function hostMatchesAllowlist(hostname, allowedHosts) {
   });
 }
 
+function isIpLiteralHost(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
+  if (!host) return false;
+  if (parseIpv4(host)) return true;
+  return host.includes(":") || host.startsWith("[");
+}
+
 export function getWebhookPolicy(env) {
   const allowedHosts = parseWebhookAllowlist(env);
   const strict =
@@ -311,8 +318,11 @@ export function validateWebhookEndpointPolicy(env, endpoint) {
   } catch (_) {
     return { ok: false, status: 400, message: "Invalid webhook URL", policy };
   }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return { ok: false, status: 400, message: "Webhook URL scheme not allowed", policy };
+  if (parsed.protocol !== "https:") {
+    return { ok: false, status: 400, message: "Webhook URL must use HTTPS", policy };
+  }
+  if (isIpLiteralHost(parsed.hostname)) {
+    return { ok: false, status: 400, message: "Webhook URL host must be a domain name", policy };
   }
   if (isBlockedWebhookHost(parsed.hostname)) {
     return {
@@ -429,10 +439,21 @@ function isBlockedWebhookHost(hostname) {
  */
 async function guardedFetch(url, init) {
   let current = url;
+  const initialHost = new URL(url).hostname.toLowerCase().replace(/\.$/, "");
   for (let hop = 0; hop <= WEBHOOK_MAX_REDIRECTS; hop++) {
     const parsed = new URL(current);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      const err = new Error("Webhook URL scheme not allowed");
+    if (parsed.protocol !== "https:") {
+      const err = new Error("Webhook URL must use HTTPS");
+      err.blocked = true;
+      throw err;
+    }
+    if (parsed.hostname.toLowerCase().replace(/\.$/, "") !== initialHost) {
+      const err = new Error("Webhook redirect changed host");
+      err.blocked = true;
+      throw err;
+    }
+    if (isIpLiteralHost(parsed.hostname)) {
+      const err = new Error("Webhook URL host must be a domain name");
       err.blocked = true;
       throw err;
     }
@@ -497,6 +518,14 @@ async function sendOne(endpoint, payload, retries = MAX_RETRIES, env = null) {
       }
       lastError = `HTTP ${res.status}`;
     } catch (err) {
+      if (err?.blocked) {
+        return {
+          ok: false,
+          status: lastStatus,
+          error: err.message || "Webhook URL is not allowed",
+          durationMs: Date.now() - started,
+        };
+      }
       // Network error or timeout: retry.
       lastError =
         err?.name === "AbortError"

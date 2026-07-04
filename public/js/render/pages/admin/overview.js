@@ -166,51 +166,28 @@ export function createOverviewRenderer({
       ["错误通知", counters.errorNotifications || 0],
       ["索引问题", counters.indexIssues || 0],
     ];
-    const hasLists =
-      observability.topLoginFailures?.length ||
-      observability.failedTasks?.length ||
-      observability.webhookFailures?.length ||
-      observability.warnings?.length;
+    const activeItems = metricItems.filter(([, value]) => Number(value) > 0);
+    const activeCount = activeItems.length;
+    const summaryText = status === "ok"
+      ? `近 ${safeText(observability.windowHours || 24)} 小时无关键异常`
+      : `近 ${safeText(observability.windowHours || 24)} 小时 ${safeText(activeCount, "0")} 类异常`;
+    const topItems = activeItems.slice(0, 3);
+    const indexText = index
+      ? (index.issueCount ? `索引 ${safeText(index.issueCount, "0")} 个问题` : "索引正常")
+      : "索引未扫描";
 
     return `
-      <div class="ov-observe">
-        <div class="ov-observe-head">
-          <div>
-            <span class="ov-section-title">运维可观测</span>
-            <p class="ov-observe-desc">近 ${safeText(observability.windowHours || 24)} 小时关键异常摘要</p>
-          </div>
+      <div class="ov-observe-summary ov-observe-summary-${status}">
+        <div class="ov-observe-summary-main">
+          <span class="ov-observe-label">运行状态</span>
           <span class="ov-observe-state ov-observe-state-${status}">${statusLabel}</span>
         </div>
-        <div class="ov-observe-metrics">
-          ${metricItems.map(([label, value]) => `
-            <div class="ov-observe-metric ${Number(value) > 0 ? "ov-observe-metric-hot" : ""}">
-              <span>${escapeHtml(label)}</span>
-              <strong>${safeText(value, "0")}</strong>
-            </div>
-          `).join("")}
-        </div>
-        <div class="ov-observe-foot">
-          <div class="ov-observe-index ${index?.issueCount ? "ov-observe-index-warn" : ""}">
-            <span>索引健康</span>
-            <strong>${index ? (index.issueCount ? `${safeText(index.issueCount, "0")} 个问题` : "正常") : "未扫描"}</strong>
-            <em>${index?.scannedAt ? `最近扫描 ${formatRelative(index.scannedAt)}` : "可在系统页运行扫描"}</em>
-          </div>
-          ${hasLists ? `
-            <div class="ov-observe-lists">
-              ${(observability.topLoginFailures || []).slice(0, 2).map(item => `
-                <span class="ov-observe-chip">登录 ${escapeHtml(item.key || "")}: ${safeText(item.attempts, "0")}</span>
-              `).join("")}
-              ${(observability.webhookFailures || []).slice(0, 2).map(item => `
-                <span class="ov-observe-chip">Webhook ${escapeHtml(item.endpoint || item.event || "")}</span>
-              `).join("")}
-              ${(observability.failedTasks || []).slice(0, 2).map(item => `
-                <span class="ov-observe-chip">任务 ${escapeHtml(item.type || item.status || "")}</span>
-              `).join("")}
-              ${(observability.warnings || []).slice(0, 2).map(item => `
-                <span class="ov-observe-chip">${escapeHtml(item.source || "系统警告")}</span>
-              `).join("")}
-            </div>
-          ` : `<span class="ov-observe-clear">暂无异常明细</span>`}
+        <span class="ov-observe-summary-text">${summaryText}</span>
+        <div class="ov-observe-chipline">
+          ${topItems.length ? topItems.map(([label, value]) => `
+            <span class="ov-observe-chip">${escapeHtml(label)} ${safeText(value, "0")}</span>
+          `).join("") : ""}
+          <span class="ov-observe-chip ${index?.issueCount ? "ov-observe-chip-hot" : ""}">${indexText}</span>
         </div>
       </div>
     `;
@@ -253,9 +230,12 @@ export function createOverviewRenderer({
             <h2 class="ov-overview-title">系统概览</h2>
             <p class="ov-overview-desc">存储状态与文件指标一览</p>
           </div>
-          <button class="btn" type="button" data-action="refresh-admin">
-            刷新
-          </button>
+          <div class="ov-overview-actions">
+            ${renderObservabilityPanel(observability)}
+            <button class="btn" type="button" data-action="refresh-admin">
+              刷新
+            </button>
+          </div>
         </div>
 
         <div class="ov-overview-stats">
@@ -300,8 +280,6 @@ export function createOverviewRenderer({
             </div>
           </div>
         </div>
-
-        ${renderObservabilityPanel(observability)}
 
         <div class="ov-overview-grid">
           <div class="ov-overview-left">

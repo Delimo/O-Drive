@@ -365,12 +365,6 @@ export const mockWebhooks = [
   },
 ];
 
-export const mockWebhookPolicy = {
-  mode: "allowlist",
-  allowlistEnabled: true,
-  allowedHosts: ["hooks.example.com", "chat.example.com"],
-};
-
 export const mockWebhookDeliveries = [
   {
     id: 1,
