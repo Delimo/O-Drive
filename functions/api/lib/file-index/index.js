@@ -1,6 +1,6 @@
 export { ensureFileIndexTable } from "./ensure.js";
 export { indexedFileKind, indexedFileCount, normalizeIndexRow, mapIndexRow } from "./helpers.js";
-export { buildUpsertParams, upsertFileIndex, batchUpsertFileIndex } from "./upsert.js";
+export { buildUpsertParams, upsertFileIndex, insertFileIndexIfAbsent, batchUpsertFileIndex } from "./upsert.js";
 export { deleteFileIndexKey, deleteFileIndexPrefix, countFileIndexObjectRefs, countObjectRefs, updateFileIndexObjectKey, updateObjectReferenceKey } from "./delete.js";
 export { getFileIndexEntry, getFileIndexStorageId, listFileIndexPrefix, hasFileIndexPath, listIndexedDirectory } from "./query.js";
 export { searchFileIndex } from "./search.js";

@@ -1,4 +1,4 @@
-import { jsonResponse, parseCookie, pbkdf2Hex } from "../common/index.js";
+import { jsonResponse, parseCookie, pbkdf2Hex, timingSafeEqual } from "../common/index.js";
 import { signHmac } from "../secrets.js";
 import {
   SHARE_ACCESS_TTL_SECONDS,
@@ -52,7 +52,7 @@ export async function hasShareAccess(env, request, token, row) {
     Date.now() >= Number(exp) * 1000
   )
     return false;
-  return value === (await signShareAccess(env, token, Number(exp)));
+  return timingSafeEqual(value, await signShareAccess(env, token, Number(exp)));
 }
 
 export function sharePasswordRequiredResponse(item) {

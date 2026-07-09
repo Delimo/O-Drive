@@ -5,7 +5,6 @@ import {
   encodeBase64Url,
   decodeBase64UrlJson,
   parseCookie,
-  bytesToHex,
   randomHex,
   pbkdf2Hex,
 } from "./common/index.js";
@@ -17,14 +16,6 @@ const ACCESS_TTL = 12 * 60 * 60 * 1000;
 const PASSWORD_ITERATIONS = 210000;
 const UNLOCK_MAX_ATTEMPTS = 5;
 const UNLOCK_LOCK_MS = 15 * 60 * 1000;
-
-async function sha256Hex(value) {
-  const bytes = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
-  return bytesToHex(new Uint8Array(bytes));
-}
 
 async function hashPassword(password, salt) {
   const iterations = PASSWORD_ITERATIONS;
@@ -41,8 +32,7 @@ async function verifyPassword(password, rule) {
     const candidate = await pbkdf2Hex(password, rule.salt, iterations);
     return candidate === parts[2];
   }
-  const legacy = await sha256Hex(`${rule.salt}:${password}`);
-  return legacy === stored;
+  return false;
 }
 
 async function sign(value, env) {

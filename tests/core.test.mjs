@@ -43,6 +43,7 @@ import {
 import { API_ROUTE_POLICIES, getApiRoutePolicy } from '../functions/api/lib/route-policy.js';
 import { ADMIN_ROUTE_DISPATCHERS, PUBLIC_ROUTE_DISPATCHERS } from '../functions/api/lib/router.js';
 import { SHARE_MIGRATION_SQL } from '../functions/api/lib/schema.js';
+import { writeUploadIndex } from '../functions/api/lib/file-mutations/helpers.js';
 
 import { makeEnv } from './helpers/make-env.mjs';
 import { resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
@@ -2448,6 +2449,25 @@ test('admin quota endpoint remains compatible for legacy reads and writes', asyn
   const data = await loaded.json();
   assert.equal(data.quota, expected);
   assert.equal(data.quotaFormatted, '9.5 GB');
+});
+
+test('admin quota endpoint writes the runtime storage config', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  await handleAdminQuota(env, new Request('https://example.com/api/admin/settings/quota', {
+    method: 'PUT',
+    body: JSON.stringify({ bytes: '1B' }),
+    headers: { 'Content-Type': 'application/json' },
+  }), 'PUT');
+
+  const form = new FormData();
+  form.append('file', new File(['hello'], 'quota-blocked.txt', { type: 'text/plain' }));
+  const upload = await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: form }), '');
+  const data = await upload.json();
+
+  assert.equal(upload.status, 507);
+  assert.equal(data.code, 'QUOTA_EXCEEDED');
 });
 
 test('legacy global quota no longer blocks uploads', async () => {
@@ -4892,6 +4912,76 @@ test('webhook notifications ignore legacy env settings', async () => {
   }
 });
 
+test('webhook delivery history redacts sensitive headers and retry uses current config', async () => {
+  const env = makeEnv();
+  env.ADMIN_USERNAME = 'admin';
+  env.ADMIN_PASSWORD = 'admin-secret';
+  await env.D1.prepare("INSERT OR REPLACE INTO kv_config (key, value) VALUES (?, ?)")
+    .bind('webhooks', JSON.stringify([{
+      name: 'secret-hook',
+      url: 'https://hooks.example.test/secret',
+      headers: { Authorization: 'Bearer real-secret', 'X-Trace': 'trace-id' },
+      events: ['folder.created'],
+    }]))
+    .run();
+
+  const calls = [];
+  const waitUntilPromises = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), headers: init?.headers || {} });
+    return new Response(calls.length <= 3 ? 'fail' : 'ok', { status: calls.length <= 3 ? 500 : 200 });
+  };
+
+  try {
+    const login = await onRequest({
+      env,
+      request: new Request('https://example.com/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'admin-secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    const loginData = await login.json();
+    const cookie = login.headers.get('Set-Cookie');
+
+    const mkdir = await onRequest({
+      env,
+      request: new Request('https://example.com/api/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ folderName: 'webhook-redaction' }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+      waitUntil(promise) {
+        waitUntilPromises.push(promise);
+      },
+    });
+    assert.equal(mkdir.status, 200);
+    await Promise.all(waitUntilPromises);
+
+    const deliveries = await env.D1.prepare("SELECT * FROM webhook_deliveries ORDER BY created_at DESC, id DESC LIMIT 20").all();
+    assert.equal(deliveries.results.length, 1);
+    const storedEndpoint = JSON.parse(deliveries.results[0].endpoint_config);
+    assert.equal(storedEndpoint.headers.Authorization, '[REDACTED]');
+    assert.equal(storedEndpoint.headers['X-Trace'], 'trace-id');
+    assert.equal(JSON.stringify(storedEndpoint).includes('real-secret'), false);
+
+    const retry = await onRequest({
+      env,
+      request: new Request('https://example.com/api/admin/webhook-deliveries/retry', {
+        method: 'POST',
+        body: JSON.stringify({ id: deliveries.results[0].id }),
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': loginData.csrf },
+      }),
+    });
+    assert.equal(retry.status, 200);
+    assert.equal(calls.at(-1).headers.Authorization, 'Bearer real-secret');
+    assert.equal(calls.at(-1).headers['X-Trace'], 'trace-id');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('admin health reports bindings and required env vars', async () => {
   const env = makeEnv();
   env.ADMIN_USERNAME = 'admin';
@@ -4988,6 +5078,25 @@ test('upload check returns exists false for unknown content', async () => {
   assert.equal(data.success, true);
   assert.equal(data.exists, false);
   assert.equal(await getFileIndexEntry(env, 'unknown.txt'), null);
+});
+
+test('upload index rename retries when a resolved candidate is concurrently taken', async () => {
+  const env = makeEnv();
+  await upsertFileIndex(env, 'race.txt', { size: 1, uploaded: Date.now() });
+  await upsertFileIndex(env, 'race (1).txt', { size: 1, uploaded: Date.now() });
+
+  const indexed = await writeUploadIndex(env, 'race.txt', {
+    size: 2,
+    contentType: 'text/plain',
+    uploaded: Date.now(),
+    storageId: 'r2',
+    objectKey: 'objects/sha256/race',
+  }, 'rename', { firstKey: 'race (1).txt' });
+
+  assert.equal(indexed.key, 'race (2).txt');
+  assert.equal(indexed.renamed, true);
+  const entry = await getFileIndexEntry(env, 'race (2).txt');
+  assert.equal(entry.object_key, 'objects/sha256/race');
 });
 
 test('upload check returns exists true and creates file index for known content', async () => {
@@ -5114,6 +5223,45 @@ test('multipart upload with sha256 skipped when already exists', async () => {
   const storageObjects = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
   assert.equal(storageObjects.results.length, 1);
   assert.equal(storageObjects.results[0].ref_count, 2);
+});
+
+test('multipart dedup race retries final index and removes assembled temp', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  const uploadForm = new FormData();
+  uploadForm.append('file', new File(['hello'], 'multipart-seed.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files', { method: 'POST', body: uploadForm }), '');
+  const storageObjs = await env.D1.prepare('SELECT * FROM storage_objects ORDER BY object_key ASC').all();
+  const sha256 = storageObjs.results[0]?.sha256;
+  const size = storageObjs.results[0]?.size || 5;
+  const seedEntry = await getFileIndexEntry(env, 'multipart-seed.txt');
+
+  await upsertFileIndex(env, 'race-mp.txt', { size: 1, uploaded: Date.now() });
+  const create = await handleMultipartCreate(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ targetDir: '/', name: 'race-mp.txt', type: 'text/plain', conflict: 'rename' }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const created = await create.json();
+  assert.equal(created.key, 'race-mp (1).txt');
+
+  await env.R2.put(created.key, 'hello', { httpMetadata: { contentType: 'text/plain' } });
+  await upsertFileIndex(env, created.key, { size: 1, uploaded: Date.now(), objectKey: 'objects/race-winner' });
+
+  const complete = await handleMultipartComplete(env, new Request('https://example.com', {
+    method: 'POST',
+    body: JSON.stringify({ key: created.key, uploadId: created.uploadId, parts: [{ partNumber: 1, etag: 'etag-1' }], sha256, size }),
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const data = await complete.json();
+  assert.equal(data.success, true);
+  assert.equal(data.skippedUpload, true);
+  assert.equal(data.key, 'race-mp (2).txt');
+
+  const entry = await getFileIndexEntry(env, 'race-mp (2).txt');
+  assert.equal(entry.object_key, seedEntry.object_key);
+  assert.equal(await env.R2.head(created.key), null);
 });
 
 test('multipart upload without sha256 works as before', async () => {

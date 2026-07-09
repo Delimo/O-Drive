@@ -5,8 +5,7 @@ import {
   ensureStorageObjectsTable,
   createStorageObject,
 } from "../storage-objects.js";
-import { upsertFileIndex } from "../file-index/index.js";
-import { assertUserKey, normalizeUserKey, resolveUploadConflict } from "./helpers.js";
+import { assertUserKey, normalizeUserKey, resolveUploadConflict, writeUploadIndex } from "./helpers.js";
 
 export async function handleUploadCheck(env, request) {
   const { targetDir, name, size, sha256, conflict } = await request.json().catch(() => ({}));
@@ -43,13 +42,14 @@ export async function handleUploadCheck(env, request) {
     reserved = true;
   }
   try {
-    await upsertFileIndex(env, resolved.key, {
+    const indexed = await writeUploadIndex(env, key, {
       size: sizeNum,
       contentType: "",
       uploaded: Date.now(),
       storageId,
       objectKey: storageObject.object_key,
-    });
+    }, conflictMode, { firstKey: resolved.key });
+    resolved.key = indexed.key;
   } finally {
     if (reserved) await releaseReservedQuota(env, storageId, sizeNum);
   }

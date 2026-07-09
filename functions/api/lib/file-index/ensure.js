@@ -26,7 +26,11 @@ const UPSERT_SQL = `INSERT INTO file_index (path, storage_id, object_key, name, 
     uploaded_at = excluded.uploaded_at,
     updated_at = excluded.updated_at`;
 
-export { UPSERT_SQL };
+const INSERT_IF_ABSENT_SQL = `INSERT INTO file_index (path, storage_id, object_key, name, parent, kind, size, content_type, uploaded_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(path) DO NOTHING`;
+
+export { UPSERT_SQL, INSERT_IF_ABSENT_SQL };
 
 async function runStatement(statement) {
   if (typeof statement.bind === "function") return statement.bind().run();

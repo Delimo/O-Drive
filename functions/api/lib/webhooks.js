@@ -21,6 +21,8 @@ const DELIVERY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const DELIVERY_RETENTION_ROWS = 200;
 const WEBHOOK_MSG_TYPES = ["json", "text", "markdown"];
 const WEBHOOK_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
+const REDACTED_HEADER_VALUE = "[REDACTED]";
+const SENSITIVE_HEADER_RE = /^(authorization|proxy-authorization|cookie|set-cookie|x-api-key|x-auth-token|x-token|api-key|token)$/i;
 const WEBHOOK_EVENTS = [
   "file.uploaded",
   "file.deleted",
@@ -249,6 +251,21 @@ const WEBHOOK_ALLOWLIST_KEYS = [
 function isTruthyEnv(value) {
   return ["1", "true", "yes", "on", "strict"].includes(
     String(value || "").trim().toLowerCase(),
+  );
+}
+
+function redactHeaders(headers) {
+  return Object.fromEntries(
+    Object.entries(parseHeaders(headers)).map(([key, value]) => [
+      key,
+      SENSITIVE_HEADER_RE.test(key) ? REDACTED_HEADER_VALUE : value,
+    ]),
+  );
+}
+
+function removeRedactedHeaders(headers) {
+  return Object.fromEntries(
+    Object.entries(parseHeaders(headers)).filter(([, value]) => value !== REDACTED_HEADER_VALUE),
   );
 }
 
@@ -554,6 +571,21 @@ function safeJsonParse(value, fallback = null) {
   }
 }
 
+function endpointForDeliveryHistory(endpoint = {}) {
+  return {
+    id: String(endpoint.id || ""),
+    name: String(endpoint.name || ""),
+    msgtype: String(endpoint.msgtype || "json"),
+    url: String(endpoint.url || ""),
+    method: String(endpoint.method || "POST"),
+    contentType: String(endpoint.contentType || "application/json"),
+    headers: redactHeaders(endpoint.headers),
+    body: String(endpoint.body || ""),
+    events: Array.isArray(endpoint.events) ? endpoint.events : [],
+    enabled: endpoint.enabled !== false,
+  };
+}
+
 async function recordDelivery(
   env,
   endpoint,
@@ -578,7 +610,7 @@ async function recordDelivery(
         result.error || "",
         Number(result.durationMs || 0),
         JSON.stringify(payload || {}),
-        JSON.stringify(endpoint || {}),
+        JSON.stringify(endpointForDeliveryHistory(endpoint)),
         Number(retryOf || 0),
         createdAt,
       )
@@ -725,16 +757,20 @@ export async function retryWebhookDelivery(env, deliveryId) {
 
   const storedEndpoint = safeJsonParse(row.endpoint_config, null);
   const configured = await loadWebhookEndpoints(env);
-  const fallbackEndpoint =
+  const configuredEndpoint =
     configured.find(
       (endpoint) =>
         endpoint.url === row.url &&
         (endpoint.name || endpointLabel(endpoint)) === row.endpoint,
     ) ||
-    configured.find((endpoint) => endpoint.url === row.url) ||
-    { name: row.endpoint || "", url: row.url || "" };
+    configured.find((endpoint) => endpoint.url === row.url);
+  const fallbackEndpoint =
+    configuredEndpoint ||
+    (storedEndpoint
+      ? { ...storedEndpoint, headers: removeRedactedHeaders(storedEndpoint.headers) }
+      : { name: row.endpoint || "", url: row.url || "" });
   const normalized = normalizeWebhookEndpoints([
-    storedEndpoint || fallbackEndpoint,
+    fallbackEndpoint,
   ])[0];
   if (!normalized) {
     return { success: false, message: "Original webhook endpoint is invalid", status: 400 };

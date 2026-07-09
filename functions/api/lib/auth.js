@@ -246,7 +246,7 @@ export async function handleLogin(request, env, context = {}) {
     await sleep(accountThrottle.delayMs);
   }
 
-  if (username === env.ADMIN_USERNAME && await timingSafeEqual(password, env.ADMIN_PASSWORD)) {
+  if (await timingSafeEqual(username, env.ADMIN_USERNAME) && await timingSafeEqual(password, env.ADMIN_PASSWORD)) {
     await Promise.all([clearLoginAttempt(env, ip), clearLoginAttempt(env, accountKey)]);
     const csrf = createCsrfToken();
     const now = Math.floor(Date.now() / 1000);

@@ -1,5 +1,5 @@
 import { normalizeName, isReservedKey } from "../common/index.js";
-import { getFileIndexEntry } from "../file-index/index.js";
+import { getFileIndexEntry, insertFileIndexIfAbsent, upsertFileIndex } from "../file-index/index.js";
 import { resolveExistingStorageId, storageHead, storageList } from "../storage.js";
 import { mapWithConcurrency } from "../r2-tree.js";
 
@@ -66,16 +66,7 @@ export async function resolveUploadConflict(env, key, mode = "error") {
     throw err;
   }
 
-  const slash = key.lastIndexOf("/");
-  const dir = slash >= 0 ? key.slice(0, slash + 1) : "";
-  const name = slash >= 0 ? key.slice(slash + 1) : key;
-  const dot = name.lastIndexOf(".");
-  const base = dot > 0 ? name.slice(0, dot) : name;
-  const ext = dot > 0 ? name.slice(dot) : "";
-  const candidates = Array.from(
-    { length: 100 },
-    (_, i) => `${dir}${base} (${i + 1})${ext}`,
-  );
+  const candidates = uploadConflictCandidates(key);
   const placeholders = candidates.map(() => "?").join(",");
   try {
     const existing = await env.D1.prepare(
@@ -89,6 +80,64 @@ export async function resolveUploadConflict(env, key, mode = "error") {
         return { key: candidate, skipped: false, conflict: true };
     }
   } catch (_) {}
+  throw new Error("Unable to generate unique filename");
+}
+
+function normalizeConflictMode(mode = "error") {
+  return ["error", "overwrite", "rename", "skip"].includes(mode)
+    ? mode
+    : "error";
+}
+
+export function uploadConflictCandidates(key, limit = 100) {
+  const slash = key.lastIndexOf("/");
+  const dir = slash >= 0 ? key.slice(0, slash + 1) : "";
+  const name = slash >= 0 ? key.slice(slash + 1) : key;
+  const dot = name.lastIndexOf(".");
+  const base = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : "";
+  return Array.from(
+    { length: limit },
+    (_, i) => `${dir}${base} (${i + 1})${ext}`,
+  );
+}
+
+function targetExistsError() {
+  const err = new Error("Target already exists");
+  err.status = 409;
+  return err;
+}
+
+export async function writeUploadIndex(env, originalKey, meta = {}, mode = "error", options = {}) {
+  const conflictMode = normalizeConflictMode(mode);
+  const firstKey = options.firstKey || originalKey;
+  if (conflictMode === "overwrite") {
+    await upsertFileIndex(env, firstKey, meta);
+    return { key: firstKey, skipped: false, renamed: firstKey !== originalKey };
+  }
+
+  const attempted = new Set();
+  const tryInsert = async (candidate) => {
+    if (!candidate || attempted.has(candidate)) return null;
+    attempted.add(candidate);
+    if (await insertFileIndexIfAbsent(env, candidate, meta)) {
+      return { key: candidate, skipped: false, renamed: candidate !== originalKey };
+    }
+    if (conflictMode === "skip") {
+      return { key: candidate, skipped: true, renamed: false };
+    }
+    if (conflictMode !== "rename") throw targetExistsError();
+    return null;
+  };
+
+  const first = await tryInsert(firstKey);
+  if (first) return first;
+
+  if (conflictMode !== "rename") throw targetExistsError();
+  for (const candidate of uploadConflictCandidates(originalKey)) {
+    const result = await tryInsert(candidate);
+    if (result) return result;
+  }
   throw new Error("Unable to generate unique filename");
 }
 

@@ -20,6 +20,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
   const storageUsageRows = [];
   const storageObjectRows = [];
   const storageQuotaCounterRows = [];
+  const multipartUploadRows = [];
   const shareRows = [];
   const shareAccessLogRows = [];
   let shareAccessLogNextId = 1;
@@ -278,6 +279,21 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 created_at: Number(statement.bound?.[7] || 0),
               });
             }
+            if (/INSERT OR IGNORE INTO multipart_uploads/i.test(sql)) {
+              const row = {
+                upload_id: statement.bound?.[0],
+                storage_id: statement.bound?.[1] || 'r2',
+                key: statement.bound?.[2],
+                original_key: statement.bound?.[3] || '',
+                conflict_mode: statement.bound?.[4] || 'error',
+                total_size: Number(statement.bound?.[5] || 0),
+                created_at: Number(statement.bound?.[6] || 0),
+              };
+              if (!multipartUploadRows.some(item => item.upload_id === row.upload_id)) {
+                multipartUploadRows.push(row);
+                changes = 1;
+              }
+            }
             if (/INSERT INTO path_passwords/i.test(sql)) {
               const row = {
                 path: statement.bound?.[0],
@@ -306,8 +322,15 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 updated_at: hasObjectKey ? statement.bound?.[9] : (statement.bound?.length >= 9 ? statement.bound?.[8] : statement.bound?.[7]),
               };
               const idx = fileIndexRows.findIndex(item => item.path === row.path);
-              if (idx >= 0) fileIndexRows[idx] = row;
-              else fileIndexRows.push(row);
+              if (idx >= 0) {
+                if (/ON CONFLICT\(path\) DO NOTHING/i.test(sql)) {
+                  return { meta: { changes: 0 } };
+                }
+                fileIndexRows[idx] = row;
+              } else {
+                fileIndexRows.push(row);
+              }
+              changes = 1;
             }
             if (/INSERT OR REPLACE INTO storage_usage/i.test(sql)) {
               const row = {
@@ -789,6 +812,12 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 if (Number(apiRateLimitRows[i].window_start || 0) < cutoff) { apiRateLimitRows.splice(i, 1); changes++; }
               }
             }
+            if (/DELETE FROM multipart_uploads WHERE upload_id = \?/i.test(sql)) {
+              const uploadId = statement.bound?.[0];
+              for (let i = multipartUploadRows.length - 1; i >= 0; i--) {
+                if (multipartUploadRows[i].upload_id === uploadId) { multipartUploadRows.splice(i, 1); changes++; }
+              }
+            }
             if (/DELETE FROM webhook_deliveries WHERE created_at < \?/i.test(sql)) {
               const cutoff = Number(statement.bound?.[0] || 0);
               for (let i = webhookDeliveryRows.length - 1; i >= 0; i--) {
@@ -983,6 +1012,9 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             if (/SELECT \* FROM trash WHERE id = \?/i.test(sql)) return trashRows.find(row => row.id === statement.bound?.[0]) || null;
             if (/SELECT \* FROM share_links WHERE token = \?/i.test(sql)) return shareRows.find(row => row.token === statement.bound?.[0]) || null;
             if (/SELECT \* FROM file_tasks WHERE id = \?/i.test(sql)) return taskRows.find(row => row.id === statement.bound?.[0]) || null;
+            if (/SELECT \* FROM multipart_uploads WHERE upload_id = \?/i.test(sql)) {
+              return multipartUploadRows.find(row => row.upload_id === statement.bound?.[0]) || null;
+            }
             if (/SELECT \* FROM webhook_deliveries WHERE id = \?/i.test(sql)) {
               return webhookDeliveryRows.find(row => row.id === Number(statement.bound?.[0])) || null;
             }
@@ -1081,6 +1113,10 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
             return null;
           },
           async all() {
+            if (/SELECT upload_id, storage_id, key, total_size FROM multipart_uploads WHERE created_at < \?/i.test(sql)) {
+              const cutoff = Number(statement.bound?.[0] || 0);
+              return { results: multipartUploadRows.filter(row => Number(row.created_at || 0) < cutoff) };
+            }
             if (/SELECT \* FROM storage_objects ORDER BY/i.test(sql)) {
               return { results: [...storageObjectRows] };
             }

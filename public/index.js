@@ -405,11 +405,116 @@ function navigateToExplorerPath(path = '') {
   store.dispatch(thunks.loadExplorer());
 }
 
+function shallowEqualValue(a, b) {
+  if (Object.is(a, b)) return true;
+  if (!a || !b) return false;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
+  }
+  if (typeof a === "object" && typeof b === "object") {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    return aKeys.length === bKeys.length && aKeys.every((key) => Object.is(a[key], b[key]));
+  }
+  return false;
+}
+
+function selectAdminRenderState(state) {
+  const admin = state.admin;
+  const base = [admin.activeTab, admin.loading, admin.error, admin.statsLoadingHint];
+  if (admin.activeTab === "overview") {
+    return [...base, admin.stats];
+  }
+  if (admin.activeTab === "storage") {
+    return [
+      ...base,
+      admin.storageConfig,
+      admin.storageConfigLoading,
+      admin.storageConfigError,
+      admin.storageConfigSaving,
+      admin.trashRetention,
+      admin.trashRetentionLoading,
+      admin.trashCleanupBusy,
+      admin.trashPreviewItems,
+      admin.trashPreviewLoading,
+      admin.trashPreviewError,
+      admin.protectedPaths,
+      admin.protectedPathsLoading,
+      admin.protectedPathsError,
+      admin.hiddenPaths,
+      admin.hiddenPathsLoading,
+      admin.hiddenPathsError,
+      admin.accessRuleDraft,
+      admin.accessRuleSaving,
+    ];
+  }
+  if (admin.activeTab === "shares") {
+    return [
+      ...base,
+      admin.shares,
+      admin.sharesLoading,
+      admin.sharesError,
+      admin.shareBusyToken,
+      admin.shareFilter,
+      admin.shareSearch,
+      admin.sharePage,
+    ];
+  }
+  if (admin.activeTab === "logs") {
+    return [
+      ...base,
+      admin.logs,
+      admin.logsLoading,
+      admin.logsError,
+      admin.logsPage,
+      admin.logsTotalPages,
+      admin.logsFilter,
+    ];
+  }
+  if (admin.activeTab === "system") {
+    return [
+      ...base,
+      admin.health,
+      admin.healthLoading,
+      admin.healthError,
+      admin.quota,
+      admin.quotaLoading,
+      admin.quotaError,
+      admin.maintenance,
+      admin.maintenanceLoading,
+      admin.maintenanceError,
+      admin.maintenanceBusyAction,
+      admin.tasks,
+      admin.tasksLoading,
+      admin.taskRetryingId,
+      admin.taskAlertConfig,
+      admin.taskAlertConfigSaving,
+      admin.activeUploadTaskId,
+    ];
+  }
+  if (admin.activeTab === "webhook") {
+    return [
+      ...base,
+      admin.webhooks,
+      admin.webhooksLoading,
+      admin.webhooksError,
+      admin.webhookDeliveries,
+      admin.webhookDeliveriesLoading,
+      admin.webhookRetryingId,
+      admin.webhookRecordTab,
+      admin.adminNotifHistory,
+      admin.adminNotifHistoryLoading,
+      admin.adminNotifFilter,
+    ];
+  }
+  return base;
+}
+
 function subscribeSlice(selector, fn) {
   let prev = selector(store.getState());
   return store.subscribe(() => {
     const next = selector(store.getState());
-    if (next !== prev) {
+    if (!shallowEqualValue(next, prev)) {
       prev = next;
       fn();
     }
@@ -428,15 +533,48 @@ const unsubscribers = [
       const path = selected ? normalizeKey(getEntryPath(selected)) : "";
       const stats = path ? s.explorer.folderStats?.[path] : null;
       const error = path ? s.explorer.folderStatsErrors?.[path] || "" : "";
-      return `${s.explorer.selectedKey}|${path}|${s.explorer.folderStatsLoadingKey}|${error}|${stats?.fileCount ?? ""}|${stats?.folderCount ?? ""}|${stats?.directFileCount ?? ""}|${stats?.totalSize ?? ""}|${stats?.latestTime ?? ""}|${stats?.truncated ?? ""}`;
+      return [
+        s.explorer.selectedKey,
+        path,
+        s.explorer.folderStatsLoadingKey,
+        error,
+        stats?.fileCount,
+        stats?.folderCount,
+        stats?.directFileCount,
+        stats?.totalSize,
+        stats?.latestTime,
+        stats?.truncated,
+      ];
     }, renderDetailDrawerRegion),
     subscribeSlice(
-      s => `${s.explorer.folders?.length}|${s.explorer.files?.length}|${s.explorer.sort}|${s.explorer.view}|${s.explorer.filter}|${s.explorer.loading}|${s.explorer.query}|${s.explorer.trashMode}|${s.explorer.searching}|${s.explorer.hasMore}|${s.explorer.selectedKeys?.length}|${s.explorer.trashSelectedKeys?.length}|${s.explorer.trashBatchBusy}|${s.explorer.clipboard?.paths?.length}|${s.explorer.showFilters}|${s.explorer.filterKind}|${s.explorer.filterMinSize}|${s.explorer.filterMaxSize}|${s.explorer.filterDateFrom}|${s.explorer.filterDateTo}`,
+      s => [
+        s.explorer.folders,
+        s.explorer.files,
+        s.explorer.trashItems,
+        s.explorer.sort,
+        s.explorer.view,
+        s.explorer.filter,
+        s.explorer.loading,
+        s.explorer.query,
+        s.explorer.trashMode,
+        s.explorer.searching,
+        s.explorer.hasMore,
+        s.explorer.selectedKeys,
+        s.explorer.trashSelectedKeys,
+        s.explorer.trashBatchBusy,
+        s.explorer.clipboard,
+        s.explorer.showFilters,
+        s.explorer.filterKind,
+        s.explorer.filterMinSize,
+        s.explorer.filterMaxSize,
+        s.explorer.filterDateFrom,
+        s.explorer.filterDateTo,
+      ],
       renderExplorerRegion,
     ),
   ] : []),
   ...(page === 'admin' ? [
-    subscribeSlice(s => s.admin, render),
+    subscribeSlice(selectAdminRenderState, render),
   ] : []),
   ...(page === 'share' ? [
     subscribeSlice(s => s.app.role, render),

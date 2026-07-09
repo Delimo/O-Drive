@@ -1,5 +1,5 @@
 import { jsonResponse, addLog } from "../common/index.js";
-import { countFileIndexObjectRefs, getFileIndexEntry, upsertFileIndex } from "../file-index/index.js";
+import { countFileIndexObjectRefs, getFileIndexEntry } from "../file-index/index.js";
 import {
   releaseReservedQuota,
   resolveExistingStorageId,
@@ -19,7 +19,7 @@ import {
   getStorageObjectByHash,
   storageObjectKeyForSha256,
 } from "../storage-objects.js";
-import { assertUserKey, resolveUploadConflict, uploadKey } from "./helpers.js";
+import { assertUserKey, resolveUploadConflict, uploadKey, writeUploadIndex } from "./helpers.js";
 
 const ORPHAN_MULTIPART_TTL_MS = 24 * 60 * 60 * 1000;
 const _trackingReady = new WeakSet();
@@ -32,21 +32,44 @@ async function ensureMultipartTrackingTable(env) {
         upload_id TEXT PRIMARY KEY,
         storage_id TEXT NOT NULL DEFAULT 'r2',
         key TEXT NOT NULL,
+        original_key TEXT NOT NULL DEFAULT '',
+        conflict_mode TEXT NOT NULL DEFAULT 'error',
         total_size INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER NOT NULL
       )`,
     ).run();
+    try {
+      await env.D1.prepare(
+        "ALTER TABLE multipart_uploads ADD COLUMN original_key TEXT NOT NULL DEFAULT ''",
+      ).run();
+    } catch (_) {}
+    try {
+      await env.D1.prepare(
+        "ALTER TABLE multipart_uploads ADD COLUMN conflict_mode TEXT NOT NULL DEFAULT 'error'",
+      ).run();
+    } catch (_) {}
     _trackingReady.add(env);
   } catch (_) {}
 }
 
-async function trackMultipartUpload(env, storageId, uploadId, key, totalSize) {
+async function trackMultipartUpload(env, storageId, uploadId, key, originalKey, conflictMode, totalSize) {
   await ensureMultipartTrackingTable(env);
   try {
     await env.D1.prepare(
-      "INSERT OR IGNORE INTO multipart_uploads (upload_id, storage_id, key, total_size, created_at) VALUES (?, ?, ?, ?, ?)",
-    ).bind(uploadId, storageId, key, Number(totalSize || 0), Date.now()).run();
+      "INSERT OR IGNORE INTO multipart_uploads (upload_id, storage_id, key, original_key, conflict_mode, total_size, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    ).bind(uploadId, storageId, key, originalKey, conflictMode, Number(totalSize || 0), Date.now()).run();
   } catch (_) {}
+}
+
+async function getTrackedMultipartUpload(env, uploadId) {
+  await ensureMultipartTrackingTable(env);
+  try {
+    return await env.D1.prepare(
+      "SELECT * FROM multipart_uploads WHERE upload_id = ?",
+    ).bind(uploadId).first();
+  } catch (_) {
+    return null;
+  }
 }
 
 async function untrackMultipartUpload(env, uploadId) {
@@ -101,7 +124,7 @@ export async function handleMultipartCreate(env, request) {
   const upload = await storageCreateMultipartUpload(env, storageId, resolved.key, {
     httpMetadata: { contentType: type || "application/octet-stream" },
   });
-  await trackMultipartUpload(env, storageId, upload.uploadId, resolved.key, Number(totalSize || size || 0));
+  await trackMultipartUpload(env, storageId, upload.uploadId, resolved.key, key, conflict, Number(totalSize || size || 0));
   return jsonResponse({
     key: upload.key,
     uploadId: upload.uploadId,
@@ -142,6 +165,10 @@ export async function handleMultipartPart(env, request, url) {
 
 async function completeAndDeduplicate(env, request, body, storageId, key) {
   const { uploadId, parts, sha256, size: bodySize } = body;
+  const completedKey = key;
+  const tracked = await getTrackedMultipartUpload(env, uploadId);
+  const originalKey = tracked?.original_key || key;
+  const conflictMode = tracked?.conflict_mode || "error";
   const object = await storageCompleteMultipartUpload(
     env,
     storageId,
@@ -151,16 +178,18 @@ async function completeAndDeduplicate(env, request, body, storageId, key) {
   );
   if (!sha256 || !(await ensureStorageObjectsTable(env))) {
     const meta = await storageHead(env, storageId, key);
-    await upsertFileIndex(env, key, {
+    const indexed = await writeUploadIndex(env, originalKey, {
       ...(meta || { uploaded: Date.now() }),
       storageId,
-    });
-    await addLog(env, request, "UPLOAD", key);
+      objectKey: key,
+    }, conflictMode, { firstKey: key });
+    await addLog(env, request, "UPLOAD", indexed.key);
     return jsonResponse({
       success: true,
-      key: object.key,
+      key: indexed.key,
       etag: object.httpEtag,
       storageId,
+      renamed: indexed.key !== originalKey,
     });
   }
   const meta = await storageHead(env, storageId, key);
@@ -176,7 +205,7 @@ async function completeAndDeduplicate(env, request, body, storageId, key) {
   const skippedUpload = Boolean(storageObject);
   if (storageObject) {
     // Dedup hit: existing storage_object found. The assembled temp at `key`
-    // will be cleaned up after upsertFileIndex succeeds (see finally below).
+    // will be cleaned up after the file index write succeeds (see finally below).
   } else {
     if (size > 0) {
       if (!(await tryReserveStorageQuota(env, storageId, size))) {
@@ -206,18 +235,19 @@ async function completeAndDeduplicate(env, request, body, storageId, key) {
   }
   if (storageObject) {
     try {
-      await upsertFileIndex(env, key, {
+      const indexed = await writeUploadIndex(env, originalKey, {
         size,
         contentType,
         uploaded: Date.now(),
         storageId,
         objectKey: storageObject.object_key,
-      });
+      }, conflictMode, { firstKey: key });
+      key = indexed.key;
       // Clean up the assembled temp key now that the index is updated.
       // For the dedup path this removes the assembled multipart object;
       // for the non-dedup path it was already deleted above.
       if (skippedUpload) {
-        try { await storageDelete(env, storageId, key); } catch (_) {}
+        try { await storageDelete(env, storageId, completedKey); } catch (_) {}
       }
     } finally {
       if (size > 0) await releaseReservedQuota(env, storageId, size);

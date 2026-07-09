@@ -1,6 +1,6 @@
 import { isReservedKey } from "../common/index.js";
 import { recordStorageObjectReferenceChange } from "../storage-objects.js";
-import { ensureFileIndexTable, UPSERT_SQL } from "./ensure.js";
+import { ensureFileIndexTable, INSERT_IF_ABSENT_SQL, UPSERT_SQL } from "./ensure.js";
 import { indexedFileKind, nameOf, parentOf, uploadedMs, indexableKey } from "./helpers.js";
 import { ensureStorageUsageTable } from "./ensure.js";
 import { clearStorageUsedCache } from "./stats.js";
@@ -65,6 +65,10 @@ async function getPreviousIndexRow(env, key) {
   }
 }
 
+function changeCount(result) {
+  return Number(result?.meta?.changes ?? result?.changes ?? 0);
+}
+
 export async function upsertFileIndex(env, key, meta = {}) {
   if (!indexableKey(key) || !(await ensureFileIndexTable(env))) return false;
   try {
@@ -92,6 +96,31 @@ export async function upsertFileIndex(env, key, meta = {}) {
       );
     }
     await recordStorageObjectReferenceChange(env, previous, {
+      storageId: nextStorageId,
+      objectKey: nextObjectKey,
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function insertFileIndexIfAbsent(env, key, meta = {}) {
+  if (!indexableKey(key) || !(await ensureFileIndexTable(env))) return false;
+  try {
+    const nextStorageId = meta.storageId || meta.storage_id || "r2";
+    const nextObjectKey = meta.objectKey || meta.object_key || key;
+    const res = await env.D1.prepare(INSERT_IF_ABSENT_SQL)
+      .bind(...buildUpsertParams(key, meta))
+      .run();
+    if (changeCount(res) <= 0) return false;
+    await addStorageUsage(
+      env,
+      nextStorageId,
+      nextObjectKey,
+      Number(meta.size || 0),
+    );
+    await recordStorageObjectReferenceChange(env, null, {
       storageId: nextStorageId,
       objectKey: nextObjectKey,
     });
