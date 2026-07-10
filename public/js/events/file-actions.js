@@ -46,6 +46,11 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       return;
     }
 
+    if (action === "show-more-entries") {
+      store.dispatch(actions.explorer.raiseDisplayLimit());
+      return;
+    }
+
     if (action === "cycle-sort") {
       const next = state.explorer.sort === "smart" ? "time" : state.explorer.sort === "time" ? "size" : "smart";
       store.dispatch(actions.explorer.setSort(next));

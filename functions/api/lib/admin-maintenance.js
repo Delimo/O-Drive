@@ -127,7 +127,7 @@ export async function handleAdminMaintenanceAction(env, request) {
       env,
       request,
       "MAINTENANCE",
-      `重建文件索引，同步 ${result.synced || 0} 个文件${result.truncated ? "，已达扫描上限" : ""}`,
+      `重建文件索引，同步 ${result.synced || 0} 个文件，清理 ${result.removed || 0} 条失效索引${result.truncated ? "，已达扫描上限" : ""}`,
     );
     return jsonResponse({ success: true, action, ...result });
   }

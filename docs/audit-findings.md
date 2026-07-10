@@ -1,188 +1,155 @@
 # O-Drive 代码审计发现
 
-> 本文档已按当前项目代码重新核对（2026-07-04）。
-> 它不再作为“原始漏洞描述逐条待修”的清单，而是区分为：当前仍待处理、需要维护决策、已修复历史问题、已核实无问题。
+> 记录时间：2026-07-10。本文档来自一次整体代码评审（文档核对 + 关键链路代码抽查），按当前代码库逐项核实。
+> 按 docs 治理约定，本清单属于阶段性过程文档：条目修复并验证后，把仍有价值的结论合并进 `maintenance-handoff.md` 或对应主题文档，然后删除本文件。
 
 ## 当前结论
 
-当前主风险已经从最初的 D1/R2 并发一致性问题，收敛到少量低到中优先级的安全硬化和维护债务。
+项目整体质量高：架构分层有测试守护、鉴权与 SSRF 防护完整、测试与文档投入扎实。本次评审的核心新发现 IX1（索引级数据丢失隐患）及全部 MEDIUM 项已于 2026-07-10 修复并通过 `npm run check`（269 测试全绿），详见文末"已修复"章节。剩余为中低优先级维护债务。
 
-仍建议继续跟进的项目：
-
-| 优先级 | 发现 | 当前状态 |
+| 优先级 | 发现 | 严重度 |
 | --- | --- | --- |
-| 1 | [U3 conflict 解析仍有竞态](#u3-conflict-解析仍有竞态medium) | 仍存在 |
-| 2 | [S5 Webhook 认证头明文存储](#s5-webhook-认证头明文存储medium) | 仍存在 |
-| 3 | [A3 分享访问 cookie 非常量时间比较](#a3-分享访问-cookie-非常量时间比较low) | 仍存在 |
-| 4 | [A4 用户名 === 比较](#a4-用户名--比较low) / [A5 遗留 SHA-256 密码回退](#a5-遗留-sha-256-密码回退low) | 仍存在 |
-| 5 | [F5 订阅粒度 / selector 脆弱](#f5-订阅粒度--selector-脆弱low) | 仍存在 |
-| 6 | [U6 两套配额配置链路并存](#u6-两套配额配置链路并存low) | 需要决策 |
+| 1 | [TS1 分享页缺浏览器测试](#ts1-分享页缺浏览器测试low) | LOW |
+| 2 | [BE2 全局限流每请求写一次 D1](#be2-全局限流每请求写一次-d1low) | LOW |
+| 3 | [BE3 ACL 缓存 30 秒窗口未文档化](#be3-acl-缓存-30-秒窗口未文档化low) | LOW |
+| 4 | [BE5 冷启动逐条执行建表语句](#be5-冷启动逐条执行建表语句low) | LOW |
+| 5 | [FE3 无障碍缺系统性审计](#fe3-无障碍缺系统性审计low) | LOW |
+| 6 | [FE6 admin 渲染 selector 元组需手工同步](#fe6-admin-渲染-selector-元组需手工同步low) | LOW |
+| 7 | [FE7 explorer 状态存在重复字段](#fe7-explorer-状态存在重复字段low) | LOW |
+| 8 | [FE8 点击事件广播式分发与重复监听器](#fe8-点击事件广播式分发与重复监听器low) | LOW |
+| 9 | [FE10 CSP 阻断内联 onerror，缩略图回退失效](#fe10-csp-阻断内联-onerror缩略图回退失效low) | LOW |
+| 10 | [RH1 仓库卫生与版本管理](#rh1-仓库卫生与版本管理low) | LOW（部分修复） |
+| 11 | [RH2 lint 仅做语法检查](#rh2-lint-仅做语法检查low) | LOW |
 
 ---
 
 ## 当前仍待处理
 
-### U3 conflict 解析仍有竞态｜MEDIUM
+### TS1 分享页缺浏览器测试｜LOW
 
-- 位置：`functions/api/lib/file-mutations/helpers.js`、`functions/api/lib/file-index/ensure.js`、`functions/api/lib/file-mutations/multipart.js`
-- 现状：`resolveUploadConflict()` 仍是先 `keyExists()` 读取，再返回目标 key。`file_index.path` 是主键，但 `UPSERT_SQL` 使用 `ON CONFLICT(path) DO UPDATE`，写入时会覆盖同 path 记录，而不是以条件插入兜底。
-- 影响：同名并发上传在 `rename` 模式下仍可能选到同一个候选名；`overwrite`/默认写入下仍可能后写覆盖先写。multipart 在 create 阶段解析 conflict，complete 阶段写入已解析 key 时不再重新校验。
-- 建议：写入 file index 时提供“仅当 path 不存在才插入”的路径；冲突时重试选名。对 overwrite 保留显式覆盖语义，对 rename/普通上传使用条件插入兜底。
+- 位置：`tests/browser/`（当前只有 `admin-flow.spec.mjs` 和 `home-flow.spec.mjs`）。
+- 现状：分享页是唯一面向外部访客的页面，包含密码解锁、文件夹浏览、ZIP 下载、过期/耗尽等多种状态，但没有 Playwright 覆盖。
+- 建议：补 `share-flow.spec.mjs`，至少覆盖文件分享打开、密码解锁、文件夹目录浏览三条主路径。
 
-### S5 Webhook 认证头明文存储｜MEDIUM
+### BE2 全局限流每请求写一次 D1｜LOW
 
-- 位置：`functions/api/lib/webhooks.js`
-- 现状：`recordDelivery()` 仍将完整 endpoint 配置写入 `webhook_deliveries.endpoint_config`，其中可能包含自定义 `headers`。`retryWebhookDelivery()` 会从该字段读回原 endpoint。
-- 影响：如果 webhook endpoint 使用 `Authorization`、`X-Token` 等头，delivery 历史会长期保存明文凭据。
-- 建议：保存 delivery 时脱敏敏感 header；重试时优先从当前 endpoint 配置加载凭据，只把必要的 endpoint 标识、url、name、msgtype 等非敏感字段写入历史。
+- 位置：`functions/api/lib/rate-limiter.js`（`checkRateLimitD1`）。
+- 现状：每个受限路由的请求都会对 `api_rate_limits` 做一次 upsert 写入。
+- 影响：D1 免费层每天 10 万行写入额度，活跃实例下限流写入会成为额度大头，并给每个请求增加一次 D1 往返。
+- 建议：对只读路由采样限流（如 1/N 请求才写）或放宽窗口粒度；保留写操作路由的严格限流。
 
-### A3 分享访问 cookie 非常量时间比较｜LOW
+### BE3 ACL 缓存 30 秒窗口未文档化｜LOW
 
-- 位置：`functions/api/lib/shares/password.js`
-- 现状：`hasShareAccess()` 仍使用 `value === (await signShareAccess(...))` 比较含 HMAC 的完整 cookie 值。
-- 影响：伪造仍需服务端密钥，网络时序侧信道实际风险很低，但与 `auth.js` 的 `timingSafeEqual()` 风格不一致。
-- 建议：改用 `timingSafeEqual()`。
+- 位置：`functions/api/lib/request-context.js`、`functions/api/lib/protected-paths.js`（缓存 TTL 30 秒，每 isolate 独立）。
+- 现状：隐藏路径和受保护路径规则按 isolate 缓存 30 秒，新增规则在其他 isolate 上最多延迟 30 秒生效。
+- 影响：刚设置的路径保护存在短暂窗口期，属于可接受的设计取舍，但文档没有记录。
+- 建议：在 README 访问控制章节或 `architecture.md` 中记录为已知行为。
 
-### A4 用户名 === 比较｜LOW
+### BE5 冷启动逐条执行建表语句｜LOW
 
-- 位置：`functions/api/lib/auth.js`
-- 现状：登录时用户名仍使用 `username === env.ADMIN_USERNAME`，密码使用 `timingSafeEqual()`。WebDAV 侧用户名和密码都使用常量时间比较。
-- 影响：理论上存在轻微用户名存在性时序差异，实际风险低。
-- 建议：为了风格一致，可将用户名比较也改为 `timingSafeEqual()`。
+- 位置：`functions/api/lib/schema.js`（`runSchemaStatements`、`ensureCoreTables`）。
+- 现状：每个 isolate 首个请求会顺序 `await` 执行约 38 条 `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` 语句，每条一次 D1 往返。
+- 影响：冷启动首请求额外增加几十次 D1 往返的延迟；表结构稳定后这些语句几乎总是空操作。
+- 建议：用 `env.D1.batch()` 把语句合并为一次往返；或维护一个 schema 版本行，冷启动先读版本，一致则完全跳过建表。
 
-### A5 遗留 SHA-256 密码回退｜LOW
+### FE3 无障碍缺系统性审计｜LOW
 
-- 位置：`functions/api/lib/protected-paths.js`
-- 现状：受保护路径密码仍接受旧格式 `sha256Hex(salt:password)`，作为非 PBKDF2 记录的兼容回退。
-- 影响：旧格式强度弱于当前 PBKDF2。若生产库里已无旧记录，这段逻辑会扩大无意义攻击面。
-- 建议：确认迁移完成后删除回退，或增加一次性迁移标记和到期删除计划。
+- 位置：`public/js/render/*`（现有约 70 处 `aria-*`/`role` 属性）。
+- 现状：有基线但没有系统性验证：弹窗焦点陷阱、文件网格键盘导航、toast 的 `aria-live`、自定义下拉的键盘操作等未确认。
+- 建议：做一次键盘走查 + 屏幕阅读器抽查，按结果补齐。
 
-### F5 订阅粒度 / selector 脆弱｜LOW
+### FE6 admin 渲染 selector 元组需手工同步｜LOW
 
-- 位置：`public/index.js`、`public/js/state/selectors.js`
-- 现状：admin 页仍以 `subscribeSlice(s => s.admin, render)` 订阅整个 admin slice；详情抽屉 selector 仍使用字符串拼接多个字段；`currentEntries()` 仍使用模块级缓存。
-- 影响：当前单 store/MPA 模型下可用，但 admin 轮询或局部状态变化会触发整页渲染；selector 可维护性偏弱。
-- 建议：细化 admin 页面订阅粒度；把复杂 selector 输出改成结构化、稳定的派生状态；如未来引入多 store，再把模块级 memo 改为 store 绑定。
+- 位置：`public/index.js` 的 `selectAdminRenderState()`。
+- 现状：后台每个 Tab 的重渲触发字段是约 90 行手工维护的元组列表。给 admin slice 新增字段但忘记加进对应 Tab 的元组时，UI 会静默不更新——这类 bug 没有报错、难以定位。
+- 影响：手写 selector 的经典维护陷阱，随 Tab 和字段增长风险上升。
+- 建议：把每个 Tab 的字段列表与 Tab 渲染器放在同一文件并一起 review；或在 `tests/architecture.test.mjs` 里加一致性检查（Tab 渲染器引用的 `admin.xxx` 字段必须出现在对应元组中）。
+
+### FE7 explorer 状态存在重复字段｜LOW
+
+- 位置：`public/js/state/slices/explorer-slice.js`。
+- 现状：`filter` 与 `filterKind` 并存、`sort` 与 `sortField`/`sortDir` 并存，语义相近但用途不同（旧版快捷筛选/排序 vs 搜索筛选器/列表排序），没有注释说明差异。
+- 影响：新维护者容易改错字段或漏改一处。
+- 建议：合并或改名以显式区分（如 `quickFilter` vs `searchFilterKind`），至少补注释。
+
+### FE8 点击事件广播式分发与重复监听器｜LOW
+
+- 位置：`public/js/events/index.js`。
+- 现状：每次点击顺序调用 `fileActions/adminActions/uploadActions/navigationActions` 四个处理器各自匹配 action 名，模块间 action 名不冲突只靠约定；`cselect-change` 注册了两个独立监听器（一个处理带 `actionChange` 的分支，一个处理 quota-unit 特例）；`data-action2` 的映射表硬编码在点击监听器内部。
+- 影响：无正确性问题，属可维护性债务：action 名冲突不会被发现，事件接线分散。
+- 建议：改为中央 action → handler 注册表（注册时检测重名冲突），合并 `cselect-change` 监听器，把 `action2` 映射并入注册表。
+
+### FE10 CSP 阻断内联 onerror，缩略图回退失效｜LOW
+
+- 位置：`public/js/render/shared.js`（文件卡片和详情面板的 `<img ... onerror="...">`）；`public/_headers` 的 CSP。
+- 现状：CSP 为 `script-src 'self'`，不含 `unsafe-inline`/`unsafe-hashes`，浏览器会拒绝执行 HTML 属性里的内联事件处理器。`shared.js` 有两处用内联 `onerror` 把加载失败的缩略图回退到文件类型图标，这段逻辑在带 CSP 的生产环境中静默失效。
+- 影响：缩略图加载失败时显示浏览器破图占位而不是类型图标；同时这是项目里仅存的内联事件处理器，违反自身"不写内联事件"的约定。
+- 建议：删除内联 `onerror`，在事件层用 capture 阶段的 `error` 事件委托统一处理（`error` 不冒泡，必须用捕获），失败时把 `img` 替换为对应类型图标。
+
+### RH1 仓库卫生与版本管理｜LOW（部分修复）
+
+- 位置：仓库根目录、git 历史。
+- 现状：`debug.log` 已删除并加入 `.gitignore`（2026-07-10）。仍待改进：提交信息全部为 "new"，无法 bisect、blame 或生成 changelog；`package.json` 版本 2.1.0 但没有 tag 和 CHANGELOG。
+- 建议：从现在开始写有意义的提交信息（一行中文描述即可）；发版时打 tag。
+
+### RH2 lint 仅做语法检查｜LOW
+
+- 位置：`scripts/check-js-syntax.mjs`（`npm run lint`）。
+- 现状：lint 只是对 JS 文件跑 `node --check` 式的语法校验，不做任何静态分析；未使用变量、未定义引用、可疑比较等问题都发现不了。
+- 影响：无框架、无类型的代码库本来就更依赖静态检查兜底，目前这层防线基本缺席。
+- 建议：引入 ESLint（recommended 规则集即可，零依赖负担在 devDependencies）；更进一步可用 JSDoc 注释 + `tsc --noEmit --checkJs` 做渐进式类型检查，不迁移 TypeScript 也能获得类型安全。与 OP3 的 CI 配合执行。
 
 ---
 
 ## 需要维护决策
 
-### U6 两套配额配置链路并存｜LOW
-
-- 位置：`functions/api/lib/storage-quota.js`、`functions/api/lib/admin-quota.js`、`functions/api/lib/storage.js`、`public/js/state/thunks/admin/storage.js`
-- 现状：上传和 WebDAV 的运行时配额检查使用 `storage.js` / `storage_config_v1` / `tryReserveStorageQuota()`；但旧的 `storage-quota.js` 仍被 `handleAdminQuota()` 使用，并且 `/api/admin/settings/quota`、前端 `loadAdminQuota()` / `setAdminQuota()` 仍然接着这条链路。
-- 判断：这不是纯 dead code，不能直接删除；但它确实是并存的旧配置通道，容易和当前存储配置页的 `storageConfig` 语义混淆。
-- 建议：选择其一：
-  - 将旧 `/api/admin/settings/quota` 迁移到当前 `storage_config_v1`；
-  - 或明确标为兼容接口，前端逐步移除旧 quota thunk；
-  - 迁移完成后再删除 `storage-quota.js`。
+- **界面语言**：全部界面文案为中文，决定了受众边界。若只面向中文用户则无需处理；若希望更广采用，需要规划文案抽离。
+- **README 缺截图**：对 UI 产品而言截图/GIF 是最低成本的采用率杠杆，是否补充取决于项目定位（个人使用 vs 开源推广）。
 
 ---
 
-## 已修复历史问题
+## 本次评审核实过无问题的点
 
-### U1 配额可绕过｜已修复
+以下链路本次抽查过，当前实现是健康的，后续审计可以降低优先级：
 
-- 旧问题：`checkStorageQuota()` 依赖缓存的 `used`，检查和写入不原子；multipart complete / 秒传等路径可能绕过配额。
-- 当前状态：`getIndexedStorageUsed()` 的 30 秒缓存已移除，`clearStorageUsedCache()` 仅为空兼容函数。上传、秒传、multipart complete、WebDAV PUT 均走 `tryReserveStorageQuota()`；该函数使用 D1 `storage_quota_counter` 做并发 reserved bytes 预留。
-- 主要位置：`functions/api/lib/file-index/stats.js`、`functions/api/lib/storage.js`、`functions/api/lib/file-mutations/upload.js`、`functions/api/lib/file-mutations/upload-check.js`、`functions/api/lib/file-mutations/multipart.js`、`functions/dav/lib/methods.js`
-
-### U2 孤儿 multipart upload｜已修复
-
-- 旧问题：multipart upload 只依赖客户端 abort，断网、关闭标签页或 Worker 异常会留下 R2 未完成分片。
-- 当前状态：服务端已增加 `multipart_uploads` 跟踪表、`trackMultipartUpload()`、`untrackMultipartUpload()` 和 `cleanupOrphanMultipartUploads()`；后台维护动作支持 `cleanup-orphan-multipart`。
-- 主要位置：`functions/api/lib/file-mutations/multipart.js`、`functions/api/lib/admin-maintenance.js`
-
-### U4 completeAndDeduplicate dedup/copy 非原子｜已修复
-
-- 旧问题：临时对象删除顺序可能导致 copy/create 失败后数据丢失。
-- 当前状态：非 dedup 路径先 copy 到永久 object key，再创建 storage object 记录，最后删除临时 key；dedup 命中时也在 `upsertFileIndex()` 成功后再清理组装出的临时 key。
-- 主要位置：`functions/api/lib/file-mutations/multipart.js`
-
-### U5 upload-check 短路竞争配额｜已修复
-
-- 旧问题：秒传 dedup 命中后直接写 index，多并发可绕过配额。
-- 当前状态：`handleUploadCheck()` 已在写入 index 前调用 `tryReserveStorageQuota()`，并在 finally 中释放 reserved bytes。
-- 主要位置：`functions/api/lib/file-mutations/upload-check.js`
-
-### A1 路径密码锁定可绕过 x-forwarded-for｜已修复
-
-- 旧问题：unlock 锁定 key 接受客户端可控的 `x-forwarded-for`。
-- 当前状态：`clientIp()` 明确只信 `cf-connecting-ip`，注释说明排除 `x-forwarded-for` 的原因。
-- 主要位置：`functions/api/lib/protected-paths.js`
-
-### A2 D1 限流器 read-modify-write｜已修复
-
-- 旧问题：D1 限流器 SELECT 后 UPDATE，非原子。
-- 当前状态：`checkRateLimitD1()` 已改为 `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`。入口路由和 WebDAV 均调用 D1 版本。
-- 注意：`withRateLimit()` 仍使用内存 `checkRateLimit()`，如果未来重新用于生产入口，仍要确认是否接受 per-isolate best-effort 语义。
-- 主要位置：`functions/api/lib/rate-limiter.js`、`functions/api/[[path]].js`、`functions/dav/[[path]].js`
-
-### S1 Webhook SSRF｜已修复当前验收范围
-
-- 旧问题：只做主机名字符串检查且默认跟随重定向。
-- 当前状态：保存、测试、重试和实际投递都会走 endpoint policy；默认要求 HTTPS，拒绝 IP literal、localhost/私网形式，并使用 `redirect: "manual"` 对每个 redirect hop 重新校验，禁止 redirect 切换 host。支持 `WEBHOOK_ALLOWED_HOSTS` / `WEBHOOK_HOST_ALLOWLIST` / `WEBHOOK_ALLOWLIST` 作为严格白名单。
-- 注意：Workers 环境无法直接做通用 DNS 解析后私网段判断；对高安全部署，仍建议配置 allowlist。
-- 主要位置：`functions/api/lib/webhooks.js`
-
-### S2 下载次数超限 TOCTOU｜已修复
-
-- 旧问题：分享下载先检查 exhausted，下载后再自增，导致并发超限。
-- 当前状态：下载前使用 `reserveDownloadSlot()` 条件 UPDATE，`WHERE max_downloads = 0 OR download_count < max_downloads`；下载失败会 `releaseDownloadSlot()` 回滚。
-- 主要位置：`functions/api/lib/shares/expiry.js`、`functions/api/lib/shares/public.js`
-
-### S3 Webhook 投递阻塞主请求｜已修复
-
-- 旧问题：分享过期/耗尽通知可能同步阻塞主请求。
-- 当前状态：分享通知通过 `context.waitUntil` 调度；文件操作和登录失败通知也通过 `waitForWebhook()` 异步投递。
-- 主要位置：`functions/api/lib/shares/expiry.js`、`functions/api/lib/router.js`、`functions/api/lib/auth.js`
-
-### S4 投递记录不全｜已修复当前路由
-
-- 旧问题：文件操作 webhook 使用不记录 delivery 的便捷通知器。
-- 当前状态：当前路由中的文件操作、登录失败 burst、分享过期/耗尽通知都走 `notifyWebhookWithLog()`，后台有 delivery 记录并支持失败重试。
-- 注意：`webhooks.js` 里仍保留 `notifyFileUploaded()` / `notifyFileDeleted()` 等便捷函数，它们内部仍调用不记录日志的 `notifyWebhook()`。当前路由未使用这些便捷函数；如果未来复用，需要同步改成 logged 版本。
-- 主要位置：`functions/api/lib/router.js`、`functions/api/lib/webhooks.js`
-
-### S6 回收站孤儿窗口｜已修复
-
-- 旧问题：先复制到 `.trash/` 并删除原件，再插入 `trash` DB 行；DB 插入失败会留下不可见孤儿。
-- 当前状态：`softDeleteTree()` 现在先插入 trash DB row，再移动/删除对象。
-- 主要位置：`functions/api/lib/trash/soft-delete.js`
-
-### F1 loadExplorer 响应乱序竞态｜已修复
-
-- 旧问题：列表/搜索请求没有请求序列号，慢响应可能覆盖新状态。
-- 当前状态：`explorer.loadSeq` 和 `incrementLoadSeq()` 已接入 `loadExplorer()` / `loadMoreSearchResults()`，旧请求结果会被 `isStale()` 丢弃。
-- 主要位置：`public/js/state/slices/explorer-slice.js`、`public/js/state/thunks/explorer.js`
-
-### F2 batchDispatch 冻结渲染直到异步 thunk 完成｜已修复当前已知触发点
-
-- 旧问题：`clear-search-filters` 将异步 `loadExplorer()` 放进 batch，导致网络返回前不通知渲染。
-- 当前状态：当前 `clear-search-filters` 只 batch 同步 action，然后单独 dispatch `loadExplorer()`。
-- 主要位置：`public/js/events/file-actions.js`
-
-### F3 上传定时器跨批次污染｜已修复
-
-- 旧问题：模块级 `autoCloseTimer` 被新批次覆盖，旧 timer 可能清掉新上传列表。
-- 当前状态：自动关闭 timer 已改为数组管理，统一清理所有 timer。
-- 主要位置：`public/js/state/thunks/upload.js`
-
-### F4 assertApiOk completed 绕过 response.ok｜已修复
-
-- 旧问题：`allowCompleted && data.completed` 在 `response.ok` 检查前短路。
-- 当前状态：`assertApiOk()` 现在要求 `response.ok && (...)`，5xx 不会因 `completed` 被接受。
-- 主要位置：`public/js/state/thunks/errors.js`
+- 鉴权栈：HMAC 签名会话 token、HTTPS 下 `__Host-` cookie 前缀、`HttpOnly; SameSite=Strict`、CSRF 常量时间比较、IP 硬锁 + 账号软降速双维度防爆破。
+- Webhook 出站 SSRF 防护：强制 HTTPS、拒绝 IP 目标、阻断私网地址和跨主机跳转、可选主机白名单。
+- 后端主入口分层：`functions/api/[[path]].js` 仅承担横切职责，声明式路由策略，500 错误细节对非管理员隐藏。
+- 前端渲染：细粒度 selector 订阅 + morphdom DOM diff，弹窗内容在整页重渲时被保留，未发现明显的焦点丢失结构；单选详情（`selectedKey`）只重渲详情抽屉，不触发文件网格重渲。
+- 自研 store（`create-slice.js`）实现纯净且极小，带 thunk 和批量派发；`loadExplorer` 有 `loadSeq` 过期响应守卫，搜索输入有防抖，事件监听统一用 AbortController 清理。
+- 分片上传服务：sha256 秒传检查、localStorage 进度持久化支持跨会话续传、过期 upload 主动 abort、worker 池并发、暂停/取消信号，工程质量高。
+- 前端全链路依赖注入（`fetchImpl`/`documentRef`/`windowRef` 等），使 1800+ 行前端测试和 thunk 测试可在 Node 直接运行；Markdown 渲染先转义再解析并拦截危险链接，且有对应 XSS 测试。
+- `public/_headers` 的安全响应头完备：严格 CSP（`script-src 'self'`）、HSTS、nosniff、Permissions-Policy、frame-ancestors 拒绝嵌入（但见 FE10 的内联 onerror 冲突）。
+- 缩略图链路健康：Cloudflare Image Resizing + R2 结果缓存 + CDN 缓存头 + `loading="lazy"` 懒加载；下载支持 Range 断点续传（206/416 处理正确）。
+- 后台 Tab 数据有"为空才加载"的缓存策略，切换 Tab 不会重复拉取，手动刷新按钮另行提供。
+- `escapeHtml` 在 render 层使用密度高且实现正确（FE2 是"缺强制"而非"缺使用"）。
+- 搜索采用游标分页，单页上限受控。
+- 测试夹具 `tests/helpers/make-env.mjs` 对 R2/D1 的模拟质量高，竞态类回归测试（上传改名、multipart 去重）真实有效。
 
 ---
 
-## 已核实无问题 / 说明
+## 已修复（2026-07-10，`npm run check` 269 测试全绿）
 
-- 分片排序正确：服务端和客户端均按 part number 重排，part number 也校验为正整数。
-- 多存储高水位溢出逻辑当前不存在：运行时 `storageId` 基本固定为 `"r2"`。
-- 文件索引引用计数整体正确：`file_index`、`storage_usage`、`storage_objects` 会随上传、删除、回收站释放更新。
-- 公开写路由不存在：公开 dispatcher 仅包含读、搜索、下载、预览、解锁等操作；写操作都在 admin 分支并受认证/CSRF/保留路径检查约束。
-- 分享删除不产生 R2 孤儿：分享是 D1 指针，删除分享仅删除分享行。
-- index 截断是降级而非直接丢文件：读取链路会合并 live R2 list 与 index。
-- 回收站恢复冲突处理支持 error/skip/overwrite/rename，引用计数经释放逻辑递减。
+| 条目 | 修复内容 |
+| --- | --- |
+| IX1（HIGH） | `rebuildFileIndex()` 改为非破坏性同步：不再 `DELETE FROM file_index`，只 upsert 路径命名对象，并仅清理"object_key 为路径式且 R2 已不存在"的死行（扫描截断时跳过清理）。上传（普通/legacy/multipart 去重）写入 R2 `customMetadata.originalPath` 保留灾备线索。补回归测试：去重上传 → rebuild → 断言索引仍在。 |
+| OP1 | README 运维建议新增"数据备份与灾备"章节：`wrangler d1 export` 定期备份、D1 Time Travel 恢复、并说明重建索引已是非破坏性但不能替代备份。 |
+| OP2 | 后台系统健康页的"Token密钥"项现区分三种状态：未配置（提示正在用管理员密码签名及其后果）、长度不足 32、正常。 |
+| OP3 | 新增 `.github/workflows/ci.yml`：push/PR 时 `npm ci && npm run check`。 |
+| FE1 | 构建新增 `scripts/stamp-asset-version.mjs`：按全部前端资源内容 hash 给三个 HTML 的 css/js 引用打 `?v=<hash>`。注意：ES module 的嵌套 import 不携带版本参数，深层模块仍依赖 1 小时 `must-revalidate`；彻底解决需打包（见 RH2/esbuild）。 |
+| FE2 | `tests/architecture.test.mjs` 新增守护测试：扫描 render 层模板插值中的纯属性链表达式，未转义即失败；存量 12 处命中均核实为安全并登记白名单。 |
+| FE4 | 目录浏览窗口化渲染：一次最多渲染 500 项 + "显示更多"按钮（`displayLimit`，导航/加载时重置）。单次 morphdom diff 有了上界，勾选卡顿随之缓解。服务端分页未做（列表是 R2+D1 双源合并，改造收益低）。 |
+| BE4 | preview/download 响应新增 `ETag`（去重对象直接用 object_key 内嵌 sha256，其余用 key+size+uploaded）、`Cache-Control: private, max-age=3600, must-revalidate`，非 Range 请求命中 `If-None-Match` 返回 304。补回归测试。 |
+| FE9 | 新增 `public/js/vendor/sha256.js`（增量 SHA-256，FIPS 180-4）：超过 64MB 的文件分块（8MB/块）流式哈希，内存占用恒定；小文件仍走原生 `crypto.subtle`。补 Node crypto 对照测试（含分块不变性）。 |
+| BE1 | `adjustStorageObjectRef`/`deleteStorageObjectRecord` 的 catch 补 `console.warn`，引用计数漂移不再无声。 |
+| SE1 | 登录用户名/密码比较不再 `&&` 短路，两个 `timingSafeEqual` 都执行完再合并。 |
+| FE5 | 搜索防抖回调内实时读取 `store.getState().explorer.path`，防抖窗口内切目录不再把 URL 同步到旧路径。 |
+| RH1（部分） | `debug.log` 删除并加入 `.gitignore`。 |
+
+---
+
+## 处理约定
+
+- 修复顺序按上方优先级表执行。
+- 每修复一项：补对应回归测试 → 运行 `npm run check` → 在本文件中把该项移入"已修复"备注或直接删除条目。
+- 全部处理完后，把仍有维护价值的结论（如 ACL 缓存行为、备份流程）合并进 `maintenance-handoff.md` 或对应主题文档，然后删除本文件并更新 `docs/README.md` 索引。

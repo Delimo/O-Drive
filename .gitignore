@@ -8,3 +8,5 @@ test-results/
 coverage/
 npm-debug.log*
 test-output.css
+debug.log
+*.log

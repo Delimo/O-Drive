@@ -35,6 +35,7 @@ async function putLegacyUpload(env, file, originalKey, resolved, storageId, conf
   try {
     await storagePut(env, storageId, objectKey, file.stream(), {
       httpMetadata: { contentType: file.type },
+      customMetadata: { originalPath: resolved.key },
     });
     const indexed = await writeUploadIndex(env, originalKey, {
       size,
@@ -132,6 +133,7 @@ export async function handleUpload(env, request, r2Key, meta = {}) {
       const objectKey = storageObjectKeyForSha256(sha256);
       await storagePut(env, storageId, objectKey, buffer, {
         httpMetadata: { contentType },
+        customMetadata: { originalPath: resolved.key },
       });
       storageObject = await createStorageObject(env, {
         storageId,

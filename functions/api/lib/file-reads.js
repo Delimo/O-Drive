@@ -615,6 +615,27 @@ async function readObjectBodyBytes(obj) {
   return new Uint8Array(buffer);
 }
 
+// 从对象位置派生一个稳定的强 ETag。去重对象的 object_key 内嵌 sha256
+// （objects/sha256/xx/xx/<hash>），天然内容寻址、不可变；其它对象退化为
+// object_key + 大小的组合，仍能在内容不变时命中缓存。
+function computeEntityTag(objectKey, size, uploaded) {
+  const sha = /objects\/sha256\/[0-9a-f]{2}\/[0-9a-f]{2}\/([0-9a-f]{16,})$/i.exec(
+    objectKey || "",
+  );
+  if (sha) return `"${sha[1]}"`;
+  const uploadedMs = uploaded ? new Date(uploaded).getTime() : 0;
+  return `"${objectKey}:${size}:${uploadedMs}"`;
+}
+
+function etagMatches(ifNoneMatch, etag) {
+  if (!ifNoneMatch) return false;
+  if (ifNoneMatch.trim() === "*") return true;
+  return ifNoneMatch
+    .split(",")
+    .map((part) => part.trim().replace(/^W\//, ""))
+    .some((candidate) => candidate === etag);
+}
+
 export async function handleDownloadOrPreview(env, request, path, r2Key) {
   const rangeHeader = request.headers.get("Range");
   const parsedRange = parseByteRange(rangeHeader);
@@ -642,6 +663,26 @@ export async function handleDownloadOrPreview(env, request, path, r2Key) {
     "Content-Disposition",
     makeDisposition(path, r2Key.split("/").pop() || r2Key),
   );
+
+  // 登录内容用私有缓存；内容寻址对象天然不可变，允许较长复用并要求再验证。
+  const etag = computeEntityTag(
+    objectKey,
+    Number(meta?.size ?? obj.size ?? 0),
+    meta?.uploaded ?? obj.uploaded,
+  );
+  headers.set("ETag", etag);
+  headers.set("Cache-Control", "private, max-age=3600, must-revalidate");
+
+  // 完整请求命中 If-None-Match 时返回 304，省去重新传输正文。
+  if (!wantsRange && etagMatches(request.headers.get("If-None-Match"), etag)) {
+    return new Response(null, {
+      status: 304,
+      headers: {
+        ETag: etag,
+        "Cache-Control": headers.get("Cache-Control"),
+      },
+    });
+  }
 
   if (!wantsRange) {
     if (shouldTranscodeTextPreview(path, r2Key, headers)) {

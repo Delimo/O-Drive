@@ -569,6 +569,7 @@ const unsubscribers = [
         s.explorer.filterMaxSize,
         s.explorer.filterDateFrom,
         s.explorer.filterDateTo,
+        s.explorer.displayLimit,
       ],
       renderExplorerRegion,
     ),

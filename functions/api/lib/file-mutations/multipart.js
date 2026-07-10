@@ -220,6 +220,7 @@ async function completeAndDeduplicate(env, request, body, storageId, key) {
       // still leaves the assembled object at `key` for recovery.
       await storageCopy(env, storageId, key, storageId, objectKey, {
         httpMetadata: { contentType },
+        customMetadata: { originalPath: originalKey },
       });
       storageObject = await createStorageObject(env, {
         storageId,

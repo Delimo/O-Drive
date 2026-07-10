@@ -89,14 +89,14 @@ export function registerAppEvents(deps) {
     (event) => {
       const result = uiActions.handleInput(event);
       if (result === "search") {
-        const state = store.getState();
         const value = event.target.value;
         store.dispatch(actions.explorer.setQueryDraft(value));
         windowRef.clearTimeout(getSearchTimer());
         setSearchTimer(
           windowRef.setTimeout(() => {
             store.dispatch(actions.explorer.setQuery(value.trim()));
-            syncHomeUrl(state.explorer.path, value.trim());
+            // 路径在回调内读取：防抖窗口内切换目录时不能同步到旧路径。
+            syncHomeUrl(store.getState().explorer.path, value.trim());
             store.dispatch(thunks.loadExplorer());
           }, 260),
         );

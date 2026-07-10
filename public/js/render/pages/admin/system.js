@@ -168,7 +168,19 @@ export function createSystemRenderer({
     }
     if (healthData.env) {
       sysComponents["管理员账户"] = { status: healthData.env.adminUsername && healthData.env.adminPassword ? "ok" : "error", message: "" };
-      sysComponents["Token密钥"] = { status: healthData.env.tokenSecret?.configured ? "ok" : "error", message: "" };
+      const ts = healthData.env.tokenSecret || {};
+      if (!ts.configured) {
+        sysComponents["Token密钥"] = {
+          status: "error",
+          message: ts.source === "ADMIN_PASSWORD"
+            ? "未配置 TOKEN_SECRET，当前使用管理员密码签名；修改密码会使所有会话和分享解锁失效，建议配置独立随机值"
+            : "未配置 TOKEN_SECRET，会话使用临时密钥，实例重启后全部失效",
+        };
+      } else if (!ts.recommended) {
+        sysComponents["Token密钥"] = { status: "error", message: `TOKEN_SECRET 长度 ${ts.length} 字符，建议至少 32 字符` };
+      } else {
+        sysComponents["Token密钥"] = { status: "ok", message: "" };
+      }
       sysComponents["访客模式"] = { status: healthData.env.guestEnabled ? "ok" : "info", message: healthData.env.guestEnabled ? "已启用" : "已禁用" };
       sysComponents["WebDAV"] = { status: healthData.env.davEnabled ? "ok" : "info", message: healthData.env.davEnabled ? "已启用" : "未配置" };
     }

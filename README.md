@@ -629,6 +629,29 @@ npm run test:browser
 - Webhook 中涉及 token 时优先使用 HTTPS。
 - 不要把 `.trash`、`.thumbs`、`.meta`、`.system` 作为用户目录。
 
+### 数据备份与灾备
+
+内容去重落地后，D1 数据库的 `file_index` 表是整个目录树的**唯一真相源**：R2 里的去重对象存放在内容寻址的 `objects/sha256/...` 路径下，不含用户目录结构，仅靠 R2 bucket 无法重建文件树。因此 D1 一旦误删表、误操作或区域故障，等价于丢失整个网盘的目录结构。务必定期备份 D1。
+
+**定期导出（推荐每日）：**
+
+```bash
+# 导出整库为 SQL 文件，文件名带日期便于保留多份
+wrangler d1 export o-drive-db --remote --output "o-drive-db-$(date +%Y%m%d).sql"
+
+# 只导出目录树（数据量小、恢复最关键的一张表）
+wrangler d1 export o-drive-db --remote --table file_index --output file_index-$(date +%Y%m%d).sql
+```
+
+把导出文件存到 R2 以外的位置（本地、对象存储或私有仓库），避免与生产数据同区域同命运。
+
+**恢复：**
+
+- 短期误操作（约 30 天内）优先用 Cloudflare D1 **Time Travel**：在 Dashboard 的 D1 数据库页面选择时间点回滚，或用 `wrangler d1 time-travel restore o-drive-db --timestamp <ISO时间>`。这是最快、无需导出文件的恢复方式。
+- 超出 Time Travel 窗口，或需要迁移到新库时，用最近一次导出的 SQL 重建：`wrangler d1 execute o-drive-db --remote --file o-drive-db-YYYYMMDD.sql`。
+
+**注意：** 后台“重建文件索引”维护动作是**非破坏性同步**（只补齐路径命名对象的索引、清理已不存在的死行），不会删除去重上传的索引行，可以安全执行。它不能替代备份——它无法恢复已从 D1 删除的去重/legacy 文件路径。灾难恢复时，去重对象的 R2 `customMetadata.originalPath` 保留了原始路径线索，可用于人工重建，但这只是兜底而非常规手段。
+
 ## 故障排查
 
 ### 页面返回 500

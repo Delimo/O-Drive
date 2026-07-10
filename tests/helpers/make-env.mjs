@@ -105,6 +105,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
           size: obj.size ?? (typeof obj.body === 'string' ? obj.body.length : 0),
           uploaded: obj.uploaded || new Date('2026-01-01'),
           httpMetadata: obj.httpMetadata || { contentType: 'text/plain' },
+          customMetadata: obj.customMetadata || {},
           writeHttpMetadata(headers) {
             if (obj.httpMetadata?.contentType) headers.set('Content-Type', obj.httpMetadata.contentType);
           },
@@ -152,7 +153,7 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
         };
       },
       async put(key, body, options = {}) {
-        byKey.set(key, { key, body, httpMetadata: options.httpMetadata || {}, size: sizeOf(body) });
+        byKey.set(key, { key, body, httpMetadata: options.httpMetadata || {}, customMetadata: options.customMetadata || {}, size: sizeOf(body) });
       },
       async delete(key) {
         byKey.delete(key);
@@ -1188,6 +1189,13 @@ export function makeEnv({ objects = [], prefixes = [], listPageSize = Infinity }
                 offset = 0;
               }
               return { results: rows.sort((a, b) => a.path.localeCompare(b.path)).slice(offset, offset + limit) };
+            }
+            if (/SELECT path FROM file_index WHERE COALESCE\(storage_id, 'r2'\) = 'r2' AND COALESCE\(NULLIF\(object_key, ''\), path\) = path/i.test(sql)) {
+              return {
+                results: fileIndexRows
+                  .filter(row => (row.storage_id || 'r2') === 'r2' && (row.object_key || row.path) === row.path)
+                  .map(row => ({ path: row.path })),
+              };
             }
             if (/SELECT \* FROM file_index WHERE parent = \?/i.test(sql)) {
               const parent = statement.bound?.[0] || '';

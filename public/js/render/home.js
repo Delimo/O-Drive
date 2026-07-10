@@ -297,9 +297,22 @@ export function createHomeRenderers(deps) {
     if (entries.length) {
       const isList = explorer.view === "list";
       const selectedSet = new Set(explorer.selectedKeys || []);
+      const displayLimit = Number(explorer.displayLimit || 0);
+      const hiddenCount =
+        displayLimit > 0 && entries.length > displayLimit
+          ? entries.length - displayLimit
+          : 0;
+      const visibleEntries = hiddenCount ? entries.slice(0, displayLimit) : entries;
+      const showMoreHtml = hiddenCount
+        ? `
+          <div style="text-align:center;padding:16px;">
+            <button class="btn toolbar-btn" data-action="show-more-entries" type="button">显示更多（剩余 ${hiddenCount} 项）</button>
+          </div>
+        `
+        : "";
 
       if (isList) {
-        return renderListTable(state, entries, showBackButton, parentPath, selectedSet);
+        return renderListTable(state, visibleEntries, showBackButton, parentPath, selectedSet) + showMoreHtml;
       }
 
       return `
@@ -309,8 +322,9 @@ export function createHomeRenderers(deps) {
               ? renderBackCard(parentPath)
               : ""
           }
-          ${entries.map((item) => renderEntryCard(item, state, selectedSet)).join("")}
+          ${visibleEntries.map((item) => renderEntryCard(item, state, selectedSet)).join("")}
         </div>
+        ${showMoreHtml}
       `;
     }
 

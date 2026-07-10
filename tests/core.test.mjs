@@ -31,7 +31,7 @@ import { handleThumbnail } from '../functions/api/lib/thumbnails.js';
 import { resolveZipArchive } from '../functions/api/lib/zip-download.js';
 import { getR2KeyFromPath, canReadKey, loadHiddenPaths } from '../functions/api/lib/request-context.js';
 import { handleLogin, verifyAuth, verifyCsrf } from '../functions/api/lib/auth.js';
-import { clearStorageUsedCache, getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex } from '../functions/api/lib/file-index/index.js';
+import { clearStorageUsedCache, getFileIndexEntry, getIndexedStorageUsed, indexedFileCount, upsertFileIndex, searchFileIndex, rebuildFileIndex } from '../functions/api/lib/file-index/index.js';
 import { createFileTask, handleTaskAlertSettings, updateFileTask } from '../functions/api/lib/tasks.js';
 import { createNotification } from '../functions/api/lib/notifications.js';
 import {
@@ -397,6 +397,50 @@ test('preview response streams existing object, supports range, and 404s missing
 
   const missing = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/missing.txt'), '/api/preview/missing.txt', 'missing.txt');
   assert.equal(missing.status, 404);
+});
+
+test('preview and download set ETag with cache headers and honor If-None-Match', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  // 去重上传：ETag 应直接来自 object_key 内嵌的 sha256。
+  const form = new FormData();
+  form.append('file', new File(['etag-body'], 'cached.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: form }), 'docs');
+  const entry = await getFileIndexEntry(env, 'docs/cached.txt');
+  const sha = entry.object_key.split('/').pop();
+
+  const first = await handleDownloadOrPreview(env, new Request('https://example.com/api/preview/docs/cached.txt'), '/api/preview/docs/cached.txt', 'docs/cached.txt');
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('ETag'), `"${sha}"`);
+  assert.match(first.headers.get('Cache-Control'), /private/);
+
+  const revalidated = await handleDownloadOrPreview(
+    env,
+    new Request('https://example.com/api/preview/docs/cached.txt', { headers: { 'If-None-Match': `"${sha}"` } }),
+    '/api/preview/docs/cached.txt',
+    'docs/cached.txt',
+  );
+  assert.equal(revalidated.status, 304);
+  assert.equal(revalidated.headers.get('ETag'), `"${sha}"`);
+  assert.equal(await revalidated.text(), '');
+
+  const stale = await handleDownloadOrPreview(
+    env,
+    new Request('https://example.com/api/preview/docs/cached.txt', { headers: { 'If-None-Match': '"other-etag"' } }),
+    '/api/preview/docs/cached.txt',
+    'docs/cached.txt',
+  );
+  assert.equal(stale.status, 200);
+
+  // Range 请求不受 If-None-Match 影响，仍按 206 返回。
+  const ranged = await handleDownloadOrPreview(
+    env,
+    new Request('https://example.com/api/download/docs/cached.txt', { headers: { Range: 'bytes=0-3', 'If-None-Match': `"${sha}"` } }),
+    '/api/download/docs/cached.txt',
+    'docs/cached.txt',
+  );
+  assert.equal(ranged.status, 206);
 });
 
 test('text preview transcodes legacy Chinese text to UTF-8 without changing downloads', async () => {
@@ -5291,4 +5335,39 @@ test('multipart upload without sha256 works as before', async () => {
   const entry = await getFileIndexEntry(env, 'legacy.bin');
   assert.ok(entry);
   assert.equal(entry.object_key, 'legacy.bin');
+});
+
+test('rebuild-index preserves deduplicated uploads and writes originalPath metadata', async () => {
+  clearStorageUsedCache();
+  const env = makeEnv();
+
+  // 去重上传：用户路径只存在于 D1，R2 对象在 objects/sha256/ 保留前缀下。
+  const dedupForm = new FormData();
+  dedupForm.append('file', new File(['rebuild-me'], 'keep.txt', { type: 'text/plain' }));
+  await handleUpload(env, new Request('https://example.com/api/files/docs', { method: 'POST', body: dedupForm }), 'docs');
+  const before = await getFileIndexEntry(env, 'docs/keep.txt');
+  assert.ok(before.object_key.startsWith('objects/sha256/'));
+
+  // customMetadata 保留了灾难恢复所需的原始路径线索。
+  const stored = await env.R2.head(before.object_key);
+  assert.equal(stored.customMetadata?.originalPath, 'docs/keep.txt');
+
+  // 路径命名的普通对象，模拟历史遗留的直写文件。
+  await env.R2.put('docs/plain.txt', 'plain', { httpMetadata: { contentType: 'text/plain' } });
+  await upsertFileIndex(env, 'docs/plain.txt', { size: 5, contentType: 'text/plain', objectKey: 'docs/plain.txt' });
+
+  // 路径命名但 R2 已不存在的死行，重建应清理。
+  await upsertFileIndex(env, 'docs/ghost.txt', { size: 3, contentType: 'text/plain', objectKey: 'docs/ghost.txt' });
+
+  const result = await rebuildFileIndex(env);
+
+  // 去重文件的索引行必须仍在，不能被删除。
+  const after = await getFileIndexEntry(env, 'docs/keep.txt');
+  assert.ok(after, 'deduplicated upload survived rebuild');
+  assert.equal(after.object_key, before.object_key);
+  // 路径命名的真实文件保留。
+  assert.ok(await getFileIndexEntry(env, 'docs/plain.txt'));
+  // 路径命名的死行被清理。
+  assert.equal(await getFileIndexEntry(env, 'docs/ghost.txt'), null);
+  assert.equal(result.removed, 1);
 });

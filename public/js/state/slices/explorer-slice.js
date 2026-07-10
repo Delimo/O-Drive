@@ -1,6 +1,8 @@
 import { createSlice } from "../create-slice.js";
 import { getInitialPath, getInitialSearch } from "../../utils/path.js";
 
+export const EXPLORER_DISPLAY_PAGE = 500;
+
 export const explorerInitialState = {
   path: getInitialPath(),
   storageId: "r2",
@@ -39,6 +41,8 @@ export const explorerInitialState = {
   folderStatsLoadingKey: "",
   folderStatsErrors: {},
   loadSeq: 0,
+  // 大目录窗口化渲染：一次只渲染前 displayLimit 项，"显示更多"按钮递增。
+  displayLimit: EXPLORER_DISPLAY_PAGE,
 };
 
 export function createExplorerSlice(initialState) {
@@ -64,6 +68,7 @@ export function createExplorerSlice(initialState) {
           selectedKey: "",
           selectedKeys: [],
           trashSelectedKeys: [],
+          displayLimit: EXPLORER_DISPLAY_PAGE,
         };
       },
       setQueryDraft(state, action) {
@@ -162,6 +167,7 @@ export function createExplorerSlice(initialState) {
           searchScanned: 0,
           searchScanLimitReached: false,
           selectedKeys: [],
+          displayLimit: EXPLORER_DISPLAY_PAGE,
         };
       },
       setSearchData(state, action) {
@@ -177,6 +183,7 @@ export function createExplorerSlice(initialState) {
           searchScanned: Number(action.payload.scanned || 0),
           searchScanLimitReached: Boolean(action.payload.scanLimitReached),
           selectedKeys: [],
+          displayLimit: EXPLORER_DISPLAY_PAGE,
         };
       },
       appendSearchResults(state, action) {
@@ -216,6 +223,14 @@ export function createExplorerSlice(initialState) {
       },
       setError(state, action) {
         return { ...state, loading: false, error: action.payload };
+      },
+      raiseDisplayLimit(state, action) {
+        return {
+          ...state,
+          displayLimit:
+            (state.displayLimit || EXPLORER_DISPLAY_PAGE) +
+            (Number(action.payload) || EXPLORER_DISPLAY_PAGE),
+        };
       },
       incrementLoadSeq(state, action) {
         return { ...state, loadSeq: state.loadSeq + 1 };

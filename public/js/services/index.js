@@ -1,6 +1,13 @@
 import { CHUNK_SIZE } from "../constants.js";
+import { sha256HexStreaming } from "../vendor/sha256.js";
+
+// 超过该阈值改用分块增量哈希，避免整文件读入内存（大文件在移动端会崩溃标签页）。
+const STREAMING_HASH_THRESHOLD = 64 * 1024 * 1024;
 
 async function sha256Hex(blob) {
+  if (blob.size > STREAMING_HASH_THRESHOLD) {
+    return sha256HexStreaming(blob);
+  }
   const buffer = await blob.arrayBuffer();
   const digest = await crypto.subtle.digest("SHA-256", buffer);
   const hashArray = Array.from(new Uint8Array(digest));

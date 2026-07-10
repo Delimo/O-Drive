@@ -246,7 +246,10 @@ export async function handleLogin(request, env, context = {}) {
     await sleep(accountThrottle.delayMs);
   }
 
-  if (await timingSafeEqual(username, env.ADMIN_USERNAME) && await timingSafeEqual(password, env.ADMIN_PASSWORD)) {
+  // 两个比较都执行完再合并，避免 && 短路造成"用户名是否正确"的时序侧信道。
+  const usernameOk = await timingSafeEqual(username, env.ADMIN_USERNAME);
+  const passwordOk = await timingSafeEqual(password, env.ADMIN_PASSWORD);
+  if (usernameOk && passwordOk) {
     await Promise.all([clearLoginAttempt(env, ip), clearLoginAttempt(env, accountKey)]);
     const csrf = createCsrfToken();
     const now = Math.floor(Date.now() / 1000);

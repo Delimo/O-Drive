@@ -376,6 +376,26 @@ test('batch bar disables actions while busy', () => {
 
 // ===== 首页搜索结果提示 =====
 
+test('home windows large directories behind a show-more button', () => {
+  const files = Array.from({ length: 12 }, (_, i) => ({
+    name: `f${i}.txt`,
+    fullKey: `f${i}.txt`,
+  }));
+  const html = home.renderHomePage(makeState({
+    explorer: { files, displayLimit: 10 },
+  }));
+  assert.match(html, /data-action="show-more-entries"/);
+  assert.match(html, /剩余 2 项/);
+  assert.match(html, /f9\.txt/);
+  assert.doesNotMatch(html, /f10\.txt/);
+
+  const all = home.renderHomePage(makeState({
+    explorer: { files, displayLimit: 500 },
+  }));
+  assert.doesNotMatch(all, /show-more-entries/);
+  assert.match(all, /f11\.txt/);
+});
+
 test('home shows searching hint and result count', () => {
   const searching = home.renderHomePage(makeState({
     explorer: { query: 'foo', searching: true },

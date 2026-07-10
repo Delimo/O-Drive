@@ -166,7 +166,11 @@ export async function adjustStorageObjectRef(
     )
       .bind(amount, amount, now, normalizeStorageId(storageId), objectKey)
       .run();
-  } catch (_) {}
+  } catch (err) {
+    console.warn(
+      `[storage-objects] ref adjust failed (${objectKey}, delta ${delta}): ${err?.message || err}`,
+    );
+  }
 }
 
 export async function deleteStorageObjectRecord(
@@ -181,7 +185,11 @@ export async function deleteStorageObjectRecord(
     )
       .bind(normalizeStorageId(storageId), objectKey)
       .run();
-  } catch (_) {}
+  } catch (err) {
+    console.warn(
+      `[storage-objects] record delete failed (${objectKey}): ${err?.message || err}`,
+    );
+  }
 }
 
 export async function recordStorageObjectReferenceChange(
