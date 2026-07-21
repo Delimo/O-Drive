@@ -15,6 +15,42 @@ const ADMIN_TABS = [
   { id: "webhook", label: "通知" },
 ];
 
+const ADMIN_RENDER_FIELDS = {
+  overview: ["stats"],
+  storage: [
+    "storageConfig", "storageConfigLoading", "storageConfigError", "storageConfigSaving",
+    "trashRetention", "trashRetentionLoading", "trashCleanupBusy", "trashPreviewItems",
+    "trashPreviewLoading", "trashPreviewError", "protectedPaths", "protectedPathsLoading",
+    "protectedPathsError", "hiddenPaths", "hiddenPathsLoading", "hiddenPathsError",
+    "accessRuleDraft", "accessRuleSaving",
+  ],
+  shares: ["shares", "sharesLoading", "sharesError", "shareBusyToken", "shareFilter", "shareSearch", "sharePage"],
+  logs: ["logs", "logsLoading", "logsError", "logsPage", "logsTotalPages", "logsFilter"],
+  system: [
+    "health", "healthLoading", "healthError", "quota", "quotaLoading", "quotaError",
+    "maintenance", "maintenanceLoading", "maintenanceError", "maintenanceBusyAction",
+    "tasks", "tasksLoading", "taskRetryingId", "taskAlertConfig", "taskAlertConfigSaving",
+    "activeUploadTaskId",
+  ],
+  webhook: [
+    "webhooks", "webhooksLoading", "webhooksError", "webhookDeliveries",
+    "webhookDeliveriesLoading", "webhookRetryingId", "webhookRecordTab",
+    "adminNotifHistory", "adminNotifHistoryLoading", "adminNotifFilter",
+  ],
+};
+
+export function selectAdminRenderState(state) {
+  const admin = state.admin;
+  const fields = ADMIN_RENDER_FIELDS[admin.activeTab] || [];
+  return [
+    admin.activeTab,
+    admin.loading,
+    admin.error,
+    admin.statsLoadingHint,
+    ...fields.map((field) => admin[field]),
+  ];
+}
+
 export function createPageRenderers(deps) {
   const {
     escapeHtml,

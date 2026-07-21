@@ -149,6 +149,8 @@ Cloudflare Pages Functions 的主 API 入口是：
 6. 是否需要写操作日志。
 7. 是否需要任务化执行。
 
+隐藏路径和受保护路径规则会在每个 Workers isolate 内缓存 30 秒。保存或删除规则时会立即清理当前 isolate 的缓存，但其他 isolate 最多可能延迟 30 秒生效；这是减少 D1 读取的已知一致性取舍。
+
 ## 维护原则
 
 - `public/index.js` 保持入口和依赖装配职责。

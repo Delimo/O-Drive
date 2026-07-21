@@ -42,6 +42,8 @@ server.listen(port, () => {
 
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.once(signal, () => {
-    server.close(() => process.exit(0));
+    server.close();
+    server.closeAllConnections?.();
+    setTimeout(() => process.exit(0), 50).unref();
   });
 }

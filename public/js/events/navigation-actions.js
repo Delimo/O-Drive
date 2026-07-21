@@ -1,5 +1,11 @@
+const NAVIGATION_ACTION_NAMES = new Set([
+  "open-login", "close-modal", "close-modal-backdrop", "logout", "copy-current-url",
+  "refresh-share", "toggle-theme", "toggle-notifications", "mark-notification-read",
+  "mark-all-notifications-read", "open-folder-modal",
+]);
+
 export function registerNavigationActions(documentRef, windowRef, store, actions, thunks, dispatchToast, copyText) {
-  return (event) => {
+  const handle = (event) => {
     const actionNode = event.target.closest("[data-action]");
     if (!actionNode) return;
 
@@ -84,4 +90,6 @@ export function registerNavigationActions(documentRef, windowRef, store, actions
       return;
     }
   };
+  handle.actions = NAVIGATION_ACTION_NAMES;
+  return handle;
 }

@@ -256,8 +256,12 @@ export async function runStatement(statement) {
 
 export async function runSchemaStatements(env, statements, migrations = []) {
   if (!env?.D1) return;
-  for (const sql of statements) {
-    await runStatement(env.D1.prepare(sql));
+  if (statements.length > 0 && typeof env.D1.batch === "function") {
+    await env.D1.batch(statements.map((sql) => env.D1.prepare(sql)));
+  } else {
+    for (const sql of statements) {
+      await runStatement(env.D1.prepare(sql));
+    }
   }
   for (const sql of migrations) {
     try {

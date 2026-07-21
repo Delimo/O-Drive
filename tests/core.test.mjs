@@ -42,7 +42,7 @@ import {
 } from '../functions/api/lib/protected-paths.js';
 import { API_ROUTE_POLICIES, getApiRoutePolicy } from '../functions/api/lib/route-policy.js';
 import { ADMIN_ROUTE_DISPATCHERS, PUBLIC_ROUTE_DISPATCHERS } from '../functions/api/lib/router.js';
-import { SHARE_MIGRATION_SQL } from '../functions/api/lib/schema.js';
+import { SHARE_MIGRATION_SQL, runSchemaStatements } from '../functions/api/lib/schema.js';
 import { writeUploadIndex } from '../functions/api/lib/file-mutations/helpers.js';
 
 import { makeEnv } from './helpers/make-env.mjs';
@@ -575,6 +575,7 @@ test('api route policy describes csrf, rate limit, upload body, and protected ac
   const fileUpload = getApiRoutePolicy('/api/files', 'POST');
   assert.equal(fileUpload.csrf, true);
   assert.equal(fileUpload.rateLimit, true);
+  assert.equal(fileUpload.rateLimitSampleSize, 1);
   assert.equal(fileUpload.hasBody, true);
   assert.equal(fileUpload.uploadBody, true);
   assert.equal(fileUpload.protectedAccess, false);
@@ -588,6 +589,7 @@ test('api route policy describes csrf, rate limit, upload body, and protected ac
   assert.equal(fileRead.csrf, false);
   assert.equal(fileRead.hasBody, false);
   assert.equal(fileRead.uploadBody, false);
+  assert.equal(fileRead.rateLimitSampleSize, 10);
 
   assert.equal(getApiRoutePolicy('/api/download/a.txt', 'GET').rateLimit, false);
   assert.equal(getApiRoutePolicy('/api/preview/a.txt', 'GET').rateLimit, false);
@@ -607,6 +609,22 @@ test('api route policy describes csrf, rate limit, upload body, and protected ac
   assert.equal(getApiRoutePolicy('/api/admin/webhook-deliveries/retry', 'POST').csrf, true);
   assert.equal(getApiRoutePolicy('/api/notifications', 'POST').csrf, true);
   assert.equal(getApiRoutePolicy('/api/admin/settings/webhooks', 'POST').userWritableKey, true);
+});
+
+test('schema setup batches idempotent create statements', async () => {
+  const env = makeEnv();
+  const originalBatch = env.D1.batch.bind(env.D1);
+  let batchCalls = 0;
+  env.D1.batch = async (statements) => {
+    batchCalls += 1;
+    return originalBatch(statements);
+  };
+
+  await runSchemaStatements(env, [
+    'CREATE TABLE IF NOT EXISTS schema_batch_a (id INTEGER PRIMARY KEY)',
+    'CREATE TABLE IF NOT EXISTS schema_batch_b (id INTEGER PRIMARY KEY)',
+  ]);
+  assert.equal(batchCalls, 1);
 });
 
 test('router dispatcher metadata covers simple admin and public routes', () => {

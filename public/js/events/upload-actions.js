@@ -1,5 +1,11 @@
+const UPLOAD_ACTION_NAMES = new Set([
+  "confirm-upload", "cancel-upload-confirm", "remove-pending-file", "add-more-files", "upload",
+  "upload-folder", "dismiss-upload", "cancel-upload", "pause-upload", "pause-all-uploads",
+  "resume-upload", "resume-all-uploads", "retry-upload", "clear-finished-uploads", "dismiss-uploads",
+]);
+
 export function registerUploadActions(documentRef, store, actions, thunks, dispatchToast, clearUploadAutoTimers) {
-  return (event) => {
+  const handle = (event) => {
     const actionNode = event.target.closest("[data-action]");
     if (!actionNode) return;
 
@@ -31,7 +37,7 @@ export function registerUploadActions(documentRef, store, actions, thunks, dispa
     }
 
     if (action === "add-more-files") {
-      const input = document.createElement("input");
+      const input = documentRef.createElement("input");
       input.type = "file";
       input.multiple = true;
       input.addEventListener("change", () => {
@@ -113,4 +119,6 @@ export function registerUploadActions(documentRef, store, actions, thunks, dispa
       return;
     }
   };
+  handle.actions = UPLOAD_ACTION_NAMES;
+  return handle;
 }

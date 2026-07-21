@@ -110,6 +110,30 @@ export async function checkRateLimitD1(
   }
 }
 
+export async function checkSampledRateLimitD1(
+  env,
+  key,
+  maxRequests = 60,
+  windowMs = 60000,
+  sampleSize = 1,
+) {
+  const local = checkRateLimit(`local:${key}`, maxRequests, windowMs);
+  if (!local.allowed || !env?.D1) return local;
+
+  const normalizedSampleSize = Math.max(1, Math.floor(Number(sampleSize) || 1));
+  const localRequestCount = maxRequests - local.remaining;
+  if (normalizedSampleSize > 1 && localRequestCount % normalizedSampleSize !== 0) return local;
+
+  const sampledLimit = Math.max(1, Math.ceil(maxRequests / normalizedSampleSize));
+  const global = await checkRateLimitD1(env, key, sampledLimit, windowMs);
+  if (!global.allowed) return global;
+  return {
+    allowed: true,
+    remaining: Math.min(local.remaining, global.remaining * normalizedSampleSize),
+    retryAfter: 0,
+  };
+}
+
 export function withRateLimit(handler, options = {}) {
   const { maxRequests = 60, windowMs = 60000, keyFn } = options;
   return async (request, env, ...args) => {

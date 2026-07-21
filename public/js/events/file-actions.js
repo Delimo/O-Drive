@@ -1,7 +1,20 @@
+const FILE_ACTION_NAMES = new Set([
+  "crumb", "expand-crumbs", "refresh-explorer", "toggle-search-filters", "clear-search-filters",
+  "load-more-search", "show-more-entries", "cycle-sort", "sort-list", "toggle-view",
+  "toggle-trash", "toggle-filter-popup", "set-kind-filter", "toggle-pick", "toggle-all-pick",
+  "select-entry", "clear-selected", "zip-download", "download-selected", "open-share-selected",
+  "copy-selected", "move-selected", "clear-clipboard", "paste-clipboard", "execute-batch-paste",
+  "delete-selected", "execute-batch-delete", "restore-selected-trash", "execute-trash-restore",
+  "delete-selected-trash", "open-entry", "preview-entry", "download-entry", "preview", "download",
+  "info", "open-share-modal", "copy-direct-link", "open-rename-modal", "toggle-preview-edit",
+  "toggle-markdown-raw", "save-preview-edit", "restore-trash", "delete-trash",
+  "confirm-clear-trash", "execute-clear-trash",
+]);
+
 export function registerFileActions(documentRef, windowRef, store, actions, thunks, deps) {
   const { dispatchToast, navigateToExplorerPath, collectSelectedPaths, findEntryByKey, getEntryPath, inferKind, canPreview, requiresProtectedUnlock, openProtectedUnlockModal, createDeferredAction, openDownload, encodeRouteKey, copyText } = deps;
 
-  return (event) => {
+  const handle = (event) => {
     const actionNode = event.target.closest("[data-action]");
     if (!actionNode) return;
 
@@ -384,4 +397,6 @@ export function registerFileActions(documentRef, windowRef, store, actions, thun
       return;
     }
   };
+  handle.actions = FILE_ACTION_NAMES;
+  return handle;
 }

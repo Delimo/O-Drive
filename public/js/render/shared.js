@@ -75,7 +75,7 @@ export function createSharedRenderers(deps) {
     const relativeText = timeValue ? formatRelative(timeValue) : "";
     const iconContent =
       kind === "image" && thumbnailUrl
-        ? `<img class="details-summary-thumb" src="${escapeHtml(thumbnailUrl(pathValue, 320, 240))}" alt="${escapeHtml(selected.name || "")}" loading="lazy" onerror="this.onerror=null;this.src='/icons/file-type-${kind}.svg'">`
+        ? `<img class="details-summary-thumb" src="${escapeHtml(thumbnailUrl(pathValue, 320, 240))}" data-fallback-src="/icons/file-type-${kind}.svg" alt="${escapeHtml(selected.name || "")}" loading="lazy">`
         : iconForKind(kind, selected.name);
     const primaryActions = state.explorer.trashMode
       ? `
@@ -307,7 +307,7 @@ export function createSharedRenderers(deps) {
 
     const iconContent =
       isImage && thumbnailUrl
-        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="${escapeHtml(item.name || "")}" loading="lazy" onerror="this.onerror=null;this.src='/icons/file-type-${kind}.svg'">`
+        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" data-fallback-src="/icons/file-type-${kind}.svg" alt="${escapeHtml(item.name || "")}" loading="lazy">`
         : iconForKind(kind, item.name);
 
     return `

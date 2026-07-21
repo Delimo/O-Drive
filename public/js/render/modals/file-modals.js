@@ -93,10 +93,10 @@ export function createFileModalRenderers({
     const fileList = files
       .map(
         (file, index) => `
-      <li style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:${index % 2 === 0 ? "var(--panel-soft)" : "transparent"};transition:background .15s;" onmouseenter="this.style.background='var(--hover-bg)'" onmouseleave="this.style.background='${index % 2 === 0 ? "var(--panel-soft)" : "transparent"}'">
+      <li class="upload-pending-row" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:${index % 2 === 0 ? "var(--panel-soft)" : "transparent"};transition:background .15s;">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:500;color:var(--text);">${escapeHtml(file.name)}</span>
         <span style="flex-shrink:0;font-size:12px;color:var(--muted);">${formatBytes(file.size || 0)}</span>
-        <button class="upload-row-remove" data-action="remove-pending-file" data-index="${index}" type="button" style="flex-shrink:0;width:22px;height:22px;border:0;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;border-radius:6px;font-size:15px;line-height:1;transition:all .15s;" onmouseenter="this.style.background='rgba(192,57,43,0.08)';this.style.color='var(--danger)'" onmouseleave="this.style.background='transparent';this.style.color='var(--muted)'" aria-label="移除">×</button>
+        <button class="upload-row-remove" data-action="remove-pending-file" data-index="${index}" type="button" style="flex-shrink:0;width:22px;height:22px;border:0;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;border-radius:6px;font-size:15px;line-height:1;transition:all .15s;" aria-label="移除">×</button>
       </li>
     `,
       )

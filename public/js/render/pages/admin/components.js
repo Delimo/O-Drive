@@ -64,14 +64,14 @@ export function createAdminComponents({ escapeHtml }) {
       <div class="cselect ${className || ""}" data-cselect="${uid}"
            data-action-change="${escapeHtml(actionChange || "")}"
            data-key="${escapeHtml(dataKey || "")}">
-        <button class="cselect-trigger" type="button" tabindex="0">
+        <button class="cselect-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="${escapeHtml(uid)}-listbox">
           <span class="cselect-value">${escapeHtml(selected?.label || "")}</span>
           <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
-        <div class="cselect-dropdown">
+        <div class="cselect-dropdown" id="${escapeHtml(uid)}-listbox" role="listbox">
           ${options.map(o => `
             <div class="cselect-option ${o.value === value ? "cselect-active" : ""}"
-                 data-value="${escapeHtml(o.value)}">
+                 data-value="${escapeHtml(o.value)}" role="option" aria-selected="${o.value === value}" tabindex="-1">
               ${escapeHtml(o.label)}
             </div>
           `).join("")}
@@ -89,38 +89,89 @@ export function createAdminComponents({ escapeHtml }) {
       const dropdown = el.querySelector(".cselect-dropdown");
       if (!trigger || !dropdown) return;
 
+      const optionElements = Array.from(dropdown.querySelectorAll(".cselect-option"));
+      const setOpen = (open, focusOption = false) => {
+        el.classList.toggle("cselect-open", open);
+        trigger.setAttribute("aria-expanded", String(open));
+        if (open && focusOption) {
+          const active = el.querySelector(".cselect-option.cselect-active") || optionElements[0];
+          active?.focus();
+        }
+      };
+      const selectOption = (opt) => {
+        const val = opt.dataset.value;
+        optionElements.forEach(o => {
+          const active = o === opt;
+          o.classList.toggle("cselect-active", active);
+          o.setAttribute("aria-selected", String(active));
+        });
+        trigger.querySelector(".cselect-value").textContent = opt.textContent.trim();
+        setOpen(false);
+        el.dataset.value = val;
+        const inputName = el.dataset.inputName;
+        if (inputName) {
+          const form = el.closest("form");
+          const scope = form || el.parentElement || root;
+          const hiddenInput = Array.from(scope.querySelectorAll('input[type="hidden"]'))
+            .find(input => input.name === inputName);
+          if (hiddenInput) hiddenInput.value = val;
+        }
+        const actionChange = el.dataset.actionChange;
+        const dataKey = el.dataset.key;
+        if (actionChange) {
+          el.dispatchEvent(new CustomEvent("cselect-change", {
+            bubbles: true,
+            detail: { actionChange, key: dataKey, value: val }
+          }));
+        }
+      };
+
       trigger.addEventListener("click", (e) => {
         e.stopPropagation();
         const wasOpen = el.classList.contains("cselect-open");
-        document.querySelectorAll(".cselect.cselect-open").forEach(o => o.classList.remove("cselect-open"));
-        if (!wasOpen) el.classList.add("cselect-open");
+        document.querySelectorAll(".cselect.cselect-open").forEach(o => {
+          o.classList.remove("cselect-open");
+          o.querySelector(".cselect-trigger")?.setAttribute("aria-expanded", "false");
+        });
+        setOpen(!wasOpen);
       });
 
-      dropdown.querySelectorAll(".cselect-option").forEach(opt => {
+      trigger.addEventListener("keydown", (event) => {
+        if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+          event.preventDefault();
+          setOpen(true, true);
+        } else if (event.key === "Escape" && el.classList.contains("cselect-open")) {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+        }
+      });
+
+      optionElements.forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
-          const val = opt.dataset.value;
-          el.querySelectorAll(".cselect-option").forEach(o => o.classList.remove("cselect-active"));
-          opt.classList.add("cselect-active");
-          trigger.querySelector(".cselect-value").textContent = opt.textContent.trim();
-          el.classList.remove("cselect-open");
-          el.dataset.value = val;
-          const inputName = el.dataset.inputName;
-          if (inputName) {
-            const form = el.closest("form");
-            const scope = form || el.parentElement || root;
-            const hiddenInput = Array.from(scope.querySelectorAll('input[type="hidden"]'))
-              .find(input => input.name === inputName);
-            if (hiddenInput) hiddenInput.value = val;
-          }
-
-          const actionChange = el.dataset.actionChange;
-          const dataKey = el.dataset.key;
-          if (actionChange) {
-            el.dispatchEvent(new CustomEvent("cselect-change", {
-              bubbles: true,
-              detail: { actionChange, key: dataKey, value: val }
-            }));
+          selectOption(opt);
+        });
+        opt.addEventListener("keydown", (event) => {
+          const index = optionElements.indexOf(opt);
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            const delta = event.key === "ArrowDown" ? 1 : -1;
+            optionElements[(index + delta + optionElements.length) % optionElements.length]?.focus();
+          } else if (event.key === "Home" || event.key === "End") {
+            event.preventDefault();
+            optionElements[event.key === "Home" ? 0 : optionElements.length - 1]?.focus();
+          } else if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectOption(opt);
+            trigger.focus();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+            trigger.focus();
+          } else if (event.key === "Tab") {
+            setOpen(false);
           }
         });
       });
@@ -129,7 +180,10 @@ export function createAdminComponents({ escapeHtml }) {
     if (!root._cselectRootBound) {
       root._cselectRootBound = true;
       root.addEventListener("click", () => {
-        root.querySelectorAll(".cselect.cselect-open").forEach(o => o.classList.remove("cselect-open"));
+        root.querySelectorAll(".cselect.cselect-open").forEach(o => {
+          o.classList.remove("cselect-open");
+          o.querySelector(".cselect-trigger")?.setAttribute("aria-expanded", "false");
+        });
       });
     }
   }

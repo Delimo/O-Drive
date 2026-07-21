@@ -111,14 +111,16 @@ export function createAdminModalRenderers({
                      placeholder="输入数值"
                      value="${quotaGB >= 1 ? quotaGB.toFixed(2) : quotaMB.toFixed(2)}"
                      style="flex:1;">
-              <div class="cselect" style="width:80px;flex-shrink:0;" data-cselect="quota-unit">
-                <button class="cselect-trigger" type="button" tabindex="0" style="min-height:44px;padding:0 8px;">
+              <div class="cselect" style="width:80px;flex-shrink:0;" data-cselect="quota-unit"
+                   data-input-name="r2QuotaUnit" data-value="${quotaGB >= 1 ? "GB" : "MB"}">
+                <button class="cselect-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"
+                        aria-controls="quota-unit-listbox" style="min-height:44px;padding:0 8px;">
                   <span class="cselect-value">${quotaGB >= 1 ? "GB" : "MB"}</span>
                   <svg class="cselect-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
-                <div class="cselect-dropdown">
-                  <div class="cselect-option ${quotaGB >= 1 ? "cselect-active" : ""}" data-value="GB">GB</div>
-                  <div class="cselect-option ${quotaGB < 1 ? "cselect-active" : ""}" data-value="MB">MB</div>
+                <div class="cselect-dropdown" id="quota-unit-listbox" role="listbox">
+                  <div class="cselect-option ${quotaGB >= 1 ? "cselect-active" : ""}" data-value="GB" role="option" aria-selected="${quotaGB >= 1}" tabindex="-1">GB</div>
+                  <div class="cselect-option ${quotaGB < 1 ? "cselect-active" : ""}" data-value="MB" role="option" aria-selected="${quotaGB < 1}" tabindex="-1">MB</div>
                 </div>
               </div>
               <input type="hidden" name="r2QuotaUnit" value="${quotaGB >= 1 ? "GB" : "MB"}">

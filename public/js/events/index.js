@@ -5,6 +5,24 @@ import { registerNavigationActions } from './navigation-actions.js';
 import { registerUiActions } from './ui-actions.js';
 import { clearUploadAutoTimers } from '../state/thunks/upload.js';
 
+export function createActionRouter(handlers) {
+  const routes = new Map();
+  for (const handler of handlers) {
+    for (const action of handler.actions || []) {
+      if (routes.has(action)) throw new Error(`Duplicate data-action handler: ${action}`);
+      routes.set(action, handler);
+    }
+  }
+  return {
+    dispatch(action, event) {
+      const handler = routes.get(action);
+      if (handler) handler(event);
+      return Boolean(handler);
+    },
+    has: action => routes.has(action),
+  };
+}
+
 export function registerAppEvents(deps) {
   const {
     documentRef,
@@ -42,6 +60,12 @@ export function registerAppEvents(deps) {
   const uploadActions = registerUploadActions(documentRef, store, actions, thunks, dispatchToast, clearUploadAutoTimers);
   const navigationActions = registerNavigationActions(documentRef, windowRef, store, actions, thunks, dispatchToast, copyText);
   const uiActions = registerUiActions(documentRef, windowRef, store, actions, thunks, { dispatchToast, getEntryPath });
+  const actionRouter = createActionRouter([fileActions, adminActions, uploadActions, navigationActions]);
+  const secondaryActionHandlers = new Map([
+    ['refresh-admin-health', () => store.dispatch(thunks.loadAdminHealth())],
+    ['refresh-admin-quota', () => store.dispatch(thunks.loadAdminQuota())],
+    ['refresh-admin-maintenance', () => store.dispatch(thunks.loadMaintenanceSnapshot())],
+  ]);
 
   documentRef.addEventListener(
     "click",
@@ -65,18 +89,10 @@ export function registerAppEvents(deps) {
       if (actionNode) {
         const { action, action2 } = actionNode.dataset;
 
-        fileActions(event);
-        adminActions(event);
-        uploadActions(event);
-        navigationActions(event);
+        actionRouter.dispatch(action, event);
 
         if (action2) {
-          const actionMap = {
-            "refresh-admin-health": () => store.dispatch(thunks.loadAdminHealth()),
-            "refresh-admin-quota": () => store.dispatch(thunks.loadAdminQuota()),
-            "refresh-admin-maintenance": () => store.dispatch(thunks.loadMaintenanceSnapshot()),
-          };
-          const fn = actionMap[action2];
+          const fn = secondaryActionHandlers.get(action2);
           if (fn) fn();
         }
       }
@@ -134,6 +150,7 @@ export function registerAppEvents(deps) {
     "cselect-change",
     (event) => {
       const { actionChange, key, value } = event.detail;
+      if (!actionChange) return;
       if (actionChange === "set-filter-kind") {
         store.dispatch(actions.explorer.setFilterKind(value));
         if (store.getState().explorer.query.trim()) store.dispatch(thunks.loadExplorer());
@@ -179,21 +196,6 @@ export function registerAppEvents(deps) {
         store.dispatch(actions.admin.setLogsFilter({ [key]: value }));
         store.dispatch(thunks.loadAdminLogs(1));
         return;
-      }
-    },
-    opts,
-  );
-
-  documentRef.addEventListener(
-    "cselect-change",
-    (event) => {
-      const { actionChange, key, value } = event.detail;
-      if (!actionChange) {
-        const cselect = event.target.closest(".cselect");
-        if (cselect && cselect.dataset.cselect === "quota-unit") {
-          const hiddenInput = cselect.parentElement.querySelector('input[name="r2QuotaUnit"]');
-          if (hiddenInput) hiddenInput.value = value;
-        }
       }
     },
     opts,
@@ -249,6 +251,19 @@ export function registerAppEvents(deps) {
       }
     },
     opts,
+  );
+
+  documentRef.addEventListener(
+    'error',
+    (event) => {
+      const image = event.target;
+      if (!image || image.tagName !== 'IMG') return;
+      const fallbackSrc = image.dataset?.fallbackSrc || '';
+      if (!fallbackSrc || image.dataset.fallbackApplied === 'true') return;
+      image.dataset.fallbackApplied = 'true';
+      image.src = fallbackSrc;
+    },
+    { ...opts, capture: true },
   );
 
   return () => ac.abort();

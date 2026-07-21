@@ -100,13 +100,13 @@ export function createHomeRenderers(deps) {
            data-action-change="${escapeHtml(actionChange || "")}"
            data-key="${escapeHtml(dataKey || "")}"
            data-value="${escapeHtml(selected?.value || "")}">
-        <button class="cselect-trigger" type="button" tabindex="0">
+        <button class="cselect-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="${escapeHtml(id)}-listbox">
           <span class="cselect-value">${escapeHtml(selected?.label || "")}</span>
           <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
-        <div class="cselect-dropdown">
+        <div class="cselect-dropdown" id="${escapeHtml(id)}-listbox" role="listbox">
           ${options.map((option) => `
-            <div class="cselect-option ${option.value === selected?.value ? "cselect-active" : ""}" data-value="${escapeHtml(option.value)}">
+            <div class="cselect-option ${option.value === selected?.value ? "cselect-active" : ""}" data-value="${escapeHtml(option.value)}" role="option" aria-selected="${option.value === selected?.value}" tabindex="-1">
               ${escapeHtml(option.label)}
             </div>
           `).join("")}
@@ -440,7 +440,7 @@ export function createHomeRenderers(deps) {
 
     const iconContent =
       isImage && thumbnailUrl
-        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" alt="${escapeHtml(item.name || "")}" loading="lazy" onerror="this.onerror=null;this.src='/icons/file-type-${kind}.svg'">`
+        ? `<img class="item-thumb" src="${escapeHtml(thumbnailUrl(path, 320, 240))}" data-fallback-src="/icons/file-type-${kind}.svg" alt="${escapeHtml(item.name || "")}" loading="lazy">`
         : iconForKind(kind, item.name);
 
     return `

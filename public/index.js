@@ -4,7 +4,7 @@ import { createStateSelectors } from './js/state/selectors.js';
 import { createThunks } from './js/state/thunks/index.js';
 import { createModalRenderers } from './js/render/modal.js';
 import { createHomeRenderers } from './js/render/home.js';
-import { createPageRenderers } from './js/render/pages/index.js';
+import { createPageRenderers, selectAdminRenderState } from './js/render/pages/index.js';
 import { createSharedRenderers } from './js/render/shared.js';
 import { createUploadsRenderer } from './js/render/uploads.js';
 import { createHeaderRenderer } from './js/render/header.js';
@@ -29,6 +29,7 @@ const { store, actions } = createRootStore({ page });
 
 let searchTimer = null;
 let toastTimer = null;
+let modalReturnFocus = null;
 
 function dispatchToast(type, message) {
   if (!message) return;
@@ -57,12 +58,12 @@ function iconForKind(kind, name) {
     const extUrl = svgUrl(ext);
     if (extUrl) {
       const fallbackUrl = svgUrl(kind) || '/icons/file-type-file.svg';
-      return `<img src="${extUrl}" alt="" aria-hidden="true" onerror="this.onerror=null;this.src='${fallbackUrl}'">`;
+      return `<img src="${extUrl}" data-fallback-src="${fallbackUrl}" alt="" aria-hidden="true">`;
     }
   }
   const kindUrl = svgUrl(kind);
   if (kindUrl) {
-    return `<img src="${kindUrl}" alt="" aria-hidden="true" onerror="this.onerror=null;this.src='/icons/file-type-file.svg'">`;
+    return `<img src="${kindUrl}" data-fallback-src="/icons/file-type-file.svg" alt="" aria-hidden="true">`;
   }
   return iconForKindBase(kind, icons);
 }
@@ -290,6 +291,9 @@ function renderRegion(container, htmlString) {
   const next = container.cloneNode(false);
   next.innerHTML = htmlString;
   morphdom(container, next, { childrenOnly: true });
+  container.querySelectorAll('button:not([type])').forEach(button => {
+    button.type = 'button';
+  });
 }
 
 function render() {
@@ -308,6 +312,9 @@ function render() {
   const next = root.cloneNode(false);
   next.innerHTML = html;
   morphdom(root, next, { childrenOnly: true });
+  root.querySelectorAll('button:not([type])').forEach(button => {
+    button.type = 'button';
+  });
   renderHeaderRegion();
   renderToast();
   renderDropOverlay();
@@ -365,8 +372,25 @@ function renderModal() {
   const state = store.getState();
   const el = root.querySelector('[data-region="modal"]');
   if (el) {
+    const opening = Boolean(state.app.modal);
+    if (opening && !modalReturnFocus && document.activeElement instanceof HTMLElement) {
+      modalReturnFocus = document.activeElement;
+    }
     renderRegion(el, modalRenderer(state));
     bindCustomSelects(el);
+    if (opening) {
+      const dialog = el.querySelector('[role="dialog"][aria-modal="true"]');
+      if (dialog && !dialog.contains(document.activeElement)) {
+        dialog.setAttribute('tabindex', '-1');
+        const firstFocusable = dialog.querySelector(
+          'input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        );
+        (firstFocusable || dialog).focus();
+      }
+    } else if (modalReturnFocus) {
+      if (modalReturnFocus.isConnected) modalReturnFocus.focus();
+      modalReturnFocus = null;
+    }
   }
 }
 
@@ -417,97 +441,6 @@ function shallowEqualValue(a, b) {
     return aKeys.length === bKeys.length && aKeys.every((key) => Object.is(a[key], b[key]));
   }
   return false;
-}
-
-function selectAdminRenderState(state) {
-  const admin = state.admin;
-  const base = [admin.activeTab, admin.loading, admin.error, admin.statsLoadingHint];
-  if (admin.activeTab === "overview") {
-    return [...base, admin.stats];
-  }
-  if (admin.activeTab === "storage") {
-    return [
-      ...base,
-      admin.storageConfig,
-      admin.storageConfigLoading,
-      admin.storageConfigError,
-      admin.storageConfigSaving,
-      admin.trashRetention,
-      admin.trashRetentionLoading,
-      admin.trashCleanupBusy,
-      admin.trashPreviewItems,
-      admin.trashPreviewLoading,
-      admin.trashPreviewError,
-      admin.protectedPaths,
-      admin.protectedPathsLoading,
-      admin.protectedPathsError,
-      admin.hiddenPaths,
-      admin.hiddenPathsLoading,
-      admin.hiddenPathsError,
-      admin.accessRuleDraft,
-      admin.accessRuleSaving,
-    ];
-  }
-  if (admin.activeTab === "shares") {
-    return [
-      ...base,
-      admin.shares,
-      admin.sharesLoading,
-      admin.sharesError,
-      admin.shareBusyToken,
-      admin.shareFilter,
-      admin.shareSearch,
-      admin.sharePage,
-    ];
-  }
-  if (admin.activeTab === "logs") {
-    return [
-      ...base,
-      admin.logs,
-      admin.logsLoading,
-      admin.logsError,
-      admin.logsPage,
-      admin.logsTotalPages,
-      admin.logsFilter,
-    ];
-  }
-  if (admin.activeTab === "system") {
-    return [
-      ...base,
-      admin.health,
-      admin.healthLoading,
-      admin.healthError,
-      admin.quota,
-      admin.quotaLoading,
-      admin.quotaError,
-      admin.maintenance,
-      admin.maintenanceLoading,
-      admin.maintenanceError,
-      admin.maintenanceBusyAction,
-      admin.tasks,
-      admin.tasksLoading,
-      admin.taskRetryingId,
-      admin.taskAlertConfig,
-      admin.taskAlertConfigSaving,
-      admin.activeUploadTaskId,
-    ];
-  }
-  if (admin.activeTab === "webhook") {
-    return [
-      ...base,
-      admin.webhooks,
-      admin.webhooksLoading,
-      admin.webhooksError,
-      admin.webhookDeliveries,
-      admin.webhookDeliveriesLoading,
-      admin.webhookRetryingId,
-      admin.webhookRecordTab,
-      admin.adminNotifHistory,
-      admin.adminNotifHistoryLoading,
-      admin.adminNotifFilter,
-    ];
-  }
-  return base;
 }
 
 function subscribeSlice(selector, fn) {

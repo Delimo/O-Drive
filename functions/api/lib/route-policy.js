@@ -81,6 +81,7 @@ export function getApiRoutePolicy(path, method) {
     csrf: Boolean(route?.csrf),
     userWritableKey: Boolean(route?.csrf),
     rateLimit: shouldApplyRateLimit(path),
+    rateLimitSampleSize: ["GET", "HEAD"].includes(normalizedMethod) ? 10 : 1,
     hasBody: hasRequestBody(normalizedMethod),
     uploadBody: isUploadBodyRoute(path, normalizedMethod),
     protectedAccess: requiresProtectedAccess(path),

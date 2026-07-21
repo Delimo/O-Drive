@@ -85,6 +85,15 @@
   gap: 12px;
 }
 
+.upload-pending-row:hover {
+  background: var(--hover-bg) !important;
+}
+
+.upload-pending-row .upload-row-remove:hover {
+  background: rgba(192, 57, 43, 0.08) !important;
+  color: var(--danger) !important;
+}
+
 .toast-wrap {
   display: flex;
   justify-content: center;

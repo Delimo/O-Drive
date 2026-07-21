@@ -210,3 +210,42 @@ test('render templates escape raw data interpolations', () => {
     'Wrap user-controllable data in escapeHtml(...) (or add the property to the safe list here with justification).',
   );
 });
+
+test('rendered markup does not use CSP-blocked inline event handlers', () => {
+  const files = [
+    ...listProjectFiles('public/js/render').filter((file) => file.endsWith('.js')),
+    'public/index.js',
+    'public/index.html',
+    'public/admin.html',
+    'public/share.html',
+  ];
+  const violations = [];
+  for (const file of files) {
+    const source = readProjectFile(file);
+    if (/\son[a-z]+\s*=/i.test(source)) violations.push(file);
+  }
+  assert.deepEqual(violations, [], 'Use delegated events or CSS instead of inline event attributes.');
+});
+
+test('rendered images keep alt text and runtime normalizes button types', () => {
+  const files = [
+    ...listProjectFiles('public/js/render').filter((file) => file.endsWith('.js')),
+    'public/index.js',
+  ];
+  const violations = [];
+  for (const file of files) {
+    const source = readProjectFile(file);
+    for (const match of source.matchAll(/<img\b(?![^>]*\balt=)[^>]*>/gi)) {
+      violations.push(`${file}: image missing alt`);
+    }
+  }
+  assert.deepEqual(violations, []);
+  assert.match(readProjectFile('public/index.js'), /button:not\(\[type\]\)/);
+});
+
+test('custom select Escape handling does not bubble into modal close', () => {
+  const source = readProjectFile('public/js/render/pages/admin/components.js');
+  const stops = source.match(/event\.stopPropagation\(\);/g) || [];
+  assert.equal(stops.length, 2);
+  assert.match(source, /event\.key === "Escape" && el\.classList\.contains\("cselect-open"\)/);
+});

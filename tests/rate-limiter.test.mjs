@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkRateLimit, checkRateLimitD1, resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
+import { checkRateLimit, checkRateLimitD1, checkSampledRateLimitD1, resetRateLimiter } from '../functions/api/lib/rate-limiter.js';
 import { makeEnv } from './helpers/make-env.mjs';
 
 test('rate-limiter allows requests under limit', () => {
@@ -76,4 +76,32 @@ test('D1 rate-limiter resets after window expires', async () => {
   } finally {
     Date.now = originalNow;
   }
+});
+
+test('sampled D1 rate-limiter keeps local enforcement and reduces D1 writes', async () => {
+  resetRateLimiter();
+  const env = makeEnv();
+
+  for (let i = 0; i < 9; i++) {
+    const result = await checkSampledRateLimitD1(env, 'sampled:read', 120, 60000, 10);
+    assert.equal(result.allowed, true);
+  }
+  const beforeSample = await env.D1.prepare(
+    'SELECT request_count, window_start FROM api_rate_limits WHERE key = ?',
+  ).bind('sampled:read').first();
+  assert.equal(beforeSample, null);
+
+  const sampled = await checkSampledRateLimitD1(env, 'sampled:read', 120, 60000, 10);
+  assert.equal(sampled.allowed, true);
+  const afterSample = await env.D1.prepare(
+    'SELECT request_count, window_start FROM api_rate_limits WHERE key = ?',
+  ).bind('sampled:read').first();
+  assert.equal(Number(afterSample.request_count), 1);
+
+  for (let i = 10; i < 120; i++) {
+    const result = await checkSampledRateLimitD1(env, 'sampled:read', 120, 60000, 10);
+    assert.equal(result.allowed, true);
+  }
+  const blocked = await checkSampledRateLimitD1(env, 'sampled:read', 120, 60000, 10);
+  assert.equal(blocked.allowed, false);
 });

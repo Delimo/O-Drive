@@ -56,7 +56,34 @@ export function registerUiActions(documentRef, windowRef, store, actions, thunks
           event.preventDefault();
           const area = documentRef.getElementById("preview-edit-area");
           store.dispatch(thunks.savePreviewText(area?.value || ""));
+          return;
         }
+      }
+
+      const dialog = documentRef.querySelector('[role="dialog"][aria-modal="true"]');
+      if (!dialog) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        store.dispatch(actions.app.setModal(null));
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialog.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => element.getAttribute("aria-hidden") !== "true");
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && documentRef.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && documentRef.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     },
 

@@ -10,6 +10,7 @@ export const explorerInitialState = {
   query: getInitialSearch(),
   queryDraft: getInitialSearch(),
   showFilters: false,
+  // 服务端搜索条件：仅在 query 非空时作为 API kind 参数提交。
   filterKind: "all",
   filterMinSize: "",
   filterMaxSize: "",
@@ -20,9 +21,12 @@ export const explorerInitialState = {
   searchScanned: 0,
   searchScanLimitReached: false,
   view: "grid",
+  // 当前文件集合的实际排序模式，由 selector 同时服务网格和列表视图。
   sort: "smart",
+  // 列表表头交互状态：记录激活列和箭头方向，并映射到上面的 sort 模式。
   sortField: "name",
   sortDir: "asc",
+  // 当前已加载结果的本地快捷类型筛选，不会作为搜索 API 参数提交。
   filter: "all",
   folders: [],
   files: [],

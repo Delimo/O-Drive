@@ -38,7 +38,7 @@ export function createModalRenderers(deps) {
     if (!state.app.toast) return "";
     return `
       <div class="toast-wrap">
-        <div class="toast" data-type="${escapeHtml(state.app.toast.type || "info")}">${escapeHtml(state.app.toast.message || "")}</div>
+        <div class="toast" role="${state.app.toast.type === "error" ? "alert" : "status"}" aria-atomic="true" data-type="${escapeHtml(state.app.toast.type || "info")}">${escapeHtml(state.app.toast.message || "")}</div>
       </div>
     `;
   }

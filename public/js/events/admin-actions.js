@@ -1,5 +1,24 @@
+const ADMIN_ACTION_NAMES = new Set([
+  "set-admin-tab", "refresh-admin", "refresh-admin-shares", "refresh-admin-health",
+  "refresh-admin-logs", "reset-logs-filter", "refresh-admin-quota", "refresh-admin-protected-paths",
+  "refresh-admin-hidden-paths", "show-add-hidden-path", "confirm-delete-hidden-path",
+  "execute-delete-hidden-path", "refresh-admin-storage-config", "show-edit-storage-quota",
+  "save-storage-alert-thresholds", "refresh-admin-webhooks", "set-webhook-record-tab",
+  "refresh-admin-webhook-deliveries", "retry-webhook-delivery", "refresh-admin-maintenance",
+  "refresh-tasks", "retry-task", "save-task-alert-thresholds", "save-access-rule",
+  "refresh-admin-notifications", "admin-mark-notif-read", "confirm-maintenance-action",
+  "execute-maintenance-action", "save-trash-retention", "cleanup-trash-by-retention",
+  "show-add-webhook", "edit-webhook", "confirm-delete-webhook", "execute-delete-webhook",
+  "test-webhook", "show-add-protected-path", "confirm-delete-protected-path",
+  "execute-delete-protected-path", "set-logs-page", "export-logs-csv", "set-share-filter",
+  "set-shares-filter", "filter-shares", "reset-shares-filter", "confirm-delete-share",
+  "confirm-reactivate-share", "confirm-cleanup-expired-shares", "execute-delete-share",
+  "execute-cleanup-expired-shares", "cleanup-expired-shares", "delete-share", "copy-share-link",
+  "copy-webdav-url",
+]);
+
 export function registerAdminActions(documentRef, windowRef, store, actions, thunks, dispatchToast, copyText) {
-  return (event) => {
+  const handle = (event) => {
     const actionNode = event.target.closest("[data-action]");
     if (!actionNode) return;
 
@@ -369,4 +388,6 @@ export function registerAdminActions(documentRef, windowRef, store, actions, thu
       return;
     }
   };
+  handle.actions = ADMIN_ACTION_NAMES;
+  return handle;
 }

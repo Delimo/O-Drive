@@ -18,6 +18,26 @@ import { createPageRenderers } from '../public/js/render/pages/index.js';
 import { createHeaderRenderer } from '../public/js/render/header.js';
 import { createNotificationPolling } from '../public/js/services/notifications.js';
 import { assertApiOk } from '../public/js/state/thunks/errors.js';
+import { createActionRouter } from '../public/js/events/index.js';
+
+test('action router dispatches one owner and rejects duplicate registrations', () => {
+  let firstCalls = 0;
+  let secondCalls = 0;
+  const first = () => { firstCalls += 1; };
+  const second = () => { secondCalls += 1; };
+  first.actions = new Set(['open-entry']);
+  second.actions = new Set(['refresh-admin']);
+
+  const router = createActionRouter([first, second]);
+  assert.equal(router.dispatch('open-entry', {}), true);
+  assert.equal(firstCalls, 1);
+  assert.equal(secondCalls, 0);
+  assert.equal(router.dispatch('missing-action', {}), false);
+
+  const duplicate = () => {};
+  duplicate.actions = new Set(['open-entry']);
+  assert.throws(() => createActionRouter([first, duplicate]), /Duplicate data-action handler/);
+});
 
 // 任意图标都返回占位 SVG，避免在测试里维护完整图标表
 const icons = new Proxy({}, { get: () => '<svg></svg>' });
@@ -461,7 +481,26 @@ test('home search filters use custom select for file kind', () => {
   assert.match(html, /data-cselect="home-filter-kind"/);
   assert.match(html, /data-action-change="set-filter-kind"/);
   assert.match(html, /data-value="image"/);
+  assert.match(html, /aria-haspopup="listbox"/);
+  assert.match(html, /role="listbox"/);
+  assert.match(html, /role="option"/);
   assert.doesNotMatch(html, /<select\b/);
+});
+
+test('toast renderer exposes live status semantics', () => {
+  const { renderToast } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: () => '',
+    apiClient: {},
+    renderMarkdown,
+    isMarkdownName,
+    formatBytes,
+  });
+  const info = renderToast({ app: { toast: { type: 'success', message: '保存成功' } } });
+  const error = renderToast({ app: { toast: { type: 'error', message: '保存失败' } } });
+  assert.match(info, /role="status"/);
+  assert.match(error, /role="alert"/);
 });
 
 // ===== mock 设计预览数据 =====
@@ -1235,6 +1274,36 @@ test('admin quota section renders storage usage', () => {
   assert.match(html, /最近回收站文件/);
   assert.match(html, /旧合同\.docx/);
   assert.match(html, /客户资料\/旧合同\.docx/);
+});
+
+test('storage quota modal keeps the selected unit wired to form data', () => {
+  const { renderModal } = createModalRenderers({
+    icons,
+    escapeHtml,
+    getEntryPath: e => e?.fullKey || '',
+    apiClient: { previewUrl: () => '' },
+    renderMarkdown: s => s,
+    isMarkdownName: () => false,
+    formatBytes,
+  });
+
+  const html = renderModal({
+    app: {
+      modal: {
+        type: 'edit-storage-quota',
+        r2QuotaBytes: 5 * 1024 * 1024 * 1024,
+        loading: false,
+        error: '',
+      },
+    },
+  });
+
+  assert.match(html, /data-cselect="quota-unit"/);
+  assert.match(html, /data-input-name="r2QuotaUnit"/);
+  assert.match(html, /name="r2QuotaUnit" value="GB"/);
+  assert.match(html, /aria-controls="quota-unit-listbox"/);
+  assert.match(html, /role="listbox"/);
+  assert.match(html, /role="option"/);
 });
 
 test('admin protected paths section renders path list with delete buttons', () => {

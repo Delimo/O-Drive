@@ -1,6 +1,6 @@
 # O-Drive 维护交接
 
-> 更新时间：2026-07-09。本文件是后续维护入口，只记录当前代码库的实际状态。
+> 更新时间：2026-07-21。本文件是后续维护入口，只记录当前代码库的实际状态。
 
 ## 项目状态
 
@@ -23,7 +23,7 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 | `npm run test:browser` | 运行 Playwright 浏览器测试。 |
 | `npm run dev` | 本地启动 Wrangler Pages dev。 |
 
-最近一次完整验证：`npm run check` 通过，包含 262 个测试全绿。构建时只有 Browserslist 的 `caniuse-lite is outdated` 提示，不影响通过。
+最近一次完整验证：`npm run check` 通过，包含 277 个测试全绿。分享页新增 3 条 Playwright 主路径用例并已通过。构建时只有 Browserslist 的 `caniuse-lite is outdated` 提示，不影响通过。
 
 ## 入口地图
 
@@ -59,7 +59,7 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 - 后台失败或部分失败任务可从系统 Tab 重试；上传任务仍由浏览器侧上传队列重试。
 - 后台 ZIP 结果写入 `.system/zip-tasks/`，会按 `ZIP_TASK_RETENTION_DAYS` 自动清理，也可通过系统 Tab 的维护指令手动清理。
 - 容量告警和任务失败告警共用 `functions/api/lib/alert-rules.js` 的阈值判断 helper。
-- API 与 WebDAV 入口的全局限流已接入 D1 `api_rate_limits` 表；内存限流保留为无 D1 时的降级路径。
+- API 与 WebDAV 入口的全局限流已接入 D1 `api_rate_limits` 表；GET/HEAD 路由逐请求执行内存限流、每 10 次采样写入 D1，写操作仍严格写入 D1。
 - 管理员登录失败防护同时记录 IP 和账号维度；IP 维度会硬锁，账号维度只做软降速，成功登录会清理两类失败计数。
 - 目录复制/移动的 `copyTree` 会收集子树单项失败，批量粘贴会返回具体失败子路径，失败的 move 子项不会删除源对象。
 - Webhook 写操作通知不再依赖 `Response.clone().json()` 二次解析；相关 handler 通过可选 `meta` 向 router 传递通知数据。

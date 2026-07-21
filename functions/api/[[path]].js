@@ -2,7 +2,7 @@ import { ensureCoreTables, jsonResponse, assertBodySize } from './lib/common/ind
 import { verifyAuth, verifyCsrf, handleLogin, handleLogout } from './lib/auth.js';
 import { loadProtectedPaths, checkProtectedAccess } from './lib/protected-paths.js';
 import { loadHiddenPaths, getR2KeyFromPath, canReadKey, canWriteUserKey, isAdmin } from './lib/request-context.js';
-import { checkRateLimitD1, getClientIp } from './lib/rate-limiter.js';
+import { checkSampledRateLimitD1, getClientIp } from './lib/rate-limiter.js';
 import { resolveAdminRoute, resolvePublicRoute } from './lib/router.js';
 import { handlePublicShare } from './lib/shares.js';
 import { getApiRoutePolicy } from './lib/route-policy.js';
@@ -49,7 +49,13 @@ export async function onRequest(context) {
 
     // Global API rate limit: 120 requests per minute per IP (skip file download streams)
     if (routePolicy.rateLimit) {
-      const rl = await checkRateLimitD1(env, `ip:${getClientIp(request)}`, 120, 60000);
+      const rl = await checkSampledRateLimitD1(
+        env,
+        `ip:${getClientIp(request)}`,
+        120,
+        60000,
+        routePolicy.rateLimitSampleSize,
+      );
       if (!rl.allowed) {
         return jsonResponse(
           { success: false, code: 'RATE_LIMITED', message: 'Rate limit exceeded' },
