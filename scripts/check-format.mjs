@@ -4,7 +4,14 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const EXTENSIONS = new Set(['.js', '.mjs', '.css', '.html', '.json', '.md']);
-const EXCLUDE_DIRS = new Set(['node_modules', '.git', '.wrangler']);
+const EXCLUDE_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.wrangler',
+  'coverage',
+  'playwright-report',
+  'test-results',
+]);
 
 function findFiles(dir, results = []) {
   const entries = readdirSync(dir);

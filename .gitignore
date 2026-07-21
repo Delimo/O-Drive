@@ -10,3 +10,4 @@ npm-debug.log*
 test-output.css
 debug.log
 *.log
+.claude/

@@ -1,6 +1,6 @@
 {
   "name": "o-drive",
-  "version": "2.1.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "build": "tailwindcss -i ./public/style.css -o ./public/main.css --minify && tailwindcss -i ./public/style.explorer.css -o ./public/explorer.css --minify && tailwindcss -i ./public/style.admin.css -o ./public/admin.css --minify && tailwindcss -i ./public/style.share.css -o ./public/share.css --minify && node scripts/ensure-final-newline.mjs ./public/main.css ./public/explorer.css ./public/admin.css ./public/share.css && node scripts/stamp-asset-version.mjs && node --check ./public/index.js",

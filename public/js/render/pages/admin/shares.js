@@ -168,7 +168,7 @@ export function createSharesRenderer({
           <div class="ov-share-filter-row">
             <input class="input ov-share-search" type="text"
                    data-action-input="set-shares-search" value="${escapeHtml(shareSearch)}"
-                   placeholder="搜索文件名或路径">
+                   placeholder="搜索文件名或路径" aria-label="搜索分享文件名或路径">
             ${components.renderCustomSelect({
               value: shareFilter,
               options: [
@@ -180,6 +180,7 @@ export function createSharesRenderer({
               actionChange: "set-shares-filter",
               dataKey: "",
               className: "ov-share-status-select",
+              ariaLabel: "分享状态",
             })}
             <div class="ov-share-filter-actions">
               <button class="btn btn-sm" type="button" data-action="filter-shares">筛选</button>

@@ -93,16 +93,16 @@ export function createHomeRenderers(deps) {
     return `<div class="crumbs-bar">${buildBreadcrumbs(path, expanded).map(renderCrumb).join("")}</div>`;
   }
 
-  function renderCustomSelect({ id, value, options, actionChange, dataKey, className = "" }) {
+  function renderCustomSelect({ id, value, options, actionChange, dataKey, className = "", ariaLabel = "" }) {
     const selected = options.find((option) => option.value === value) || options[0];
     return `
       <div class="cselect ${className}" data-cselect="${escapeHtml(id)}"
            data-action-change="${escapeHtml(actionChange || "")}"
            data-key="${escapeHtml(dataKey || "")}"
            data-value="${escapeHtml(selected?.value || "")}">
-        <button class="cselect-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="${escapeHtml(id)}-listbox">
+        <button class="cselect-trigger" type="button" aria-label="${escapeHtml(ariaLabel || "选择选项")}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${escapeHtml(id)}-listbox">
           <span class="cselect-value">${escapeHtml(selected?.label || "")}</span>
-          <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div class="cselect-dropdown" id="${escapeHtml(id)}-listbox" role="listbox">
           ${options.map((option) => `
@@ -130,12 +130,13 @@ export function createHomeRenderers(deps) {
     return `
       <div class="filter-panel">
         <div class="filter-field">
-          <label class="filter-label">类型</label>
+          <span class="filter-label">类型</span>
           ${renderCustomSelect({
             id: "home-filter-kind",
             value: explorer.filterKind,
             actionChange: "set-filter-kind",
             className: "filter-input home-filter-select",
+            ariaLabel: "文件类型",
             options: kindOptions.map((kind) => ({
               value: kind,
               label: kind === "all" ? "全部" : kind,
@@ -143,20 +144,20 @@ export function createHomeRenderers(deps) {
           })}
         </div>
         <div class="filter-field">
-          <label class="filter-label">最小大小 (KB)</label>
-          <input class="inline-input filter-input" type="number" min="0" data-role="filter-min-size" value="${escapeHtml(explorer.filterMinSize)}" style="width:100px;">
+          <label class="filter-label" for="home-filter-min-size">最小大小 (KB)</label>
+          <input class="inline-input filter-input" id="home-filter-min-size" type="number" min="0" data-role="filter-min-size" value="${escapeHtml(explorer.filterMinSize)}" style="width:100px;">
         </div>
         <div class="filter-field">
-          <label class="filter-label">最大大小 (KB)</label>
-          <input class="inline-input filter-input" type="number" min="0" data-role="filter-max-size" value="${escapeHtml(explorer.filterMaxSize)}" style="width:100px;">
+          <label class="filter-label" for="home-filter-max-size">最大大小 (KB)</label>
+          <input class="inline-input filter-input" id="home-filter-max-size" type="number" min="0" data-role="filter-max-size" value="${escapeHtml(explorer.filterMaxSize)}" style="width:100px;">
         </div>
         <div class="filter-field">
-          <label class="filter-label">修改日期从</label>
-          <input class="inline-input filter-input" type="date" data-role="filter-date-from" value="${escapeHtml(explorer.filterDateFrom)}">
+          <label class="filter-label" for="home-filter-date-from">修改日期从</label>
+          <input class="inline-input filter-input" id="home-filter-date-from" type="date" data-role="filter-date-from" value="${escapeHtml(explorer.filterDateFrom)}">
         </div>
         <div class="filter-field">
-          <label class="filter-label">到</label>
-          <input class="inline-input filter-input" type="date" data-role="filter-date-to" value="${escapeHtml(explorer.filterDateTo)}">
+          <label class="filter-label" for="home-filter-date-to">到</label>
+          <input class="inline-input filter-input" id="home-filter-date-to" type="date" data-role="filter-date-to" value="${escapeHtml(explorer.filterDateTo)}">
         </div>
         <button class="btn toolbar-btn" data-action="clear-search-filters" type="button" style="font-size:13px;padding:4px 12px;">清除筛选</button>
       </div>

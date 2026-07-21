@@ -6,6 +6,8 @@
 
 O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create React App、Ant Design 或 Redux Toolkit 项目。
 
+当前仍处于首次正式发布前，版本号统一使用 `0.x`，当前开发版本为 `0.1.0`。项目保持单管理员模式，不规划多用户、角色权限或协作功能。
+
 - 前端：原生 ES Module、字符串模板渲染、自研 store/slice/thunk。
 - 样式：Tailwind 输入文件在 `public/style*.css`，构建产物是 `public/main.css` 和页面级 CSS。
 - 后端：Cloudflare Pages Functions，主入口是 `functions/api/[[path]].js`。
@@ -23,7 +25,7 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 | `npm run test:browser` | 运行 Playwright 浏览器测试。 |
 | `npm run dev` | 本地启动 Wrangler Pages dev。 |
 
-最近一次完整验证：`npm run check` 通过，包含 277 个测试全绿。分享页新增 3 条 Playwright 主路径用例并已通过。构建时只有 Browserslist 的 `caniuse-lite is outdated` 提示，不影响通过。
+最近一次完整验证：`npm run check` 通过，包含 278 个测试全绿；`npm run test:browser` 的 7 条 Playwright 用例全部通过。构建时只有 Browserslist 的 `caniuse-lite is outdated` 提示，不影响通过。
 
 ## 入口地图
 
@@ -81,6 +83,15 @@ O-Drive 是运行在 Cloudflare Pages 上的轻量云盘，不是 React、Create
 - 上传 rename 在候选名被并发占用时继续重试。
 - multipart dedup 在 complete 阶段遇到竞态时继续重试，并清理实际组装出来的临时对象。
 - Webhook delivery 历史脱敏敏感 header，重试使用当前配置。
+
+## 2026-07-21 审计收尾
+
+第二轮审计发现的高危索引数据丢失隐患、全部中优先级问题和大部分低优先级问题已经修复，并已补充对应回归测试。长期维护时继续关注：
+
+- 使用真实屏幕阅读器抽查首页、后台、分享页、弹窗和自定义选择器；现有自动化检查已覆盖焦点管理、键盘操作、Toast live region、按钮类型和图片替代文本。
+- 将 `npm run lint` 从语法检查升级为 ESLint 推荐规则，并保持在现有 CI 的 `npm run check` 中执行。
+- 使用可追踪的提交信息；首次公开发布前保持 `0.x` 版本，达到稳定兼容承诺后再发布 `1.0.0`。
+- Webhook 已阻断显式私网目标和跨主机跳转；Cloudflare Workers 缺少请求前 DNS 解析能力，无法彻底识别域名 DNS rebinding 到私网地址。
 
 ## 后续维护提示
 

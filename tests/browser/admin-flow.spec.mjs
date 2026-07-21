@@ -9,7 +9,7 @@ test('admin maintenance panel groups common and advanced actions in mock mode', 
   await page.locator('[data-tab="system"]').click();
   const maintSection = page.locator('.ov-maintenance');
   await expect(maintSection).toBeVisible({ timeout: 10000 });
-  await expect(maintSection.locator('[data-maintenance-action]')).toHaveCount(13);
+  await expect(maintSection.locator('[data-maintenance-action]')).toHaveCount(14);
   await expect(maintSection.locator('[data-maintenance-action="scan-index-consistency"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="rebuild-index"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="purge-trash"]')).toBeVisible();
@@ -23,6 +23,7 @@ test('admin maintenance panel groups common and advanced actions in mock mode', 
   await expect(maintSection.locator('[data-maintenance-action="cleanup-login-attempts"]')).toBeHidden();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-download-bursts"]')).toBeHidden();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-orphan-storage-objects"]')).toBeHidden();
+  await expect(maintSection.locator('[data-maintenance-action="cleanup-orphan-multipart"]')).toBeHidden();
   await maintSection.getByText('高级清理').click();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-thumbnails"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="rebuild-storage-refs"]')).toBeVisible();
@@ -32,6 +33,7 @@ test('admin maintenance panel groups common and advanced actions in mock mode', 
   await expect(maintSection.locator('[data-maintenance-action="cleanup-login-attempts"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-download-bursts"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="cleanup-orphan-storage-objects"]')).toBeVisible();
+  await expect(maintSection.locator('[data-maintenance-action="cleanup-orphan-multipart"]')).toBeVisible();
   await expect(maintSection.locator('[data-maintenance-action="clear-cache"]')).toHaveCount(0);
 });
 

@@ -245,7 +245,12 @@ test('rendered images keep alt text and runtime normalizes button types', () => 
 
 test('custom select Escape handling does not bubble into modal close', () => {
   const source = readProjectFile('public/js/render/pages/admin/components.js');
-  const stops = source.match(/event\.stopPropagation\(\);/g) || [];
+  const selectSource = source.slice(
+    source.indexOf('function bindCustomSelects'),
+    source.indexOf('function renderCustomDatePicker'),
+  );
+  const stops = selectSource.match(/event\.stopPropagation\(\);/g) || [];
   assert.equal(stops.length, 2);
-  assert.match(source, /event\.key === "Escape" && el\.classList\.contains\("cselect-open"\)/);
+  assert.match(selectSource, /event\.key === "Escape" && el\.classList\.contains\("cselect-open"\)/);
+  assert.match(source, /panel\.addEventListener\("keydown"[\s\S]*event\.key === "Escape"[\s\S]*event\.stopPropagation\(\)/);
 });

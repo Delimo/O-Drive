@@ -301,6 +301,7 @@ export function createWebhookRenderer({
                         actionChange: "set-notification-filter",
                         dataKey: "severity",
                         className: "ov-webhook-notif-select",
+                        ariaLabel: "通知级别",
                       })}
                     </label>
                     <label class="ov-webhook-notif-filter">
@@ -316,6 +317,7 @@ export function createWebhookRenderer({
                         actionChange: "set-notification-filter",
                         dataKey: "read",
                         className: "ov-webhook-notif-select",
+                        ariaLabel: "通知读取状态",
                       })}
                     </label>
                     <label class="ov-webhook-notif-filter ov-webhook-notif-filter-event">

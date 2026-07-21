@@ -71,8 +71,8 @@ export function createStorageRenderer({
                   <span class="ov-quota-stat-value" style="color:${fillColor};">${usedPercent}%</span>
                 </div>
               </div>
-              <div class="ov-quota-track">
-                <div class="ov-quota-fill" style="width:${usedPercent}%;background:${fillColor};"></div>
+              <div class="ov-quota-track" role="progressbar" aria-label="R2 存储使用率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${usedPercent}">
+                <div class="ov-quota-fill" style="width:${usedPercent}%;background:${fillColor};" aria-hidden="true"></div>
               </div>
               <div class="ov-quota-alerts">
                 <div class="ov-quota-alerts-head">
@@ -108,7 +108,7 @@ export function createStorageRenderer({
               <div class="ov-trash-policy">
                 <p class="ov-trash-desc">设置已删除文件在系统内被永久抹除前的暂存天数。</p>
                 <div class="ov-trash-input-row">
-                  <input class="input" type="number" data-binding="trash-retention-days"
+                  <input class="input" type="number" data-binding="trash-retention-days" aria-label="回收站保留天数"
                          value="${trashRetention ? trashRetention.days : 7}" style="width:60px;text-align:center;">
                   <span class="ov-trash-unit">天</span>
                   <button class="btn btn-primary btn-sm" type="button"
@@ -154,8 +154,8 @@ export function createStorageRenderer({
             </div>
             <div class="ov-rules-editor-body">
               <div class="ov-rules-field">
-                <label class="ov-rules-label">路径</label>
-                <input class="input" type="text" placeholder="/客户资料/" data-action-input="set-rule-path" value="${escapeHtml(ruleDraft.path)}">
+                <label class="ov-rules-label" for="access-rule-path">路径</label>
+                <input class="input" id="access-rule-path" type="text" placeholder="/客户资料/" data-action-input="set-rule-path" value="${escapeHtml(ruleDraft.path)}">
               </div>
               <div class="ov-rules-options">
                 <label class="ov-rules-checkbox">
@@ -175,12 +175,12 @@ export function createStorageRenderer({
               </div>
               <div class="ov-rules-inline-fields">
                 <div class="ov-rules-field">
-                  <label class="ov-rules-label">访问密码</label>
-                  <input class="input" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password" value="${escapeHtml(ruleDraft.password)}">
+                  <label class="ov-rules-label" for="access-rule-password">访问密码</label>
+                  <input class="input" id="access-rule-password" type="password" placeholder="至少 4 位，可不填" data-action-input="set-rule-password" value="${escapeHtml(ruleDraft.password)}">
                 </div>
                 <div class="ov-rules-field">
-                  <label class="ov-rules-label">备注</label>
-                  <input class="input" type="text" placeholder="可选" data-action-input="set-rule-note" value="${escapeHtml(ruleDraft.note)}">
+                  <label class="ov-rules-label" for="access-rule-note">备注</label>
+                  <input class="input" id="access-rule-note" type="text" placeholder="可选" data-action-input="set-rule-note" value="${escapeHtml(ruleDraft.note)}">
                 </div>
               </div>
             </div>

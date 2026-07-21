@@ -57,16 +57,16 @@ export function createAdminComponents({ escapeHtml }) {
     return `<span class="toolbar-tag ${typeClass}">${escapeHtml(label)}</span>`;
   }
 
-  function renderCustomSelect({ id, value, options, actionChange, dataKey, className }) {
+  function renderCustomSelect({ id, value, options, actionChange, dataKey, className, ariaLabel = "" }) {
     const selected = options.find(o => o.value === value) || options[0];
     const uid = id || `cselect-${Math.random().toString(36).slice(2, 8)}`;
     return `
       <div class="cselect ${className || ""}" data-cselect="${uid}"
            data-action-change="${escapeHtml(actionChange || "")}"
            data-key="${escapeHtml(dataKey || "")}">
-        <button class="cselect-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="${escapeHtml(uid)}-listbox">
+        <button class="cselect-trigger" type="button" aria-label="${escapeHtml(ariaLabel || "选择选项")}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${escapeHtml(uid)}-listbox">
           <span class="cselect-value">${escapeHtml(selected?.label || "")}</span>
-          <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          <svg class="cselect-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div class="cselect-dropdown" id="${escapeHtml(uid)}-listbox" role="listbox">
           ${options.map(o => `
@@ -188,37 +188,38 @@ export function createAdminComponents({ escapeHtml }) {
     }
   }
 
-  function renderCustomDatePicker({ id, value, placeholder, actionChange, dataKey, className }) {
+  function renderCustomDatePicker({ id, value, placeholder, actionChange, dataKey, className, ariaLabel = "" }) {
     const uid = id || `datepicker-${Math.random().toString(36).slice(2, 8)}`;
     const displayValue = value || "";
+    const accessibleLabel = ariaLabel || placeholder || "选择日期";
     return `
       <div class="cdate ${className || ""}" data-cdate="${uid}"
            data-action-change="${escapeHtml(actionChange || "")}"
            data-key="${escapeHtml(dataKey || "")}"
            data-value="${escapeHtml(value || "")}">
-        <button class="cdate-trigger" type="button" tabindex="0">
+        <button class="cdate-trigger" type="button" aria-label="${escapeHtml(accessibleLabel)}" aria-haspopup="dialog" aria-expanded="false" aria-controls="${escapeHtml(uid)}-panel">
           <span class="cdate-value">${escapeHtml(displayValue || placeholder || "年/月/日")}</span>
-          <svg class="cdate-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="cdate-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
         </button>
-        <div class="cdate-panel">
+        <div class="cdate-panel" id="${escapeHtml(uid)}-panel" role="dialog" aria-label="${escapeHtml(accessibleLabel)}">
           <div class="cdate-header">
-            <button class="cdate-nav" type="button" data-dir="-1">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <button class="cdate-nav" type="button" data-dir="-1" aria-label="上个月">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
             </button>
-            <span class="cdate-title"></span>
-            <button class="cdate-nav" type="button" data-dir="1">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <span class="cdate-title" aria-live="polite"></span>
+            <button class="cdate-nav" type="button" data-dir="1" aria-label="下个月">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </button>
           </div>
-          <div class="cdate-weekdays">
+          <div class="cdate-weekdays" aria-hidden="true">
             <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
           </div>
-          <div class="cdate-days"></div>
+          <div class="cdate-days" role="group" aria-label="日期"></div>
           <div class="cdate-footer">
             <button class="cdate-action" type="button" data-action="clear">清除</button>
             <button class="cdate-action" type="button" data-action="today">今天</button>
@@ -251,6 +252,29 @@ export function createAdminComponents({ escapeHtml }) {
         return `${y}-${m}-${day}`;
       }
 
+      function setOpen(open, focusDate = false) {
+        panel.classList.toggle("cdate-open", open);
+        trigger.setAttribute("aria-expanded", String(open));
+        if (open && focusDate) {
+          daysContainer.querySelector(".cdate-selected, .cdate-today, .cdate-day")?.focus();
+        }
+      }
+
+      function selectDate(value) {
+        el.dataset.value = value;
+        trigger.querySelector(".cdate-value").textContent = value || placeholder || "年/月/日";
+        setOpen(false);
+        const actionChange = el.dataset.actionChange;
+        const dataKey = el.dataset.key;
+        if (actionChange) {
+          el.dispatchEvent(new CustomEvent("cdate-change", {
+            bubbles: true,
+            detail: { actionChange, key: dataKey, value }
+          }));
+        }
+        trigger.focus();
+      }
+
       function renderCalendar() {
         const y = viewDate.getFullYear();
         const m = viewDate.getMonth();
@@ -264,7 +288,7 @@ export function createAdminComponents({ escapeHtml }) {
         const today = formatDate(new Date());
         let html = "";
         for (let i = 1; i < startWeekday; i++) {
-          html += `<span class="cdate-day cdate-empty"></span>`;
+          html += `<span class="cdate-day cdate-empty" aria-hidden="true"></span>`;
         }
         for (let d = 1; d <= totalDays; d++) {
           const dateStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -273,25 +297,15 @@ export function createAdminComponents({ escapeHtml }) {
           const cls = ["cdate-day"];
           if (isToday) cls.push("cdate-today");
           if (isSelected) cls.push("cdate-selected");
-          html += `<span class="${cls.join(" ")}" data-date="${dateStr}">${d}</span>`;
+          const currentAttr = isToday ? ` aria-current="date"` : "";
+          html += `<button class="${cls.join(" ")}" type="button" data-date="${dateStr}" aria-label="${dateStr}" aria-pressed="${isSelected}"${currentAttr}>${d}</button>`;
         }
         daysContainer.innerHTML = html;
 
         daysContainer.querySelectorAll(".cdate-day:not(.cdate-empty)").forEach(dayEl => {
           dayEl.addEventListener("click", (e) => {
             e.stopPropagation();
-            const val = dayEl.dataset.date;
-            el.dataset.value = val;
-            trigger.querySelector(".cdate-value").textContent = val;
-            panel.classList.remove("cdate-open");
-            const actionChange = el.dataset.actionChange;
-            const dataKey = el.dataset.key;
-            if (actionChange) {
-              el.dispatchEvent(new CustomEvent("cdate-change", {
-                bubbles: true,
-                detail: { actionChange, key: dataKey, value: val }
-              }));
-            }
+            selectDate(dayEl.dataset.date);
           });
         });
       }
@@ -299,10 +313,22 @@ export function createAdminComponents({ escapeHtml }) {
       trigger.addEventListener("click", (e) => {
         e.stopPropagation();
         const wasOpen = panel.classList.contains("cdate-open");
-        document.querySelectorAll(".cdate-panel.cdate-open").forEach(p => p.classList.remove("cdate-open"));
+        document.querySelectorAll(".cdate-panel.cdate-open").forEach(p => {
+          p.classList.remove("cdate-open");
+          p.closest(".cdate")?.querySelector(".cdate-trigger")?.setAttribute("aria-expanded", "false");
+        });
         if (!wasOpen) {
-          panel.classList.add("cdate-open");
           renderCalendar();
+          setOpen(true, true);
+        }
+      });
+
+      panel.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+          trigger.focus();
         }
       });
 
@@ -320,31 +346,11 @@ export function createAdminComponents({ escapeHtml }) {
           e.stopPropagation();
           const action = btn.dataset.action;
           if (action === "clear") {
-            el.dataset.value = "";
-            trigger.querySelector(".cdate-value").textContent = placeholder || "年/月/日";
-            panel.classList.remove("cdate-open");
-            const actionChange = el.dataset.actionChange;
-            const dataKey = el.dataset.key;
-            if (actionChange) {
-              el.dispatchEvent(new CustomEvent("cdate-change", {
-                bubbles: true,
-                detail: { actionChange, key: dataKey, value: "" }
-              }));
-            }
+            selectDate("");
           } else if (action === "today") {
             const today = formatDate(new Date());
-            el.dataset.value = today;
-            trigger.querySelector(".cdate-value").textContent = today;
-            panel.classList.remove("cdate-open");
             viewDate = new Date();
-            const actionChange = el.dataset.actionChange;
-            const dataKey = el.dataset.key;
-            if (actionChange) {
-              el.dispatchEvent(new CustomEvent("cdate-change", {
-                bubbles: true,
-                detail: { actionChange, key: dataKey, value: today }
-              }));
-            }
+            selectDate(today);
           }
         });
       });
@@ -353,7 +359,10 @@ export function createAdminComponents({ escapeHtml }) {
     if (!root._cdateRootBound) {
       root._cdateRootBound = true;
       root.addEventListener("click", () => {
-        root.querySelectorAll(".cdate-panel.cdate-open").forEach(p => p.classList.remove("cdate-open"));
+        root.querySelectorAll(".cdate-panel.cdate-open").forEach(p => {
+          p.classList.remove("cdate-open");
+          p.closest(".cdate")?.querySelector(".cdate-trigger")?.setAttribute("aria-expanded", "false");
+        });
       });
     }
   }

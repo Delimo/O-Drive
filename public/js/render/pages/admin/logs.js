@@ -59,7 +59,7 @@ export function createLogsRenderer({
           <div class="ov-logs-filter-row">
             <input class="input" type="text"
                    data-action-input="set-logs-filter" data-key="q"
-                   value="${escapeHtml(logsFilter.q || "")}" placeholder="关键词：路径、详情、IP">
+                   value="${escapeHtml(logsFilter.q || "")}" placeholder="关键词：路径、详情、IP" aria-label="日志关键词">
             ${components.renderCustomSelect({
               value: logsFilter.action || "",
               options: [
@@ -74,10 +74,11 @@ export function createLogsRenderer({
               actionChange: "set-logs-filter",
               dataKey: "action",
               className: "ov-logs-action-select",
+              ariaLabel: "日志事件类型",
             })}
             <input class="input" type="text"
                    data-action-input="set-logs-filter" data-key="ip"
-                   value="${escapeHtml(logsFilter.ip || "")}" placeholder="IP">
+                   value="${escapeHtml(logsFilter.ip || "")}" placeholder="IP" aria-label="IP 地址">
             <div class="ov-logs-date-range">
               ${components.renderCustomDatePicker({
                 value: logsFilter.from || "",
@@ -85,6 +86,7 @@ export function createLogsRenderer({
                 actionChange: "set-logs-filter",
                 dataKey: "from",
                 className: "ov-logs-date-from",
+                ariaLabel: "日志开始日期",
               })}
               <span class="ov-logs-date-sep">–</span>
               ${components.renderCustomDatePicker({
@@ -93,6 +95,7 @@ export function createLogsRenderer({
                 actionChange: "set-logs-filter",
                 dataKey: "to",
                 className: "ov-logs-date-to",
+                ariaLabel: "日志结束日期",
               })}
             </div>
             <div class="ov-logs-filter-actions">

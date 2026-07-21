@@ -34,7 +34,7 @@ export function createUiComponents({ escapeHtml }) {
   function renderFormFeedback(error, helperText, style = "") {
     const styleAttr = style ? ` style="${escapeHtml(style)}"` : "";
     return error
-      ? `<div class="error-text"${styleAttr}>${escapeHtml(error)}</div>`
+      ? `<div class="error-text" role="alert"${styleAttr}>${escapeHtml(error)}</div>`
       : `<div class="helper-text"${styleAttr}>${escapeHtml(helperText || "")}</div>`;
   }
 

@@ -232,6 +232,7 @@ test('ui components render reusable empty states and detail rows', () => {
   assert.match(helper, /helper-text/);
   assert.match(helper, /请填写名称/);
   assert.match(error, /error-text/);
+  assert.match(error, /role="alert"/);
   assert.match(error, /&lt;失败&gt;/);
   assert.match(badge, /class="ov-badge ov-badge-ok"/);
   assert.match(badge, /title="&lt;可用&gt;"/);
@@ -482,9 +483,39 @@ test('home search filters use custom select for file kind', () => {
   assert.match(html, /data-action-change="set-filter-kind"/);
   assert.match(html, /data-value="image"/);
   assert.match(html, /aria-haspopup="listbox"/);
+  assert.match(html, /aria-label="文件类型"/);
   assert.match(html, /role="listbox"/);
   assert.match(html, /role="option"/);
+  assert.match(html, /for="home-filter-min-size"/);
+  assert.match(html, /id="home-filter-min-size"/);
+  assert.match(html, /for="home-filter-date-from"/);
   assert.doesNotMatch(html, /<select\b/);
+});
+
+test('admin log filters expose labels and keyboard-ready date picker semantics', () => {
+  const html = pages.renderAdminPage({
+    app: { role: 'admin' },
+    admin: {
+      activeTab: 'logs',
+      loading: false,
+      logsLoading: false,
+      logs: [],
+      logsError: '',
+      logsPage: 1,
+      logsTotalPages: 1,
+      logsFilter: { q: '', action: '', ip: '', from: '', to: '' },
+    },
+  });
+
+  assert.match(html, /aria-label="日志关键词"/);
+  assert.match(html, /aria-label="日志事件类型"/);
+  assert.match(html, /aria-label="IP 地址"/);
+  assert.match(html, /aria-label="日志开始日期"/);
+  assert.match(html, /aria-label="日志结束日期"/);
+  assert.match(html, /aria-haspopup="dialog"/);
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /aria-label="上个月"/);
+  assert.match(html, /aria-label="下个月"/);
 });
 
 test('toast renderer exposes live status semantics', () => {
@@ -1271,6 +1302,13 @@ test('admin quota section renders storage usage', () => {
   assert.match(html, /data-action="save-storage-alert-thresholds"/);
   assert.match(html, /value="76"/);
   assert.match(html, /value="91"/);
+  assert.match(html, /role="progressbar"/);
+  assert.match(html, /aria-valuenow="24"/);
+  assert.match(html, /aria-label="回收站保留天数"/);
+  assert.match(html, /for="access-rule-path"/);
+  assert.match(html, /id="access-rule-path"/);
+  assert.match(html, /for="access-rule-password"/);
+  assert.match(html, /id="access-rule-password"/);
   assert.match(html, /最近回收站文件/);
   assert.match(html, /旧合同\.docx/);
   assert.match(html, /客户资料\/旧合同\.docx/);
